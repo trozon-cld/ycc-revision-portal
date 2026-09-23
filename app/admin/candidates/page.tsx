@@ -3,11 +3,13 @@ import { pool } from "@/lib/db/pool";
 import { LogoutButton } from "@/components/logout-button";
 import { SuperadminNav } from "@/components/superadmin-nav";
 import { CreateCandidateForm } from "./create-candidate-form";
+import { ChangeAdmin } from "./change-admin";
 
 interface CandidateRow {
   id: string;
   email: string;
   category_name: string;
+  admin_id: string;
   admin_email: string;
   access_expires_at: string | null;
   is_blocked: boolean;
@@ -19,14 +21,19 @@ interface CategoryRow {
   name: string;
 }
 
+interface AdminOption {
+  id: string;
+  email: string;
+}
+
 export default async function CandidatesPage() {
   const session = await requireRole(["admin", "superadmin"]);
   const isSuperadmin = session.role === "superadmin";
 
   // Admins only ever see their own candidates; Superadmin sees all.
-  const [{ rows: candidates }, { rows: categories }] = await Promise.all([
+  const [{ rows: candidates }, { rows: categories }, { rows: admins }] = await Promise.all([
     pool.query<CandidateRow>(
-      `select u.id, u.email, c.name as category_name, a.email as admin_email,
+      `select u.id, u.email, c.name as category_name, u.admin_id, a.email as admin_email,
               u.access_expires_at, u.is_blocked, u.created_at
        from users u
        join categories c on c.id = u.category_id
@@ -39,6 +46,9 @@ export default async function CandidatesPage() {
     isSuperadmin
       ? Promise.resolve({ rows: [] as CategoryRow[] })
       : pool.query<CategoryRow>(`select id, name from categories order by name`),
+    isSuperadmin
+      ? pool.query<AdminOption>(`select id, email from users where role = 'admin' order by email`)
+      : Promise.resolve({ rows: [] as AdminOption[] }),
   ]);
 
   return (
@@ -73,29 +83,35 @@ export default async function CandidatesPage() {
         </h2>
         <ul className="mt-3 divide-y divide-ink/15 rounded-lg border border-ink/15">
           {candidates.map((candidate) => (
-            <li
-              key={candidate.id}
-              className="flex flex-col gap-1 p-4 text-base text-ink sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div>
-                <p className="font-medium">{candidate.email}</p>
-                <p className="text-ink/70">{candidate.category_name}</p>
-                {isSuperadmin && (
-                  <p className="text-ink/70">Admin: {candidate.admin_email}</p>
-                )}
+            <li key={candidate.id} className="space-y-3 p-4 text-base text-ink">
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="font-medium">{candidate.email}</p>
+                  <p className="text-ink/70">{candidate.category_name}</p>
+                  {isSuperadmin && (
+                    <p className="text-ink/70">Admin: {candidate.admin_email}</p>
+                  )}
+                </div>
+                <div className="text-ink/70">
+                  {candidate.is_blocked ? (
+                    <span className="text-red-700">Blocked</span>
+                  ) : candidate.access_expires_at ? (
+                    <>
+                      Expires{" "}
+                      {new Date(candidate.access_expires_at).toLocaleDateString(
+                        "en-GB"
+                      )}
+                    </>
+                  ) : null}
+                </div>
               </div>
-              <div className="text-ink/70">
-                {candidate.is_blocked ? (
-                  <span className="text-red-700">Blocked</span>
-                ) : candidate.access_expires_at ? (
-                  <>
-                    Expires{" "}
-                    {new Date(candidate.access_expires_at).toLocaleDateString(
-                      "en-GB"
-                    )}
-                  </>
-                ) : null}
-              </div>
+              {isSuperadmin && (
+                <ChangeAdmin
+                  candidateId={candidate.id}
+                  currentAdminId={candidate.admin_id}
+                  admins={admins}
+                />
+              )}
             </li>
           ))}
           {candidates.length === 0 && (

@@ -67,3 +67,46 @@ function getErrorCode(error: unknown): string | undefined {
   }
   return undefined;
 }
+
+export type ChangeAdminState = { error?: string; success?: boolean };
+
+export async function changeCandidateAdmin(
+  _prevState: ChangeAdminState,
+  formData: FormData
+): Promise<ChangeAdminState> {
+  await requireRole(["superadmin"]);
+
+  const candidateId = String(formData.get("candidateId") ?? "");
+  const adminId = String(formData.get("adminId") ?? "");
+
+  if (!candidateId || !adminId) {
+    return { error: "Choose an admin." };
+  }
+
+  // Both roles are checked in SQL so a forged id can't move a candidate to a non-admin.
+  let updatedCount: number;
+  try {
+    const result = await pool.query(
+      `update users set admin_id = $2
+       where id = $1
+         and role = 'candidate'
+         and exists (select 1 from users where id = $2 and role = 'admin')`,
+      [candidateId, adminId]
+    );
+    updatedCount = result.rowCount ?? 0;
+  } catch (error) {
+    if (getErrorCode(error) === "22P02") {
+      return { error: "Candidate or admin not found." };
+    }
+    throw error;
+  }
+
+  if (updatedCount === 0) {
+    revalidatePath("/admin/candidates");
+    return { error: "Candidate or admin not found. The page has been refreshed." };
+  }
+
+  revalidatePath("/admin/candidates");
+  revalidatePath("/admin/admins");
+  return { success: true };
+}
