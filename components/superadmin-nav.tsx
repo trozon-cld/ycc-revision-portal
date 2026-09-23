@@ -4,6 +4,7 @@ const LINKS = [
   { href: "/admin/admins", label: "Admins" },
   { href: "/admin/candidates", label: "Candidates" },
   { href: "/admin/categories", label: "Categories" },
+  { href: "/admin/account", label: "My account" },
 ] as const;
 
 export function SuperadminNav({

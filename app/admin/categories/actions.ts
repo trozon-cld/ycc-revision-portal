@@ -14,9 +14,7 @@ export async function createCategory(
 ): Promise<CategoryActionState> {
   await requireRole(["superadmin"]);
 
-  const name = String(formData.get("name") ?? "")
-    .trim()
-    .replace(/\s+/g, " ");
+  const name = normaliseName(formData.get("name"));
 
   if (!name) {
     return { error: "Category name is required." };
@@ -44,6 +42,54 @@ export async function createCategory(
 
   revalidatePath("/admin/categories");
   return { success: true };
+}
+
+export async function renameCategory(
+  _prevState: CategoryActionState,
+  formData: FormData
+): Promise<CategoryActionState> {
+  await requireRole(["superadmin"]);
+
+  const categoryId = String(formData.get("categoryId") ?? "");
+  const name = normaliseName(formData.get("name"));
+
+  if (!name) {
+    return { error: "Category name is required." };
+  }
+  if (name.length > MAX_NAME_LENGTH) {
+    return { error: `Category name must be ${MAX_NAME_LENGTH} characters or fewer.` };
+  }
+
+  let updatedCount: number;
+  try {
+    const { rows: existing } = await pool.query(
+      `select 1 from categories where lower(name) = lower($1) and id <> $2`,
+      [name, categoryId]
+    );
+    if (existing.length > 0) {
+      return { error: "A category with this name already exists." };
+    }
+    const result = await pool.query(
+      `update categories set name = $2 where id = $1`,
+      [categoryId, name]
+    );
+    updatedCount = result.rowCount ?? 0;
+  } catch (error) {
+    const code = getErrorCode(error);
+    if (code === "23505") {
+      return { error: "A category with this name already exists." };
+    }
+    if (code === "22P02") {
+      return { error: "Category not found." };
+    }
+    throw error;
+  }
+
+  revalidatePath("/admin/categories");
+  revalidatePath("/admin/candidates");
+  return updatedCount === 0
+    ? { error: "This category no longer exists." }
+    : { success: true };
 }
 
 export async function deleteCategory(
@@ -96,6 +142,10 @@ export async function deleteCategory(
   revalidatePath("/admin/categories");
   revalidatePath("/admin/candidates");
   return { success: true };
+}
+
+function normaliseName(value: FormDataEntryValue | null): string {
+  return String(value ?? "").trim().replace(/\s+/g, " ");
 }
 
 function blockedMessage(candidateCount: number) {
