@@ -13,7 +13,8 @@ export async function createCandidate(
   _prevState: CreateCandidateState,
   formData: FormData
 ): Promise<CreateCandidateState> {
-  await requireRole(["admin"]);
+  // Owner always comes from the session, never the form.
+  const session = await requireRole(["admin"]);
 
   const email = String(formData.get("email") ?? "")
     .trim()
@@ -33,10 +34,10 @@ export async function createCandidate(
   try {
     await pool.query(
       `insert into users
-         (email, password_hash, role, category_id, access_start_at, access_expires_at, is_blocked)
+         (email, password_hash, role, category_id, admin_id, access_start_at, access_expires_at, is_blocked)
        values
-         ($1, $2, 'candidate', $3, now(), now() + interval '${ACCESS_DURATION_DAYS} days', false)`,
-      [email, passwordHash, categoryId]
+         ($1, $2, 'candidate', $3, $4, now(), now() + interval '${ACCESS_DURATION_DAYS} days', false)`,
+      [email, passwordHash, categoryId, session.sub]
     );
   } catch (error) {
     if (isUniqueViolation(error)) {

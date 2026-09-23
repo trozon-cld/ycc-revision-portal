@@ -1,6 +1,7 @@
 import { requireRole } from "@/lib/auth/guard";
 import { pool } from "@/lib/db/pool";
 import { LogoutButton } from "@/components/logout-button";
+import { SuperadminNav } from "@/components/superadmin-nav";
 import { CreateAdminForm } from "./create-admin-form";
 
 interface AdminRow {
@@ -30,6 +31,8 @@ export default async function AdminsPage() {
         </div>
         <LogoutButton />
       </div>
+
+      <SuperadminNav current="/admin/admins" />
 
       <CreateAdminForm />
 
