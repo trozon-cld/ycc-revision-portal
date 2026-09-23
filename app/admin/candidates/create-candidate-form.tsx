@@ -1,17 +1,28 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { createCandidate, type CreateCandidateState } from "./actions";
+import { AccessLengthField } from "./access-length-field";
 
 const initialState: CreateCandidateState = {};
 
 export function CreateCandidateForm({
   categories,
+  minDate,
+  maxDate,
 }: {
   categories: { id: string; name: string }[];
+  minDate: string;
+  maxDate: string;
 }) {
+  // Bumped on success so the access field resets along with the form.
+  const [resetKey, setResetKey] = useState(0);
   const [state, formAction, isPending] = useActionState(
-    createCandidate,
+    async (prev: CreateCandidateState, formData: FormData) => {
+      const result = await createCandidate(prev, formData);
+      if (result.success) setResetKey((key) => key + 1);
+      return result;
+    },
     initialState
   );
 
@@ -80,9 +91,13 @@ export function CreateCandidateForm({
         </select>
       </div>
 
-      <p className="text-base text-ink/70">
-        Access is granted for 30 days from creation.
-      </p>
+      <AccessLengthField
+        key={resetKey}
+        idPrefix="create"
+        label="Access length"
+        minDate={minDate}
+        maxDate={maxDate}
+      />
 
       {state.error && (
         <p role="alert" className="text-base text-red-700">

@@ -1,5 +1,6 @@
 import { requireRole } from "@/lib/auth/guard";
 import { LogoutButton } from "@/components/logout-button";
+import { ACCESS_TIME_ZONE } from "@/lib/candidates/access";
 
 // Placeholder landing page — proves Candidate login + role gating works.
 // Prepare/Practice/Mock Test sections come later.
@@ -11,6 +12,7 @@ export default async function CandidateDashboard() {
         day: "numeric",
         month: "long",
         year: "numeric",
+        timeZone: ACCESS_TIME_ZONE,
       })
     : null;
 
