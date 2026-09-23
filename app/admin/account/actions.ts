@@ -3,6 +3,8 @@
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { pool } from "@/lib/db/pool";
+import { getErrorCode, withTransaction } from "@/lib/db/transaction";
+import { logActivity } from "@/lib/audit/log";
 import { requireRole } from "@/lib/auth/guard";
 import { signToken } from "@/lib/auth/jwt";
 import { setAuthCookie } from "@/lib/auth/cookies";
@@ -31,10 +33,23 @@ export async function updateOwnEmail(
   }
 
   try {
-    await pool.query(
-      `update users set email = $2 where id = $1 and role = 'superadmin'`,
-      [session.sub, email]
-    );
+    await withTransaction(async (client) => {
+      const { rows } = await client.query<{ email: string }>(
+        `select email from users where id = $1 and role = 'superadmin' for update`,
+        [session.sub]
+      );
+      const previous = rows[0]?.email;
+      if (!previous || previous === email) return;
+
+      await client.query(`update users set email = $2 where id = $1`, [session.sub, email]);
+      await logActivity(
+        client,
+        session,
+        "account.email_changed",
+        { type: "account", id: session.sub, label: email },
+        { from: previous, to: email }
+      );
+    });
   } catch (error) {
     if (getErrorCode(error) === "23505") {
       return { error: "An account with this email already exists." };
@@ -77,10 +92,17 @@ export async function updateOwnPassword(
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
-  await pool.query(
-    `update users set password_hash = $2 where id = $1 and role = 'superadmin'`,
-    [session.sub, passwordHash]
-  );
+  await withTransaction(async (client) => {
+    await client.query(
+      `update users set password_hash = $2 where id = $1 and role = 'superadmin'`,
+      [session.sub, passwordHash]
+    );
+    await logActivity(client, session, "account.password_changed", {
+      type: "account",
+      id: session.sub,
+      label: session.email,
+    });
+  });
 
   return { success: true };
 }
@@ -92,11 +114,4 @@ async function currentPasswordMatches(userId: string, password: string): Promise
     [userId]
   );
   return rows[0] ? bcrypt.compare(password, rows[0].password_hash) : false;
-}
-
-function getErrorCode(error: unknown): string | undefined {
-  if (typeof error === "object" && error !== null && "code" in error) {
-    return (error as { code?: string }).code;
-  }
-  return undefined;
 }

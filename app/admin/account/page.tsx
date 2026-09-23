@@ -1,6 +1,6 @@
 import { requireRole } from "@/lib/auth/guard";
 import { LogoutButton } from "@/components/logout-button";
-import { SuperadminNav } from "@/components/superadmin-nav";
+import { AreaNav } from "@/components/area-nav";
 import { ChangeEmailForm, ChangePasswordForm } from "./account-forms";
 
 export default async function AccountPage() {
@@ -21,7 +21,7 @@ export default async function AccountPage() {
         <LogoutButton />
       </div>
 
-      <SuperadminNav current="/admin/account" />
+      <AreaNav role="superadmin" current="/admin/account" />
 
       <ChangeEmailForm currentEmail={session.email} />
       <ChangePasswordForm />

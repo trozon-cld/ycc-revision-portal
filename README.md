@@ -42,9 +42,10 @@ Status: in active development.
 
 ## Project structure
 
-- `app/` — routes: `/login`, `/admin/*` (Admin/Superadmin), `/dashboard` (Candidate), `/access-expired`
+- `app/` — routes: `/login`, `/admin/*` (Admin/Superadmin, including `/admin/activity` logs), `/dashboard` (Candidate), `/access-expired`
 - `lib/auth/` — JWT signing/verification, session cookie, role guard
-- `lib/db/pool.ts` — shared Postgres connection pool
+- `lib/db/` — shared Postgres pool and transaction helper
+- `lib/audit/` — activity and login logs (every loggable action is listed in `lib/audit/actions.ts`)
 - `proxy.ts` — route protection by role, block and expiry
 - `supabase/` — schema, migrations and seed
 

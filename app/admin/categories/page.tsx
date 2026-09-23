@@ -1,7 +1,7 @@
 import { requireRole } from "@/lib/auth/guard";
 import { pool } from "@/lib/db/pool";
 import { LogoutButton } from "@/components/logout-button";
-import { SuperadminNav } from "@/components/superadmin-nav";
+import { AreaNav } from "@/components/area-nav";
 import { CreateCategoryForm } from "./create-category-form";
 import { CategoryItem } from "./category-item";
 
@@ -37,7 +37,7 @@ export default async function CategoriesPage() {
         <LogoutButton />
       </div>
 
-      <SuperadminNav current="/admin/categories" />
+      <AreaNav role="superadmin" current="/admin/categories" />
 
       <CreateCategoryForm />
 

@@ -2,7 +2,7 @@ import { requireRole } from "@/lib/auth/guard";
 import { pool } from "@/lib/db/pool";
 import { customDateBounds, formatUkDate } from "@/lib/candidates/access";
 import { LogoutButton } from "@/components/logout-button";
-import { SuperadminNav } from "@/components/superadmin-nav";
+import { AreaNav } from "@/components/area-nav";
 import { CreateCandidateForm } from "./create-candidate-form";
 import { ChangeAdmin } from "./change-admin";
 import { CandidateManager } from "./candidate-manager";
@@ -70,7 +70,7 @@ export default async function CandidatesPage() {
         <LogoutButton />
       </div>
 
-      {isSuperadmin && <SuperadminNav current="/admin/candidates" />}
+      <AreaNav role={isSuperadmin ? "superadmin" : "admin"} current="/admin/candidates" />
 
       {!isSuperadmin && categories.length === 0 && (
         <p className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-base text-amber-900">
