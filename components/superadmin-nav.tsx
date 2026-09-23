@@ -3,6 +3,7 @@ import Link from "next/link";
 const LINKS = [
   { href: "/admin/admins", label: "Admins" },
   { href: "/admin/candidates", label: "Candidates" },
+  { href: "/admin/categories", label: "Categories" },
 ] as const;
 
 export function SuperadminNav({
@@ -11,7 +12,7 @@ export function SuperadminNav({
   current: (typeof LINKS)[number]["href"];
 }) {
   return (
-    <nav aria-label="Superadmin" className="flex gap-2">
+    <nav aria-label="Superadmin" className="flex flex-wrap gap-2">
       {LINKS.map((link) => {
         const isCurrent = link.href === current;
         return (
