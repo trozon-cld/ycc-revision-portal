@@ -5,13 +5,26 @@ create extension if not exists pgcrypto;
 
 create type role_type as enum ('superadmin', 'admin', 'candidate');
 
+-- A Candidate is scoped to one category at credential creation (e.g.
+-- Operative, Supervisor). Admins/Superadmins have no category — NULL.
+-- Distinct from the topics/questions stub tables below, which are reserved
+-- for the actual Prepare/Practice/Mock Test content *within* a category, a
+-- later feature.
+create table categories (
+  id uuid primary key default gen_random_uuid(),
+  name varchar not null unique,
+  created_at timestamptz not null default now()
+);
+
 create table users (
   id uuid primary key default gen_random_uuid(),
   email varchar not null unique,
   password_hash varchar not null,
   role role_type not null,
+  -- Candidates only. NULL for Admins/Superadmins.
+  category_id uuid references categories (id),
   -- Expiry/block checks apply only to candidates. Admins/Superadmins keep
-  -- these NULL and bypass the checks (see middleware).
+  -- these NULL and bypass the checks (see proxy.ts).
   access_start_at timestamptz,
   access_expires_at timestamptz,
   is_blocked boolean not null default false,

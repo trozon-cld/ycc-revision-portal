@@ -15,3 +15,15 @@
 insert into users (email, password_hash, role, access_start_at, access_expires_at, is_blocked)
 values ('REPLACE_WITH_EMAIL', 'REPLACE_WITH_BCRYPT_HASH', 'superadmin', null, null, false)
 on conflict (email) do update set password_hash = excluded.password_hash;
+
+-- Placeholder categories, so the Candidate-creation form has real options
+-- to assign. Rename/replace/add to these freely — category management
+-- (Admin creating categories via UI) isn't built yet, this is just seed
+-- data to unblock testing.
+insert into categories (name) values
+  ('General Operative'),
+  ('Skilled Trade'),
+  ('Supervisor'),
+  ('Site Manager'),
+  ('Specialist Role')
+on conflict (name) do nothing;

@@ -1,15 +1,10 @@
-import { redirect } from "next/navigation";
-import { getSession } from "@/lib/auth/session";
+import { requireRole } from "@/lib/auth/guard";
 import { LogoutButton } from "@/components/logout-button";
 
 // Placeholder landing page — proves Candidate login + role gating works.
 // Prepare/Practice/Mock Test sections come later.
 export default async function CandidateDashboard() {
-  const session = await getSession();
-
-  if (!session || session.role !== "candidate") {
-    redirect("/login");
-  }
+  const session = await requireRole(["candidate"]);
 
   const expiryLabel = session.accessExpiresAt
     ? new Date(session.accessExpiresAt).toLocaleDateString("en-GB", {
