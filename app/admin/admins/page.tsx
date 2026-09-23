@@ -3,18 +3,24 @@ import { pool } from "@/lib/db/pool";
 import { LogoutButton } from "@/components/logout-button";
 import { SuperadminNav } from "@/components/superadmin-nav";
 import { CreateAdminForm } from "./create-admin-form";
+import { AdminItem } from "./admin-item";
 
 interface AdminRow {
   id: string;
   email: string;
-  created_at: string;
+  candidate_count: number;
 }
 
 export default async function AdminsPage() {
   const session = await requireRole(["superadmin"]);
 
   const { rows: admins } = await pool.query<AdminRow>(
-    `select id, email, created_at from users where role = 'admin' order by created_at desc`
+    `select a.id, a.email, count(c.id)::int as candidate_count
+     from users a
+     left join users c on c.admin_id = a.id
+     where a.role = 'admin'
+     group by a.id, a.email, a.created_at
+     order by a.created_at desc`
   );
 
   return (
@@ -42,9 +48,12 @@ export default async function AdminsPage() {
         </h2>
         <ul className="mt-3 divide-y divide-ink/15 rounded-lg border border-ink/15">
           {admins.map((admin) => (
-            <li key={admin.id} className="p-4 text-base text-ink">
-              {admin.email}
-            </li>
+            <AdminItem
+              key={admin.id}
+              id={admin.id}
+              email={admin.email}
+              candidateCount={admin.candidate_count}
+            />
           ))}
           {admins.length === 0 && (
             <li className="p-4 text-base text-ink/70">No admins yet.</li>
