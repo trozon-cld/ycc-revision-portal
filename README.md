@@ -1,36 +1,51 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# YCC Revision Portal
 
-## Getting Started
+Revision platform for construction site workers preparing for the CITB HS&E test — designed to help them prepare with confidence.
 
-First, run the development server:
+Status: in active development.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Stack
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- Next.js 16 (App Router, TypeScript, Tailwind CSS v4)
+- PostgreSQL on Supabase (database only, raw SQL via `pg`)
+- Custom JWT auth (jose + bcryptjs, HTTP-only cookies)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Roles
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Superadmin** — manages Admins and has access to all candidates.
+- **Admin** — creates and manages candidates, each scoped to a category with an access expiry.
+- **Candidate** — logs in with an allotted credential to revise for their category.
 
-## Learn More
+## Getting started
 
-To learn more about Next.js, take a look at the following resources:
+1. Install dependencies:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+   ```bash
+   npm install
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+2. Copy `.env.example` to `.env.local` and fill in `DATABASE_URL` (Supabase pooler string) and `JWT_SECRET`.
 
-## Deploy on Vercel
+3. In the Supabase SQL editor, run `supabase/schema.sql` for a fresh database. The files in `supabase/migrations/` are changes for databases created from an earlier version of the schema, so skip them on a fresh setup.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+4. Generate the Superadmin password hash, paste it and the email into `supabase/seed.sql`, then run that file:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+   ```bash
+   npm run hash -- "YourStrongPassword"
+   ```
+
+5. Start the dev server and open [http://localhost:3000](http://localhost:3000):
+
+   ```bash
+   npm run dev
+   ```
+
+## Project structure
+
+- `app/` — routes: `/login`, `/admin/*` (Admin/Superadmin), `/dashboard` (Candidate), `/access-expired`
+- `lib/auth/` — JWT signing/verification, session cookie, role guard
+- `lib/db/pool.ts` — shared Postgres connection pool
+- `proxy.ts` — route protection by role, block and expiry
+- `supabase/` — schema, migrations and seed
+
+This project runs Next.js 16, which differs from older versions. See `AGENTS.md` and `node_modules/next/dist/docs/` before changing routing, data fetching or config.

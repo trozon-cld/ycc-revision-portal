@@ -48,8 +48,8 @@ export default async function CandidatesPage() {
 
       {categories.length === 0 && (
         <p className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-base text-amber-900">
-          No categories exist yet — run the categories migration in Supabase
-          before creating a candidate.
+          No categories are available yet. A category is needed before a
+          candidate can be created.
         </p>
       )}
 

@@ -27,8 +27,7 @@ export default function LoginPage() {
         return;
       }
 
-      // Full navigation (not client-side routing) so Middleware evaluates
-      // the request fresh with the cookie the browser just stored.
+      // Full navigation so Proxy sees the cookie the browser just stored.
       window.location.href = data.redirectTo;
     } catch {
       setError("Something went wrong. Please try again.");

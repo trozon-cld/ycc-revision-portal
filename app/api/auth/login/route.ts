@@ -4,10 +4,8 @@ import { pool } from "@/lib/db/pool";
 import { signToken } from "@/lib/auth/jwt";
 import { setAuthCookie } from "@/lib/auth/cookies";
 
-// Login always succeeds on valid credentials, regardless of a candidate's
-// block/expiry status — Middleware is what redirects a blocked/expired
-// candidate to /access-expired when they hit a protected route. This
-// matches the Day 1 verification steps (log in, then confirm the redirect).
+// Valid credentials always log in, even if blocked/expired — proxy.ts
+// then redirects that candidate to /access-expired.
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
