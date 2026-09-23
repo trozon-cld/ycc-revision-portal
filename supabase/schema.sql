@@ -4,8 +4,7 @@ create extension if not exists pgcrypto;
 
 create type role_type as enum ('superadmin', 'admin', 'candidate');
 
--- A Candidate's assignment (e.g. Operative). Distinct from topics/questions
--- below, which are reserved for future Prepare/Practice/Mock Test content.
+-- A Candidate's assignment (e.g. Operative).
 create table categories (
   id uuid primary key default gen_random_uuid(),
   name varchar not null unique,
@@ -34,15 +33,5 @@ create table login_logs (
   logged_in_at timestamptz not null default now()
 );
 
--- Stub tables, reserved for future modules. No columns beyond identity yet —
--- real shape comes when we design Prepare/Practice/Mock Test content.
-create table topics (
-  id uuid primary key default gen_random_uuid(),
-  created_at timestamptz not null default now()
-);
-
-create table questions (
-  id uuid primary key default gen_random_uuid(),
-  topic_id uuid references topics (id) on delete cascade,
-  created_at timestamptz not null default now()
-);
+-- topics/questions intentionally omitted — added when we design
+-- Prepare/Practice/Mock Test content.
