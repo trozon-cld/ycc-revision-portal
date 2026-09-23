@@ -1,12 +1,4 @@
--- YCC Revision Portal — adds `categories`
--- Run this in the Supabase SQL editor (your DB already has schema.sql v1
--- applied, so this is the delta, not a full re-run).
---
--- A Candidate is scoped to one category at credential creation (e.g.
--- Operative, Supervisor). Admins/Superadmins have no category — NULL.
--- Distinct from the topics/questions stub tables, which are reserved for
--- the actual Prepare/Practice/Mock Test content *within* a category, a
--- later feature — not the same thing as categories.
+-- Delta for a DB that already has schema.sql v1 applied (not a full re-run).
 
 create table categories (
   id uuid primary key default gen_random_uuid(),
@@ -17,10 +9,8 @@ create table categories (
 alter table users
   add column category_id uuid references categories (id);
 
--- Placeholder categories, so the Candidate-creation form has real options
--- to assign. Rename/replace/add to these freely — category management
--- (Admin creating categories via UI) isn't built yet, this is just seed
--- data to unblock testing.
+-- Placeholders so the Candidate-creation form has real options — rename
+-- freely, category management isn't built yet.
 insert into categories (name) values
   ('General Operative'),
   ('Skilled Trade'),

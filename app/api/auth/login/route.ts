@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { pool } from "@/lib/db/pool";
 import { signToken } from "@/lib/auth/jwt";
-import { AUTH_COOKIE_NAME, SESSION_DURATION_SECONDS } from "@/lib/auth/constants";
+import { setAuthCookie } from "@/lib/auth/cookies";
 
 // Login always succeeds on valid credentials, regardless of a candidate's
 // block/expiry status — Middleware is what redirects a blocked/expired
@@ -66,13 +66,6 @@ export async function POST(request: NextRequest) {
 
   const redirectTo = user.role === "candidate" ? "/dashboard" : "/admin";
 
-  const response = NextResponse.json({ role: user.role, redirectTo });
-  response.cookies.set(AUTH_COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "lax",
-    path: "/",
-    maxAge: SESSION_DURATION_SECONDS,
-  });
-  return response;
+  await setAuthCookie(token);
+  return NextResponse.json({ role: user.role, redirectTo });
 }

@@ -2,10 +2,8 @@ import { cookies } from "next/headers";
 import { verifyToken, type SessionPayload } from "./jwt";
 import { AUTH_COOKIE_NAME } from "./constants";
 
-// Server Components / Server Actions helper — reads and verifies the
-// session cookie. Middleware already gates /admin/* and /dashboard/*, but
-// pages check again defensively rather than trusting that every request
-// necessarily passed through it.
+// Reads and verifies the session cookie, for use in Server
+// Components/Actions.
 export async function getSession(): Promise<SessionPayload | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;

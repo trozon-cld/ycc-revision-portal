@@ -1,15 +1,11 @@
--- YCC Revision Portal — Day 1 schema
--- Run this in the Supabase SQL editor.
+-- Run in the Supabase SQL editor.
 
 create extension if not exists pgcrypto;
 
 create type role_type as enum ('superadmin', 'admin', 'candidate');
 
--- A Candidate is scoped to one category at credential creation (e.g.
--- Operative, Supervisor). Admins/Superadmins have no category — NULL.
--- Distinct from the topics/questions stub tables below, which are reserved
--- for the actual Prepare/Practice/Mock Test content *within* a category, a
--- later feature.
+-- A Candidate's assignment (e.g. Operative). Distinct from topics/questions
+-- below, which are reserved for future Prepare/Practice/Mock Test content.
 create table categories (
   id uuid primary key default gen_random_uuid(),
   name varchar not null unique,

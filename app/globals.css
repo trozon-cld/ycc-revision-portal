@@ -10,19 +10,15 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-google-sans);
 
-  /* Brand palette — YCC Revision Portal Planned Brand Book.
-     Used as bg-primary / text-primary / border-accent / etc. everywhere,
-     plus opacity modifiers (e.g. text-ink/70, border-ink/15) for tints
-     instead of introducing separate gray shades. */
+  /* Brand palette. Use with opacity modifiers (text-ink/70) for tints
+     instead of separate gray shades. */
   --color-primary: #005da1; /* Deep Cobalt */
   --color-accent: #00aac5; /* Lagoon Blue */
   --color-ink: #1e293b; /* Navy Ink */
   --color-surface: #ffffff; /* Pure White */
 }
 
-/* Forced light mode for now — no dark variant of the brand palette has
-   been designed yet. Revisit as a deliberate decision later, not as a
-   side effect of someone's OS theme. */
+/* Forced light mode — no dark variant of the brand palette exists yet. */
 html {
   color-scheme: light;
 }

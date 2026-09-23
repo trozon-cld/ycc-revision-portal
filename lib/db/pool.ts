@@ -1,14 +1,7 @@
 import { Pool } from "pg";
 
-// Used from Route Handlers / Server Actions (Node runtime). Proxy
-// (proxy.ts) uses JWT claims instead of calling this directly — see its
-// comment for why, even though Next 16's Proxy can run Node code now.
-//
-// DATABASE_URL: use Supabase's connection pooler string (port 6543), not
-// the direct connection (port 5432). Two reasons: it avoids exhausting
-// Postgres connections once deployed serverless, and — as found during Day
-// 1 testing — some networks block outbound 5432 entirely, causing
-// ETIMEDOUT, while the pooler's port works. See .env.example.
+// Route Handlers / Server Actions only — proxy.ts uses JWT claims instead
+// (see its comment). DATABASE_URL should be the pooler string; see .env.example.
 
 declare global {
   // eslint-disable-next-line no-var

@@ -11,8 +11,6 @@ export async function createAdmin(
   _prevState: CreateAdminState,
   formData: FormData
 ): Promise<CreateAdminState> {
-  // Defense in depth: the page already gates this route, but a Server
-  // Action is its own callable endpoint and must not trust that.
   await requireRole(["superadmin"]);
 
   const email = String(formData.get("email") ?? "")

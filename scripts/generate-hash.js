@@ -1,9 +1,5 @@
 #!/usr/bin/env node
-// Generates a bcrypt hash for a password, to paste into supabase/seed.sql
-// (or use whenever you need to rotate the Superadmin password by hand).
-//
-// Usage:
-//   npm run hash -- "YourStrongPassword"
+// Usage: npm run hash -- "YourStrongPassword"
 
 const bcrypt = require("bcryptjs");
 

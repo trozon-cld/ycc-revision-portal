@@ -6,6 +6,7 @@ const googleSans = Google_Sans({
   variable: "--font-google-sans",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
+  // Silences a harmless warning — Next has no fallback metrics for this font yet.
   adjustFontFallback: false,
 });
 

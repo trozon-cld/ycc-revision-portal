@@ -2,12 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "@/lib/auth/jwt";
 import { AUTH_COOKIE_NAME } from "@/lib/auth/constants";
 
-// Day 1: claims-based guard. Role, block status, and candidate expiry are
-// all read from the JWT itself, no DB call here. (Next 16 note: Proxy now
-// defaults to the Node.js runtime, so a live `pg` check here is actually
-// possible now — unlike old Edge-only Middleware. We're keeping claims-only
-// for Day 1 simplicity, as agreed; revisit if live block/expiry enforcement
-// mid-session matters later.)
+// Claims-based guard: role/block/expiry come from the JWT, no DB call.
+// Next 16's Proxy can run Node code now, so a live check is possible later.
 
 const ADMIN_PREFIX = "/admin";
 const CANDIDATE_PREFIX = "/dashboard";

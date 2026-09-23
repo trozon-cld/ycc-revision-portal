@@ -3,9 +3,8 @@ import { SESSION_DURATION } from "./constants";
 
 export type UserRole = "superadmin" | "admin" | "candidate";
 
-// What we bake into the JWT at login (Day 1: claims-based session, no live
-// DB check in Middleware — see project notes on the trade-off: a block or
-// expiry change by an Admin takes effect on next login, not mid-session).
+// Claims-based session: role/block/expiry are baked in at login, so a
+// change by an Admin takes effect on next login, not mid-session.
 export interface SessionPayload extends JWTPayload {
   sub: string; // users.id
   email: string;
