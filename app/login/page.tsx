@@ -40,17 +40,17 @@ export default function LoginPage() {
     <div className="flex flex-1 items-center justify-center p-4">
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-sm space-y-5 rounded-xl border border-gray-200 p-6 sm:p-8"
+        className="w-full max-w-sm space-y-5 rounded-xl border border-ink/15 p-6 sm:p-8"
       >
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Log in</h1>
-          <p className="mt-1 text-base text-gray-600">YCC Revision Portal</p>
+          <h1 className="text-2xl font-semibold text-ink">Log in</h1>
+          <p className="mt-1 text-base text-ink/70">YCC Revision Portal</p>
         </div>
 
         <div className="space-y-2">
           <label
             htmlFor="email"
-            className="block text-base font-medium text-gray-900"
+            className="block text-base font-medium text-ink"
           >
             Email
           </label>
@@ -62,14 +62,14 @@ export default function LoginPage() {
             required
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base text-gray-900 focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900"
+            className="w-full rounded-lg border border-ink/25 px-4 py-3 text-base text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
           />
         </div>
 
         <div className="space-y-2">
           <label
             htmlFor="password"
-            className="block text-base font-medium text-gray-900"
+            className="block text-base font-medium text-ink"
           >
             Password
           </label>
@@ -81,7 +81,7 @@ export default function LoginPage() {
             required
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base text-gray-900 focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900"
+            className="w-full rounded-lg border border-ink/25 px-4 py-3 text-base text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
           />
         </div>
 
@@ -94,7 +94,7 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full rounded-lg bg-gray-900 px-4 py-3 text-base font-medium text-white transition-colors hover:bg-gray-700 disabled:opacity-60"
+          className="w-full rounded-lg bg-primary px-4 py-3 text-base font-medium text-surface transition-colors hover:bg-primary/90 disabled:opacity-60"
         >
           {isSubmitting ? "Logging in…" : "Log in"}
         </button>

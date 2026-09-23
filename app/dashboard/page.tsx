@@ -16,7 +16,7 @@ export default async function CandidateDashboard() {
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 p-4 text-center">
-      <h1 className="text-2xl font-semibold text-gray-900">
+      <h1 className="text-2xl font-semibold text-ink">
         Welcome, {session.email}
       </h1>
 
@@ -27,7 +27,7 @@ export default async function CandidateDashboard() {
         </div>
       )}
 
-      <p className="max-w-sm text-base text-gray-600">
+      <p className="max-w-sm text-base text-ink/70">
         This is a placeholder — Prepare, Practice, and Mock Test sections
         come later.
       </p>

@@ -35,11 +35,11 @@ export default async function CandidatesPage() {
     <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 p-4 py-8">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-base uppercase tracking-wide text-gray-500">
+          <p className="text-base uppercase tracking-wide text-primary">
             Admin
           </p>
-          <h1 className="text-2xl font-semibold text-gray-900">Candidates</h1>
-          <p className="mt-1 text-base text-gray-600">
+          <h1 className="text-2xl font-semibold text-ink">Candidates</h1>
+          <p className="mt-1 text-base text-ink/70">
             Signed in as {session.email}
           </p>
         </div>
@@ -56,22 +56,22 @@ export default async function CandidatesPage() {
       <CreateCandidateForm categories={categories} />
 
       <div>
-        <h2 className="text-lg font-medium text-gray-900">
+        <h2 className="text-lg font-medium text-ink">
           {candidates.length} candidate{candidates.length === 1 ? "" : "s"}
         </h2>
-        <ul className="mt-3 divide-y divide-gray-200 rounded-lg border border-gray-200">
+        <ul className="mt-3 divide-y divide-ink/15 rounded-lg border border-ink/15">
           {candidates.map((candidate) => (
             <li
               key={candidate.id}
-              className="flex flex-col gap-1 p-4 text-base text-gray-900 sm:flex-row sm:items-center sm:justify-between"
+              className="flex flex-col gap-1 p-4 text-base text-ink sm:flex-row sm:items-center sm:justify-between"
             >
               <div>
                 <p className="font-medium">{candidate.email}</p>
-                <p className="text-gray-600">
+                <p className="text-ink/70">
                   {candidate.category_name ?? "No category"}
                 </p>
               </div>
-              <div className="text-gray-600">
+              <div className="text-ink/70">
                 {candidate.is_blocked ? (
                   <span className="text-red-700">Blocked</span>
                 ) : candidate.access_expires_at ? (
@@ -86,7 +86,7 @@ export default async function CandidatesPage() {
             </li>
           ))}
           {candidates.length === 0 && (
-            <li className="p-4 text-base text-gray-600">
+            <li className="p-4 text-base text-ink/70">
               No candidates yet.
             </li>
           )}

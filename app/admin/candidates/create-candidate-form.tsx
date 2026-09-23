@@ -18,14 +18,14 @@ export function CreateCandidateForm({
   return (
     <form
       action={formAction}
-      className="space-y-4 rounded-xl border border-gray-200 p-6"
+      className="space-y-4 rounded-xl border border-ink/15 p-6"
     >
-      <h2 className="text-lg font-medium text-gray-900">Create candidate</h2>
+      <h2 className="text-lg font-medium text-ink">Create candidate</h2>
 
       <div className="space-y-2">
         <label
           htmlFor="email"
-          className="block text-base font-medium text-gray-900"
+          className="block text-base font-medium text-ink"
         >
           Email
         </label>
@@ -34,14 +34,14 @@ export function CreateCandidateForm({
           name="email"
           type="email"
           required
-          className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base text-gray-900 focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900"
+          className="w-full rounded-lg border border-ink/25 px-4 py-3 text-base text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
         />
       </div>
 
       <div className="space-y-2">
         <label
           htmlFor="password"
-          className="block text-base font-medium text-gray-900"
+          className="block text-base font-medium text-ink"
         >
           Password
         </label>
@@ -51,14 +51,14 @@ export function CreateCandidateForm({
           type="password"
           required
           minLength={8}
-          className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base text-gray-900 focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900"
+          className="w-full rounded-lg border border-ink/25 px-4 py-3 text-base text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
         />
       </div>
 
       <div className="space-y-2">
         <label
           htmlFor="categoryId"
-          className="block text-base font-medium text-gray-900"
+          className="block text-base font-medium text-ink"
         >
           Category
         </label>
@@ -67,7 +67,7 @@ export function CreateCandidateForm({
           name="categoryId"
           required
           defaultValue=""
-          className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base text-gray-900 focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900"
+          className="w-full rounded-lg border border-ink/25 px-4 py-3 text-base text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
         >
           <option value="" disabled>
             Select a category
@@ -80,7 +80,7 @@ export function CreateCandidateForm({
         </select>
       </div>
 
-      <p className="text-base text-gray-600">
+      <p className="text-base text-ink/70">
         Access is granted for 30 days from creation.
       </p>
 
@@ -96,7 +96,7 @@ export function CreateCandidateForm({
       <button
         type="submit"
         disabled={isPending}
-        className="rounded-lg bg-gray-900 px-5 py-3 text-base font-medium text-white hover:bg-gray-700 disabled:opacity-60"
+        className="rounded-lg bg-primary px-5 py-3 text-base font-medium text-surface hover:bg-primary/90 disabled:opacity-60"
       >
         {isPending ? "Creating…" : "Create candidate"}
       </button>
