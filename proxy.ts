@@ -3,17 +3,18 @@ import { verifyToken } from "@/lib/auth/jwt";
 import { AUTH_COOKIE_NAME } from "@/lib/auth/constants";
 
 // Day 1: claims-based guard. Role, block status, and candidate expiry are
-// all read from the JWT itself — no DB call here (see lib/db/pool.ts's note
-// on why `pg` can't run in Middleware's Edge runtime). Trade-off: an Admin
-// blocking a candidate or an expiry passing takes effect on that
-// candidate's next login, not mid-session. Flagged for revisit later.
+// all read from the JWT itself, no DB call here. (Next 16 note: Proxy now
+// defaults to the Node.js runtime, so a live `pg` check here is actually
+// possible now — unlike old Edge-only Middleware. We're keeping claims-only
+// for Day 1 simplicity, as agreed; revisit if live block/expiry enforcement
+// mid-session matters later.)
 
 const ADMIN_PREFIX = "/admin";
 const CANDIDATE_PREFIX = "/dashboard";
 const LOGIN_PATH = "/login";
 const EXPIRED_PATH = "/access-expired";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
   const session = token ? await verifyToken(token) : null;
