@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { TEXT_SIZES, type BookPageData, type ResolvedMedia, type TextSize } from "@/lib/content/book";
+import { DEFAULT_TEXT_SIZE, TEXT_SIZES, type BookPageData, type ResolvedMedia, type TextSize } from "@/lib/content/book";
 import { BookReader } from "@/components/learning/book-reader";
 import { buttonClass } from "@/components/admin/styles";
 
@@ -15,7 +15,7 @@ type Device = keyof typeof DEVICES;
 // Renders the reader at a real device size, scaled down to fit the admin page when needed.
 export function SamplePreview({ pages, media }: { pages: BookPageData[]; media: ResolvedMedia }) {
   const [device, setDevice] = useState<Device>("desktop");
-  const [textSize, setTextSize] = useState<TextSize>(TEXT_SIZES[0]);
+  const [textSize, setTextSize] = useState<TextSize>(DEFAULT_TEXT_SIZE);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [available, setAvailable] = useState({ width: 0, height: 0 });
 

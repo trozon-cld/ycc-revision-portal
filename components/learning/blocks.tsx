@@ -70,11 +70,14 @@ function PictureView({ block, media }: { block: PictureBlock; media: ResolvedMed
           height={picture.height}
           loading="lazy"
           decoding="async"
-          // Capped to the sheet height (set by the reader) so a picture always fits on one sheet.
-          className="mx-auto block h-auto max-h-[var(--book-picture-max,60vh)] w-auto max-w-full rounded-md"
+          className="mx-auto block h-auto rounded-md"
+          style={fitToSheet(picture.width / picture.height)}
         />
       ) : (
-        <div className="flex aspect-[4/3] w-full items-center justify-center rounded-md bg-slate-100 text-[0.85em] text-slate-700">
+        <div
+          className="mx-auto flex items-center justify-center rounded-md bg-slate-100 text-[0.85em] text-slate-700"
+          style={fitToSheet(4 / 3)}
+        >
           Picture unavailable
         </div>
       )}
@@ -85,6 +88,15 @@ function PictureView({ block, media }: { block: PictureBlock; media: ResolvedMed
       )}
     </figure>
   );
+}
+
+// Size comes from the known aspect ratio, never from the loaded file, so pages are counted the
+// same before and after pictures arrive. Capped to the sheet height set by the reader.
+function fitToSheet(ratio: number) {
+  return {
+    aspectRatio: String(ratio),
+    width: `min(100%, calc(var(--book-picture-max, 60vh) * ${ratio.toFixed(4)}))`,
+  };
 }
 
 const CALLOUT_STYLE = {

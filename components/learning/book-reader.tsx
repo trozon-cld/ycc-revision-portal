@@ -5,12 +5,13 @@ import { buildSheets, type BookPageData, type ResolvedMedia, type Sheet, type Te
 import { BlockList } from "./blocks";
 
 // Fixed-size book sheets. Each authored page is laid out in CSS columns one sheet wide; extra
-// columns become "continued" sheets. Spread (two sheets) when the reader is at least 1024px wide.
+// columns become extra sheets. Spread (two sheets) when the reader is at least 1024px wide.
 
 const SPREAD_MIN_WIDTH = 1024;
 const SHEET_RATIO = 0.75; // width / height of a sheet in a spread
 const STAGE_PADDING = 12;
 const NARROW_SHEET = 480;
+const PICTURE_SHARE = 0.6;
 
 type Geometry = {
   spread: boolean;
@@ -154,14 +155,16 @@ export function BookReader({
     }
   }
 
-  const status = describeView(visible, pages);
+  const totalPages = sheets.reduce((count, sheet) => (sheet.kind === "page" ? count + 1 : count), 0);
+  const status = describeView(visible, totalPages);
 
   const sheetStyle = geometry
     ? ({
         width: geometry.sheetWidth,
         height: geometry.sheetHeight,
         fontSize: textSize,
-        "--book-picture-max": `${Math.max(120, geometry.contentHeight - textSize * 3.2)}px`,
+        // Pictures take at most ~60% of the page height, so they can share a page with their text.
+        "--book-picture-max": `${Math.max(120, Math.round(geometry.contentHeight * PICTURE_SHARE))}px`,
       } as CSSProperties)
     : undefined;
 
@@ -283,13 +286,10 @@ function SheetView({
   }
 
   const page = pages[sheet.pageIndex];
-  const continued = sheet.part > 0;
+  // Later parts of a page repeat its text for layout only; screen readers get it once, from the first part.
+  const repeat = sheet.part > 0;
   return (
-    <article
-      aria-label={`Page ${page.number}${continued ? ", continued" : ""}`}
-      className={`flex shrink-0 flex-col ${edge}`}
-      style={style}
-    >
+    <article aria-label={`Page ${sheet.number}`} className={`flex shrink-0 flex-col ${edge}`} style={style}>
       <header
         className="flex items-end justify-between gap-3 overflow-hidden border-b border-slate-200 pb-[0.35em] text-[0.72em] text-slate-700"
         style={{ height: geometry.headerHeight, marginLeft: geometry.padX, marginRight: geometry.padX }}
@@ -301,10 +301,9 @@ function SheetView({
         </span>
       </header>
 
-      {/* Continuation sheets repeat the page's text for layout only; screen readers get it once, from the first sheet. */}
       <div
         className="overflow-hidden"
-        aria-hidden={continued || undefined}
+        aria-hidden={repeat || undefined}
         style={{
           width: geometry.contentWidth,
           height: geometry.contentHeight,
@@ -316,24 +315,18 @@ function SheetView({
       </div>
 
       <footer
+        aria-hidden="true"
         className="flex items-center justify-center text-[0.8em] text-slate-700"
         style={{ height: geometry.footerHeight }}
       >
-        {continued && <span className="sr-only">Continued. </span>}
-        <span aria-hidden={continued || undefined}>
-          {page.number}
-          {continued && " · continued"}
-        </span>
+        {sheet.number}
       </footer>
     </article>
   );
 }
 
-function describeView(visible: Sheet[], pages: BookPageData[]) {
-  const labels = visible.flatMap((sheet) =>
-    sheet.kind === "page" ? [`${pages[sheet.pageIndex].number}${sheet.part > 0 ? " (continued)" : ""}`] : []
-  );
-  if (labels.length === 0) return "";
-  const unique = [...new Set(labels)];
-  return unique.length === 1 ? `Page ${unique[0]}` : `Pages ${unique.join(" and ")}`;
+function describeView(visible: Sheet[], total: number) {
+  const numbers = visible.flatMap((sheet) => (sheet.kind === "page" ? [sheet.number] : []));
+  if (numbers.length === 0 || total === 0) return "";
+  return numbers.length === 1 ? `Page ${numbers[0]} of ${total}` : `Pages ${numbers[0]}–${numbers[1]} of ${total}`;
 }

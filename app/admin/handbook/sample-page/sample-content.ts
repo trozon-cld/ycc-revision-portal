@@ -6,7 +6,7 @@ const FILLER = [
   "This is **placeholder text** used to check how a Handbook page looks. It has no real meaning and will be replaced by content written by an admin.",
   "Paragraphs like this one show the size of the text, the space between lines and how a long passage flows from one page onto the next.",
   "When a page has more content than fits, the rest continues on the next sheet. Pictures and boxes are never cut in half.",
-  "Changing the text size with A− and A+ makes every page re-flow. The reader stays on the same page, even if it now takes more sheets.",
+  "Changing the text size with A− and A+ makes every page re-flow, and the page numbers update to match. The reader stays at the same place in the text.",
 ];
 
 const id = (n: number) => `5a3e0000-0000-4000-8000-${String(n).padStart(12, "0")}`;
@@ -49,7 +49,7 @@ const raw = [
     blocks: [
       { type: "heading", level: 1, text: "The next chapter starts on a fresh spread" },
       { type: "paragraph", text: FILLER[3] },
-      { type: "picture", mediaId: SAMPLE_PICTURE_TALL, caption: "A tall picture is sized to fit on one sheet." },
+      { type: "picture", mediaId: SAMPLE_PICTURE_TALL, caption: "Pictures take at most about 60% of a page, so text fits on the same page." },
       { type: "paragraph", text: FILLER[0] },
     ],
   },
@@ -66,7 +66,6 @@ export const SAMPLE_PAGES: BookPageData[] = raw.map((page, index) => {
   if (!parsed.ok) throw new Error(`Sample page ${index + 1} is invalid: ${parsed.error}`);
   return {
     id: `sample-page-${index + 1}`,
-    number: index + 1,
     chapterId: page.chapter,
     sectionLabel: CHAPTERS[page.chapter].section,
     chapterLabel: CHAPTERS[page.chapter].chapter,
