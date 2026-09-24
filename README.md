@@ -44,6 +44,7 @@ Status: in active development.
 
 - `app/` — routes: `/login`, `/admin/*` (Admin/Superadmin, including `/admin/activity` logs), `/dashboard` (Candidate), `/access-expired`
 - `lib/auth/` — JWT signing/verification, session cookie, role guard
+- `components/admin/` — compact admin console UI (sidebar shell, tables, row menus, slide-in panels); admin pages must build from these. Candidate pages keep the large, simple style.
 - `lib/db/` — shared Postgres pool and transaction helper
 - `lib/audit/` — activity and login logs (every loggable action is listed in `lib/audit/actions.ts`)
 - `proxy.ts` — route protection by role, block and expiry

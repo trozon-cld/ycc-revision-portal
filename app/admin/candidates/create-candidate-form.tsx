@@ -1,12 +1,13 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { createCandidate, type CreateCandidateState } from "./actions";
+import { ActionForm } from "@/components/admin/action-form";
+import { Field } from "@/components/admin/field";
+import { PanelButton } from "@/components/admin/row-actions";
+import { inputClass } from "@/components/admin/styles";
+import { createCandidate } from "./actions";
 import { AccessLengthField } from "./access-length-field";
 
-const initialState: CreateCandidateState = {};
-
-export function CreateCandidateForm({
+export function NewCandidateButton({
   categories,
   minDate,
   maxDate,
@@ -15,106 +16,51 @@ export function CreateCandidateForm({
   minDate: string;
   maxDate: string;
 }) {
-  // Bumped on success so the access field resets along with the form.
-  const [resetKey, setResetKey] = useState(0);
-  const [state, formAction, isPending] = useActionState(
-    async (prev: CreateCandidateState, formData: FormData) => {
-      const result = await createCandidate(prev, formData);
-      if (result.success) setResetKey((key) => key + 1);
-      return result;
-    },
-    initialState
-  );
-
   return (
-    <form
-      action={formAction}
-      className="space-y-4 rounded-xl border border-ink/15 p-6"
-    >
-      <h2 className="text-lg font-medium text-ink">Create candidate</h2>
-
-      <div className="space-y-2">
-        <label
-          htmlFor="email"
-          className="block text-base font-medium text-ink"
+    <PanelButton label="New candidate" title="New candidate">
+      {(close) => (
+        <ActionForm
+          action={createCandidate}
+          submitLabel="Create candidate"
+          pendingLabel="Creating…"
+          successMessage="Candidate created."
+          onSuccess={close}
+          onCancel={close}
         >
-          Email
-        </label>
-        <input
-          id="email"
-          name="email"
-          type="email"
-          required
-          className="w-full rounded-lg border border-ink/25 px-4 py-3 text-base text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
-        />
-      </div>
-
-      <div className="space-y-2">
-        <label
-          htmlFor="password"
-          className="block text-base font-medium text-ink"
-        >
-          Password
-        </label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          required
-          minLength={8}
-          className="w-full rounded-lg border border-ink/25 px-4 py-3 text-base text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
-        />
-      </div>
-
-      <div className="space-y-2">
-        <label
-          htmlFor="categoryId"
-          className="block text-base font-medium text-ink"
-        >
-          Category
-        </label>
-        <select
-          id="categoryId"
-          name="categoryId"
-          required
-          defaultValue=""
-          className="w-full rounded-lg border border-ink/25 px-4 py-3 text-base text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
-        >
-          <option value="" disabled>
-            Select a category
-          </option>
-          {categories.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <AccessLengthField
-        key={resetKey}
-        idPrefix="create"
-        label="Access length"
-        minDate={minDate}
-        maxDate={maxDate}
-      />
-
-      {state.error && (
-        <p role="alert" className="text-base text-red-700">
-          {state.error}
-        </p>
+          {categories.length === 0 && (
+            <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              No categories are available yet. A category is needed before a candidate can be created.
+            </p>
+          )}
+          <Field id="new-candidate-email" label="Email">
+            <input id="new-candidate-email" name="email" type="email" required autoComplete="off" className={inputClass} />
+          </Field>
+          <Field id="new-candidate-password" label="Password" hint="At least 8 characters.">
+            <input
+              id="new-candidate-password"
+              name="password"
+              type="password"
+              required
+              minLength={8}
+              autoComplete="new-password"
+              className={inputClass}
+            />
+          </Field>
+          <Field id="new-candidate-category" label="Category">
+            <select id="new-candidate-category" name="categoryId" required defaultValue="" className={inputClass}>
+              <option value="" disabled>
+                Select a category
+              </option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <AccessLengthField idPrefix="new-candidate" label="Access length" minDate={minDate} maxDate={maxDate} />
+        </ActionForm>
       )}
-      {state.success && (
-        <p className="text-base text-green-700">Candidate created.</p>
-      )}
-
-      <button
-        type="submit"
-        disabled={isPending}
-        className="rounded-lg bg-primary px-5 py-3 text-base font-medium text-surface hover:bg-primary/90 disabled:opacity-60"
-      >
-        {isPending ? "Creating…" : "Create candidate"}
-      </button>
-    </form>
+    </PanelButton>
   );
 }

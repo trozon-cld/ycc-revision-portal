@@ -1,30 +1,25 @@
 import { requireRole } from "@/lib/auth/guard";
-import { LogoutButton } from "@/components/logout-button";
-import { AreaNav } from "@/components/area-nav";
+import { PageHeader } from "@/components/admin/page-header";
+import { cardClass } from "@/components/admin/styles";
 import { ChangeEmailForm, ChangePasswordForm } from "./account-forms";
 
 export default async function AccountPage() {
   const session = await requireRole(["superadmin"]);
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 p-4 py-8">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-base uppercase tracking-wide text-primary">
-            Superadmin
-          </p>
-          <h1 className="text-2xl font-semibold text-ink">My account</h1>
-          <p className="mt-1 break-all text-base text-ink/70">
-            Signed in as {session.email}
-          </p>
-        </div>
-        <LogoutButton />
+    <>
+      <PageHeader title="My account" description={session.email} />
+
+      <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+        <section className={`${cardClass} p-5`}>
+          <h2 className="mb-4 text-base font-semibold text-ink">Change email</h2>
+          <ChangeEmailForm currentEmail={session.email} />
+        </section>
+        <section className={`${cardClass} p-5`}>
+          <h2 className="mb-4 text-base font-semibold text-ink">Change password</h2>
+          <ChangePasswordForm />
+        </section>
       </div>
-
-      <AreaNav role="superadmin" current="/admin/account" />
-
-      <ChangeEmailForm currentEmail={session.email} />
-      <ChangePasswordForm />
-    </div>
+    </>
   );
 }

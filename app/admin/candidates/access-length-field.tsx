@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import { ACCESS_PRESET_DAYS, DEFAULT_ACCESS_DAYS } from "@/lib/candidates/access";
-
-const fieldClass =
-  "w-full rounded-lg border border-ink/25 bg-surface px-4 py-3 text-base text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40";
+import { Field } from "@/components/admin/field";
+import { inputClass } from "@/components/admin/styles";
 
 // min/max come from the server so the client clock can't disagree with validation.
 export function AccessLengthField({
@@ -21,17 +20,14 @@ export function AccessLengthField({
   const [length, setLength] = useState(String(DEFAULT_ACCESS_DAYS));
 
   return (
-    <div className="space-y-3">
-      <div className="space-y-2">
-        <label htmlFor={`${idPrefix}-length`} className="block text-base font-medium text-ink">
-          {label}
-        </label>
+    <>
+      <Field id={`${idPrefix}-length`} label={label}>
         <select
           id={`${idPrefix}-length`}
           name="accessLength"
           value={length}
           onChange={(event) => setLength(event.target.value)}
-          className={fieldClass}
+          className={inputClass}
         >
           {ACCESS_PRESET_DAYS.map((days) => (
             <option key={days} value={days}>
@@ -40,13 +36,14 @@ export function AccessLengthField({
           ))}
           <option value="custom">Choose a date</option>
         </select>
-      </div>
+      </Field>
 
       {length === "custom" && (
-        <div className="space-y-2">
-          <label htmlFor={`${idPrefix}-date`} className="block text-base font-medium text-ink">
-            Access ends on
-          </label>
+        <Field
+          id={`${idPrefix}-date`}
+          label="Access ends on"
+          hint="Access lasts until the end of this day (UK time), up to 1 year from today."
+        >
           <input
             id={`${idPrefix}-date`}
             name="accessDate"
@@ -54,11 +51,10 @@ export function AccessLengthField({
             required
             min={minDate}
             max={maxDate}
-            className={fieldClass}
+            className={inputClass}
           />
-          <p className="text-base text-ink/70">Access lasts until the end of this day (UK time), up to 1 year from today.</p>
-        </div>
+        </Field>
       )}
-    </div>
+    </>
   );
 }

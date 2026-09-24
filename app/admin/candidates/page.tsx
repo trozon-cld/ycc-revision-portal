@@ -1,11 +1,13 @@
 import { requireRole } from "@/lib/auth/guard";
 import { pool } from "@/lib/db/pool";
 import { customDateBounds, formatUkDate } from "@/lib/candidates/access";
-import { LogoutButton } from "@/components/logout-button";
-import { AreaNav } from "@/components/area-nav";
-import { CreateCandidateForm } from "./create-candidate-form";
-import { ChangeAdmin } from "./change-admin";
-import { CandidateManager } from "./candidate-manager";
+import { Badge } from "@/components/admin/badge";
+import { FilterBar, FilterSearch, FilterSelect } from "@/components/admin/filter-bar";
+import { Breakable } from "@/components/admin/breakable";
+import { PageHeader } from "@/components/admin/page-header";
+import { Cell, Row, Table } from "@/components/admin/table";
+import { NewCandidateButton } from "./create-candidate-form";
+import { AdminCandidateActions, SuperadminCandidateActions } from "./candidate-row-actions";
 
 interface CandidateRow {
   id: string;
@@ -18,23 +20,29 @@ interface CandidateRow {
   is_blocked: boolean;
 }
 
-interface CategoryRow {
+interface Option {
   id: string;
-  name: string;
+  label: string;
 }
 
-interface AdminOption {
-  id: string;
-  email: string;
-}
+const STATUSES = ["active", "expired", "blocked"] as const;
+type Status = (typeof STATUSES)[number];
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export default async function CandidatesPage() {
+export default async function CandidatesPage({ searchParams }: PageProps<"/admin/candidates">) {
   const session = await requireRole(["admin", "superadmin"]);
   const isSuperadmin = session.role === "superadmin";
+  const params = await searchParams;
   const { min: minDate, max: maxDate } = customDateBounds();
-  const now = Date.now();
 
-  // Admins only ever see their own candidates; Superadmin sees all.
+  const search = (one(params.q) ?? "").trim().slice(0, 100);
+  const categoryFilter = uuidOrNull(one(params.category));
+  const statusParam = one(params.status) ?? "";
+  const status = (STATUSES as readonly string[]).includes(statusParam) ? (statusParam as Status) : null;
+  // Admins are always pinned to their own candidates, whatever the URL says.
+  const ownerFilter = isSuperadmin ? uuidOrNull(one(params.admin)) : session.sub;
+  const isFiltered = Boolean(search || categoryFilter || status || (isSuperadmin && ownerFilter));
+
   const [{ rows: candidates }, { rows: categories }, { rows: admins }] = await Promise.all([
     pool.query<CandidateRow>(
       `select u.id, u.email, u.category_id, c.name as category_name, u.admin_id,
@@ -44,106 +52,145 @@ export default async function CandidatesPage() {
        join users a on a.id = u.admin_id
        where u.role = 'candidate'
          and ($1::uuid is null or u.admin_id = $1::uuid)
+         and ($2::text is null or u.email ilike '%' || $2::text || '%')
+         and ($3::uuid is null or u.category_id = $3::uuid)
+         and ($4::text is null
+              or ($4::text = 'blocked' and u.is_blocked)
+              or ($4::text = 'expired' and not u.is_blocked and u.access_expires_at <= now())
+              or ($4::text = 'active' and not u.is_blocked
+                  and (u.access_expires_at is null or u.access_expires_at > now())))
        order by u.created_at desc`,
-      [isSuperadmin ? null : session.sub]
+      [ownerFilter, search ? escapeLike(search) : null, categoryFilter, status]
     ),
+    pool.query<Option>(`select id, name as label from categories order by name`),
     isSuperadmin
-      ? Promise.resolve({ rows: [] as CategoryRow[] })
-      : pool.query<CategoryRow>(`select id, name from categories order by name`),
-    isSuperadmin
-      ? pool.query<AdminOption>(`select id, email from users where role = 'admin' order by email`)
-      : Promise.resolve({ rows: [] as AdminOption[] }),
+      ? pool.query<Option>(`select id, email as label from users where role = 'admin' order by email`)
+      : Promise.resolve({ rows: [] as Option[] }),
   ]);
 
+  const now = Date.now();
+  const columns = isSuperadmin
+    ? ["Email", "Category", "Admin", "Status", "Access until", ""]
+    : ["Email", "Category", "Status", "Access until", ""];
+  const countLabel = `${candidates.length} candidate${candidates.length === 1 ? "" : "s"}`;
+
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 p-4 py-8">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-base uppercase tracking-wide text-primary">
-            {isSuperadmin ? "Superadmin" : "Admin"}
-          </p>
-          <h1 className="text-2xl font-semibold text-ink">Candidates</h1>
-          <p className="mt-1 text-base text-ink/70">
-            Signed in as {session.email}
-          </p>
-        </div>
-        <LogoutButton />
-      </div>
+    <>
+      <PageHeader
+        title="Candidates"
+        description={isFiltered ? `${countLabel} match your filters` : countLabel}
+        actions={
+          !isSuperadmin && (
+            <NewCandidateButton
+              categories={categories.map(({ id, label }) => ({ id, name: label }))}
+              minDate={minDate}
+              maxDate={maxDate}
+            />
+          )
+        }
+      />
 
-      <AreaNav role={isSuperadmin ? "superadmin" : "admin"} current="/admin/candidates" />
+      <FilterBar action="/admin/candidates" clearHref="/admin/candidates" isFiltered={isFiltered}>
+        <FilterSearch name="q" label="Search by email" defaultValue={search} />
+        <FilterSelect name="category" label="Category" defaultValue={categoryFilter ?? ""}>
+          <option value="">All categories</option>
+          {categories.map((category) => (
+            <option key={category.id} value={category.id}>
+              {category.label}
+            </option>
+          ))}
+        </FilterSelect>
+        <FilterSelect name="status" label="Status" defaultValue={status ?? ""}>
+          <option value="">All statuses</option>
+          <option value="active">Active</option>
+          <option value="expired">Expired</option>
+          <option value="blocked">Blocked</option>
+        </FilterSelect>
+        {isSuperadmin && (
+          <FilterSelect name="admin" label="Admin" defaultValue={ownerFilter ?? ""}>
+            <option value="">All admins</option>
+            {admins.map((admin) => (
+              <option key={admin.id} value={admin.id}>
+                {admin.label}
+              </option>
+            ))}
+          </FilterSelect>
+        )}
+      </FilterBar>
 
-      {!isSuperadmin && categories.length === 0 && (
-        <p className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-base text-amber-900">
-          No categories are available yet. A category is needed before a
-          candidate can be created.
-        </p>
-      )}
+      <Table
+        columns={columns}
+        isEmpty={candidates.length === 0}
+        emptyMessage={isFiltered ? "No candidates match these filters." : "No candidates yet."}
+      >
+        {candidates.map((candidate) => {
+          const expiresAt = candidate.access_expires_at;
+          const isExpired = expiresAt !== null && new Date(expiresAt).getTime() <= now;
+          const expiryDate = expiresAt ? formatUkDate(expiresAt) : "No expiry";
+          const rowCandidate = {
+            id: candidate.id,
+            email: candidate.email,
+            categoryId: candidate.category_id,
+            adminId: candidate.admin_id,
+            isBlocked: candidate.is_blocked,
+            expiryLabel: expiresAt ? `${isExpired ? "Expired on" : "Expires"} ${expiryDate}` : "No expiry set",
+          };
 
-      {!isSuperadmin && (
-        <CreateCandidateForm categories={categories} minDate={minDate} maxDate={maxDate} />
-      )}
-
-      <div>
-        <h2 className="text-lg font-medium text-ink">
-          {candidates.length} candidate{candidates.length === 1 ? "" : "s"}
-        </h2>
-        <ul className="mt-3 divide-y divide-ink/15 rounded-lg border border-ink/15">
-          {candidates.map((candidate) => {
-            const expiresAt = candidate.access_expires_at;
-            const isExpired = expiresAt !== null && new Date(expiresAt).getTime() <= now;
-            const expiryLabel = expiresAt
-              ? `${isExpired ? "Expired on" : "Expires"} ${formatUkDate(expiresAt)}`
-              : "No expiry set";
-
-            return (
-              <li key={candidate.id} className="space-y-3 p-4 text-base text-ink">
-                <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <p className="break-all font-medium">{candidate.email}</p>
-                    <p className="text-ink/70">{candidate.category_name}</p>
-                    {isSuperadmin && (
-                      <p className="break-all text-ink/70">Admin: {candidate.admin_email}</p>
-                    )}
-                  </div>
-                  <div className="sm:text-right">
-                    {candidate.is_blocked && (
-                      <p className="font-medium text-red-700">Blocked</p>
-                    )}
-                    <p className={isExpired ? "font-medium text-red-700" : "text-ink/70"}>
-                      {expiryLabel}
-                    </p>
-                  </div>
-                </div>
+          return (
+            <Row key={candidate.id}>
+              <Cell kind="primary">
+                <Breakable text={candidate.email} />
+              </Cell>
+              <Cell label="Category">{candidate.category_name}</Cell>
+              {isSuperadmin && (
+                <Cell label="Admin" breakAnywhere>
+                  <Breakable text={candidate.admin_email} />
+                </Cell>
+              )}
+              <Cell label="Status">
+                {candidate.is_blocked ? (
+                  <Badge tone="danger">Blocked</Badge>
+                ) : isExpired ? (
+                  <Badge tone="warning">Expired</Badge>
+                ) : (
+                  <Badge tone="success">Active</Badge>
+                )}
+              </Cell>
+              <Cell label="Access until" nowrap>
+                {expiryDate}
+              </Cell>
+              <Cell kind="actions">
                 {isSuperadmin ? (
-                  <ChangeAdmin
-                    candidateId={candidate.id}
-                    currentAdminId={candidate.admin_id}
-                    admins={admins}
+                  <SuperadminCandidateActions
+                    candidate={rowCandidate}
+                    admins={admins.map(({ id, label }) => ({ id, email: label }))}
                   />
                 ) : (
-                  <CandidateManager
-                    candidate={{
-                      id: candidate.id,
-                      email: candidate.email,
-                      categoryId: candidate.category_id,
-                      isBlocked: candidate.is_blocked,
-                      expiryLabel,
-                    }}
-                    categories={categories}
+                  <AdminCandidateActions
+                    candidate={rowCandidate}
+                    categories={categories.map(({ id, label }) => ({ id, name: label }))}
                     minDate={minDate}
                     maxDate={maxDate}
                   />
                 )}
-              </li>
-            );
-          })}
-          {candidates.length === 0 && (
-            <li className="p-4 text-base text-ink/70">
-              No candidates yet.
-            </li>
-          )}
-        </ul>
-      </div>
-    </div>
+              </Cell>
+            </Row>
+          );
+        })}
+      </Table>
+    </>
   );
+}
+
+function one(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function uuidOrNull(value: string | undefined): string | null {
+  return value && UUID_PATTERN.test(value) ? value : null;
+}
+
+// Treat the user's % and _ literally; Postgres LIKE uses backslash as its escape.
+function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, "\\$&");
 }

@@ -28,3 +28,36 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
 }
+
+/* Admin console motion; skipped for users who prefer reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  dialog[open].admin-panel {
+    animation: admin-slide-from-right 180ms ease-out;
+  }
+  dialog[open].admin-drawer {
+    animation: admin-slide-from-left 180ms ease-out;
+  }
+  dialog[open].admin-confirm,
+  .admin-toast {
+    animation: admin-fade-in 150ms ease-out;
+  }
+}
+
+@keyframes admin-slide-from-right {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes admin-slide-from-left {
+  from {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes admin-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
