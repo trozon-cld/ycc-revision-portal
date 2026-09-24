@@ -42,7 +42,7 @@ Status: in active development.
 
 ## Project structure
 
-- `app/` — routes: `/login`, `/admin/*` (Admin/Superadmin, including `/admin/activity` logs), `/dashboard` (Candidate), `/access-expired`
+- `app/` — routes: `/login`, `/admin/*` (Admin/Superadmin, including `/admin/activity` logs and `/admin/handbook` chapters), `/dashboard` (Candidate), `/access-expired`
 - `lib/auth/` — JWT signing/verification, session cookie, role guard
 - `components/admin/` — compact admin console UI (sidebar shell, tables, row menus, slide-in panels); admin pages must build from these. Candidate pages keep the large, simple style.
 - `lib/db/` — shared Postgres pool and transaction helper

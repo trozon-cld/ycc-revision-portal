@@ -1,11 +1,12 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import { useRef, useState, useTransition, type ReactNode } from "react";
 import { Dialog } from "./dialog";
 import { RowMenu } from "./row-menu";
 import { buttonClass } from "./styles";
+import { useToast } from "./toast";
 
-export type RowAction = {
+export type PanelRowAction = {
   label: string;
   danger?: boolean;
   title: string;
@@ -14,11 +15,32 @@ export type RowAction = {
   render: (close: () => void) => ReactNode;
 };
 
-// A row's "⋯" menu; each item opens its own slide-in panel or confirmation.
+// Runs straight away (no panel), then toasts the result. For quick, reversible actions.
+export type InstantRowAction = {
+  label: string;
+  danger?: boolean;
+  run: () => Promise<{ error?: string; success?: boolean }>;
+  successMessage: string;
+};
+
+export type RowAction = PanelRowAction | InstantRowAction;
+
+// A row's "⋯" menu; each item opens its own slide-in panel or confirmation, or runs instantly.
 export function RowActions({ label, actions }: { label: string; actions: RowAction[] }) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [, startTransition] = useTransition();
+  const toast = useToast();
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const active = activeIndex === null ? null : actions[activeIndex];
+  const selected = activeIndex === null ? null : actions[activeIndex];
+  const active = selected && "render" in selected ? selected : null;
+
+  function runInstant(action: InstantRowAction) {
+    startTransition(async () => {
+      const result = await action.run();
+      toast(result.error ?? action.successMessage);
+      triggerRef.current?.focus();
+    });
+  }
 
   function close() {
     setActiveIndex(null);
@@ -34,7 +56,7 @@ export function RowActions({ label, actions }: { label: string; actions: RowActi
         items={actions.map((action, index) => ({
           label: action.label,
           danger: action.danger,
-          onSelect: () => setActiveIndex(index),
+          onSelect: () => ("run" in action ? runInstant(action) : setActiveIndex(index)),
         }))}
       />
       {active && (

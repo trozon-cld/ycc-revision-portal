@@ -88,5 +88,18 @@ create trigger auth_events_read_only
   before update or delete on auth_events
   for each row execute function prevent_log_changes();
 
--- topics/questions intentionally omitted — added when we design
--- Prepare/Practice/Mock Test content.
+-- Shared by chapters now, and by content pages and questions later.
+create type content_status as enum ('draft', 'published');
+
+create table chapters (
+  id uuid primary key default gen_random_uuid(),
+  -- Display order, shown as "01", "02"… Deferred so a reorder can swap two positions.
+  position integer not null check (position > 0),
+  title varchar(120) not null,
+  status content_status not null default 'draft',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint chapters_position_key unique (position) deferrable initially deferred
+);
+
+create unique index chapters_title_key on chapters (lower(title));

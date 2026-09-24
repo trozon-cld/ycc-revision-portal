@@ -1,20 +1,22 @@
--- Only Superadmin is seeded here; Superadmin creates Admins and Admins
--- create Candidates via the UI. To rotate the password, regenerate the
--- hash (npm run hash -- "password") and re-run this file.
+-- Delta for a DB with 0005 applied. Adds Handbook chapters.
 
-insert into users (email, password_hash, role, access_start_at, access_expires_at, is_blocked)
-values ('REPLACE_WITH_EMAIL', 'REPLACE_WITH_BCRYPT_HASH', 'superadmin', null, null, false)
-on conflict (email) do update set password_hash = excluded.password_hash;
+begin;
 
--- Placeholders so the Candidate-creation form has real options — rename
--- freely, category management isn't built yet.
-insert into categories (name) values
-  ('General Operative'),
-  ('Skilled Trade'),
-  ('Supervisor'),
-  ('Site Manager'),
-  ('Specialist Role')
-on conflict (name) do nothing;
+-- Shared by chapters now, and by content pages and questions later.
+create type content_status as enum ('draft', 'published');
+
+create table chapters (
+  id uuid primary key default gen_random_uuid(),
+  -- Display order, shown as "01", "02"… Deferred so a reorder can swap two positions.
+  position integer not null check (position > 0),
+  title varchar(120) not null,
+  status content_status not null default 'draft',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint chapters_position_key unique (position) deferrable initially deferred
+);
+
+create unique index chapters_title_key on chapters (lower(title));
 
 -- Placeholder chapter titles, renameable. Only seeds an empty table.
 insert into chapters (position, title)
@@ -38,3 +40,5 @@ from (values
   (16, 'Hazardous substances')
 ) as seed (position, title)
 where not exists (select 1 from chapters);
+
+commit;

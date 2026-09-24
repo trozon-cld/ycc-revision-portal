@@ -8,19 +8,34 @@ import { buttonClass } from "./styles";
 import { ToastProvider } from "./toast";
 
 type Role = "admin" | "superadmin";
-type IconName = "admins" | "candidates" | "categories" | "activity" | "account";
+type IconName = "admins" | "candidates" | "categories" | "handbook" | "activity" | "account";
+type NavItem = { href: string; label: string; icon: IconName };
+type NavGroup = { heading?: string; items: NavItem[] };
 
-const NAV: Record<Role, { href: string; label: string; icon: IconName }[]> = {
+const NAV: Record<Role, NavGroup[]> = {
   superadmin: [
-    { href: "/admin/admins", label: "Admins", icon: "admins" },
-    { href: "/admin/candidates", label: "Candidates", icon: "candidates" },
-    { href: "/admin/categories", label: "Categories", icon: "categories" },
-    { href: "/admin/activity", label: "Activity", icon: "activity" },
-    { href: "/admin/account", label: "My account", icon: "account" },
+    {
+      items: [
+        { href: "/admin/admins", label: "Admins", icon: "admins" },
+        { href: "/admin/candidates", label: "Candidates", icon: "candidates" },
+        { href: "/admin/categories", label: "Categories", icon: "categories" },
+      ],
+    },
+    { heading: "Content", items: [{ href: "/admin/handbook", label: "Handbook", icon: "handbook" }] },
+    {
+      items: [
+        { href: "/admin/activity", label: "Activity", icon: "activity" },
+        { href: "/admin/account", label: "My account", icon: "account" },
+      ],
+    },
   ],
   admin: [
-    { href: "/admin/candidates", label: "Candidates", icon: "candidates" },
-    { href: "/admin/activity", label: "My activity", icon: "activity" },
+    {
+      items: [
+        { href: "/admin/candidates", label: "Candidates", icon: "candidates" },
+        { href: "/admin/activity", label: "My activity", icon: "activity" },
+      ],
+    },
   ],
 };
 
@@ -87,24 +102,36 @@ function SidebarContent({ role, email, onNavigate }: { role: Role; email: string
       <div className="flex h-14 items-center border-b border-slate-200 px-4 lg:h-16">
         <Brand role={role} />
       </div>
-      <nav aria-label="Admin sections" className="flex-1 space-y-0.5 overflow-y-auto p-3">
-        {NAV[role].map((item) => {
-          const isCurrent = pathname === item.href || pathname.startsWith(`${item.href}/`);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onNavigate}
-              aria-current={isCurrent ? "page" : undefined}
-              className={`flex h-10 items-center gap-2.5 rounded-md px-3 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:h-9 ${
-                isCurrent ? "bg-primary/10 font-medium text-primary" : "text-slate-700 hover:bg-slate-100 hover:text-ink"
-              }`}
-            >
-              <NavIcon name={item.icon} />
-              {item.label}
-            </Link>
-          );
-        })}
+      <nav aria-label="Admin sections" className="flex-1 space-y-4 overflow-y-auto p-3">
+        {NAV[role].map((group, groupIndex) => (
+          <div
+            key={group.heading ?? `group-${groupIndex}`}
+            role={group.heading ? "group" : undefined}
+            aria-label={group.heading}
+            className="space-y-0.5"
+          >
+            {group.heading && (
+              <p aria-hidden="true" className="px-3 pb-1 text-xs font-medium uppercase tracking-wide text-slate-600">{group.heading}</p>
+            )}
+            {group.items.map((item) => {
+              const isCurrent = pathname === item.href || pathname.startsWith(`${item.href}/`);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={onNavigate}
+                  aria-current={isCurrent ? "page" : undefined}
+                  className={`flex h-10 items-center gap-2.5 rounded-md px-3 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:h-9 ${
+                    isCurrent ? "bg-primary/10 font-medium text-primary" : "text-slate-700 hover:bg-slate-100 hover:text-ink"
+                  }`}
+                >
+                  <NavIcon name={item.icon} />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+        ))}
       </nav>
       <div className="border-t border-slate-200 p-3">
         <p className="truncate px-1 text-sm font-medium text-ink" title={email}>
@@ -174,6 +201,12 @@ function NavIcon({ name }: { name: IconName }) {
       <>
         <path d="M3.5 3.5h6l7 7-6 6-7-7z" />
         <circle cx="7" cy="7" r="1" />
+      </>
+    ),
+    handbook: (
+      <>
+        <path d="M10 5.5C8.5 4.3 6.3 3.75 3 3.75v11.5c3.3 0 5.5.55 7 1.75 1.5-1.2 3.7-1.75 7-1.75V3.75c-3.3 0-5.5.55-7 1.75z" />
+        <path d="M10 5.5V17" />
       </>
     ),
     activity: (
