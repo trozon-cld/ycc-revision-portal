@@ -50,6 +50,8 @@ Status: in active development.
 - `lib/auth/` — JWT signing/verification, session cookie, role guard
 - `components/admin/` — compact admin console UI (sidebar shell, tables, row menus, slide-in panels); admin pages must build from these. Candidate pages keep the large, simple style.
 - `lib/db/` — shared Postgres pool and transaction helper
+- `lib/content/` — Handbook page blocks (types, validation, **bold** markup) and book sheet rules
+- `components/learning/` — candidate-facing renderers: blocks and the fixed-page book reader (large-target style)
 - `lib/storage/` — the only code that talks to the storage provider (upload, delete, signed links)
 - `lib/media/` — image checks (real type and size from the file) and in-browser WebP conversion
 - `lib/audit/` — activity and login logs (every loggable action is listed in `lib/audit/actions.ts`)

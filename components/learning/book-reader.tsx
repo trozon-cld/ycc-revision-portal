@@ -1,0 +1,339 @@
+"use client";
+
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
+import { buildSheets, type BookPageData, type ResolvedMedia, type Sheet, type TextSize } from "@/lib/content/book";
+import { BlockList } from "./blocks";
+
+// Fixed-size book sheets. Each authored page is laid out in CSS columns one sheet wide; extra
+// columns become "continued" sheets. Spread (two sheets) when the reader is at least 1024px wide.
+
+const SPREAD_MIN_WIDTH = 1024;
+const SHEET_RATIO = 0.75; // width / height of a sheet in a spread
+const STAGE_PADDING = 12;
+const NARROW_SHEET = 480;
+
+type Geometry = {
+  spread: boolean;
+  sheetWidth: number;
+  sheetHeight: number;
+  padX: number;
+  headerHeight: number;
+  contentTop: number;
+  footerHeight: number;
+  contentWidth: number;
+  contentHeight: number;
+  columnGap: number;
+};
+
+function computeGeometry(width: number, height: number, textSize: TextSize): Geometry | null {
+  const availableWidth = width - STAGE_PADDING * 2;
+  const availableHeight = height - STAGE_PADDING * 2;
+  if (availableWidth < 200 || availableHeight < 200) return null;
+
+  const spread = width >= SPREAD_MIN_WIDTH;
+  const sheetHeight = Math.floor(availableHeight);
+  const sheetWidth = Math.floor(spread ? Math.min(availableWidth / 2, sheetHeight * SHEET_RATIO) : availableWidth);
+  const padX = Math.round(Math.min(56, Math.max(20, sheetWidth * 0.08)));
+  const headerHeight = Math.round(textSize * 2.6);
+  const contentTop = Math.round(textSize * 0.9);
+  const footerHeight = Math.round(textSize * 2.4);
+  const contentWidth = sheetWidth - padX * 2;
+  const contentHeight = sheetHeight - headerHeight - contentTop - footerHeight;
+  return {
+    spread,
+    sheetWidth,
+    sheetHeight,
+    padX,
+    headerHeight,
+    contentTop,
+    footerHeight,
+    contentWidth,
+    contentHeight,
+    columnGap: padX * 2,
+  };
+}
+
+export function BookReader({
+  pages,
+  media,
+  textSize,
+  label = "Handbook",
+}: {
+  pages: BookPageData[];
+  media: ResolvedMedia;
+  textSize: TextSize;
+  label?: string;
+}) {
+  const stageRef = useRef<HTMLDivElement>(null);
+  const measureRef = useRef<HTMLDivElement>(null);
+  const [stageSize, setStageSize] = useState<{ width: number; height: number } | null>(null);
+  const [partCounts, setPartCounts] = useState<number[] | null>(null);
+  const [position, setPosition] = useState({ pageIndex: 0, part: 0 });
+  const [fontsReady, setFontsReady] = useState(0);
+
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    const observer = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      setStageSize((current) =>
+        current && Math.round(current.width) === Math.round(width) && Math.round(current.height) === Math.round(height)
+          ? current
+          : { width, height }
+      );
+    });
+    observer.observe(stage);
+    return () => observer.disconnect();
+  }, []);
+
+  // Text measured before the web font arrives would page differently, so measure again after.
+  useEffect(() => {
+    let cancelled = false;
+    document.fonts?.ready.then(() => !cancelled && setFontsReady((n) => n + 1));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const geometry = useMemo(
+    () => (stageSize ? computeGeometry(stageSize.width, stageSize.height, textSize) : null),
+    [stageSize, textSize]
+  );
+
+  useLayoutEffect(() => {
+    const layer = measureRef.current;
+    if (!layer || !geometry) return;
+    const step = geometry.contentWidth + geometry.columnGap;
+    const counts = Array.from(layer.children, (child) =>
+      Math.max(1, Math.round(((child as HTMLElement).scrollWidth + geometry.columnGap) / step))
+    );
+    setPartCounts((current) => (current && current.join() === counts.join() ? current : counts));
+  }, [geometry, pages, media, fontsReady]);
+
+  const sheets = useMemo(
+    () => (partCounts && geometry ? buildSheets(pages, partCounts, geometry.spread) : []),
+    [pages, partCounts, geometry]
+  );
+
+  // Keep the reader on the same authored page when the layout changes.
+  const currentSheetIndex = useMemo(() => {
+    if (sheets.length === 0) return 0;
+    const exact = sheets.findIndex(
+      (sheet) => sheet.kind === "page" && sheet.pageIndex === position.pageIndex && sheet.part === Math.min(position.part, sheet.parts - 1)
+    );
+    return exact === -1 ? 0 : exact;
+  }, [sheets, position]);
+
+  const perView = geometry?.spread ? 2 : 1;
+  const viewStart = Math.floor(currentSheetIndex / perView) * perView;
+  const visible = sheets.slice(viewStart, viewStart + perView);
+  const canGoBack = viewStart > 0;
+  const canGoForward = viewStart + perView < sheets.length;
+
+  const goTo = useCallback(
+    (sheetIndex: number) => {
+      const clamped = Math.max(0, Math.min(sheets.length - 1, sheetIndex));
+      // A blank filler sheet has no page of its own; land on its neighbour.
+      const target = sheets[clamped]?.kind === "page" ? sheets[clamped] : sheets[clamped + 1] ?? sheets[clamped - 1];
+      if (target?.kind === "page") setPosition({ pageIndex: target.pageIndex, part: target.part });
+    },
+    [sheets]
+  );
+
+  const next = () => canGoForward && goTo(viewStart + perView);
+  const previous = () => canGoBack && goTo(viewStart - perView);
+
+  function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
+    if (event.key === "ArrowRight" || event.key === "PageDown") {
+      event.preventDefault();
+      next();
+    } else if (event.key === "ArrowLeft" || event.key === "PageUp") {
+      event.preventDefault();
+      previous();
+    }
+  }
+
+  const status = describeView(visible, pages);
+
+  const sheetStyle = geometry
+    ? ({
+        width: geometry.sheetWidth,
+        height: geometry.sheetHeight,
+        fontSize: textSize,
+        "--book-picture-max": `${Math.max(120, geometry.contentHeight - textSize * 3.2)}px`,
+      } as CSSProperties)
+    : undefined;
+
+  return (
+    <section aria-label={label} onKeyDown={onKeyDown} className="flex h-full min-h-0 flex-col bg-slate-100 text-ink">
+      <div ref={stageRef} className="relative min-h-0 flex-1 overflow-hidden">
+        {geometry && (
+          <>
+            <div
+              ref={measureRef}
+              aria-hidden="true"
+              className="pointer-events-none invisible absolute left-0 top-0 overflow-hidden"
+              style={{ width: 0, height: 0, fontSize: textSize, ...sheetStyle, position: "absolute" }}
+            >
+              {pages.map((page) => (
+                <FlowColumns key={page.id} page={page} media={media} geometry={geometry} />
+              ))}
+            </div>
+
+            {partCounts && (
+              <div className="flex h-full items-center justify-center" style={{ padding: STAGE_PADDING }}>
+                <div className={`flex ${geometry.spread ? "shadow-xl" : "shadow-md"}`}>
+                  {visible.map((sheet, index) => (
+                    <SheetView
+                      key={sheet.kind === "page" ? `${sheet.pageIndex}-${sheet.part}` : `blank-${viewStart + index}`}
+                      sheet={sheet}
+                      pages={pages}
+                      media={media}
+                      geometry={geometry}
+                      style={sheetStyle}
+                      side={geometry.spread ? (index === 0 ? "left" : "right") : "single"}
+                    />
+                  ))}
+                  {geometry.spread && visible.length === 1 && <div aria-hidden="true" style={{ width: geometry.sheetWidth }} />}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      <nav aria-label="Page controls" className="flex items-center justify-between gap-3 border-t border-slate-300 bg-white px-3 py-3 sm:px-6">
+        <button
+          type="button"
+          onClick={previous}
+          disabled={!canGoBack}
+          className="inline-flex h-14 min-w-28 items-center justify-center gap-2 rounded-xl border-2 border-ink/25 bg-white px-4 text-lg font-semibold text-ink transition-colors hover:bg-slate-50 focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-40 sm:min-w-36"
+        >
+          <span aria-hidden="true">‹</span> Previous
+        </button>
+        <p aria-live="polite" className="min-w-0 text-center text-base font-medium text-ink sm:text-lg">
+          {status}
+        </p>
+        <button
+          type="button"
+          onClick={next}
+          disabled={!canGoForward}
+          className="inline-flex h-14 min-w-28 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-lg font-semibold text-white transition-colors hover:bg-primary/90 focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-40 sm:min-w-36"
+        >
+          Next <span aria-hidden="true">›</span>
+        </button>
+      </nav>
+    </section>
+  );
+}
+
+function FlowColumns({
+  page,
+  media,
+  geometry,
+  offset = 0,
+}: {
+  page: BookPageData;
+  media: ResolvedMedia;
+  geometry: Geometry;
+  offset?: number;
+}) {
+  return (
+    <div
+      className="leading-[1.6]"
+      style={{
+        width: geometry.contentWidth,
+        height: geometry.contentHeight,
+        columnWidth: geometry.contentWidth,
+        columnGap: geometry.columnGap,
+        columnFill: "auto",
+        transform: offset ? `translateX(-${offset * (geometry.contentWidth + geometry.columnGap)}px)` : undefined,
+      }}
+    >
+      <BlockList blocks={page.blocks} media={media} />
+    </div>
+  );
+}
+
+function SheetView({
+  sheet,
+  pages,
+  media,
+  geometry,
+  style,
+  side,
+}: {
+  sheet: Sheet;
+  pages: BookPageData[];
+  media: ResolvedMedia;
+  geometry: Geometry;
+  style?: CSSProperties;
+  side: "left" | "right" | "single";
+}) {
+  const edge =
+    side === "left"
+      ? "bg-gradient-to-l from-slate-200/70 via-white via-[3%] to-white"
+      : side === "right"
+        ? "bg-gradient-to-r from-slate-200/70 via-white via-[3%] to-white"
+        : "bg-white rounded-sm";
+
+  if (sheet.kind === "blank") {
+    return <div aria-hidden="true" className={`shrink-0 ${edge}`} style={style} />;
+  }
+
+  const page = pages[sheet.pageIndex];
+  const continued = sheet.part > 0;
+  return (
+    <article
+      aria-label={`Page ${page.number}${continued ? ", continued" : ""}`}
+      className={`flex shrink-0 flex-col ${edge}`}
+      style={style}
+    >
+      <header
+        className="flex items-end justify-between gap-3 overflow-hidden border-b border-slate-200 pb-[0.35em] text-[0.72em] text-slate-700"
+        style={{ height: geometry.headerHeight, marginLeft: geometry.padX, marginRight: geometry.padX }}
+      >
+        {/* Narrow sheets (phones) show only the chapter, so neither name is cut to a few letters. */}
+        {geometry.sheetWidth >= NARROW_SHEET && <span className="truncate">{page.sectionLabel}</span>}
+        <span className={`truncate font-medium text-ink ${geometry.sheetWidth >= NARROW_SHEET ? "text-right" : ""}`}>
+          {page.chapterLabel}
+        </span>
+      </header>
+
+      {/* Continuation sheets repeat the page's text for layout only; screen readers get it once, from the first sheet. */}
+      <div
+        className="overflow-hidden"
+        aria-hidden={continued || undefined}
+        style={{
+          width: geometry.contentWidth,
+          height: geometry.contentHeight,
+          marginLeft: geometry.padX,
+          marginTop: geometry.contentTop,
+        }}
+      >
+        <FlowColumns page={page} media={media} geometry={geometry} offset={sheet.part} />
+      </div>
+
+      <footer
+        className="flex items-center justify-center text-[0.8em] text-slate-700"
+        style={{ height: geometry.footerHeight }}
+      >
+        {continued && <span className="sr-only">Continued. </span>}
+        <span aria-hidden={continued || undefined}>
+          {page.number}
+          {continued && " · continued"}
+        </span>
+      </footer>
+    </article>
+  );
+}
+
+function describeView(visible: Sheet[], pages: BookPageData[]) {
+  const labels = visible.flatMap((sheet) =>
+    sheet.kind === "page" ? [`${pages[sheet.pageIndex].number}${sheet.part > 0 ? " (continued)" : ""}`] : []
+  );
+  if (labels.length === 0) return "";
+  const unique = [...new Set(labels)];
+  return unique.length === 1 ? `Page ${unique[0]}` : `Pages ${unique.join(" and ")}`;
+}
