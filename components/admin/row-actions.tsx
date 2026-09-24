@@ -3,7 +3,7 @@
 import { useRef, useState, useTransition, type ReactNode } from "react";
 import { Dialog } from "./dialog";
 import { RowMenu } from "./row-menu";
-import { buttonClass } from "./styles";
+import { buttonClass, type ButtonVariant } from "./styles";
 import { useToast } from "./toast";
 
 export type PanelRowAction = {
@@ -77,10 +77,12 @@ export function RowActions({ label, actions }: { label: string; actions: RowActi
 export function PanelButton({
   label,
   title,
+  variant = "primary",
   children,
 }: {
   label: string;
   title: string;
+  variant?: ButtonVariant;
   children: (close: () => void) => ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -98,7 +100,7 @@ export function PanelButton({
         ref={triggerRef}
         type="button"
         onClick={() => setOpen(true)}
-        className={buttonClass("primary")}
+        className={buttonClass(variant)}
       >
         <svg viewBox="0 0 20 20" aria-hidden="true" className="size-4">
           <path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />

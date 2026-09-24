@@ -3,26 +3,41 @@
 import { ActionForm } from "@/components/admin/action-form";
 import { Field } from "@/components/admin/field";
 import { PanelButton, RowActions, type RowAction } from "@/components/admin/row-actions";
-import { inputClass } from "@/components/admin/styles";
-import { createChapter, deleteChapter, moveChapter, renameChapter } from "./actions";
+import { buttonClass, inputClass } from "@/components/admin/styles";
+import { createChapter, deleteChapter, moveChapter, moveChapterToSection, renameChapter } from "./chapter-actions";
+import type { SectionOption } from "./section-row-actions";
 
-export function NewChapterButton() {
+export function NewChapterButton({ sections }: { sections: SectionOption[] }) {
   return (
     <PanelButton label="New chapter" title="New chapter">
-      {(close) => (
-        <ActionForm
-          action={createChapter}
-          submitLabel="Add chapter"
-          pendingLabel="Adding…"
-          successMessage="Chapter added."
-          onSuccess={close}
-          onCancel={close}
-        >
-          <Field id="new-chapter-title" label="Chapter title" hint="It's added at the end. You can move it afterwards.">
-            <input id="new-chapter-title" name="title" type="text" required maxLength={120} className={inputClass} />
-          </Field>
-        </ActionForm>
-      )}
+      {(close) =>
+        sections.length === 0 ? (
+          <div>
+            <p className="px-5 py-4 text-sm">Add a section first. Every chapter belongs to a section.</p>
+            <div className="flex justify-end border-t border-slate-200 px-5 py-3">
+              <button type="button" onClick={close} className={buttonClass("secondary")}>
+                Close
+              </button>
+            </div>
+          </div>
+        ) : (
+          <ActionForm
+            action={createChapter}
+            submitLabel="Add chapter"
+            pendingLabel="Adding…"
+            successMessage="Chapter added."
+            onSuccess={close}
+            onCancel={close}
+          >
+            <Field id="new-chapter-title" label="Chapter title">
+              <input id="new-chapter-title" name="title" type="text" required maxLength={120} className={inputClass} />
+            </Field>
+            <Field id="new-chapter-section" label="Section" hint="It's added at the end of this section.">
+              <SectionSelect id="new-chapter-section" options={sections} />
+            </Field>
+          </ActionForm>
+        )
+      }
     </PanelButton>
   );
 }
@@ -33,14 +48,17 @@ export function ChapterRowActions({
   number,
   isFirst,
   isLast,
+  otherSections,
 }: {
   id: string;
   title: string;
   number: string;
   isFirst: boolean;
   isLast: boolean;
+  otherSections: SectionOption[];
 }) {
   const hidden = { chapterId: id };
+  const description = `Chapter ${number} · ${title}`;
 
   const actions: RowAction[] = [
     {
@@ -79,6 +97,29 @@ export function ChapterRowActions({
     actions.push({ label: "Move down", run: () => moveChapter(id, "down"), successMessage: "Chapter moved down." });
   }
 
+  if (otherSections.length > 0) {
+    actions.push({
+      label: "Move to section",
+      title: "Move to section",
+      description,
+      render: (close) => (
+        <ActionForm
+          action={moveChapterToSection}
+          hidden={hidden}
+          submitLabel="Move chapter"
+          pendingLabel="Moving…"
+          successMessage="Chapter moved."
+          onSuccess={close}
+          onCancel={close}
+        >
+          <Field id={`move-${id}`} label="Section" hint="It's added at the end of that section.">
+            <SectionSelect id={`move-${id}`} options={otherSections} />
+          </Field>
+        </ActionForm>
+      ),
+    });
+  }
+
   actions.push({
     label: "Delete",
     danger: true,
@@ -106,4 +147,19 @@ export function ChapterRowActions({
   });
 
   return <RowActions label={`Actions for ${title}`} actions={actions} />;
+}
+
+function SectionSelect({ id, options }: { id: string; options: SectionOption[] }) {
+  return (
+    <select id={id} name="sectionId" required defaultValue="" className={inputClass}>
+      <option value="" disabled>
+        Choose a section
+      </option>
+      {options.map((option) => (
+        <option key={option.id} value={option.id}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  );
 }

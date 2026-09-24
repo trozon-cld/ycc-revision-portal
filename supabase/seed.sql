@@ -16,25 +16,37 @@ insert into categories (name) values
   ('Specialist Role')
 on conflict (name) do nothing;
 
--- Placeholder chapter titles, renameable. Only seeds an empty table.
-insert into chapters (position, title)
+-- Placeholder sections and chapters, all renameable. Each only seeds an empty table.
+insert into sections (position, title)
 select position, title
 from (values
-  (1, 'General responsibilities'),
-  (2, 'Accident reporting and recording'),
-  (3, 'First aid and emergency procedures'),
-  (4, 'Personal protective equipment'),
-  (5, 'Environmental awareness and waste control'),
-  (6, 'Dust and fumes (respiratory hazards)'),
-  (7, 'Noise and vibration'),
-  (8, 'Health and welfare'),
-  (9, 'Manual handling'),
-  (10, 'Safety signs'),
-  (11, 'Fire prevention and control'),
-  (12, 'Electrical safety, tools and equipment'),
-  (13, 'Site transport and lifting operations'),
-  (14, 'Working at height'),
-  (15, 'Excavations and confined spaces'),
-  (16, 'Hazardous substances')
+  (1, 'Working environment'),
+  (2, 'Occupational health'),
+  (3, 'Safety'),
+  (4, 'High risk activities'),
+  (5, 'Specialist activities')
 ) as seed (position, title)
+where not exists (select 1 from sections);
+
+insert into chapters (section_id, position, title)
+select s.id, seed.position, seed.title
+from (values
+  (1, 1, 'General responsibilities'),
+  (1, 2, 'Accident reporting and recording'),
+  (1, 3, 'First aid and emergency procedures'),
+  (1, 4, 'Personal protective equipment'),
+  (1, 5, 'Environmental awareness and waste control'),
+  (2, 1, 'Dust and fumes (respiratory hazards)'),
+  (2, 2, 'Noise and vibration'),
+  (2, 3, 'Health and welfare'),
+  (2, 4, 'Manual handling'),
+  (3, 1, 'Safety signs'),
+  (3, 2, 'Fire prevention and control'),
+  (3, 3, 'Electrical safety, tools and equipment'),
+  (4, 1, 'Site transport and lifting operations'),
+  (4, 2, 'Working at height'),
+  (4, 3, 'Excavations and confined spaces'),
+  (4, 4, 'Hazardous substances')
+) as seed (section_position, position, title)
+join sections s on s.position = seed.section_position
 where not exists (select 1 from chapters);

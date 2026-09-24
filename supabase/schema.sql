@@ -91,15 +91,29 @@ create trigger auth_events_read_only
 -- Shared by chapters now, and by content pages and questions later.
 create type content_status as enum ('draft', 'published');
 
+create table sections (
+  id uuid primary key default gen_random_uuid(),
+  -- Display order; the letter (A, B, C…) is derived from it. Deferred so a reorder can swap.
+  position integer not null check (position > 0),
+  title varchar(120) not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint sections_position_key unique (position) deferrable initially deferred
+);
+
+create unique index sections_title_key on sections (lower(title));
+
 create table chapters (
   id uuid primary key default gen_random_uuid(),
-  -- Display order, shown as "01", "02"… Deferred so a reorder can swap two positions.
+  section_id uuid not null references sections (id) on delete restrict,
+  -- Order within its section. The displayed number ("01", "02"…) is derived across the whole
+  -- book. Deferred so a reorder can swap two positions.
   position integer not null check (position > 0),
   title varchar(120) not null,
   status content_status not null default 'draft',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  constraint chapters_position_key unique (position) deferrable initially deferred
+  constraint chapters_section_position_key unique (section_id, position) deferrable initially deferred
 );
 
 create unique index chapters_title_key on chapters (lower(title));
