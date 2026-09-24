@@ -4,7 +4,20 @@
 export type HeadingBlock = { id: string; type: "heading"; level: 1 | 2; text: string };
 export type ParagraphBlock = { id: string; type: "paragraph"; text: string };
 export type ListBlock = { id: string; type: "list"; style: "bullet" | "numbered"; items: string[] };
-export type PictureBlock = { id: string; type: "picture"; mediaId: string; caption?: string };
+export type PictureSize = "small" | "medium" | "large" | "full";
+export type PictureAlign = "left" | "center" | "right";
+// size and align are optional: pages saved before they existed show full width, centred.
+export type PictureBlock = {
+  id: string;
+  type: "picture";
+  mediaId: string;
+  caption?: string;
+  size?: PictureSize;
+  align?: PictureAlign;
+};
+
+export const PICTURE_SIZES: PictureSize[] = ["small", "medium", "large", "full"];
+export const PICTURE_ALIGNS: PictureAlign[] = ["left", "center", "right"];
 export type CalloutBlock = { id: string; type: "callout"; tone: "key-point" | "remember"; text: string };
 
 export type Block = HeadingBlock | ParagraphBlock | ListBlock | PictureBlock | CalloutBlock;
@@ -74,10 +87,22 @@ function parseBlock(raw: unknown): Block | string {
     }
     case "picture": {
       if (typeof raw.mediaId !== "string" || !UUID.test(raw.mediaId)) return "choose a picture.";
-      if (raw.caption === undefined || raw.caption === "") return { id, type: "picture", mediaId: raw.mediaId };
-      const caption = cleanText(raw.caption, BLOCK_LIMITS.captionLength, "caption");
-      if (typeof caption !== "string") return caption.error;
-      return caption ? { id, type: "picture", mediaId: raw.mediaId, caption } : { id, type: "picture", mediaId: raw.mediaId };
+      const picture: PictureBlock = { id, type: "picture", mediaId: raw.mediaId };
+      if (raw.caption !== undefined && raw.caption !== "") {
+        const caption = cleanText(raw.caption, BLOCK_LIMITS.captionLength, "caption");
+        if (typeof caption !== "string") return caption.error;
+        if (caption) picture.caption = caption;
+      }
+      if (raw.size !== undefined) {
+        if (!PICTURE_SIZES.includes(raw.size as PictureSize)) return "picture size must be small, medium, large or full.";
+        if (raw.size !== "full") picture.size = raw.size as PictureSize;
+      }
+      if (raw.align !== undefined) {
+        if (!PICTURE_ALIGNS.includes(raw.align as PictureAlign)) return "picture position must be left, center or right.";
+        // Position only matters when the picture is narrower than the page.
+        if (raw.align !== "center" && picture.size) picture.align = raw.align as PictureAlign;
+      }
+      return picture;
     }
     case "callout": {
       if (raw.tone !== "key-point" && raw.tone !== "remember") return "box style must be key point or remember.";

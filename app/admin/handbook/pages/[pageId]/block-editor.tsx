@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, type ReactNode } from "react";
-import type { Block } from "@/lib/content/blocks";
+import type { Block, PictureAlign, PictureSize } from "@/lib/content/blocks";
 import { BLOCK_LIMITS } from "@/lib/content/blocks";
 import { BLOCK_LABELS, applyBold } from "@/lib/content/editor";
 import { buttonClass, cardClass, inputClass, labelClass, textareaClass } from "@/components/admin/styles";
@@ -150,6 +150,31 @@ function BlockFields({
               </button>
             </div>
           </div>
+          <div className="flex flex-wrap gap-x-4 gap-y-2">
+            <Segmented
+              label="Size"
+              value={block.size ?? "full"}
+              options={[
+                ["small", "Small"],
+                ["medium", "Medium"],
+                ["large", "Large"],
+                ["full", "Full width"],
+              ]}
+              onChange={(size) => onChange({ ...block, size: size as PictureSize })}
+            />
+            <Segmented
+              label="Position"
+              value={block.align ?? "center"}
+              disabled={(block.size ?? "full") === "full"}
+              disabledHint="Full-width pictures fill the page, so position doesn't apply."
+              options={[
+                ["left", "Left"],
+                ["center", "Centre"],
+                ["right", "Right"],
+              ]}
+              onChange={(align) => onChange({ ...block, align: align as PictureAlign })}
+            />
+          </div>
           <div className="space-y-1">
             <label htmlFor={`${id}-caption`} className={labelClass}>
               Caption <span className="font-normal text-slate-600">(optional)</span>
@@ -256,6 +281,54 @@ function BoldTextarea({
       <p className="text-xs text-slate-600">
         {hint ? <>{hint} </> : null}Select words and press B to make them bold (shown as **words** here).
       </p>
+    </div>
+  );
+}
+
+// A row of toggle buttons; the pressed one is the current choice.
+function Segmented({
+  label,
+  value,
+  options,
+  onChange,
+  disabled,
+  disabledHint,
+}: {
+  label: string;
+  value: string;
+  options: [string, string][];
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  disabledHint?: string;
+}) {
+  return (
+    <div className="space-y-1">
+      <p className={labelClass}>{label}</p>
+      <div
+        role="group"
+        aria-label={label}
+        title={disabled ? disabledHint : undefined}
+        className="inline-flex flex-wrap rounded-md border border-slate-300 bg-white p-0.5"
+      >
+        {options.map(([optionValue, optionLabel]) => {
+          const pressed = value === optionValue;
+          return (
+            <button
+              key={optionValue}
+              type="button"
+              aria-pressed={pressed}
+              disabled={disabled}
+              onClick={() => onChange(optionValue)}
+              className={`h-9 rounded px-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 sm:h-8 ${
+                pressed && !disabled ? "bg-primary text-white" : "text-ink hover:bg-slate-100"
+              }`}
+            >
+              {optionLabel}
+            </button>
+          );
+        })}
+      </div>
+      {disabled && disabledHint && <p className="text-xs text-slate-600">{disabledHint}</p>}
     </div>
   );
 }
