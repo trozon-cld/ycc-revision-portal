@@ -8,7 +8,7 @@ import { buttonClass } from "./styles";
 import { ToastProvider } from "./toast";
 
 type Role = "admin" | "superadmin";
-type IconName = "admins" | "candidates" | "categories" | "handbook" | "activity" | "account";
+type IconName = "admins" | "candidates" | "categories" | "handbook" | "media" | "activity" | "account";
 type NavItem = { href: string; label: string; icon: IconName };
 type NavGroup = { heading?: string; items: NavItem[] };
 
@@ -21,7 +21,13 @@ const NAV: Record<Role, NavGroup[]> = {
         { href: "/admin/categories", label: "Categories", icon: "categories" },
       ],
     },
-    { heading: "Content", items: [{ href: "/admin/handbook", label: "Handbook", icon: "handbook" }] },
+    {
+      heading: "Content",
+      items: [
+        { href: "/admin/handbook", label: "Handbook", icon: "handbook" },
+        { href: "/admin/media", label: "Media", icon: "media" },
+      ],
+    },
     {
       items: [
         { href: "/admin/activity", label: "Activity", icon: "activity" },
@@ -207,6 +213,13 @@ function NavIcon({ name }: { name: IconName }) {
       <>
         <path d="M10 5.5C8.5 4.3 6.3 3.75 3 3.75v11.5c3.3 0 5.5.55 7 1.75 1.5-1.2 3.7-1.75 7-1.75V3.75c-3.3 0-5.5.55-7 1.75z" />
         <path d="M10 5.5V17" />
+      </>
+    ),
+    media: (
+      <>
+        <rect x="3" y="4" width="14" height="12" rx="1.5" />
+        <circle cx="7.5" cy="8.5" r="1.25" />
+        <path d="M3.5 14.5l4-4 3 3 2-2 4 4" />
       </>
     ),
     activity: (

@@ -32,3 +32,9 @@ export const inputClass =
 export const labelClass = "block text-sm font-medium text-ink";
 
 export const cardClass = "rounded-lg border border-slate-200 bg-white";
+
+export const textareaClass =
+  "block min-h-20 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-base text-ink placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25 sm:text-sm";
+
+export const fileInputClass =
+  "block w-full text-sm text-ink file:mr-3 file:h-10 file:cursor-pointer file:rounded-md file:border file:border-slate-300 file:bg-white file:px-3 file:text-sm file:font-medium file:text-ink hover:file:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:file:h-9";

@@ -28,13 +28,17 @@ Status: in active development.
 
 3. In the Supabase SQL editor, run `supabase/schema.sql` for a fresh database. The files in `supabase/migrations/` are changes for databases created from an earlier version of the schema, so skip them on a fresh setup.
 
-4. Generate the Superadmin password hash, paste it and the email into `supabase/seed.sql`, then run that file:
+4. For the image library (Admin → Media), in Supabase:
+   - **Storage → New bucket**, name `handbook-media`, **Public bucket off** (pictures are served through short-lived signed links).
+   - Add `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (Project Settings → API; the secret or legacy service_role key) to `.env.local`. They are server-only; never prefix them with `NEXT_PUBLIC_`.
+
+5. Generate the Superadmin password hash, paste it and the email into `supabase/seed.sql`, then run that file:
 
    ```bash
    npm run hash -- "YourStrongPassword"
    ```
 
-5. Start the dev server and open [http://localhost:3000](http://localhost:3000):
+6. Start the dev server and open [http://localhost:3000](http://localhost:3000):
 
    ```bash
    npm run dev
@@ -42,10 +46,12 @@ Status: in active development.
 
 ## Project structure
 
-- `app/` — routes: `/login`, `/admin/*` (Admin/Superadmin, including `/admin/activity` logs and `/admin/handbook` sections and chapters), `/dashboard` (Candidate), `/access-expired`
+- `app/` — routes: `/login`, `/admin/*` (Admin/Superadmin, including `/admin/activity` logs and `/admin/handbook` sections and chapters, `/admin/media` image library), `/dashboard` (Candidate), `/access-expired`
 - `lib/auth/` — JWT signing/verification, session cookie, role guard
 - `components/admin/` — compact admin console UI (sidebar shell, tables, row menus, slide-in panels); admin pages must build from these. Candidate pages keep the large, simple style.
 - `lib/db/` — shared Postgres pool and transaction helper
+- `lib/storage/` — the only code that talks to the storage provider (upload, delete, signed links)
+- `lib/media/` — image checks (real type and size from the file) and in-browser WebP conversion
 - `lib/audit/` — activity and login logs (every loggable action is listed in `lib/audit/actions.ts`)
 - `proxy.ts` — route protection by role, block and expiry
 - `supabase/` — schema, migrations and seed
