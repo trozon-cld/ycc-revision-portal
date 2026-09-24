@@ -10,6 +10,8 @@ export type CategoryActionState = { error?: string; success?: boolean };
 
 const MAX_NAME_LENGTH = 100;
 const DUPLICATE_NAME = "A category with this name already exists.";
+const MAX_LINKED_CHAPTERS = 1000;
+const CHAPTERS_CHANGED = "The chapter list has changed since you opened this. Close it, reopen and try again.";
 
 export async function createCategory(
   _prevState: CategoryActionState,
@@ -128,6 +130,47 @@ export async function deleteCategory(
 
   revalidatePath("/admin/categories");
   revalidatePath("/admin/candidates");
+  return result;
+}
+
+// Replaces the whole chapter list. Logging deferred to Handbook plan Phase F (category.chapters_changed).
+export async function saveCategoryChapters(
+  _prevState: CategoryActionState,
+  formData: FormData
+): Promise<CategoryActionState> {
+  await requireRole(["superadmin"]);
+
+  const categoryId = String(formData.get("categoryId") ?? "");
+  const chapterIds = [...new Set(formData.getAll("chapterId").map(String))];
+  if (!categoryId) return { error: "Category not found." };
+  if (chapterIds.length > MAX_LINKED_CHAPTERS) return { error: "Too many chapters selected." };
+
+  let result: CategoryActionState;
+  try {
+    result = await withTransaction<CategoryActionState>(async (client) => {
+      const category = await lockCategory(client, categoryId);
+      if (!category) return { error: "This category no longer exists." };
+
+      // FOR SHARE keeps these chapters from being deleted until this save commits.
+      const { rows } = await client.query(`select id from chapters where id = any($1::uuid[]) for share`, [
+        chapterIds,
+      ]);
+      if (rows.length !== chapterIds.length) return { error: CHAPTERS_CHANGED };
+
+      await client.query(`delete from category_chapters where category_id = $1`, [categoryId]);
+      await client.query(
+        `insert into category_chapters (category_id, chapter_id) select $1::uuid, unnest($2::uuid[])`,
+        [categoryId, chapterIds]
+      );
+      return { success: true };
+    });
+  } catch (error) {
+    const code = getErrorCode(error);
+    if (code === "22P02" || code === "23503") return { error: CHAPTERS_CHANGED };
+    throw error;
+  }
+
+  revalidatePath("/admin/categories");
   return result;
 }
 

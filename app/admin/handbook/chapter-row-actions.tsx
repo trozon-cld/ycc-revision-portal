@@ -140,7 +140,8 @@ export function ChapterRowActions({
           <strong className="font-medium">
             {number} {title}
           </strong>{" "}
-          will be removed and the chapters after it will move up one number. This can&apos;t be undone.
+          will be removed and the chapters after it will move up one number. It&apos;s also removed from any
+          categories that include it. This can&apos;t be undone.
         </p>
       </ActionForm>
     ),

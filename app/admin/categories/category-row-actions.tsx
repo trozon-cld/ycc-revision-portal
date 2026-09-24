@@ -5,6 +5,7 @@ import { Field } from "@/components/admin/field";
 import { PanelButton, RowActions, type RowAction } from "@/components/admin/row-actions";
 import { buttonClass, inputClass } from "@/components/admin/styles";
 import { createCategory, deleteCategory, renameCategory } from "./actions";
+import { CategoryChaptersForm, type ChapterOutline } from "./category-chapters-form";
 
 export function NewCategoryButton() {
   return (
@@ -31,15 +32,27 @@ export function CategoryRowActions({
   id,
   name,
   candidateCount,
+  outline,
+  linkedChapterIds,
 }: {
   id: string;
   name: string;
   candidateCount: number;
+  outline: ChapterOutline;
+  linkedChapterIds: string[];
 }) {
   const hidden = { categoryId: id };
   const countLabel = `${candidateCount} candidate${candidateCount === 1 ? "" : "s"}`;
 
   const actions: RowAction[] = [
+    {
+      label: "Chapters",
+      title: `Chapters for ${name}`,
+      description: "Tick the chapters this category's Mock test will draw from.",
+      render: (close) => (
+        <CategoryChaptersForm categoryId={id} outline={outline} initialSelected={linkedChapterIds} onClose={close} />
+      ),
+    },
     {
       label: "Rename",
       title: "Rename category",
