@@ -17,6 +17,7 @@ interface MediaRow {
   height: number;
   byte_size: number;
   alt_text: string;
+  used_in: number;
 }
 
 const PAGE_LIMIT = 300;
@@ -30,7 +31,8 @@ export default async function MediaPage({ searchParams }: PageProps<"/admin/medi
   const configured = isStorageConfigured();
 
   const { rows: media } = await pool.query<MediaRow>(
-    `select id, thumb_path, original_name, mime_type, width, height, byte_size, alt_text
+    `select id, thumb_path, original_name, mime_type, width, height, byte_size, alt_text,
+            (select count(*) from content_page_media u where u.media_id = media.id)::int as used_in
      from media
      where $1 = '' or alt_text ilike '%' || $1 || '%' escape '\\' or original_name ilike '%' || $1 || '%' escape '\\'
      order by created_at desc
@@ -111,8 +113,17 @@ export default async function MediaPage({ searchParams }: PageProps<"/admin/medi
                     <p className="mt-1 text-xs text-slate-600" title={item.original_name}>
                       {item.width} × {item.height} · {formatBytes(item.byte_size)} · {formatType(item.mime_type)}
                     </p>
+                    <p className="mt-0.5 text-xs text-slate-600">
+                      {item.used_in === 0 ? "Not used yet" : `Used in ${item.used_in} page${item.used_in === 1 ? "" : "s"}`}
+                    </p>
                   </div>
-                  <MediaRowActions id={item.id} altText={item.alt_text} name={item.original_name} thumbUrl={thumbUrl} />
+                  <MediaRowActions
+                    id={item.id}
+                    altText={item.alt_text}
+                    name={item.original_name}
+                    thumbUrl={thumbUrl}
+                    usedIn={item.used_in}
+                  />
                 </div>
               </li>
             );

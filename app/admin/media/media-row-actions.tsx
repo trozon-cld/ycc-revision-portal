@@ -3,7 +3,7 @@
 import { ActionForm } from "@/components/admin/action-form";
 import { Field } from "@/components/admin/field";
 import { RowActions, type RowAction } from "@/components/admin/row-actions";
-import { textareaClass } from "@/components/admin/styles";
+import { buttonClass, textareaClass } from "@/components/admin/styles";
 import { deleteMedia, updateAltText } from "./actions";
 
 export function MediaRowActions({
@@ -11,11 +11,13 @@ export function MediaRowActions({
   altText,
   name,
   thumbUrl,
+  usedIn,
 }: {
   id: string;
   altText: string;
   name: string;
   thumbUrl?: string;
+  usedIn: number;
 }) {
   const hidden = { mediaId: id };
 
@@ -54,9 +56,22 @@ export function MediaRowActions({
     {
       label: "Delete",
       danger: true,
-      title: "Delete picture?",
+      title: usedIn > 0 ? "Can't delete this picture" : "Delete picture?",
       variant: "confirm",
-      render: (close) => (
+      render: (close) =>
+        usedIn > 0 ? (
+          <div>
+            <p className="px-5 py-4 text-sm [overflow-wrap:anywhere]">
+              <strong className="font-medium">{name}</strong> is used in {usedIn} Handbook page{usedIn === 1 ? "" : "s"}.
+              Remove it from {usedIn === 1 ? "that page" : "those pages"} first.
+            </p>
+            <div className="flex justify-end border-t border-slate-200 px-5 py-3">
+              <button type="button" onClick={close} className={buttonClass("secondary")}>
+                Close
+              </button>
+            </div>
+          </div>
+        ) : (
         <ActionForm
           action={deleteMedia}
           hidden={hidden}
@@ -71,7 +86,7 @@ export function MediaRowActions({
             <strong className="font-medium">{name}</strong> will be removed from the library. This can&apos;t be undone.
           </p>
         </ActionForm>
-      ),
+        ),
     },
   ];
 

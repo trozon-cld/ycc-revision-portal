@@ -60,11 +60,14 @@ export function BookReader({
   media,
   textSize,
   label = "Handbook",
+  onLayout,
 }: {
   pages: BookPageData[];
   media: ResolvedMedia;
   textSize: TextSize;
   label?: string;
+  // Reports how many on-screen pages the content takes (used by the editor's readout).
+  onLayout?: (info: { pages: number }) => void;
 }) {
   const stageRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
@@ -158,6 +161,10 @@ export function BookReader({
 
   const totalPages = sheets.reduce((count, sheet) => (sheet.kind === "page" ? count + 1 : count), 0);
   const status = describeView(visible, totalPages);
+
+  useEffect(() => {
+    if (partCounts && onLayout) onLayout({ pages: totalPages });
+  }, [partCounts, totalPages, onLayout]);
   const shortStatus = status.replace(/^Pages? /, "");
   // Sized from the reader's own width (not the screen), so previews match real devices.
   const compact = (stageSize?.width ?? COMPACT_BELOW) < COMPACT_BELOW;

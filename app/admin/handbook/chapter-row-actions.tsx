@@ -49,6 +49,7 @@ export function ChapterRowActions({
   isFirst,
   isLast,
   otherSections,
+  pageCount,
 }: {
   id: string;
   title: string;
@@ -56,6 +57,7 @@ export function ChapterRowActions({
   isFirst: boolean;
   isLast: boolean;
   otherSections: SectionOption[];
+  pageCount: number;
 }) {
   const hidden = { chapterId: id };
   const description = `Chapter ${number} · ${title}`;
@@ -123,9 +125,24 @@ export function ChapterRowActions({
   actions.push({
     label: "Delete",
     danger: true,
-    title: "Delete chapter?",
+    title: pageCount > 0 ? "Can't delete this chapter" : "Delete chapter?",
     variant: "confirm",
-    render: (close) => (
+    render: (close) =>
+      pageCount > 0 ? (
+        <div>
+          <p className="px-5 py-4 text-sm">
+            <strong className="font-medium">
+              {number} {title}
+            </strong>{" "}
+            still has {pageCount} page{pageCount === 1 ? "" : "s"}. Delete them first.
+          </p>
+          <div className="flex justify-end border-t border-slate-200 px-5 py-3">
+            <button type="button" onClick={close} className={buttonClass("secondary")}>
+              Close
+            </button>
+          </div>
+        </div>
+      ) : (
       <ActionForm
         action={deleteChapter}
         hidden={hidden}
@@ -144,7 +161,7 @@ export function ChapterRowActions({
           categories that include it. This can&apos;t be undone.
         </p>
       </ActionForm>
-    ),
+      ),
   });
 
   return <RowActions label={`Actions for ${title}`} actions={actions} />;

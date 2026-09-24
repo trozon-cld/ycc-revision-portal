@@ -22,6 +22,7 @@ interface ChapterRow {
   number: number;
   title: string;
   status: "draft" | "published";
+  page_count: number;
 }
 
 export default async function HandbookPage() {
@@ -31,7 +32,8 @@ export default async function HandbookPage() {
     pool.query<SectionRow>(`select id, position, title from sections order by position`),
     pool.query<ChapterRow>(
       `select c.id, c.section_id, c.position, c.title, c.status,
-              row_number() over (order by s.position, c.position)::int as number
+              row_number() over (order by s.position, c.position)::int as number,
+              (select count(*) from handbook_items i where i.chapter_id = c.id)::int as page_count
        from chapters c
        join sections s on s.id = c.section_id
        order by s.position, c.position`
@@ -91,7 +93,7 @@ export default async function HandbookPage() {
               </div>
 
               <Table
-                columns={["Chapter", "Status", ""]}
+                columns={["Chapter", "Pages", "Status", ""]}
                 isEmpty={sectionChapters.length === 0}
                 emptyMessage="No chapters in this section yet."
               >
@@ -99,8 +101,14 @@ export default async function HandbookPage() {
                   <Row key={chapter.id}>
                     <Cell kind="primary">
                       <span className="mr-1 font-mono text-slate-600 tabular-nums">{chapterNumber(chapter.number)}</span>{" "}
-                      {chapter.title}
+                      <Link
+                        href={`/admin/handbook/chapters/${chapter.id}`}
+                        className="text-ink underline-offset-2 hover:text-primary hover:underline"
+                      >
+                        {chapter.title}
+                      </Link>
                     </Cell>
+                    <Cell label="Pages">{chapter.page_count}</Cell>
                     <Cell label="Status" nowrap>
                       <Badge tone={chapter.status === "published" ? "success" : "neutral"}>
                         {chapter.status === "published" ? "Published" : "Draft"}
@@ -114,6 +122,7 @@ export default async function HandbookPage() {
                         isFirst={index === 0}
                         isLast={index === sectionChapters.length - 1}
                         otherSections={sectionOptions.filter((option) => option.id !== section.id)}
+                        pageCount={chapter.page_count}
                       />
                     </Cell>
                   </Row>

@@ -20,7 +20,7 @@ export type InstantRowAction = {
   label: string;
   danger?: boolean;
   run: () => Promise<{ error?: string; success?: boolean }>;
-  successMessage: string;
+  successMessage?: string;
 };
 
 export type RowAction = PanelRowAction | InstantRowAction;
@@ -37,7 +37,8 @@ export function RowActions({ label, actions }: { label: string; actions: RowActi
   function runInstant(action: InstantRowAction) {
     startTransition(async () => {
       const result = await action.run();
-      toast(result.error ?? action.successMessage);
+      const message = result.error ?? action.successMessage;
+      if (message) toast(message);
       triggerRef.current?.focus();
     });
   }
