@@ -12,6 +12,7 @@ const SHEET_RATIO = 0.75; // width / height of a sheet in a spread
 const STAGE_PADDING = 12;
 const NARROW_SHEET = 480;
 const PICTURE_SHARE = 0.6;
+const COMPACT_BELOW = 600;
 
 type Geometry = {
   spread: boolean;
@@ -157,6 +158,9 @@ export function BookReader({
 
   const totalPages = sheets.reduce((count, sheet) => (sheet.kind === "page" ? count + 1 : count), 0);
   const status = describeView(visible, totalPages);
+  const shortStatus = status.replace(/^Pages? /, "");
+  // Sized from the reader's own width (not the screen), so previews match real devices.
+  const compact = (stageSize?.width ?? COMPACT_BELOW) < COMPACT_BELOW;
 
   const sheetStyle = geometry
     ? ({
@@ -206,28 +210,56 @@ export function BookReader({
         )}
       </div>
 
-      <nav aria-label="Page controls" className="flex items-center justify-between gap-3 border-t border-slate-300 bg-white px-3 py-3 sm:px-6">
-        <button
-          type="button"
-          onClick={previous}
-          disabled={!canGoBack}
-          className="inline-flex h-14 min-w-28 items-center justify-center gap-2 rounded-xl border-2 border-ink/25 bg-white px-4 text-lg font-semibold text-ink transition-colors hover:bg-slate-50 focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-40 sm:min-w-36"
-        >
-          <span aria-hidden="true">‹</span> Previous
-        </button>
-        <p aria-live="polite" className="min-w-0 text-center text-base font-medium text-ink sm:text-lg">
-          {status}
+      <nav
+        aria-label="Page controls"
+        className={`flex items-center justify-between gap-3 border-t border-slate-300 bg-white py-3 ${compact ? "px-3" : "px-6"}`}
+      >
+        <PageButton direction="previous" compact={compact} disabled={!canGoBack} onClick={previous} />
+        <p className="min-w-0 whitespace-nowrap text-center text-lg font-medium text-ink">
+          <span aria-hidden="true">{compact ? shortStatus : status}</span>
+          <span className="sr-only" aria-live="polite">
+            {status}
+          </span>
         </p>
-        <button
-          type="button"
-          onClick={next}
-          disabled={!canGoForward}
-          className="inline-flex h-14 min-w-28 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-lg font-semibold text-white transition-colors hover:bg-primary/90 focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-40 sm:min-w-36"
-        >
-          Next <span aria-hidden="true">›</span>
-        </button>
+        <PageButton direction="next" compact={compact} disabled={!canGoForward} onClick={next} />
       </nav>
     </section>
+  );
+}
+
+function PageButton({
+  direction,
+  compact,
+  disabled,
+  onClick,
+}: {
+  direction: "previous" | "next";
+  compact: boolean;
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  const isNext = direction === "next";
+  const tone = isNext
+    ? "bg-primary text-white hover:bg-primary/90"
+    : "border-2 border-ink/25 bg-white text-ink hover:bg-slate-50";
+  const size = compact ? "size-14" : "h-14 min-w-36 gap-2 px-5";
+  const arrow = (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={compact ? "size-7" : "size-5"} fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d={isNext ? "M9 5l7 7-7 7" : "M15 5l-7 7 7 7"} />
+    </svg>
+  );
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={compact ? (isNext ? "Next page" : "Previous page") : undefined}
+      className={`inline-flex shrink-0 items-center justify-center rounded-xl text-lg font-semibold transition-colors focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-40 ${tone} ${size}`}
+    >
+      {!isNext && arrow}
+      {!compact && (isNext ? "Next" : "Previous")}
+      {isNext && arrow}
+    </button>
   );
 }
 
