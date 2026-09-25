@@ -11,6 +11,10 @@ export type QuestionTypeDef<C, A, R> = {
   check(content: C, answer: A, response: R): boolean;
   // Every picture the content uses (not the question picture, which is shared).
   mediaIds(content: C): string[];
+  // Optional: a message when a started answer isn't complete yet (e.g. "Choose 1 more answer").
+  incomplete?(content: C, raw: unknown): string | null;
+  // Optional: a typical wrong answer, so the book can measure how the question looks after Check.
+  sampleWrongResponse?(content: C, answer: A): unknown;
 };
 
 export type AnyQuestionTypeDef = {
@@ -18,6 +22,8 @@ export type AnyQuestionTypeDef = {
   parseResponse(raw: unknown, content: unknown): unknown;
   check(content: unknown, answer: unknown, response: unknown): boolean;
   mediaIds(content: unknown): string[];
+  incomplete?(content: unknown, raw: unknown): string | null;
+  sampleWrongResponse?(content: unknown, answer: unknown): unknown;
 };
 
 // Erases the type parameters so every type fits in one registry.

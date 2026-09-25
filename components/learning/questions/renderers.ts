@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import type { ResolvedMedia } from "@/lib/content/book";
 import type { CheckResult, QuestionMode, QuestionType } from "@/lib/questions/types";
+import { MultiPickAnswer } from "./multi-pick";
 import { SinglePictureAnswer } from "./single-picture";
 import { SingleTextAnswer } from "./single-text";
 
@@ -17,6 +18,8 @@ export type AnswerAreaProps = {
   answer: unknown;
   response: unknown;
   onResponse: (response: unknown) => void;
+  // Shows a short message in the frame's shared message area (e.g. "You've chosen 2…").
+  onNotice: (message: string) => void;
   // True once the question is checked or revealed: answers can no longer be changed.
   locked: boolean;
   // True when the correct answer should be shown (learn mode, after Check or Reveal).
@@ -28,6 +31,6 @@ export type AnswerAreaProps = {
 export const QUESTION_RENDERERS: Record<QuestionType, ComponentType<AnswerAreaProps> | null> = {
   single_text: SingleTextAnswer,
   single_picture: SinglePictureAnswer,
-  multi_pick: null,
+  multi_pick: MultiPickAnswer,
   hotspot: null,
 };

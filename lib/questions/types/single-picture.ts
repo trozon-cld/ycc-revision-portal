@@ -67,6 +67,10 @@ export const singlePictureDef = defineQuestionType<SinglePictureContent, SingleP
     return response === answer.correctOptionId;
   },
 
+  sampleWrongResponse(content, answer) {
+    return content.options.find((option) => option.id !== answer.correctOptionId)?.id ?? null;
+  },
+
   mediaIds(content) {
     return content.options.map((option) => option.mediaId);
   },

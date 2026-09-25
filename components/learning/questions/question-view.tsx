@@ -3,6 +3,7 @@
 import { useId, useState, type ReactNode } from "react";
 import type { ResolvedMedia } from "@/lib/content/book";
 import { checkAnswer } from "@/lib/questions/check";
+import { getQuestionTypeDef } from "@/lib/questions/registry";
 import type { ClientQuestion } from "@/lib/questions/public";
 import type { CheckResult } from "@/lib/questions/types";
 import { InlineText } from "../inline-text";
@@ -73,6 +74,11 @@ export function QuestionView({
       setState({ notice: "Choose an answer first." });
       return;
     }
+    const unfinished = getQuestionTypeDef(question.type)?.incomplete?.(question.content, response);
+    if (unfinished) {
+      setState({ notice: unfinished });
+      return;
+    }
     setChecking(true);
     try {
       const marked =
@@ -128,6 +134,7 @@ export function QuestionView({
               answer={mode === "learn" ? question.answer : undefined}
               response={response}
               onResponse={changeResponse}
+              onNotice={(message) => setState({ notice: message })}
               locked={phase !== "answering"}
               showCorrect={mode === "learn" && phase !== "answering"}
               result={result}

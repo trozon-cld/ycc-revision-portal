@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 import { buildSheets, type BookPageData, type ResolvedMedia, type Sheet, type TextSize } from "@/lib/content/book";
+import { getQuestionTypeDef } from "@/lib/questions/registry";
 import { BlockList } from "./blocks";
 import { FRESH_QUESTION_STATE, QuestionView, type QuestionViewState } from "./questions/question-view";
 
@@ -11,7 +12,17 @@ type QuestionStates = Record<string, QuestionViewState>;
 type QuestionBinding = { states: QuestionStates; setState: (key: string, state: QuestionViewState) => void };
 
 // How a question looks after a wrong answer is checked: its tallest state before the explanation.
-const CHECKED_WRONG: QuestionViewState = { ...FRESH_QUESTION_STATE, phase: "checked", result: { answered: true, correct: false } };
+// With a typical wrong answer from its type, "Your answer" labels are measured too.
+function checkedWrong(page: BookPageData): QuestionViewState {
+  const data = page.question?.data;
+  const sample = data ? getQuestionTypeDef(data.type)?.sampleWrongResponse?.(data.content, data.answer) : undefined;
+  return { ...FRESH_QUESTION_STATE, phase: "checked", result: { answered: true, correct: false }, response: sample ?? null };
+}
+
+function measuresWrongAnswer(page: BookPageData): boolean {
+  const data = page.question?.data;
+  return Boolean(data && getQuestionTypeDef(data.type)?.sampleWrongResponse);
+}
 
 function questionKey(page: BookPageData): string {
   return page.question ? `${page.id}:${JSON.stringify(page.question)}` : page.id;
@@ -130,9 +141,8 @@ export function BookReader({
   useLayoutEffect(() => {
     const layer = measureRef.current;
     if (!layer || !geometry) return;
-    // A question page's picture gets the height left by the rest of the question (measured without
-    // picture or explanation), within 80px and the usual 60%: first so it all fits even after Check
-    // (one extra line kept for a "Your answer" label), else so it fits while answering.
+    // Question pictures get the height the rest of the question leaves (80px up to the usual 60%),
+    // fitted to how it looks after a wrong answer is checked, else to how it looks while answering.
     const caps = pages.map((page, index) => {
       if (!page.question) return null;
       const share = Math.round(geometry.contentHeight * PICTURE_SHARE);
@@ -141,7 +151,9 @@ export function BookReader({
         const rest = restRef.current?.querySelector<HTMLElement>(`[data-rest-page="${index}"][data-rest-state="${state}"]`);
         return rest ? geometry.contentHeight - rest.offsetHeight - pictureMargin - extra : -1;
       };
-      for (const room of [roomFor("checked", Math.ceil(textSize * 1.4)), roomFor("answering", 0)]) {
+      // Types without a sample wrong answer keep one extra line for their "Your answer" label.
+      const labelReserve = measuresWrongAnswer(page) ? 0 : Math.ceil(textSize * 1.4);
+      for (const room of [roomFor("checked", labelReserve), roomFor("answering", 0)]) {
         if (room >= QUESTION_PICTURE_MIN) return Math.min(share, room);
       }
       return share;
@@ -257,7 +269,7 @@ export function BookReader({
                             question={page.question!.data}
                             label={page.question!.label}
                             media={media}
-                            state={state === "checked" ? CHECKED_WRONG : FRESH_QUESTION_STATE}
+                            state={state === "checked" ? checkedWrong(page) : FRESH_QUESTION_STATE}
                           />
                         </div>
                       ))

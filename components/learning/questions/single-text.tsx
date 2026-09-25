@@ -20,7 +20,7 @@ export function SingleTextAnswer({ mode, seed, content, answer, response, onResp
   );
 
   return (
-    <ul className="m-0 list-none space-y-[0.6em] p-0">
+    <ul className="m-0 list-none space-y-[max(0.6em,10px)] p-0">
       {options.map((option, index) => {
         const selected = response === option.id;
         const isCorrect = correctId === option.id;
@@ -37,7 +37,7 @@ export function SingleTextAnswer({ mode, seed, content, answer, response, onResp
             <label
               htmlFor={inputId}
               data-option={option.id}
-              className={`flex min-h-[max(56px,3.5em)] items-center gap-[0.75em] rounded-lg border-2 px-[0.9em] py-[0.55em] leading-snug text-ink has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary ${tone} ${
+              className={`relative flex min-h-[max(56px,3.5em)] items-center gap-[0.75em] rounded-lg border-2 px-[0.9em] py-[0.55em] leading-snug text-ink has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary ${tone} ${
                 locked ? "cursor-default" : "cursor-pointer hover:border-primary"
               }`}
             >
@@ -62,11 +62,13 @@ export function SingleTextAnswer({ mode, seed, content, answer, response, onResp
               <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
                 <span className="sr-only">{optionLetter(index)}: </span>
                 <InlineText text={option.text} />
-                {/* On its own line, so the option text keeps the full width on phones. */}
-                {isCorrect && <Status tone="text-green-900" icon="tick" label="Correct answer" />}
-                {isWrongChoice && <Status tone="text-amber-950" icon="cross" label="Your answer" />}
+                {isCorrect && <span className="sr-only">. Correct answer</span>}
+                {isWrongChoice && <span className="sr-only">. Your answer</span>}
               </span>
               {selected && !isCorrect && !isWrongChoice && <Icon name="tick" className="text-primary" />}
+              {/* Results sit on the border, so an option never grows after Check and never moves page. */}
+              {isCorrect && <Status tone="bg-green-700" icon="tick" label="Correct answer" />}
+              {isWrongChoice && <Status tone="bg-amber-800" icon="cross" label="Your answer" />}
             </label>
           </li>
         );
@@ -77,7 +79,10 @@ export function SingleTextAnswer({ mode, seed, content, answer, response, onResp
 
 function Status({ tone, icon, label }: { tone: string; icon: "tick" | "cross"; label: string }) {
   return (
-    <span className={`mt-[0.25em] flex items-center gap-[0.3em] text-[0.85em] font-semibold ${tone}`}>
+    <span
+      aria-hidden="true"
+      className={`absolute -top-[0.65em] right-[0.75em] flex items-center gap-[0.25em] rounded-full px-[0.55em] py-[0.08em] text-[max(14px,0.8em)] font-semibold leading-tight text-white ${tone}`}
+    >
       <Icon name={icon} />
       {label}
     </span>

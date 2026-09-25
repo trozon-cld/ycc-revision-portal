@@ -74,6 +74,10 @@ export const singleTextDef = defineQuestionType<SingleTextContent, SingleTextAns
     return response === answer.correctOptionId;
   },
 
+  sampleWrongResponse(content, answer) {
+    return content.options.find((option) => option.id !== answer.correctOptionId)?.id ?? null;
+  },
+
   mediaIds() {
     return [];
   },

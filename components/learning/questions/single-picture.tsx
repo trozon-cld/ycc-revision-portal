@@ -101,7 +101,7 @@ function Status({ tone, icon, label }: { tone: string; icon: "tick" | "cross"; l
   return (
     <span
       aria-hidden="true"
-      className={`absolute inset-x-[0.3em] bottom-[0.3em] flex items-center gap-[0.3em] rounded-md px-[0.4em] py-[0.2em] text-[0.72em] font-semibold leading-tight text-white ${tone}`}
+      className={`absolute inset-x-[0.3em] bottom-[0.3em] flex items-center gap-[0.3em] rounded-md px-[0.4em] py-[0.2em] text-[max(14px,0.8em)] font-semibold leading-tight text-white ${tone}`}
     >
       <Icon name={icon} />
       {label}

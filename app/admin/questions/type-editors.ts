@@ -1,9 +1,11 @@
 import type { ComponentType } from "react";
 import type { ResolvedMedia } from "@/lib/content/book";
 import { cleanLine } from "@/lib/questions/text";
+import type { MultiPickContent } from "@/lib/questions/types/multi-pick";
 import type { PictureOptionDraft, SinglePictureContent } from "@/lib/questions/types/single-picture";
 import type { SingleTextContent } from "@/lib/questions/types/single-text";
 import type { QuestionType } from "@/lib/questions/types";
+import { MultiPickFields } from "./multi-pick-fields";
 import { SinglePictureFields } from "./single-picture-fields";
 import { SingleTextFields } from "./single-text-fields";
 
@@ -44,5 +46,13 @@ export const TYPE_EDITORS: Partial<Record<QuestionType, TypeEditor>> = {
       return { content: { ...data, options: data.options.filter((option) => option.mediaId) }, answer };
     },
     shuffles: (content) => !(content as SinglePictureContent).keepOrder,
+  },
+  multi_pick: {
+    Fields: MultiPickFields,
+    previewable: (content, answer) => {
+      const data = content as MultiPickContent;
+      return { content: { ...data, options: data.options.filter((option) => cleanLine(option.text)) }, answer };
+    },
+    shuffles: (content) => !(content as MultiPickContent).keepOrder,
   },
 };
