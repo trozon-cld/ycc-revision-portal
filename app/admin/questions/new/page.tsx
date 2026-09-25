@@ -4,7 +4,7 @@ import { requireRole } from "@/lib/auth/guard";
 import { listChapterOptions } from "@/lib/questions/queries";
 import { getQuestionTypeDef } from "@/lib/questions/registry";
 import { isQuestionType } from "@/lib/questions/types";
-import { emptySingleText } from "@/lib/questions/types/single-text";
+import { emptyDraft } from "@/lib/questions/drafts";
 import { isUuid } from "@/lib/questions/validate";
 import { isStorageConfigured } from "@/lib/storage/storage";
 import { QuestionEditor } from "../question-editor";
@@ -19,7 +19,8 @@ export default async function NewQuestionPage({ searchParams }: PageProps<"/admi
   const chapterParam = one(params.chapter);
   const known = chapters.some((section) => section.chapters.some((chapter) => chapter.id === chapterParam));
   // Ids are made here, not in the browser, so the server and browser render the same options.
-  const empty = emptySingleText(randomUUID);
+  const empty = emptyDraft(type, randomUUID);
+  if (!empty) notFound();
 
   return (
     <QuestionEditor

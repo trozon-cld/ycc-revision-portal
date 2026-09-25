@@ -1,5 +1,7 @@
 import type { ComponentType } from "react";
+import type { ResolvedMedia } from "@/lib/content/book";
 import type { CheckResult, QuestionMode, QuestionType } from "@/lib/questions/types";
+import { SinglePictureAnswer } from "./single-picture";
 import { SingleTextAnswer } from "./single-text";
 
 // What every type's answer area receives from QuestionView. The frame owns the state.
@@ -9,6 +11,8 @@ export type AnswerAreaProps = {
   // Same seed, same shuffled order (e.g. attempt id + question id), so a reload doesn't reshuffle.
   seed: string;
   content: unknown;
+  // Pictures the answer area may show (e.g. picture options), keyed by media id.
+  media: ResolvedMedia;
   // Only present in learn mode.
   answer: unknown;
   response: unknown;
@@ -23,7 +27,7 @@ export type AnswerAreaProps = {
 // Each type step (C1–C4) adds its answer area here.
 export const QUESTION_RENDERERS: Record<QuestionType, ComponentType<AnswerAreaProps> | null> = {
   single_text: SingleTextAnswer,
-  single_picture: null,
+  single_picture: SinglePictureAnswer,
   multi_pick: null,
   hotspot: null,
 };

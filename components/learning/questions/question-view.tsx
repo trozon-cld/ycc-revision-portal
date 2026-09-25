@@ -124,6 +124,7 @@ export function QuestionView({
               mode={mode}
               seed={seed ?? question.id}
               content={question.content}
+              media={media}
               answer={mode === "learn" ? question.answer : undefined}
               response={response}
               onResponse={changeResponse}

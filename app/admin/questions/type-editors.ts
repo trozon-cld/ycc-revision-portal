@@ -1,7 +1,10 @@
 import type { ComponentType } from "react";
+import type { ResolvedMedia } from "@/lib/content/book";
 import { cleanLine } from "@/lib/questions/text";
+import type { PictureOptionDraft, SinglePictureContent } from "@/lib/questions/types/single-picture";
 import type { SingleTextContent } from "@/lib/questions/types/single-text";
 import type { QuestionType } from "@/lib/questions/types";
+import { SinglePictureFields } from "./single-picture-fields";
 import { SingleTextFields } from "./single-text-fields";
 
 export type TypeFieldsProps = {
@@ -9,6 +12,11 @@ export type TypeFieldsProps = {
   answer: unknown;
   onChange: (content: unknown, answer: unknown) => void;
   newId: () => string;
+  // Pictures chosen so far (full size) and picker thumbnails, keyed by media id.
+  media: ResolvedMedia;
+  thumbs: Record<string, string>;
+  // Opens the Media picker; `onPicked` receives the chosen picture's id.
+  choosePicture: (onPicked: (mediaId: string) => void) => void;
 };
 
 type TypeEditor = {
@@ -28,5 +36,13 @@ export const TYPE_EDITORS: Partial<Record<QuestionType, TypeEditor>> = {
       return { content: { ...data, options: data.options.filter((option) => cleanLine(option.text)) }, answer };
     },
     shuffles: (content) => !(content as SingleTextContent).keepOrder,
+  },
+  single_picture: {
+    Fields: SinglePictureFields,
+    previewable: (content, answer) => {
+      const data = content as SinglePictureContent & { options: PictureOptionDraft[] };
+      return { content: { ...data, options: data.options.filter((option) => option.mediaId) }, answer };
+    },
+    shuffles: (content) => !(content as SinglePictureContent).keepOrder,
   },
 };

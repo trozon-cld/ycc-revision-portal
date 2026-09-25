@@ -8,7 +8,7 @@ import { chapterNumber } from "@/lib/handbook/structure";
 import { questionRef } from "@/lib/questions/labels";
 import { listChapterOptions } from "@/lib/questions/queries";
 import type { QuestionStatus, QuestionType } from "@/lib/questions/types";
-import { editableSingleText } from "@/lib/questions/types/single-text";
+import { editableDraft } from "@/lib/questions/drafts";
 import { isUuid, parseQuestion } from "@/lib/questions/validate";
 import { isStorageConfigured } from "@/lib/storage/storage";
 import { QuestionEditor } from "../question-editor";
@@ -62,14 +62,18 @@ export default async function EditQuestionPage({ params }: PageProps<"/admin/que
     explanation: question.explanation,
   });
 
-  // Single answer is the only editable type so far; later types add their own fallback here.
-  const editable = parsed.ok
-    ? { content: parsed.question.content, answer: parsed.question.answer }
-    : editableSingleText(question.content, question.answer, randomUUID);
+  // Always in the editor's draft shape (e.g. an empty label rather than none), so opening a question
+  // never shows it as changed. A question that no longer passes the checks opens with what is usable.
+  const source = parsed.ok ? parsed.question : { content: question.content, answer: question.answer };
+  const editable = editableDraft(question.type, source.content, source.answer, randomUUID) ?? source;
 
   let media: ResolvedMedia = {};
   try {
-    media = await resolveMedia(question.stem_media_id ? [question.stem_media_id] : []);
+    // Every picture the question uses: its own and any option pictures.
+    const { rows: used } = await pool.query<{ media_id: string }>(`select media_id from question_media where question_id = $1`, [
+      question.id,
+    ]);
+    media = await resolveMedia([...new Set([...(question.stem_media_id ? [question.stem_media_id] : []), ...used.map((row) => row.media_id)])]);
   } catch (error) {
     console.error("Question editor: pictures could not be loaded", error);
   }

@@ -72,7 +72,8 @@ export function QuestionEditor({
   const [isPublishing, startPublishing] = useTransition();
   const [media, setMedia] = useState<ResolvedMedia>(initialMedia);
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
-  const [picking, setPicking] = useState(false);
+  // Who gets the picture chosen in the Media picker (the question picture or an answer option).
+  const [pickFor, setPickFor] = useState<((mediaId: string) => void) | null>(null);
   const [leaveTo, setLeaveTo] = useState<string | null>(null);
   const [tab, setTab] = useState<"edit" | "preview">("edit");
 
@@ -144,8 +145,8 @@ export function QuestionEditor({
   }, [dirty]);
 
   function pick(item: PickerItem) {
-    setPicking(false);
-    update({ stemMediaId: item.id });
+    pickFor?.(item.id);
+    setPickFor(null);
     if (item.thumbUrl) setThumbs((current) => ({ ...current, [item.id]: item.thumbUrl as string }));
     if (!media[item.id]) getPreviewMedia([item.id]).then((found) => setMedia((current) => ({ ...current, ...found })));
   }
@@ -331,7 +332,11 @@ export function QuestionEditor({
                     <p className="line-clamp-2 text-sm text-slate-700 [overflow-wrap:anywhere]">{media[draft.stemMediaId].alt}</p>
                   )}
                   <div className="flex flex-wrap gap-2">
-                    <button type="button" onClick={() => setPicking(true)} className={buttonClass("secondary", "sm")}>
+                    <button
+                      type="button"
+                      onClick={() => setPickFor(() => (mediaId: string) => update({ stemMediaId: mediaId }))}
+                      className={buttonClass("secondary", "sm")}
+                    >
                       {draft.stemMediaId ? "Change picture" : "Choose picture"}
                     </button>
                     {draft.stemMediaId && (
@@ -382,6 +387,9 @@ export function QuestionEditor({
               answer={draft.answer}
               onChange={(content, answer) => update({ content, answer })}
               newId={() => crypto.randomUUID()}
+              media={media}
+              thumbs={thumbs}
+              choosePicture={(onPicked) => setPickFor(() => onPicked)}
             />
           </div>
 
@@ -421,7 +429,7 @@ export function QuestionEditor({
         </section>
       </div>
 
-      {picking && <PicturePicker load={listPickerMedia} storageReady={storageReady} onPick={pick} onClose={() => setPicking(false)} />}
+      {pickFor && <PicturePicker load={listPickerMedia} storageReady={storageReady} onPick={pick} onClose={() => setPickFor(null)} />}
 
       {leaveTo && (
         <Dialog title="Leave without saving?" variant="confirm" onClose={() => setLeaveTo(null)}>
