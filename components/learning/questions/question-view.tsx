@@ -62,6 +62,7 @@ export function QuestionView({
   const { mode } = question;
   const AnswerArea = QUESTION_RENDERERS[question.type];
   const hasResponse = response !== null && response !== undefined;
+  const canCheck = mode === "learn" || (mode === "practice" && Boolean(onCheck));
 
   function changeResponse(next: unknown) {
     if (phase !== "answering") return;
@@ -99,7 +100,6 @@ export function QuestionView({
     setState(FRESH_QUESTION_STATE);
   }
 
-  const canCheck = mode === "learn" || (mode === "practice" && Boolean(onCheck));
   const showExplanation = mode === "learn" && phase !== "answering" && Boolean(question.explanation);
 
   return (
@@ -135,6 +135,7 @@ export function QuestionView({
               response={response}
               onResponse={changeResponse}
               onNotice={(message) => setState({ notice: message })}
+              onSubmit={canCheck && phase === "answering" && !checking ? check : undefined}
               locked={phase !== "answering"}
               showCorrect={mode === "learn" && phase !== "answering"}
               result={result}

@@ -51,6 +51,6 @@ const SIZE_SHARE: Record<PictureSize, string> = { small: "33.333%", medium: "50%
 
 // Size comes from the known aspect ratio, never from the loaded file, so pages are counted the
 // same before and after pictures arrive. Capped by the chosen size and the sheet height.
-function fitToSheet(ratio: number, size: PictureSize) {
+export function fitToSheet(ratio: number, size: PictureSize) {
   return { width: `min(${SIZE_SHARE[size]}, calc(var(--book-picture-max, 60vh) * ${ratio.toFixed(4)}))` };
 }

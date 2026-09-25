@@ -313,72 +313,74 @@ export function QuestionEditor({
               onChange={(stemText) => update({ stemText })}
             />
 
-            <div className="space-y-1">
-              <p className={labelClass}>
-                Question picture <span className="font-normal text-slate-600">(optional)</span>
-              </p>
-              <div className="flex flex-wrap items-center gap-3">
-                {draft.stemMediaId &&
-                  (pictureThumb ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- short-lived signed thumbnail
-                    <img src={pictureThumb} alt="" className="size-24 shrink-0 rounded-md bg-slate-100 object-contain" />
-                  ) : (
-                    <span className="grid size-24 shrink-0 place-items-center rounded-md bg-slate-100 text-xs text-slate-600">
-                      Picture chosen
-                    </span>
-                  ))}
-                <div className="min-w-0 flex-1 space-y-2">
-                  {draft.stemMediaId && media[draft.stemMediaId]?.alt && (
-                    <p className="line-clamp-2 text-sm text-slate-700 [overflow-wrap:anywhere]">{media[draft.stemMediaId].alt}</p>
-                  )}
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setPickFor(() => (mediaId: string) => update({ stemMediaId: mediaId }))}
-                      className={buttonClass("secondary", "sm")}
-                    >
-                      {draft.stemMediaId ? "Change picture" : "Choose picture"}
-                    </button>
-                    {draft.stemMediaId && (
+            {!editor.ownsPicture && (
+              <div className="space-y-1">
+                <p className={labelClass}>
+                  Question picture <span className="font-normal text-slate-600">(optional)</span>
+                </p>
+                <div className="flex flex-wrap items-center gap-3">
+                  {draft.stemMediaId &&
+                    (pictureThumb ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- short-lived signed thumbnail
+                      <img src={pictureThumb} alt="" className="size-24 shrink-0 rounded-md bg-slate-100 object-contain" />
+                    ) : (
+                      <span className="grid size-24 shrink-0 place-items-center rounded-md bg-slate-100 text-xs text-slate-600">
+                        Picture chosen
+                      </span>
+                    ))}
+                  <div className="min-w-0 flex-1 space-y-2">
+                    {draft.stemMediaId && media[draft.stemMediaId]?.alt && (
+                      <p className="line-clamp-2 text-sm text-slate-700 [overflow-wrap:anywhere]">{media[draft.stemMediaId].alt}</p>
+                    )}
+                    <div className="flex flex-wrap gap-2">
                       <button
                         type="button"
-                        onClick={() => update({ stemMediaId: null, stemMediaSize: "full", stemMediaAlign: "center" })}
-                        className={buttonClass("ghost", "sm")}
+                        onClick={() => setPickFor(() => (mediaId: string) => update({ stemMediaId: mediaId }))}
+                        className={buttonClass("secondary", "sm")}
                       >
-                        Remove picture
+                        {draft.stemMediaId ? "Change picture" : "Choose picture"}
                       </button>
-                    )}
+                      {draft.stemMediaId && (
+                        <button
+                          type="button"
+                          onClick={() => update({ stemMediaId: null, stemMediaSize: "full", stemMediaAlign: "center" })}
+                          className={buttonClass("ghost", "sm")}
+                        >
+                          Remove picture
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
+                {draft.stemMediaId && (
+                  <div className="flex flex-wrap gap-x-4 gap-y-2 pt-2">
+                    <Segmented
+                      label="Size"
+                      value={draft.stemMediaSize}
+                      options={[
+                        ["small", "Small"],
+                        ["medium", "Medium"],
+                        ["large", "Large"],
+                        ["full", "Full width"],
+                      ]}
+                      onChange={(size) => update({ stemMediaSize: size as PictureSize })}
+                    />
+                    <Segmented
+                      label="Position"
+                      value={draft.stemMediaAlign}
+                      disabled={draft.stemMediaSize === "full"}
+                      disabledHint="Full-width pictures fill the page, so position doesn't apply."
+                      options={[
+                        ["left", "Left"],
+                        ["center", "Centre"],
+                        ["right", "Right"],
+                      ]}
+                      onChange={(align) => update({ stemMediaAlign: align as PictureAlign })}
+                    />
+                  </div>
+                )}
               </div>
-              {draft.stemMediaId && (
-                <div className="flex flex-wrap gap-x-4 gap-y-2 pt-2">
-                  <Segmented
-                    label="Size"
-                    value={draft.stemMediaSize}
-                    options={[
-                      ["small", "Small"],
-                      ["medium", "Medium"],
-                      ["large", "Large"],
-                      ["full", "Full width"],
-                    ]}
-                    onChange={(size) => update({ stemMediaSize: size as PictureSize })}
-                  />
-                  <Segmented
-                    label="Position"
-                    value={draft.stemMediaAlign}
-                    disabled={draft.stemMediaSize === "full"}
-                    disabledHint="Full-width pictures fill the page, so position doesn't apply."
-                    options={[
-                      ["left", "Left"],
-                      ["center", "Centre"],
-                      ["right", "Right"],
-                    ]}
-                    onChange={(align) => update({ stemMediaAlign: align as PictureAlign })}
-                  />
-                </div>
-              )}
-            </div>
+            )}
           </div>
 
           <div className={`${cardClass} p-4`}>

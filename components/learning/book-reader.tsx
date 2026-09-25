@@ -228,6 +228,8 @@ export function BookReader({
         fontSize: textSize,
         // Pictures take at most ~60% of the page height, so they can share a page with their text.
         "--book-picture-max": `${Math.max(120, Math.round(geometry.contentHeight * PICTURE_SHARE))}px`,
+        // The usual limit before any per-page fitting; tap pictures never shrink below it on small pages.
+        "--book-picture-share": `${Math.max(120, Math.round(geometry.contentHeight * PICTURE_SHARE))}px`,
       } as CSSProperties)
     : undefined;
 
