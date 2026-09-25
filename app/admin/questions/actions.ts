@@ -19,6 +19,8 @@ export type QuestionSaveInput = {
   type: string;
   stemText: string;
   stemMediaId: string | null;
+  stemMediaSize: string | null;
+  stemMediaAlign: string | null;
   content: unknown;
   answer: unknown;
   explanation: string;
@@ -60,8 +62,10 @@ export async function saveQuestion(input: QuestionSaveInput): Promise<QuestionSa
         if (!(await picturesExist(client, question.mediaIds))) return { ok: false, error: PICTURE_GONE };
 
         const { rows } = await client.query<{ id: string; ref_no: number }>(
-          `insert into questions (chapter_id, type, stem_text, stem_media_id, content, answer, explanation, in_practice, in_mock)
-           values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning id, ref_no`,
+          `insert into questions
+             (chapter_id, type, stem_text, stem_media_id, content, answer, explanation, in_practice, in_mock,
+              stem_media_size, stem_media_align)
+           values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning id, ref_no`,
           [
             chapterId,
             question.type,
@@ -72,6 +76,8 @@ export async function saveQuestion(input: QuestionSaveInput): Promise<QuestionSa
             question.explanation,
             input.inPractice,
             input.inMock,
+            question.stemMediaSize,
+            question.stemMediaAlign,
           ]
         );
         await writeMediaLinks(client, rows[0].id, question.mediaIds);
@@ -126,7 +132,8 @@ export async function saveQuestion(input: QuestionSaveInput): Promise<QuestionSa
       await client.query(
         `update questions
          set chapter_id = $2, stem_text = $3, stem_media_id = $4, content = $5, answer = $6, explanation = $7,
-             in_practice = $8, in_mock = $9, content_version = $10, updated_at = now()
+             in_practice = $8, in_mock = $9, content_version = $10, stem_media_size = $11, stem_media_align = $12,
+             updated_at = now()
          where id = $1`,
         [
           questionId,
@@ -139,6 +146,8 @@ export async function saveQuestion(input: QuestionSaveInput): Promise<QuestionSa
           input.inPractice,
           input.inMock,
           version,
+          question.stemMediaSize,
+          question.stemMediaAlign,
         ]
       );
       await writeMediaLinks(client, questionId, question.mediaIds);
@@ -270,7 +279,15 @@ async function writeMediaLinks(client: PoolClient, questionId: string, mediaIds:
 
 // What candidates see: a change here raises the version. Chapter and usage are tracked separately.
 function fingerprint(question: ParsedQuestion): string {
-  return JSON.stringify([question.stemText, question.stemMediaId, question.content, question.answer, question.explanation]);
+  return JSON.stringify([
+    question.stemText,
+    question.stemMediaId,
+    question.stemMediaSize,
+    question.stemMediaAlign,
+    question.content,
+    question.answer,
+    question.explanation,
+  ]);
 }
 
 type Usage = { inPractice: boolean; inMock: boolean };

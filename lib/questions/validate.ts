@@ -33,6 +33,22 @@ export function parseQuestion(raw: unknown): QuestionParseResult {
     stemMediaId = raw.stemMediaId.toLowerCase();
   }
 
+  // Same rules as picture blocks: "full" and "center" are the defaults and are stored as empty.
+  let stemMediaSize: QuestionData["stemMediaSize"] = null;
+  let stemMediaAlign: QuestionData["stemMediaAlign"] = null;
+  if (stemMediaId) {
+    const size = raw.stemMediaSize ?? null;
+    if (size !== null && !["small", "medium", "large", "full"].includes(size as string)) {
+      return { ok: false, error: "Picture size must be small, medium, large or full width." };
+    }
+    const align = raw.stemMediaAlign ?? null;
+    if (align !== null && !["left", "center", "right"].includes(align as string)) {
+      return { ok: false, error: "Picture position must be left, centre or right." };
+    }
+    if (size !== null && size !== "full") stemMediaSize = size as NonNullable<QuestionData["stemMediaSize"]>;
+    if (stemMediaSize && align !== null && align !== "center") stemMediaAlign = align as NonNullable<QuestionData["stemMediaAlign"]>;
+  }
+
   const explanation = cleanText(raw.explanation) || null;
   if (explanation && explanation.length > QUESTION_LIMITS.explanationLength) {
     return { ok: false, error: `Explanation must be ${QUESTION_LIMITS.explanationLength} characters or fewer.` };
@@ -48,6 +64,8 @@ export function parseQuestion(raw: unknown): QuestionParseResult {
       type: raw.type,
       stemText,
       stemMediaId,
+      stemMediaSize,
+      stemMediaAlign,
       content: parsed.content,
       answer: parsed.answer,
       explanation,

@@ -138,6 +138,8 @@ type QuestionRow = {
   status: QuestionStatus;
   stem_text: string;
   stem_media_id: string | null;
+  stem_media_size: StoredQuestion["stemMediaSize"];
+  stem_media_align: StoredQuestion["stemMediaAlign"];
   content: unknown;
   answer: unknown;
   explanation: string | null;
@@ -149,7 +151,8 @@ type QuestionRow = {
 // Reads and row-locks one question inside a transaction, for the change that follows.
 export async function readQuestionForUpdate(client: PoolClient, id: string): Promise<StoredQuestion | null> {
   const { rows } = await client.query<QuestionRow>(
-    `select id, ref_no, chapter_id, type, status, stem_text, stem_media_id, content, answer, explanation,
+    `select id, ref_no, chapter_id, type, status, stem_text, stem_media_id, stem_media_size, stem_media_align,
+            content, answer, explanation,
             in_practice, in_mock, content_version
      from questions where id = $1 for update`,
     [id]
@@ -164,6 +167,8 @@ export async function readQuestionForUpdate(client: PoolClient, id: string): Pro
     status: row.status,
     stemText: row.stem_text,
     stemMediaId: row.stem_media_id,
+    stemMediaSize: row.stem_media_size,
+    stemMediaAlign: row.stem_media_align,
     content: row.content,
     answer: row.answer,
     explanation: row.explanation,

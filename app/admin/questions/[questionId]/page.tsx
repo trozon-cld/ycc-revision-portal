@@ -26,6 +26,8 @@ export default async function EditQuestionPage({ params }: PageProps<"/admin/que
     status: QuestionStatus;
     stem_text: string;
     stem_media_id: string | null;
+    stem_media_size: "small" | "medium" | "large" | null;
+    stem_media_align: "left" | "right" | null;
     content: unknown;
     answer: unknown;
     explanation: string | null;
@@ -34,7 +36,8 @@ export default async function EditQuestionPage({ params }: PageProps<"/admin/que
     content_version: number;
     book_chapter: number | null;
   }>(
-    `select q.id, q.ref_no, q.chapter_id, q.type, q.status, q.stem_text, q.stem_media_id, q.content, q.answer,
+    `select q.id, q.ref_no, q.chapter_id, q.type, q.status, q.stem_text, q.stem_media_id, q.stem_media_size,
+            q.stem_media_align, q.content, q.answer,
             q.explanation, q.in_practice, q.in_mock, q.content_version,
             (select n.number from handbook_items hi
                join (select c.id, row_number() over (order by s.position, c.position)::int as number
@@ -52,6 +55,8 @@ export default async function EditQuestionPage({ params }: PageProps<"/admin/que
     type: question.type,
     stemText: question.stem_text,
     stemMediaId: question.stem_media_id,
+    stemMediaSize: question.stem_media_size,
+    stemMediaAlign: question.stem_media_align,
     content: question.content,
     answer: question.answer,
     explanation: question.explanation,
@@ -78,6 +83,8 @@ export default async function EditQuestionPage({ params }: PageProps<"/admin/que
         chapterId: question.chapter_id,
         stemText: question.stem_text,
         stemMediaId: question.stem_media_id,
+        stemMediaSize: question.stem_media_size ?? "full",
+        stemMediaAlign: question.stem_media_align ?? "center",
         content: editable.content,
         answer: editable.answer,
         explanation: question.explanation ?? "",

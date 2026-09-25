@@ -236,7 +236,14 @@ create table questions (
   in_mock boolean not null default true,
   content_version integer not null default 1 check (content_version > 0),
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  -- Empty = full width, centred (how every existing question looks). Position only applies below full width.
+  stem_media_size varchar(10) check (stem_media_size in ('small', 'medium', 'large')),
+  stem_media_align varchar(10) check (stem_media_align in ('left', 'right')),
+  constraint questions_stem_media_layout_check check (
+    (stem_media_id is not null or (stem_media_size is null and stem_media_align is null))
+    and (stem_media_align is null or stem_media_size is not null)
+  )
 );
 
 create index questions_chapter_idx on questions (chapter_id);

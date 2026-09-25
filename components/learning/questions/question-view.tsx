@@ -9,11 +9,18 @@ import { InlineText } from "../inline-text";
 import { BookPicture } from "../picture";
 import { QUESTION_RENDERERS } from "./renderers";
 
-type Phase = "answering" | "checked" | "revealed";
+export type QuestionViewState = {
+  response: unknown;
+  phase: "answering" | "checked" | "revealed";
+  result: CheckResult | null;
+  notice: string | null;
+};
+
+export const FRESH_QUESTION_STATE: QuestionViewState = { response: null, phase: "answering", result: null, notice: null };
 
 // The shared frame for every question type, in learn, practice and exam modes. Candidate style:
-// sizes in em so A−/A+ scales it; buttons never under 56px. The question and its answers never
-// split across book pages; the explanation may continue on the next page.
+// sizes in em so A−/A+ scales it; buttons never under 56px. In the book, the question stays on one
+// page when it fits; if it can't, it continues on the next page rather than being cut off.
 export function QuestionView({
   question,
   label,
@@ -22,6 +29,8 @@ export function QuestionView({
   seed,
   onCheck,
   onResponseChange,
+  state: controlledState,
+  onStateChange,
 }: {
   question: ClientQuestion;
   // e.g. "Question 3" in the book, "3 of 36" in a mock test.
@@ -34,12 +43,19 @@ export function QuestionView({
   onCheck?: (response: unknown) => Promise<CheckResult | null>;
   // Exam: reports every change; nothing is marked here.
   onResponseChange?: (response: unknown) => void;
+  // Optional: the host keeps the state, so several copies of one question stay in step (the book).
+  state?: QuestionViewState;
+  onStateChange?: (state: QuestionViewState) => void;
 }) {
-  const [response, setResponse] = useState<unknown>(initialResponse);
-  const [phase, setPhase] = useState<Phase>("answering");
-  const [result, setResult] = useState<CheckResult | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [ownState, setOwnState] = useState<QuestionViewState>({ ...FRESH_QUESTION_STATE, response: initialResponse });
   const [checking, setChecking] = useState(false);
+  const current = controlledState ?? ownState;
+  const { response, phase, result, notice } = current;
+  const setState = (patch: Partial<QuestionViewState>) => {
+    const next = { ...current, ...patch };
+    if (onStateChange) onStateChange(next);
+    if (!controlledState) setOwnState(next);
+  };
   const stemId = useId();
 
   const { mode } = question;
@@ -48,14 +64,13 @@ export function QuestionView({
 
   function changeResponse(next: unknown) {
     if (phase !== "answering") return;
-    setResponse(next);
-    setNotice(null);
+    setState({ response: next, notice: null });
     onResponseChange?.(next);
   }
 
   async function check() {
     if (!hasResponse) {
-      setNotice("Choose an answer first.");
+      setState({ notice: "Choose an answer first." });
       return;
     }
     setChecking(true);
@@ -65,21 +80,17 @@ export function QuestionView({
           ? checkAnswer({ type: question.type, content: question.content, answer: question.answer }, response)
           : await onCheck?.(response);
       if (!marked) {
-        setNotice("This answer couldn't be checked. Please try again.");
+        setState({ notice: "This answer couldn't be checked. Please try again." });
         return;
       }
-      setResult(marked);
-      setPhase("checked");
+      setState({ result: marked, phase: "checked", notice: null });
     } finally {
       setChecking(false);
     }
   }
 
   function reset() {
-    setResponse(null);
-    setResult(null);
-    setNotice(null);
-    setPhase("answering");
+    setState(FRESH_QUESTION_STATE);
   }
 
   const canCheck = mode === "learn" || (mode === "practice" && Boolean(onCheck));
@@ -87,17 +98,26 @@ export function QuestionView({
 
   return (
     <section aria-labelledby={stemId} className="question-view">
-      <fieldset className="m-0 min-w-0 border-0 p-0 [break-inside:avoid]">
-        <legend id={stemId} className="mb-[0.8em] w-full p-0">
+      <fieldset className="m-0 min-w-0 border-0 p-0">
+        <legend id={stemId} data-flow-unit className="mb-[0.8em] w-full p-0 [break-after:avoid] [break-inside:avoid]">
           <span className="mb-[0.3em] block text-[0.8em] font-bold uppercase tracking-wide text-primary">{label}</span>
           <span className="block whitespace-pre-line text-[1.1em] font-medium leading-snug text-ink">
             <InlineText text={question.stemText} />
           </span>
         </legend>
 
-        {question.stemMediaId && <BookPicture picture={media[question.stemMediaId]} />}
+        {question.stemMediaId && (
+          <div data-flow-unit data-question-picture>
+            <BookPicture
+              picture={media[question.stemMediaId]}
+              size={question.stemMediaSize ?? "full"}
+              align={question.stemMediaAlign ?? "center"}
+            />
+          </div>
+        )}
 
-        <div className="mb-[0.9em]">
+        {/* Spacing sits above each part, never below, so an empty feedback area can't start a new page. */}
+        <div>
           {AnswerArea ? (
             <AnswerArea
               questionId={question.id}
@@ -118,13 +138,13 @@ export function QuestionView({
       </fieldset>
 
       {canCheck && AnswerArea && (
-        <div className="mb-[0.9em] flex flex-wrap gap-[0.6em] [break-inside:avoid]">
+        <div data-flow-unit className="mt-[0.9em] flex flex-wrap gap-[0.6em] [break-inside:avoid]">
           {phase === "answering" ? (
             <>
               <FrameButton key="check" primary onClick={check} disabled={checking}>
                 {checking ? "Checking…" : "Check answer"}
               </FrameButton>
-              {mode === "learn" && <FrameButton key="reveal" onClick={() => setPhase("revealed")}>Reveal answer</FrameButton>}
+              {mode === "learn" && <FrameButton key="reveal" onClick={() => setState({ phase: "revealed", notice: null })}>Reveal answer</FrameButton>}
             </>
           ) : (
             <FrameButton key="again" onClick={reset}>
@@ -134,18 +154,18 @@ export function QuestionView({
         </div>
       )}
 
-      <div role="status" aria-live="polite" className="[break-inside:avoid]">
-        {notice && <p className="mb-[0.9em] font-semibold text-ink">{notice}</p>}
+      <div data-flow-unit role="status" aria-live="polite" className="[break-inside:avoid]">
+        {notice && <p className="mt-[0.9em] font-semibold text-ink">{notice}</p>}
         {phase === "checked" && result && <Feedback correct={result.correct} showsAnswer={mode === "learn"} />}
         {phase === "revealed" && (
-          <p className="mb-[0.9em] rounded-lg border-l-[0.3em] border-primary bg-primary/[0.07] px-[0.9em] py-[0.6em] font-semibold text-ink">
+          <p className="mt-[0.9em] rounded-lg border-l-[0.3em] border-primary bg-primary/[0.07] px-[0.9em] py-[0.6em] font-semibold text-ink">
             The correct answer is highlighted.
           </p>
         )}
       </div>
 
       {showExplanation && (
-        <div className="mb-[0.9em]">
+        <div data-flow-unit data-question-explanation className="mt-[0.9em]">
           <p className="mb-[0.2em] text-[0.8em] font-bold uppercase tracking-wide text-primary [break-after:avoid]">Explanation</p>
           <p className="whitespace-pre-line [orphans:2] [widows:2]">
             <InlineText text={question.explanation ?? ""} />
@@ -159,7 +179,7 @@ export function QuestionView({
 function Feedback({ correct, showsAnswer }: { correct: boolean; showsAnswer: boolean }) {
   return (
     <p
-      className={`mb-[0.9em] flex items-start gap-[0.5em] rounded-lg border-l-[0.3em] px-[0.9em] py-[0.6em] font-semibold ${
+      className={`mt-[0.9em] flex items-start gap-[0.5em] rounded-lg border-l-[0.3em] px-[0.9em] py-[0.6em] font-semibold ${
         correct ? "border-green-700 bg-green-50 text-green-900" : "border-amber-600 bg-amber-50 text-amber-950"
       }`}
     >
@@ -190,7 +210,7 @@ function FrameButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`inline-flex min-h-[max(56px,3.5em)] items-center justify-center rounded-lg px-[1.25em] font-semibold transition-colors focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60 ${
+      className={`inline-flex min-h-[max(56px,3.5em)] items-center justify-center rounded-lg px-[1em] font-semibold transition-colors focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60 ${
         primary ? "bg-primary text-white hover:bg-primary/90" : "border-2 border-primary bg-white text-primary hover:bg-primary/[0.06]"
       }`}
     >

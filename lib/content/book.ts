@@ -1,12 +1,15 @@
+import type { ClientQuestion } from "@/lib/questions/public";
 import type { Block } from "./blocks";
 
-// One page as authored in the page builder. On screen it may take one or more book sheets.
+// One page as authored in the page builder, or one question page. On screen it may take one or
+// more book sheets. A question page shows `question` instead of blocks.
 export type BookPageData = {
   id: string;
   chapterId: string;
   sectionLabel: string;
   chapterLabel: string;
   blocks: Block[];
+  question?: { data: ClientQuestion; label: string };
 };
 
 // Pictures resolved on the server: a short-lived link plus the size stored in Media.

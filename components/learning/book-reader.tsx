@@ -3,6 +3,19 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 import { buildSheets, type BookPageData, type ResolvedMedia, type Sheet, type TextSize } from "@/lib/content/book";
 import { BlockList } from "./blocks";
+import { FRESH_QUESTION_STATE, QuestionView, type QuestionViewState } from "./questions/question-view";
+
+// A page's question is drawn several times (measuring layer, each sheet it spans); they share one
+// state, keyed by the question's content so an edited question starts afresh.
+type QuestionStates = Record<string, QuestionViewState>;
+type QuestionBinding = { states: QuestionStates; setState: (key: string, state: QuestionViewState) => void };
+
+// How a question looks after a wrong answer is checked: its tallest state before the explanation.
+const CHECKED_WRONG: QuestionViewState = { ...FRESH_QUESTION_STATE, phase: "checked", result: { answered: true, correct: false } };
+
+function questionKey(page: BookPageData): string {
+  return page.question ? `${page.id}:${JSON.stringify(page.question)}` : page.id;
+}
 
 // Fixed-size book sheets. Each authored page is laid out in CSS columns one sheet wide; extra
 // columns become extra sheets. Spread (two sheets) when the reader is at least 1024px wide.
@@ -12,6 +25,7 @@ const SHEET_RATIO = 0.75; // width / height of a sheet in a spread
 const STAGE_PADDING = 12;
 const NARROW_SHEET = 480;
 const PICTURE_SHARE = 0.6;
+const QUESTION_PICTURE_MIN = 80;
 const COMPACT_BELOW = 600;
 
 type Geometry = {
@@ -71,10 +85,18 @@ export function BookReader({
 }) {
   const stageRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
+  const restRef = useRef<HTMLDivElement>(null);
+  // Per page: the tallest a question's picture may be so the whole question fits on one page.
+  const [pictureCaps, setPictureCaps] = useState<(number | null)[]>([]);
   const [stageSize, setStageSize] = useState<{ width: number; height: number } | null>(null);
   const [partCounts, setPartCounts] = useState<number[] | null>(null);
   const [position, setPosition] = useState({ pageIndex: 0, part: 0 });
   const [fontsReady, setFontsReady] = useState(0);
+  const [questionStates, setQuestionStates] = useState<QuestionStates>({});
+  const questions = useMemo<QuestionBinding>(
+    () => ({ states: questionStates, setState: (key, state) => setQuestionStates((current) => ({ ...current, [key]: state })) }),
+    [questionStates]
+  );
 
   useEffect(() => {
     const stage = stageRef.current;
@@ -108,12 +130,30 @@ export function BookReader({
   useLayoutEffect(() => {
     const layer = measureRef.current;
     if (!layer || !geometry) return;
+    // A question page's picture gets the height left by the rest of the question (measured without
+    // picture or explanation), within 80px and the usual 60%: first so it all fits even after Check
+    // (one extra line kept for a "Your answer" label), else so it fits while answering.
+    const caps = pages.map((page, index) => {
+      if (!page.question) return null;
+      const share = Math.round(geometry.contentHeight * PICTURE_SHARE);
+      const pictureMargin = Math.ceil(textSize * 0.9) + 4;
+      const roomFor = (state: string, extra: number) => {
+        const rest = restRef.current?.querySelector<HTMLElement>(`[data-rest-page="${index}"][data-rest-state="${state}"]`);
+        return rest ? geometry.contentHeight - rest.offsetHeight - pictureMargin - extra : -1;
+      };
+      for (const room of [roomFor("checked", Math.ceil(textSize * 1.4)), roomFor("answering", 0)]) {
+        if (room >= QUESTION_PICTURE_MIN) return Math.min(share, room);
+      }
+      return share;
+    });
+    setPictureCaps((current) => (current.join() === caps.join() ? current : caps));
     const step = geometry.contentWidth + geometry.columnGap;
     const counts = Array.from(layer.children, (child) =>
       Math.max(1, Math.round(((child as HTMLElement).scrollWidth + geometry.columnGap) / step))
     );
     setPartCounts((current) => (current && current.join() === counts.join() ? current : counts));
-  }, [geometry, pages, media, fontsReady]);
+    // Feedback and explanations appear after Check, so a question page is measured again then.
+  }, [geometry, pages, media, fontsReady, questionStates, pictureCaps, textSize]);
 
   const sheets = useMemo(
     () => (partCounts && geometry ? buildSheets(pages, partCounts, geometry.spread) : []),
@@ -190,10 +230,41 @@ export function BookReader({
               className="pointer-events-none invisible absolute left-0 top-0 overflow-hidden"
               style={{ width: 0, height: 0, fontSize: textSize, ...sheetStyle, position: "absolute" }}
             >
-              {pages.map((page) => (
-                <FlowColumns key={page.id} page={page} media={media} geometry={geometry} />
+              {pages.map((page, index) => (
+                <FlowColumns
+                  key={page.id}
+                  page={page}
+                  media={media}
+                  geometry={geometry}
+                  questions={questions}
+                  pictureCap={pictureCaps[index] ?? null}
+                />
               ))}
             </div>
+            {pages.some((page) => page.question) && (
+              <div
+                ref={restRef}
+                aria-hidden="true"
+                className="pointer-events-none invisible absolute left-0 top-0 overflow-hidden leading-[1.6] [&_[data-question-explanation]]:hidden [&_[data-question-picture]]:hidden"
+                style={{ width: 0, height: 0, fontSize: textSize }}
+                inert
+              >
+                {pages.map((page, index) =>
+                  page.question
+                    ? (["answering", "checked"] as const).map((state) => (
+                        <div key={`${page.id}-${state}`} data-rest-page={index} data-rest-state={state} style={{ width: geometry.contentWidth }}>
+                          <QuestionView
+                            question={page.question!.data}
+                            label={page.question!.label}
+                            media={media}
+                            state={state === "checked" ? CHECKED_WRONG : FRESH_QUESTION_STATE}
+                          />
+                        </div>
+                      ))
+                    : null
+                )}
+              </div>
+            )}
 
             {partCounts && (
               <div className="flex h-full items-center justify-center" style={{ padding: STAGE_PADDING }}>
@@ -205,6 +276,8 @@ export function BookReader({
                       pages={pages}
                       media={media}
                       geometry={geometry}
+                      questions={questions}
+                      pictureCaps={pictureCaps}
                       style={sheetStyle}
                       side={geometry.spread ? (index === 0 ? "left" : "right") : "single"}
                     />
@@ -274,13 +347,21 @@ function FlowColumns({
   page,
   media,
   geometry,
+  questions,
+  pictureCap = null,
   offset = 0,
 }: {
   page: BookPageData;
   media: ResolvedMedia;
   geometry: Geometry;
+  questions: QuestionBinding;
+  pictureCap?: number | null;
   offset?: number;
 }) {
+  const key = questionKey(page);
+  const questionStyle = page.question
+    ? ({ position: "relative", ...(pictureCap ? { "--book-picture-max": `${pictureCap}px` } : {}) } as CSSProperties)
+    : undefined;
   return (
     <div
       className="leading-[1.6]"
@@ -291,9 +372,20 @@ function FlowColumns({
         columnGap: geometry.columnGap,
         columnFill: "auto",
         transform: offset ? `translateX(-${offset * (geometry.contentWidth + geometry.columnGap)}px)` : undefined,
+        ...questionStyle,
       }}
     >
-      <BlockList blocks={page.blocks} media={media} />
+      {page.question ? (
+        <QuestionView
+          question={page.question.data}
+          label={page.question.label}
+          media={media}
+          state={questions.states[key] ?? FRESH_QUESTION_STATE}
+          onStateChange={(state) => questions.setState(key, state)}
+        />
+      ) : (
+        <BlockList blocks={page.blocks} media={media} />
+      )}
     </div>
   );
 }
@@ -303,6 +395,8 @@ function SheetView({
   pages,
   media,
   geometry,
+  questions,
+  pictureCaps,
   style,
   side,
 }: {
@@ -310,9 +404,25 @@ function SheetView({
   pages: BookPageData[];
   media: ResolvedMedia;
   geometry: Geometry;
+  questions: QuestionBinding;
+  pictureCaps: (number | null)[];
   style?: CSSProperties;
   side: "left" | "right" | "single";
 }) {
+  const boxRef = useRef<HTMLDivElement>(null);
+  const page = sheet.kind === "page" ? pages[sheet.pageIndex] : null;
+  const part = sheet.kind === "page" ? sheet.part : 0;
+
+  // Question pages: each part (option, button, explanation…) is live only on the sheet that shows it,
+  // so keyboard and screen readers meet it once, and never focus something that isn't visible.
+  useLayoutEffect(() => {
+    const box = boxRef.current;
+    if (!box || !page?.question) return;
+    const step = geometry.contentWidth + geometry.columnGap;
+    box.querySelectorAll<HTMLElement>("[data-flow-unit]").forEach((unit) => {
+      unit.inert = Math.floor((unit.offsetLeft + 1) / step) !== part;
+    });
+  });
   const edge =
     side === "left"
       ? "bg-gradient-to-l from-slate-200/70 via-white via-[3%] to-white"
@@ -324,9 +434,10 @@ function SheetView({
     return <div aria-hidden="true" className={`shrink-0 ${edge}`} style={style} />;
   }
 
-  const page = pages[sheet.pageIndex];
+  if (!page) return null;
   // Later parts of a page repeat its text for layout only; screen readers get it once, from the first part.
-  const repeat = sheet.part > 0;
+  // Question pages instead expose each part on the sheet where it shows (see above).
+  const repeat = sheet.part > 0 && !page.question;
   return (
     <article aria-label={`Page ${sheet.number}`} className={`flex shrink-0 flex-col ${edge}`} style={style}>
       <header
@@ -341,8 +452,16 @@ function SheetView({
       </header>
 
       <div
+        ref={boxRef}
         className="overflow-hidden"
+        // Nothing may scroll a sheet sideways (e.g. find-in-page); that would show the wrong part.
+        onScroll={(event) => {
+          event.currentTarget.scrollLeft = 0;
+          event.currentTarget.scrollTop = 0;
+        }}
         aria-hidden={repeat || undefined}
+        // Repeats are also out of reach of the keyboard (a question's buttons, for example).
+        inert={repeat || undefined}
         style={{
           width: geometry.contentWidth,
           height: geometry.contentHeight,
@@ -350,7 +469,14 @@ function SheetView({
           marginTop: geometry.contentTop,
         }}
       >
-        <FlowColumns page={page} media={media} geometry={geometry} offset={sheet.part} />
+        <FlowColumns
+          page={page}
+          media={media}
+          geometry={geometry}
+          questions={questions}
+          pictureCap={pictureCaps[sheet.pageIndex] ?? null}
+          offset={sheet.part}
+        />
       </div>
 
       <footer

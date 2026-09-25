@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useDeferredValue, useEffect, useMemo, useState, useTransition } from "react";
+import type { PictureAlign, PictureSize } from "@/lib/content/blocks";
 import type { ResolvedMedia } from "@/lib/content/book";
 import type { SectionOptions } from "@/lib/questions/queries";
 import { questionTypeLabel } from "@/lib/questions/registry";
@@ -10,7 +11,7 @@ import type { QuestionType } from "@/lib/questions/types";
 import { parseQuestion, QUESTION_LIMITS } from "@/lib/questions/validate";
 import { Badge } from "@/components/admin/badge";
 import { Dialog } from "@/components/admin/dialog";
-import { BoldTextarea } from "@/components/admin/editor-fields";
+import { BoldTextarea, Segmented } from "@/components/admin/editor-fields";
 import { PicturePicker } from "@/components/admin/picture-picker";
 import { QuestionPreview } from "@/components/admin/question-preview";
 import { buttonClass, cardClass, inputClass, labelClass } from "@/components/admin/styles";
@@ -23,6 +24,9 @@ export type QuestionDraft = {
   chapterId: string;
   stemText: string;
   stemMediaId: string | null;
+  // As in the page builder: "full" and "center" are the defaults.
+  stemMediaSize: PictureSize;
+  stemMediaAlign: PictureAlign;
   content: unknown;
   answer: unknown;
   explanation: string;
@@ -157,6 +161,8 @@ export function QuestionEditor({
 
   // The preview follows typing without slowing it down.
   const deferred = useDeferredValue(draft);
+  const pictureSize = deferred.stemMediaSize === "full" ? null : deferred.stemMediaSize;
+  const pictureAlign = deferred.stemMediaAlign === "center" ? null : deferred.stemMediaAlign;
   const preview = useMemo(() => {
     const shown = editor?.previewable(deferred.content, deferred.answer) ?? { content: deferred.content, answer: deferred.answer };
     return {
@@ -164,11 +170,22 @@ export function QuestionEditor({
       type,
       stemText: deferred.stemText.trim() || "Your question text appears here.",
       stemMediaId: deferred.stemMediaId,
+      stemMediaSize: pictureSize,
+      stemMediaAlign: pictureSize ? pictureAlign : null,
       content: shown.content,
       answer: shown.answer,
       explanation: deferred.explanation.trim() || null,
     };
-  }, [deferred, editor, questionId, type]);
+  }, [deferred, editor, pictureAlign, pictureSize, questionId, type]);
+
+  // Running header of the book preview: the chosen chapter and its section.
+  const previewChapter = useMemo(() => {
+    for (const section of chapters) {
+      const found = section.chapters.find((chapter) => chapter.id === deferred.chapterId);
+      if (found) return { id: found.id, sectionLabel: section.label, chapterLabel: found.label };
+    }
+    return { id: "no-chapter", sectionLabel: "Section", chapterLabel: "Chapter" };
+  }, [chapters, deferred.chapterId]);
 
   const saveState = isSaving ? "Saving…" : isNew ? "Not saved yet" : dirty ? "Unsaved changes" : "All changes saved";
   const pictureThumb = draft.stemMediaId ? (thumbs[draft.stemMediaId] ?? media[draft.stemMediaId]?.src) : undefined;
@@ -318,13 +335,44 @@ export function QuestionEditor({
                       {draft.stemMediaId ? "Change picture" : "Choose picture"}
                     </button>
                     {draft.stemMediaId && (
-                      <button type="button" onClick={() => update({ stemMediaId: null })} className={buttonClass("ghost", "sm")}>
+                      <button
+                        type="button"
+                        onClick={() => update({ stemMediaId: null, stemMediaSize: "full", stemMediaAlign: "center" })}
+                        className={buttonClass("ghost", "sm")}
+                      >
                         Remove picture
                       </button>
                     )}
                   </div>
                 </div>
               </div>
+              {draft.stemMediaId && (
+                <div className="flex flex-wrap gap-x-4 gap-y-2 pt-2">
+                  <Segmented
+                    label="Size"
+                    value={draft.stemMediaSize}
+                    options={[
+                      ["small", "Small"],
+                      ["medium", "Medium"],
+                      ["large", "Large"],
+                      ["full", "Full width"],
+                    ]}
+                    onChange={(size) => update({ stemMediaSize: size as PictureSize })}
+                  />
+                  <Segmented
+                    label="Position"
+                    value={draft.stemMediaAlign}
+                    disabled={draft.stemMediaSize === "full"}
+                    disabledHint="Full-width pictures fill the page, so position doesn't apply."
+                    options={[
+                      ["left", "Left"],
+                      ["center", "Centre"],
+                      ["right", "Right"],
+                    ]}
+                    onChange={(align) => update({ stemMediaAlign: align as PictureAlign })}
+                  />
+                </div>
+              )}
             </div>
           </div>
 
@@ -368,7 +416,7 @@ export function QuestionEditor({
 
         <section aria-label="Live preview" className={`min-w-0 ${tab === "edit" ? "hidden lg:block" : ""}`}>
           <div className="lg:sticky lg:top-4">
-            <QuestionPreview question={preview} media={media} shuffles={editor.shuffles(deferred.content)} />
+            <QuestionPreview question={preview} media={media} shuffles={editor.shuffles(deferred.content)} chapter={previewChapter} />
           </div>
         </section>
       </div>

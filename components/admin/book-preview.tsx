@@ -20,6 +20,10 @@ export function BookPreview({
   initialDevice = "desktop",
   devices = ["phone", "tablet", "desktop"],
   readout,
+  device: controlledDevice,
+  onDeviceChange,
+  textSize: controlledTextSize,
+  onTextSizeChange,
 }: {
   pages: BookPageData[];
   media: ResolvedMedia;
@@ -27,9 +31,18 @@ export function BookPreview({
   initialDevice?: PreviewDevice;
   devices?: PreviewDevice[];
   readout?: (info: { pages: number; device: string; textSize: TextSize }) => ReactNode;
+  // Optional: the host keeps screen and text size (the question preview shares them across modes).
+  device?: PreviewDevice;
+  onDeviceChange?: (device: PreviewDevice) => void;
+  textSize?: TextSize;
+  onTextSizeChange?: (size: TextSize) => void;
 }) {
-  const [device, setDevice] = useState<PreviewDevice>(initialDevice);
-  const [textSize, setTextSize] = useState<TextSize>(DEFAULT_TEXT_SIZE);
+  const [ownDevice, setOwnDevice] = useState<PreviewDevice>(initialDevice);
+  const [ownTextSize, setOwnTextSize] = useState<TextSize>(DEFAULT_TEXT_SIZE);
+  const device = controlledDevice ?? ownDevice;
+  const textSize = controlledTextSize ?? ownTextSize;
+  const setDevice = onDeviceChange ?? setOwnDevice;
+  const setTextSize = onTextSizeChange ?? setOwnTextSize;
   const [pageCount, setPageCount] = useState<number | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [available, setAvailable] = useState({ width: 0, height: 0 });

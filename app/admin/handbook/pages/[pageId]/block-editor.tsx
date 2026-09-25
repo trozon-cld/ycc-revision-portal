@@ -3,7 +3,7 @@
 import type { Block, PictureAlign, PictureSize } from "@/lib/content/blocks";
 import { BLOCK_LIMITS } from "@/lib/content/blocks";
 import { BLOCK_LABELS } from "@/lib/content/editor";
-import { BoldTextarea, IconButton } from "@/components/admin/editor-fields";
+import { BoldTextarea, IconButton, Segmented } from "@/components/admin/editor-fields";
 import { buttonClass, cardClass, inputClass, labelClass } from "@/components/admin/styles";
 
 export function BlockEditor({
@@ -214,54 +214,6 @@ function BlockFields({
         </div>
       );
   }
-}
-
-// A row of toggle buttons; the pressed one is the current choice.
-function Segmented({
-  label,
-  value,
-  options,
-  onChange,
-  disabled,
-  disabledHint,
-}: {
-  label: string;
-  value: string;
-  options: [string, string][];
-  onChange: (value: string) => void;
-  disabled?: boolean;
-  disabledHint?: string;
-}) {
-  return (
-    <div className="space-y-1">
-      <p className={labelClass}>{label}</p>
-      <div
-        role="group"
-        aria-label={label}
-        title={disabled ? disabledHint : undefined}
-        className="inline-flex flex-wrap rounded-md border border-slate-300 bg-white p-0.5"
-      >
-        {options.map(([optionValue, optionLabel]) => {
-          const pressed = value === optionValue;
-          return (
-            <button
-              key={optionValue}
-              type="button"
-              aria-pressed={pressed}
-              disabled={disabled}
-              onClick={() => onChange(optionValue)}
-              className={`h-9 rounded px-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 sm:h-8 ${
-                pressed && !disabled ? "bg-primary text-white" : "text-ink hover:bg-slate-100"
-              }`}
-            >
-              {optionLabel}
-            </button>
-          );
-        })}
-      </div>
-      {disabled && disabledHint && <p className="text-xs text-slate-600">{disabledHint}</p>}
-    </div>
-  );
 }
 
 function Select({

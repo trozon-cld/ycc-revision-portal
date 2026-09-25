@@ -30,6 +30,8 @@ export default async function NewQuestionPage({ searchParams }: PageProps<"/admi
         chapterId: known && chapterParam && isUuid(chapterParam) ? chapterParam : "",
         stemText: "",
         stemMediaId: null,
+        stemMediaSize: "full",
+        stemMediaAlign: "center",
         content: empty.content,
         answer: empty.answer,
         explanation: "",

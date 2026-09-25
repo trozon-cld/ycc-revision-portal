@@ -1,4 +1,4 @@
-import type { QuestionData, QuestionMode, QuestionType } from "./types";
+import type { QuestionData, QuestionMode, QuestionType, StemPictureAlign, StemPictureSize } from "./types";
 
 export type ClientQuestion = {
   id: string;
@@ -6,6 +6,8 @@ export type ClientQuestion = {
   mode: QuestionMode;
   stemText: string;
   stemMediaId: string | null;
+  stemMediaSize: StemPictureSize | null;
+  stemMediaAlign: StemPictureAlign | null;
   content: unknown;
   // Only in learn mode, where Reveal and instant feedback happen in the browser.
   answer?: unknown;
@@ -20,6 +22,8 @@ export function toClientQuestion(question: QuestionData & { id: string }, mode: 
     mode,
     stemText: question.stemText,
     stemMediaId: question.stemMediaId,
+    stemMediaSize: question.stemMediaSize,
+    stemMediaAlign: question.stemMediaAlign,
     content: question.content,
   };
   if (mode !== "learn") return base;

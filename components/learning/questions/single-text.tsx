@@ -33,7 +33,7 @@ export function SingleTextAnswer({ mode, seed, content, answer, response, onResp
         else if (selected) tone = "border-primary bg-primary/[0.06]";
 
         return (
-          <li key={option.id}>
+          <li key={option.id} data-flow-unit className="[break-inside:avoid]">
             <label
               htmlFor={inputId}
               data-option={option.id}
