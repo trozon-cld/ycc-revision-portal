@@ -1,16 +1,13 @@
 import { getQuestionTypeDef } from "./registry";
+import { cleanText, isRecord, isUuid } from "./text";
 import { isQuestionType, type QuestionData } from "./types";
+
+export { cleanText, isUuid };
 
 export const QUESTION_LIMITS = {
   stemLength: 1000,
   explanationLength: 2000,
 } as const;
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-export function isUuid(value: unknown): value is string {
-  return typeof value === "string" && UUID.test(value);
-}
 
 export type ParsedQuestion = QuestionData & { mediaIds: string[] };
 export type QuestionParseResult = { ok: true; question: ParsedQuestion } | { ok: false; error: string };
@@ -57,19 +54,4 @@ export function parseQuestion(raw: unknown): QuestionParseResult {
       mediaIds,
     },
   };
-}
-
-export function cleanText(value: unknown): string {
-  if (typeof value !== "string") return "";
-  return value
-    .replace(/\r\n?/g, "\n")
-    .split("\n")
-    .map((line) => line.replace(/[ \t]+/g, " ").trim())
-    .join("\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

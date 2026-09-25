@@ -1,15 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Dialog } from "@/components/admin/dialog";
-import { inputClass } from "@/components/admin/styles";
-import { listPickerMedia, type PickerItem } from "../actions";
+import type { PickerItem } from "@/app/admin/handbook/pages/actions";
+import { Dialog } from "./dialog";
+import { inputClass } from "./styles";
 
+// Media library picker, shared by the page and question editors. `load` is a server action.
 export function PicturePicker({
+  load,
   storageReady,
   onPick,
   onClose,
 }: {
+  load: (search: string) => Promise<PickerItem[]>;
   storageReady: boolean;
   onPick: (item: PickerItem) => void;
   onClose: () => void;
@@ -23,7 +26,7 @@ export function PicturePicker({
     let cancelled = false;
     const timer = setTimeout(async () => {
       try {
-        const result = await listPickerMedia(search);
+        const result = await load(search);
         if (!cancelled) {
           setItems(result);
           setFailed(false);
@@ -36,7 +39,7 @@ export function PicturePicker({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [search, storageReady]);
+  }, [load, search, storageReady]);
 
   return (
     <Dialog title="Choose a picture" description="From your Media library, newest first." onClose={onClose}>

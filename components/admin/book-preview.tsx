@@ -5,7 +5,7 @@ import { DEFAULT_TEXT_SIZE, TEXT_SIZES, type BookPageData, type ResolvedMedia, t
 import { BookReader } from "@/components/learning/book-reader";
 import { buttonClass } from "./styles";
 
-const DEVICES = {
+export const DEVICES = {
   phone: { label: "Phone", width: 390, height: 760 },
   tablet: { label: "Tablet", width: 820, height: 1000 },
   desktop: { label: "Desktop", width: 1280, height: 780 },

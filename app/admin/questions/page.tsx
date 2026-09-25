@@ -3,7 +3,7 @@ import { requireRole } from "@/lib/auth/guard";
 import { plainText } from "@/lib/content/inline";
 import { questionRef } from "@/lib/questions/labels";
 import { countQuestions, listBankQuestions, listChapterOptions, type BankFilters } from "@/lib/questions/queries";
-import { QUESTION_TYPES } from "@/lib/questions/registry";
+import { availableQuestionTypes, QUESTION_TYPES } from "@/lib/questions/registry";
 import { isQuestionType, QUESTION_TYPE_KEYS } from "@/lib/questions/types";
 import { isUuid } from "@/lib/questions/validate";
 import { Badge } from "@/components/admin/badge";
@@ -11,7 +11,7 @@ import { FilterBar, FilterSearch, FilterSelect } from "@/components/admin/filter
 import { PageHeader } from "@/components/admin/page-header";
 import { buttonClass } from "@/components/admin/styles";
 import { Cell, Row, Table } from "@/components/admin/table";
-import { QuestionRowActions } from "./question-row-actions";
+import { NewQuestionButton, QuestionRowActions } from "./question-row-actions";
 
 export default async function QuestionBankPage({ searchParams }: PageProps<"/admin/questions">) {
   await requireRole(["superadmin"]);
@@ -45,7 +45,17 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
 
   return (
     <>
-      <PageHeader title="Question bank" description={`${total} question${total === 1 ? "" : "s"}`} />
+      <PageHeader
+        title="Question bank"
+        description={`${total} question${total === 1 ? "" : "s"}`}
+        actions={
+          <NewQuestionButton
+            types={availableQuestionTypes().map((key) => ({ key, label: QUESTION_TYPES[key].label }))}
+            chapters={sections}
+            defaultChapterId={filters.chapterId}
+          />
+        }
+      />
 
       <FilterBar action="/admin/questions" clearHref="/admin/questions" isFiltered={isFiltered}>
         <FilterSearch name="q" label="Search question text or ID" defaultValue={filters.search} />
@@ -90,7 +100,7 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
         columns={["Question", "Chapter", "Type", "Status", "Used in", ""]}
         isEmpty={rows.length === 0}
         emptyMessage={
-          total === 0 ? "No questions yet." : filters.page > 1 ? "No questions on this page." : "No questions match these filters."
+          total === 0 ? "No questions yet. Add the first one with New question." : filters.page > 1 ? "No questions on this page." : "No questions match these filters."
         }
       >
         {rows.map((row) => {
@@ -101,7 +111,12 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
                 <div className="flex gap-2">
                   <span className="shrink-0 font-mono text-slate-600 tabular-nums">{refLabel}</span>
                   <div className="min-w-0 font-normal">
-                    <span className="line-clamp-2">{plainText(row.stemText)}</span>
+                    <Link
+                      href={`/admin/questions/${row.id}`}
+                      className="line-clamp-2 text-ink underline-offset-2 hover:text-primary hover:underline"
+                    >
+                      {plainText(row.stemText)}
+                    </Link>
                     {row.hasPicture && (
                       <span className="mt-1 block text-xs text-slate-600">
                         <PictureIcon /> Has a picture

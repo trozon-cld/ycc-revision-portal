@@ -19,6 +19,7 @@ export function QuestionView({
   label,
   media,
   initialResponse = null,
+  seed,
   onCheck,
   onResponseChange,
 }: {
@@ -27,6 +28,8 @@ export function QuestionView({
   label: string;
   media: ResolvedMedia;
   initialResponse?: unknown;
+  // Shuffle seed for Practice and Mock; defaults to the question id.
+  seed?: string;
   // Practice: marks on the server. Learn marks in the browser with the answer it already has.
   onCheck?: (response: unknown) => Promise<CheckResult | null>;
   // Exam: reports every change; nothing is marked here.
@@ -87,7 +90,7 @@ export function QuestionView({
       <fieldset className="m-0 min-w-0 border-0 p-0 [break-inside:avoid]">
         <legend id={stemId} className="mb-[0.8em] w-full p-0">
           <span className="mb-[0.3em] block text-[0.8em] font-bold uppercase tracking-wide text-primary">{label}</span>
-          <span className="block whitespace-pre-line text-[1.1em] font-semibold leading-snug text-ink">
+          <span className="block whitespace-pre-line text-[1.1em] font-medium leading-snug text-ink">
             <InlineText text={question.stemText} />
           </span>
         </legend>
@@ -99,6 +102,7 @@ export function QuestionView({
             <AnswerArea
               questionId={question.id}
               mode={mode}
+              seed={seed ?? question.id}
               content={question.content}
               answer={mode === "learn" ? question.answer : undefined}
               response={response}

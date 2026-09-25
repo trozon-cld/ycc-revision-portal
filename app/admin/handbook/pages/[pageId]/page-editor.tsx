@@ -12,9 +12,9 @@ import { BookPreview } from "@/components/admin/book-preview";
 import { Dialog } from "@/components/admin/dialog";
 import { buttonClass, inputClass, labelClass } from "@/components/admin/styles";
 import { useToast } from "@/components/admin/toast";
-import { getPreviewMedia, savePageContent, type PickerItem } from "../actions";
+import { PicturePicker } from "@/components/admin/picture-picker";
+import { getPreviewMedia, listPickerMedia, savePageContent, type PickerItem } from "../actions";
 import { BlockEditor } from "./block-editor";
-import { PicturePicker } from "./picture-picker";
 
 const ADD_ORDER: BlockType[] = ["heading", "paragraph", "list", "picture", "callout"];
 const LONG_ON_PHONE = 4;
@@ -318,7 +318,9 @@ export function PageEditor({
         </section>
       </div>
 
-      {pickingFor && <PicturePicker storageReady={storageReady} onPick={pick} onClose={() => setPickingFor(null)} />}
+      {pickingFor && (
+        <PicturePicker load={listPickerMedia} storageReady={storageReady} onPick={pick} onClose={() => setPickingFor(null)} />
+      )}
 
       {leaveTo && (
         <Dialog title="Leave without saving?" variant="confirm" onClose={() => setLeaveTo(null)}>
