@@ -201,12 +201,12 @@ export async function moveCategoryToGroup(
   return result;
 }
 
-// Replaces the whole chapter list. Logging deferred to Handbook plan Phase F (category.chapters_changed).
+// Replaces the whole chapter list.
 export async function saveCategoryChapters(
   _prevState: CategoryActionState,
   formData: FormData
 ): Promise<CategoryActionState> {
-  await requireRole(["superadmin"]);
+  const session = await requireRole(["superadmin"]);
 
   const categoryId = String(formData.get("categoryId") ?? "");
   const chapterIds = [...new Set(formData.getAll("chapterId").map(String))];
@@ -225,11 +225,27 @@ export async function saveCategoryChapters(
       ]);
       if (rows.length !== chapterIds.length) return { error: CHAPTERS_CHANGED };
 
-      await client.query(`delete from category_chapters where category_id = $1`, [categoryId]);
+      const { rows: removed } = await client.query<{ chapter_id: string }>(
+        `delete from category_chapters where category_id = $1 returning chapter_id`,
+        [categoryId]
+      );
       await client.query(
         `insert into category_chapters (category_id, chapter_id) select $1::uuid, unnest($2::uuid[])`,
         [categoryId, chapterIds]
       );
+
+      const before = new Set(removed.map((row) => row.chapter_id));
+      const added = chapterIds.filter((id) => !before.has(id)).length;
+      const dropped = [...before].filter((id) => !chapterIds.includes(id)).length;
+      if (added > 0 || dropped > 0) {
+        await logActivity(
+          client,
+          session,
+          "category.chapters_changed",
+          { type: "category", id: categoryId, label: category.name },
+          { added: String(added), removed: String(dropped), total: String(chapterIds.length) }
+        );
+      }
       return { success: true };
     });
   } catch (error) {

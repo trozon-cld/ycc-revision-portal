@@ -3,7 +3,16 @@ import { headers } from "next/headers";
 import type { SessionPayload, UserRole } from "@/lib/auth/jwt";
 import type { ActivityAction, AuthEvent } from "./actions";
 
-type TargetType = "admin" | "candidate" | "category" | "category_group" | "account";
+type TargetType =
+  | "admin"
+  | "candidate"
+  | "category"
+  | "category_group"
+  | "section"
+  | "chapter"
+  | "page"
+  | "media"
+  | "account";
 type Details = Record<string, string>;
 
 export function ipFromHeaders(requestHeaders: Headers): string | null {

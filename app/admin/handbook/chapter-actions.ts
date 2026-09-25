@@ -4,14 +4,13 @@ import type { PoolClient } from "pg";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/guard";
 import { getErrorCode, withTransaction } from "@/lib/db/transaction";
+import { logActivity } from "@/lib/audit/log";
 import {
   lockHandbookStructure,
   normaliseTitle,
   validateTitle,
   type StructureActionState,
 } from "@/lib/handbook/structure";
-
-// Activity logging for Handbook content is deferred to Handbook plan Phase F (ask first).
 
 const DUPLICATE_TITLE = "A chapter with this title already exists.";
 const NOT_FOUND = "This chapter no longer exists.";
@@ -22,7 +21,7 @@ export async function createChapter(
   _prevState: StructureActionState,
   formData: FormData
 ): Promise<StructureActionState> {
-  await requireRole(["superadmin"]);
+  const session = await requireRole(["superadmin"]);
 
   const sectionId = String(formData.get("sectionId") ?? "");
   const title = normaliseTitle(formData.get("title"));
@@ -34,13 +33,22 @@ export async function createChapter(
   try {
     result = await withTransaction<StructureActionState>(async (client) => {
       await lockHandbookStructure(client);
-      if (!(await sectionExists(client, sectionId))) return { error: SECTION_NOT_FOUND };
+      const sectionTitle = await sectionTitleOf(client, sectionId);
+      if (!sectionTitle) return { error: SECTION_NOT_FOUND };
       if (await titleTaken(client, title, null)) return { error: DUPLICATE_TITLE };
 
-      await client.query(
+      const { rows: created } = await client.query<{ id: string }>(
         `insert into chapters (section_id, position, title)
-         select $1, coalesce(max(position), 0) + 1, $2 from chapters where section_id = $1`,
+         select $1, coalesce(max(position), 0) + 1, $2 from chapters where section_id = $1
+         returning id`,
         [sectionId, title]
+      );
+      await logActivity(
+        client,
+        session,
+        "chapter.created",
+        { type: "chapter", id: created[0].id, label: title },
+        { section: sectionTitle }
       );
       return { success: true };
     });
@@ -59,7 +67,7 @@ export async function renameChapter(
   _prevState: StructureActionState,
   formData: FormData
 ): Promise<StructureActionState> {
-  await requireRole(["superadmin"]);
+  const session = await requireRole(["superadmin"]);
 
   const chapterId = String(formData.get("chapterId") ?? "");
   const title = normaliseTitle(formData.get("title"));
@@ -78,6 +86,13 @@ export async function renameChapter(
       if (await titleTaken(client, title, chapterId)) return { error: DUPLICATE_TITLE };
 
       await client.query(`update chapters set title = $2, updated_at = now() where id = $1`, [chapterId, title]);
+      await logActivity(
+        client,
+        session,
+        "chapter.renamed",
+        { type: "chapter", id: chapterId, label: title },
+        { from: rows[0].title, to: title }
+      );
       return { success: true };
     });
   } catch (error) {
@@ -93,7 +108,7 @@ export async function renameChapter(
 
 // Moves within the chapter's own section; "Move to section" crosses sections.
 export async function moveChapter(id: string, direction: "up" | "down"): Promise<StructureActionState> {
-  await requireRole(["superadmin"]);
+  const session = await requireRole(["superadmin"]);
 
   const chapterId = String(id ?? "");
   if (direction !== "up" && direction !== "down") return { error: "Unknown direction." };
@@ -103,8 +118,8 @@ export async function moveChapter(id: string, direction: "up" | "down"): Promise
     result = await withTransaction<StructureActionState>(async (client) => {
       await lockHandbookStructure(client);
 
-      const { rows } = await client.query<{ section_id: string; position: number }>(
-        `select section_id, position from chapters where id = $1`,
+      const { rows } = await client.query<{ section_id: string; position: number; title: string }>(
+        `select section_id, position, title from chapters where id = $1`,
         [chapterId]
       );
       if (!rows[0]) return { error: NOT_FOUND };
@@ -130,6 +145,13 @@ export async function moveChapter(id: string, direction: "up" | "down"): Promise
          where id in ($1, $2)`,
         [chapterId, neighbours[0].id, to, from]
       );
+      await logActivity(
+        client,
+        session,
+        "chapter.reordered",
+        { type: "chapter", id: chapterId, label: rows[0].title },
+        { from: `Position ${from}`, to: `Position ${to}` }
+      );
       return { success: true };
     });
   } catch (error) {
@@ -145,7 +167,7 @@ export async function moveChapterToSection(
   _prevState: StructureActionState,
   formData: FormData
 ): Promise<StructureActionState> {
-  await requireRole(["superadmin"]);
+  const session = await requireRole(["superadmin"]);
 
   const chapterId = String(formData.get("chapterId") ?? "");
   const sectionId = String(formData.get("sectionId") ?? "");
@@ -156,13 +178,15 @@ export async function moveChapterToSection(
     result = await withTransaction<StructureActionState>(async (client) => {
       await lockHandbookStructure(client);
 
-      const { rows } = await client.query<{ section_id: string; position: number }>(
-        `select section_id, position from chapters where id = $1`,
+      const { rows } = await client.query<{ section_id: string; position: number; title: string }>(
+        `select section_id, position, title from chapters where id = $1`,
         [chapterId]
       );
       if (!rows[0]) return { error: NOT_FOUND };
       if (rows[0].section_id === sectionId) return { success: true };
-      if (!(await sectionExists(client, sectionId))) return { error: SECTION_NOT_FOUND };
+      const newSection = await sectionTitleOf(client, sectionId);
+      if (!newSection) return { error: SECTION_NOT_FOUND };
+      const oldSection = await sectionTitleOf(client, rows[0].section_id);
 
       await client.query(
         `update chapters
@@ -173,6 +197,13 @@ export async function moveChapterToSection(
         [chapterId, sectionId]
       );
       await closeGap(client, rows[0].section_id, rows[0].position);
+      await logActivity(
+        client,
+        session,
+        "chapter.section_changed",
+        { type: "chapter", id: chapterId, label: rows[0].title },
+        { from: oldSection ?? "", to: newSection }
+      );
       return { success: true };
     });
   } catch (error) {
@@ -188,7 +219,7 @@ export async function deleteChapter(
   _prevState: StructureActionState,
   formData: FormData
 ): Promise<StructureActionState> {
-  await requireRole(["superadmin"]);
+  const session = await requireRole(["superadmin"]);
 
   const chapterId = String(formData.get("chapterId") ?? "");
   if (!chapterId) return { error: NOT_FOUND };
@@ -198,13 +229,20 @@ export async function deleteChapter(
     result = await withTransaction<StructureActionState>(async (client) => {
       await lockHandbookStructure(client);
 
-      const { rows } = await client.query<{ section_id: string; position: number }>(
-        `delete from chapters where id = $1 returning section_id, position`,
+      const { rows } = await client.query<{ section_id: string; position: number; title: string }>(
+        `delete from chapters where id = $1 returning section_id, position, title`,
         [chapterId]
       );
       if (!rows[0]) return { error: "This chapter has already been deleted." };
 
       await closeGap(client, rows[0].section_id, rows[0].position);
+      await logActivity(
+        client,
+        session,
+        "chapter.deleted",
+        { type: "chapter", id: chapterId, label: rows[0].title },
+        { section: (await sectionTitleOf(client, rows[0].section_id)) ?? "" }
+      );
       return { success: true };
     });
   } catch (error) {
@@ -227,9 +265,9 @@ async function closeGap(client: PoolClient, sectionId: string, removedPosition: 
   );
 }
 
-async function sectionExists(client: PoolClient, sectionId: string) {
-  const { rows } = await client.query(`select 1 from sections where id = $1`, [sectionId]);
-  return rows.length > 0;
+async function sectionTitleOf(client: PoolClient, sectionId: string): Promise<string | undefined> {
+  const { rows } = await client.query<{ title: string }>(`select title from sections where id = $1`, [sectionId]);
+  return rows[0]?.title;
 }
 
 async function titleTaken(client: PoolClient, title: string, exceptId: string | null) {

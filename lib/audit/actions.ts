@@ -4,17 +4,6 @@ export const ACTIVITY_ACTIONS = {
   "admin.email_changed": "Changed admin email",
   "admin.password_changed": "Changed admin password",
   "admin.deleted": "Deleted admin",
-  "category.created": "Created category",
-  "category.renamed": "Renamed category",
-  "category.deleted": "Deleted category",
-  "category.group_changed": "Moved category to another group",
-  "category_group.created": "Created category group",
-  "category_group.renamed": "Renamed category group",
-  "category_group.reordered": "Reordered category group",
-  "category_group.deleted": "Deleted category group",
-  "candidate.admin_changed": "Moved candidate to another admin",
-  "account.email_changed": "Changed own email",
-  "account.password_changed": "Changed own password",
   "candidate.created": "Created candidate",
   "candidate.email_changed": "Changed candidate email",
   "candidate.password_changed": "Changed candidate password",
@@ -23,6 +12,37 @@ export const ACTIVITY_ACTIONS = {
   "candidate.blocked": "Blocked candidate",
   "candidate.unblocked": "Unblocked candidate",
   "candidate.deleted": "Deleted candidate",
+  "candidate.admin_changed": "Moved candidate to another admin",
+  "category_group.created": "Created category group",
+  "category_group.renamed": "Renamed category group",
+  "category_group.reordered": "Reordered category group",
+  "category_group.deleted": "Deleted category group",
+  "category.created": "Created category",
+  "category.renamed": "Renamed category",
+  "category.group_changed": "Moved category to another group",
+  "category.chapters_changed": "Changed category chapters",
+  "category.deleted": "Deleted category",
+  "section.created": "Created section",
+  "section.renamed": "Renamed section",
+  "section.reordered": "Reordered section",
+  "section.deleted": "Deleted section",
+  "chapter.created": "Created chapter",
+  "chapter.renamed": "Renamed chapter",
+  "chapter.reordered": "Reordered chapter",
+  "chapter.section_changed": "Moved chapter to another section",
+  "chapter.deleted": "Deleted chapter",
+  "content_page.created": "Created page",
+  "content_page.renamed": "Renamed page",
+  "content_page.updated": "Edited page content",
+  "content_page.reordered": "Reordered page",
+  "content_page.published": "Published page",
+  "content_page.unpublished": "Unpublished page",
+  "content_page.deleted": "Deleted page",
+  "media.uploaded": "Uploaded picture",
+  "media.alt_text_changed": "Changed picture description",
+  "media.deleted": "Deleted picture",
+  "account.email_changed": "Changed own email",
+  "account.password_changed": "Changed own password",
 } as const;
 
 export type ActivityAction = keyof typeof ACTIVITY_ACTIONS;
@@ -30,6 +50,16 @@ export type ActivityAction = keyof typeof ACTIVITY_ACTIONS;
 export const ADMIN_ACTIONS = (Object.keys(ACTIVITY_ACTIONS) as ActivityAction[]).filter(
   (action) => action.startsWith("candidate.") && action !== "candidate.admin_changed"
 );
+
+// Groups actions by area for the "Type of action" filter; matched by the part before the dot.
+export const ACTION_AREAS: { label: string; prefixes: string[] }[] = [
+  { label: "Admins", prefixes: ["admin"] },
+  { label: "Candidates", prefixes: ["candidate"] },
+  { label: "Categories", prefixes: ["category_group", "category"] },
+  { label: "Handbook", prefixes: ["section", "chapter", "content_page"] },
+  { label: "Media", prefixes: ["media"] },
+  { label: "Own account", prefixes: ["account"] },
+];
 
 export const AUTH_EVENTS = {
   login_success: "Logged in",

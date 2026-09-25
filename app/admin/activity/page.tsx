@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/auth/guard";
 import { pool } from "@/lib/db/pool";
 import { ACCESS_TIME_ZONE } from "@/lib/candidates/access";
 import {
+  ACTION_AREAS,
   ACTIVITY_ACTIONS,
   ADMIN_ACTIONS,
   AUTH_EVENTS,
@@ -12,7 +13,7 @@ import {
   type AuthEvent,
 } from "@/lib/audit/actions";
 import { Badge } from "@/components/admin/badge";
-import { FilterBar, FilterSelect } from "@/components/admin/filter-bar";
+import { FilterBar, FilterSearch, FilterSelect } from "@/components/admin/filter-bar";
 import { Breakable } from "@/components/admin/breakable";
 import { PageHeader } from "@/components/admin/page-header";
 import { buttonClass } from "@/components/admin/styles";
@@ -59,6 +60,7 @@ export default async function ActivityPage({ searchParams }: PageProps<"/admin/a
   const actionParam = one(params.action) ?? "";
   const eventParam = one(params.event) ?? "";
   const actorParam = one(params.actor) ?? "";
+  const emailSearch = isSuperadmin ? (one(params.q) ?? "").trim().slice(0, 100) : "";
 
   const allowedActions = isSuperadmin
     ? (Object.keys(ACTIVITY_ACTIONS) as ActivityAction[])
@@ -72,7 +74,7 @@ export default async function ActivityPage({ searchParams }: PageProps<"/admin/a
   const filters: Record<string, string> =
     tab === "activity"
       ? { tab, action: action ?? "", actor: isSuperadmin ? actorId ?? "" : "" }
-      : { tab, event: event ?? "" };
+      : { tab, event: event ?? "", q: emailSearch };
 
   return (
     <>
@@ -105,6 +107,7 @@ export default async function ActivityPage({ searchParams }: PageProps<"/admin/a
           isSuperadmin={isSuperadmin}
           userId={isSuperadmin ? null : session.sub}
           event={event}
+          emailSearch={emailSearch}
           offset={offset}
           page={page}
           filters={filters}
@@ -177,11 +180,19 @@ async function ActivityTab({
         )}
         <FilterSelect name="action" label="Type of action" defaultValue={filters.action}>
           <option value="">All actions</option>
-          {allowedActions.map((value) => (
-            <option key={value} value={value}>
-              {ACTIVITY_ACTIONS[value]}
-            </option>
-          ))}
+          {ACTION_AREAS.map((area) => {
+            const inArea = allowedActions.filter((value) => area.prefixes.includes(value.split(".")[0]));
+            if (inArea.length === 0) return null;
+            return (
+              <optgroup key={area.label} label={area.label}>
+                {inArea.map((value) => (
+                  <option key={value} value={value}>
+                    {ACTIVITY_ACTIONS[value]}
+                  </option>
+                ))}
+              </optgroup>
+            );
+          })}
         </FilterSelect>
       </FilterBar>
 
@@ -224,6 +235,7 @@ async function LoginsTab({
   isSuperadmin,
   userId,
   event,
+  emailSearch,
   offset,
   page,
   filters,
@@ -231,6 +243,7 @@ async function LoginsTab({
   isSuperadmin: boolean;
   userId: string | null;
   event: AuthEvent | null;
+  emailSearch: string;
   offset: number;
   page: number;
   filters: Record<string, string>;
@@ -240,13 +253,14 @@ async function LoginsTab({
      from auth_events
      where ($1::uuid is null or user_id = $1::uuid)
        and ($2::varchar is null or event = $2::varchar)
+       and ($3::text is null or email ilike '%' || $3::text || '%')
      order by created_at desc
-     limit $3 offset $4`,
-    [userId, event, PAGE_SIZE + 1, offset]
+     limit $4 offset $5`,
+    [userId, event, emailSearch ? escapeLike(emailSearch) : null, PAGE_SIZE + 1, offset]
   );
   const hasMore = rows.length > PAGE_SIZE;
   const entries = rows.slice(0, PAGE_SIZE);
-  const isFiltered = Boolean(filters.event);
+  const isFiltered = Boolean(filters.event || filters.q);
   const columns = isSuperadmin ? ["When", "Event", "Account", "IP"] : ["When", "Event", "IP"];
 
   return (
@@ -257,6 +271,7 @@ async function LoginsTab({
         isFiltered={isFiltered}
         hidden={{ tab: "logins" }}
       >
+        {isSuperadmin && <FilterSearch name="q" label="Search by email" defaultValue={filters.q} />}
         <FilterSelect name="event" label="Type" defaultValue={filters.event}>
           <option value="">All events</option>
           {(Object.keys(AUTH_EVENTS) as AuthEvent[]).map((value) => (
@@ -270,7 +285,7 @@ async function LoginsTab({
       <Table
         columns={columns}
         isEmpty={entries.length === 0}
-        emptyMessage={isFiltered ? "Nothing matches this filter." : "Nothing recorded yet."}
+        emptyMessage={isFiltered ? "Nothing matches these filters." : "Nothing recorded yet."}
       >
         {entries.map((entry) => (
           <Row key={entry.id}>
@@ -360,6 +375,11 @@ function describeDetails(details: Record<string, string>): string | null {
   if (details.from !== undefined && details.to !== undefined) parts.push(`${details.from} → ${details.to}`);
   if (details.previousCurrent) parts.push(`Was working in: ${details.previousCurrent}`);
   if (details.group) parts.push(`Group: ${details.group}`);
+  if (details.section) parts.push(`Section: ${details.section}`);
+  if (details.chapter) parts.push(`Chapter: ${details.chapter}`);
+  if (details.total !== undefined) {
+    parts.push(`Chapters +${details.added ?? 0} −${details.removed ?? 0} (${details.total} in total)`);
+  }
   if (details.category) parts.push(`Category: ${details.category}`);
   if (details.accessUntil) parts.push(`Access until ${details.accessUntil}`);
   return parts.length > 0 ? parts.join(" · ") : null;
@@ -378,4 +398,9 @@ function formatUkDateTime(value: string): string {
 
 function one(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
+}
+
+// Treat the user's % and _ literally; Postgres LIKE uses backslash as its escape.
+function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, "\\$&");
 }

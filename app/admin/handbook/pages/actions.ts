@@ -6,12 +6,11 @@ import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
 import { pool } from "@/lib/db/pool";
 import { getErrorCode, withTransaction } from "@/lib/db/transaction";
+import { logActivity } from "@/lib/audit/log";
 import { collectMediaIds, parseBlocks } from "@/lib/content/blocks";
 import type { ResolvedMedia } from "@/lib/content/book";
 import { isUuid, resolveMedia } from "@/lib/content/pages";
 import { getSignedUrls, isStorageConfigured } from "@/lib/storage/storage";
-
-// Activity logging for Handbook content is deferred to Handbook plan Phase F (ask first).
 
 export type PageActionState = { error?: string; success?: boolean };
 export type SaveResult = { ok: true; version: number } | { ok: false; error: string; conflict?: boolean };
@@ -21,7 +20,7 @@ const MAX_TITLE_LENGTH = 120;
 const NOT_FOUND = "This page no longer exists.";
 
 export async function createPage(_prev: PageActionState, formData: FormData): Promise<PageActionState> {
-  await requireRole(["superadmin"]);
+  const session = await requireRole(["superadmin"]);
 
   const chapterId = String(formData.get("chapterId") ?? "");
   const title = normaliseTitle(formData.get("title"));
@@ -31,7 +30,10 @@ export async function createPage(_prev: PageActionState, formData: FormData): Pr
 
   const pageId = await withTransaction(async (client) => {
     await lockOrder(client);
-    const { rows: chapter } = await client.query(`select 1 from chapters where id = $1 for share`, [chapterId]);
+    const { rows: chapter } = await client.query<{ title: string }>(
+      `select title from chapters where id = $1 for share`,
+      [chapterId]
+    );
     if (chapter.length === 0) return null;
     const { rows } = await client.query<{ id: string }>(
       `insert into content_pages (chapter_id, title) values ($1, $2) returning id`,
@@ -42,6 +44,13 @@ export async function createPage(_prev: PageActionState, formData: FormData): Pr
        select $1, coalesce(max(position), 0) + 1, $2 from handbook_items where chapter_id = $1`,
       [chapterId, rows[0].id]
     );
+    await logActivity(
+      client,
+      session,
+      "content_page.created",
+      { type: "page", id: rows[0].id, label: title },
+      { chapter: chapter[0].title }
+    );
     return rows[0].id;
   });
   if (!pageId) return { error: "This chapter no longer exists." };
@@ -51,7 +60,7 @@ export async function createPage(_prev: PageActionState, formData: FormData): Pr
 }
 
 export async function renamePage(_prev: PageActionState, formData: FormData): Promise<PageActionState> {
-  await requireRole(["superadmin"]);
+  const session = await requireRole(["superadmin"]);
 
   const pageId = String(formData.get("pageId") ?? "");
   const title = normaliseTitle(formData.get("title"));
@@ -59,26 +68,41 @@ export async function renamePage(_prev: PageActionState, formData: FormData): Pr
   if (invalid) return { error: invalid };
   if (!isUuid(pageId)) return { error: NOT_FOUND };
 
-  const { rowCount } = await pool.query(`update content_pages set title = $2, updated_at = now() where id = $1`, [
-    pageId,
-    title,
-  ]);
-  if (rowCount === 0) return { error: NOT_FOUND };
+  const result = await withTransaction<PageActionState>(async (client) => {
+    const { rows } = await client.query<{ title: string }>(
+      `select title from content_pages where id = $1 for update`,
+      [pageId]
+    );
+    if (!rows[0]) return { error: NOT_FOUND };
+    if (rows[0].title === title) return { success: true };
+
+    await client.query(`update content_pages set title = $2, updated_at = now() where id = $1`, [pageId, title]);
+    await logActivity(
+      client,
+      session,
+      "content_page.renamed",
+      { type: "page", id: pageId, label: title },
+      { from: rows[0].title, to: title }
+    );
+    return { success: true };
+  });
 
   revalidatePath("/admin/handbook", "layout");
-  return { success: true };
+  return result;
 }
 
 export async function movePage(id: string, direction: "up" | "down"): Promise<PageActionState> {
-  await requireRole(["superadmin"]);
+  const session = await requireRole(["superadmin"]);
 
   const pageId = String(id ?? "");
   if (!isUuid(pageId) || (direction !== "up" && direction !== "down")) return { error: NOT_FOUND };
 
   const result = await withTransaction<PageActionState>(async (client) => {
     await lockOrder(client);
-    const { rows } = await client.query<{ id: string; chapter_id: string; position: number }>(
-      `select id, chapter_id, position from handbook_items where content_page_id = $1`,
+    const { rows } = await client.query<{ id: string; chapter_id: string; position: number; title: string }>(
+      `select i.id, i.chapter_id, i.position, p.title
+       from handbook_items i join content_pages p on p.id = i.content_page_id
+       where i.content_page_id = $1`,
       [pageId]
     );
     const item = rows[0];
@@ -96,6 +120,13 @@ export async function movePage(id: string, direction: "up" | "down"): Promise<Pa
       `update handbook_items set position = case when id = $1 then $3::int else $4::int end where id in ($1, $2)`,
       [item.id, neighbours[0].id, to, item.position]
     );
+    await logActivity(
+      client,
+      session,
+      "content_page.reordered",
+      { type: "page", id: pageId, label: item.title },
+      { from: `Position ${item.position}`, to: `Position ${to}` }
+    );
     return { success: true };
   });
 
@@ -104,32 +135,43 @@ export async function movePage(id: string, direction: "up" | "down"): Promise<Pa
 }
 
 export async function setPageStatus(id: string, status: "draft" | "published"): Promise<PageActionState> {
-  await requireRole(["superadmin"]);
+  const session = await requireRole(["superadmin"]);
 
   const pageId = String(id ?? "");
   if (!isUuid(pageId) || (status !== "draft" && status !== "published")) return { error: NOT_FOUND };
 
-  if (status === "published") {
-    // Only content that passes today's checks can be published.
-    const { rows } = await pool.query<{ blocks: unknown }>(`select blocks from content_pages where id = $1`, [pageId]);
-    if (!rows[0]) return { error: NOT_FOUND };
-    const parsed = parseBlocks(rows[0].blocks);
-    if (!parsed.ok) return { error: `This page can't be published yet. ${parsed.error}` };
-    if (parsed.blocks.length === 0) return { error: "An empty page can't be published. Add some content first." };
-  }
+  const result = await withTransaction<PageActionState>(async (client) => {
+    const { rows } = await client.query<{ title: string; status: string; blocks: unknown }>(
+      `select title, status, blocks from content_pages where id = $1 for update`,
+      [pageId]
+    );
+    const page = rows[0];
+    if (!page) return { error: NOT_FOUND };
+    if (page.status === status) return { success: true };
 
-  const { rowCount } = await pool.query(`update content_pages set status = $2, updated_at = now() where id = $1`, [
-    pageId,
-    status,
-  ]);
-  if (rowCount === 0) return { error: NOT_FOUND };
+    if (status === "published") {
+      // Only content that passes today's checks can be published.
+      const parsed = parseBlocks(page.blocks);
+      if (!parsed.ok) return { error: `This page can't be published yet. ${parsed.error}` };
+      if (parsed.blocks.length === 0) return { error: "An empty page can't be published. Add some content first." };
+    }
+
+    await client.query(`update content_pages set status = $2, updated_at = now() where id = $1`, [pageId, status]);
+    await logActivity(
+      client,
+      session,
+      status === "published" ? "content_page.published" : "content_page.unpublished",
+      { type: "page", id: pageId, label: page.title }
+    );
+    return { success: true };
+  });
 
   revalidatePath("/admin/handbook", "layout");
-  return { success: true };
+  return result;
 }
 
 export async function deletePage(_prev: PageActionState, formData: FormData): Promise<PageActionState> {
-  await requireRole(["superadmin"]);
+  const session = await requireRole(["superadmin"]);
 
   const pageId = String(formData.get("pageId") ?? "");
   if (!isUuid(pageId)) return { error: NOT_FOUND };
@@ -140,14 +182,25 @@ export async function deletePage(_prev: PageActionState, formData: FormData): Pr
       `select chapter_id, position from handbook_items where content_page_id = $1`,
       [pageId]
     );
-    const { rowCount } = await client.query(`delete from content_pages where id = $1`, [pageId]);
-    if (rowCount === 0) return { error: "This page has already been deleted." };
+    const { rows: deleted } = await client.query<{ title: string; chapter_title: string }>(
+      `delete from content_pages p where p.id = $1
+       returning p.title, (select title from chapters where id = p.chapter_id) as chapter_title`,
+      [pageId]
+    );
+    if (!deleted[0]) return { error: "This page has already been deleted." };
     if (rows[0]) {
       await client.query(
         `update handbook_items set position = position - 1 where chapter_id = $1 and position > $2`,
         [rows[0].chapter_id, rows[0].position]
       );
     }
+    await logActivity(
+      client,
+      session,
+      "content_page.deleted",
+      { type: "page", id: pageId, label: deleted[0].title },
+      { chapter: deleted[0].chapter_title ?? "" }
+    );
     return { success: true };
   });
 
@@ -163,7 +216,7 @@ export async function savePageContent(input: {
   title: string;
   blocks: unknown;
 }): Promise<SaveResult> {
-  await requireRole(["superadmin"]);
+  const session = await requireRole(["superadmin"]);
 
   const pageId = String(input?.pageId ?? "");
   const expectedVersion = Number(input?.expectedVersion);
@@ -180,8 +233,8 @@ export async function savePageContent(input: {
   let result: SaveResult;
   try {
     result = await withTransaction<SaveResult>(async (client) => {
-      const { rows } = await client.query<{ content_version: number }>(
-        `select content_version from content_pages where id = $1 for update`,
+      const { rows } = await client.query<{ content_version: number; title: string }>(
+        `select content_version, title from content_pages where id = $1 for update`,
         [pageId]
       );
       if (!rows[0]) return { ok: false, error: NOT_FOUND };
@@ -217,6 +270,17 @@ export async function savePageContent(input: {
           `insert into content_page_media (content_page_id, media_id) select $1::uuid, unnest($2::uuid[])`,
           [pageId, mediaIds]
         );
+      }
+      // A rename and a content change in one save are logged as two entries.
+      const target = { type: "page" as const, id: pageId, label: title };
+      if (rows[0].title !== title) {
+        await logActivity(client, session, "content_page.renamed", target, { from: rows[0].title, to: title });
+      }
+      if (saved[0].content_version !== expectedVersion) {
+        await logActivity(client, session, "content_page.updated", target, {
+          from: `Version ${expectedVersion}`,
+          to: `Version ${saved[0].content_version}`,
+        });
       }
       return { ok: true, version: saved[0].content_version };
     });

@@ -3,12 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/guard";
 import { getErrorCode, withTransaction } from "@/lib/db/transaction";
-import { pool } from "@/lib/db/pool";
+import { logActivity } from "@/lib/audit/log";
 import { EXTENSION_BY_MIME, readImageInfo, type ImageInfo } from "@/lib/media/image-info";
 import { MAX_THUMB_BYTES, MAX_UPLOAD_BYTES } from "@/lib/media/limits";
 import { StorageConfigError, deleteObjects, storeObject } from "@/lib/storage/storage";
-
-// Activity logging for Handbook content is deferred to Handbook plan Phase F (ask first).
 
 export type MediaActionState = { error?: string; success?: boolean };
 
@@ -46,22 +44,25 @@ export async function uploadMedia(_prevState: MediaActionState, formData: FormDa
   }
 
   try {
-    await pool.query(
-      `insert into media (id, storage_path, thumb_path, original_name, mime_type, width, height, byte_size, alt_text, uploaded_by)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-      [
-        id,
-        storagePath,
-        thumbPath,
-        originalName,
-        main.info.mime,
-        main.info.width,
-        main.info.height,
-        main.file.size,
-        altText,
-        session.sub,
-      ]
-    );
+    await withTransaction(async (client) => {
+      await client.query(
+        `insert into media (id, storage_path, thumb_path, original_name, mime_type, width, height, byte_size, alt_text, uploaded_by)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        [
+          id,
+          storagePath,
+          thumbPath,
+          originalName,
+          main.info.mime,
+          main.info.width,
+          main.info.height,
+          main.file.size,
+          altText,
+          session.sub,
+        ]
+      );
+      await logActivity(client, session, "media.uploaded", { type: "media", id, label: originalName });
+    });
   } catch (error) {
     await deleteQuietly([storagePath, thumbPath]);
     throw error;
@@ -72,33 +73,44 @@ export async function uploadMedia(_prevState: MediaActionState, formData: FormDa
 }
 
 export async function updateAltText(_prevState: MediaActionState, formData: FormData): Promise<MediaActionState> {
-  await requireRole(["superadmin"]);
+  const session = await requireRole(["superadmin"]);
 
   const mediaId = String(formData.get("mediaId") ?? "");
   const altText = normaliseText(formData.get("altText"));
   const altError = validateAltText(altText);
   if (altError) return { error: altError };
 
+  let result: MediaActionState;
   try {
-    const { rowCount } = await pool.query(
-      `update media set alt_text = $2, updated_at = now() where id = $1 and alt_text is distinct from $2`,
-      [mediaId, altText]
-    );
-    if (rowCount === 0) {
-      const { rows } = await pool.query(`select 1 from media where id = $1`, [mediaId]);
-      if (rows.length === 0) return { error: NOT_FOUND };
-    }
+    result = await withTransaction<MediaActionState>(async (client) => {
+      const { rows } = await client.query<{ alt_text: string; original_name: string }>(
+        `select alt_text, original_name from media where id = $1 for update`,
+        [mediaId]
+      );
+      if (!rows[0]) return { error: NOT_FOUND };
+      if (rows[0].alt_text === altText) return { success: true };
+
+      await client.query(`update media set alt_text = $2, updated_at = now() where id = $1`, [mediaId, altText]);
+      await logActivity(
+        client,
+        session,
+        "media.alt_text_changed",
+        { type: "media", id: mediaId, label: rows[0].original_name },
+        { from: rows[0].alt_text, to: altText }
+      );
+      return { success: true };
+    });
   } catch (error) {
     if (getErrorCode(error) === "22P02") return { error: NOT_FOUND };
     throw error;
   }
 
   revalidatePath(PAGE_PATH);
-  return { success: true };
+  return result;
 }
 
 export async function deleteMedia(_prevState: MediaActionState, formData: FormData): Promise<MediaActionState> {
-  await requireRole(["superadmin"]);
+  const session = await requireRole(["superadmin"]);
 
   const mediaId = String(formData.get("mediaId") ?? "");
   if (!mediaId) return { error: NOT_FOUND };
@@ -107,10 +119,13 @@ export async function deleteMedia(_prevState: MediaActionState, formData: FormDa
   try {
     // Pages and questions will reference media with ON DELETE RESTRICT, so an in-use picture fails here.
     const deleted = await withTransaction(async (client) => {
-      const { rows } = await client.query<{ storage_path: string; thumb_path: string }>(
-        `delete from media where id = $1 returning storage_path, thumb_path`,
+      const { rows } = await client.query<{ storage_path: string; thumb_path: string; original_name: string }>(
+        `delete from media where id = $1 returning storage_path, thumb_path, original_name`,
         [mediaId]
       );
+      if (rows[0]) {
+        await logActivity(client, session, "media.deleted", { type: "media", id: mediaId, label: rows[0].original_name });
+      }
       return rows[0];
     });
     if (!deleted) return { error: "This picture has already been deleted." };
