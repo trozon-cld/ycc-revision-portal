@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { pool } from "@/lib/db/pool";
-import { signToken } from "@/lib/auth/jwt";
+import { signToken, type UserRole } from "@/lib/auth/jwt";
 import { setAuthCookie } from "@/lib/auth/cookies";
+import { ipFromHeaders, logAuthEvent } from "@/lib/audit/log";
 
-// Login always succeeds on valid credentials, regardless of a candidate's
-// block/expiry status — Middleware is what redirects a blocked/expired
-// candidate to /access-expired when they hit a protected route. This
-// matches the Day 1 verification steps (log in, then confirm the redirect).
+// Valid credentials always log in, even if blocked/expired — proxy.ts
+// then redirects that candidate to /access-expired.
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
@@ -22,11 +21,20 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const invalidCredentials = () =>
-    NextResponse.json(
+  const ipAddress = ipFromHeaders(request.headers);
+
+  const invalidCredentials = async (user?: { id: string; role: UserRole }) => {
+    await logAuthEvent(
+      pool,
+      "login_failed",
+      { id: user?.id ?? null, email, role: user?.role ?? null },
+      ipAddress
+    );
+    return NextResponse.json(
       { error: "Invalid email or password." },
       { status: 401 }
     );
+  };
 
   const { rows } = await pool.query(
     `select id, email, password_hash, role, is_blocked, access_expires_at
@@ -43,7 +51,7 @@ export async function POST(request: NextRequest) {
 
   const passwordMatches = await bcrypt.compare(password, user.password_hash);
   if (!passwordMatches) {
-    return invalidCredentials();
+    return invalidCredentials({ id: user.id, role: user.role });
   }
 
   const token = await signToken({
@@ -56,12 +64,15 @@ export async function POST(request: NextRequest) {
       : null,
   });
 
-  const ipAddress =
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
-
   await pool.query(
     `insert into login_logs (user_id, ip_address) values ($1, $2)`,
     [user.id, ipAddress]
+  );
+  await logAuthEvent(
+    pool,
+    "login_success",
+    { id: user.id, email: user.email, role: user.role },
+    ipAddress
   );
 
   const redirectTo = user.role === "candidate" ? "/dashboard" : "/admin";

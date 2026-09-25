@@ -1,97 +1,204 @@
 import { requireRole } from "@/lib/auth/guard";
 import { pool } from "@/lib/db/pool";
-import { LogoutButton } from "@/components/logout-button";
-import { CreateCandidateForm } from "./create-candidate-form";
+import { customDateBounds, formatUkDate } from "@/lib/candidates/access";
+import { Badge } from "@/components/admin/badge";
+import { FilterBar, FilterSearch, FilterSelect } from "@/components/admin/filter-bar";
+import { Breakable } from "@/components/admin/breakable";
+import { PageHeader } from "@/components/admin/page-header";
+import { Cell, Row, Table } from "@/components/admin/table";
+import { NewCandidateButton } from "./create-candidate-form";
+import { AdminCandidateActions, SuperadminCandidateActions } from "./candidate-row-actions";
+import { CategoryOptions, type CategoryChoice } from "./category-options";
 
 interface CandidateRow {
   id: string;
   email: string;
-  category_name: string | null;
+  category_id: string;
+  category_name: string;
+  current_category_name: string;
+  admin_id: string;
+  admin_email: string;
   access_expires_at: string | null;
   is_blocked: boolean;
-  created_at: string;
 }
 
-interface CategoryRow {
+interface Option {
   id: string;
-  name: string;
+  label: string;
 }
 
-export default async function CandidatesPage() {
-  const session = await requireRole(["admin"]);
+const STATUSES = ["active", "expired", "blocked"] as const;
+type Status = (typeof STATUSES)[number];
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-  const [{ rows: candidates }, { rows: categories }] = await Promise.all([
+export default async function CandidatesPage({ searchParams }: PageProps<"/admin/candidates">) {
+  const session = await requireRole(["admin", "superadmin"]);
+  const isSuperadmin = session.role === "superadmin";
+  const params = await searchParams;
+  const { min: minDate, max: maxDate } = customDateBounds();
+
+  const search = (one(params.q) ?? "").trim().slice(0, 100);
+  const categoryFilter = uuidOrNull(one(params.category));
+  const statusParam = one(params.status) ?? "";
+  const status = (STATUSES as readonly string[]).includes(statusParam) ? (statusParam as Status) : null;
+  // Admins are always pinned to their own candidates, whatever the URL says.
+  const ownerFilter = isSuperadmin ? uuidOrNull(one(params.admin)) : session.sub;
+  const isFiltered = Boolean(search || categoryFilter || status || (isSuperadmin && ownerFilter));
+
+  const [{ rows: candidates }, { rows: categories }, { rows: admins }] = await Promise.all([
     pool.query<CandidateRow>(
-      `select u.id, u.email, c.name as category_name, u.access_expires_at, u.is_blocked, u.created_at
+      `select u.id, u.email, u.category_id, c.name as category_name, cc.name as current_category_name,
+              u.admin_id, a.email as admin_email, u.access_expires_at, u.is_blocked
        from users u
-       left join categories c on c.id = u.category_id
+       join categories c on c.id = u.category_id
+       join categories cc on cc.id = u.current_category_id
+       join users a on a.id = u.admin_id
        where u.role = 'candidate'
-       order by u.created_at desc`
+         and ($1::uuid is null or u.admin_id = $1::uuid)
+         and ($2::text is null or u.email ilike '%' || $2::text || '%')
+         and ($3::uuid is null or u.category_id = $3::uuid or u.current_category_id = $3::uuid)
+         and ($4::text is null
+              or ($4::text = 'blocked' and u.is_blocked)
+              or ($4::text = 'expired' and not u.is_blocked and u.access_expires_at <= now())
+              or ($4::text = 'active' and not u.is_blocked
+                  and (u.access_expires_at is null or u.access_expires_at > now())))
+       order by u.created_at desc`,
+      [ownerFilter, search ? escapeLike(search) : null, categoryFilter, status]
     ),
-    pool.query<CategoryRow>(`select id, name from categories order by name`),
+    pool.query<CategoryChoice>(
+      `select c.id, c.name, g.name as "group"
+       from categories c join category_groups g on g.id = c.group_id
+       order by g.position, c.name`
+    ),
+    isSuperadmin
+      ? pool.query<Option>(`select id, email as label from users where role = 'admin' order by email`)
+      : Promise.resolve({ rows: [] as Option[] }),
   ]);
 
+  const now = Date.now();
+  const columns = isSuperadmin
+    ? ["Email", "Category", "Admin", "Status", "Access until", ""]
+    : ["Email", "Category", "Status", "Access until", ""];
+  const countLabel = `${candidates.length} candidate${candidates.length === 1 ? "" : "s"}`;
+
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 p-4 py-8">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-base uppercase tracking-wide text-primary">
-            Admin
-          </p>
-          <h1 className="text-2xl font-semibold text-ink">Candidates</h1>
-          <p className="mt-1 text-base text-ink/70">
-            Signed in as {session.email}
-          </p>
-        </div>
-        <LogoutButton />
-      </div>
+    <>
+      <PageHeader
+        title="Candidates"
+        description={isFiltered ? `${countLabel} match your filters` : countLabel}
+        actions={
+          !isSuperadmin && (
+            <NewCandidateButton
+              categories={categories}
+              minDate={minDate}
+              maxDate={maxDate}
+            />
+          )
+        }
+      />
 
-      {categories.length === 0 && (
-        <p className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-base text-amber-900">
-          No categories exist yet — run the categories migration in Supabase
-          before creating a candidate.
-        </p>
-      )}
+      <FilterBar action="/admin/candidates" clearHref="/admin/candidates" isFiltered={isFiltered}>
+        <FilterSearch name="q" label="Search by email" defaultValue={search} />
+        <FilterSelect name="category" label="Category" defaultValue={categoryFilter ?? ""}>
+          <option value="">All categories</option>
+          <CategoryOptions categories={categories} />
+        </FilterSelect>
+        <FilterSelect name="status" label="Status" defaultValue={status ?? ""}>
+          <option value="">All statuses</option>
+          <option value="active">Active</option>
+          <option value="expired">Expired</option>
+          <option value="blocked">Blocked</option>
+        </FilterSelect>
+        {isSuperadmin && (
+          <FilterSelect name="admin" label="Admin" defaultValue={ownerFilter ?? ""}>
+            <option value="">All admins</option>
+            {admins.map((admin) => (
+              <option key={admin.id} value={admin.id}>
+                {admin.label}
+              </option>
+            ))}
+          </FilterSelect>
+        )}
+      </FilterBar>
 
-      <CreateCandidateForm categories={categories} />
+      <Table
+        columns={columns}
+        isEmpty={candidates.length === 0}
+        emptyMessage={isFiltered ? "No candidates match these filters." : "No candidates yet."}
+      >
+        {candidates.map((candidate) => {
+          const expiresAt = candidate.access_expires_at;
+          const isExpired = expiresAt !== null && new Date(expiresAt).getTime() <= now;
+          const expiryDate = expiresAt ? formatUkDate(expiresAt) : "No expiry";
+          const rowCandidate = {
+            id: candidate.id,
+            email: candidate.email,
+            categoryId: candidate.category_id,
+            adminId: candidate.admin_id,
+            isBlocked: candidate.is_blocked,
+            expiryLabel: expiresAt ? `${isExpired ? "Expired on" : "Expires"} ${expiryDate}` : "No expiry set",
+          };
 
-      <div>
-        <h2 className="text-lg font-medium text-ink">
-          {candidates.length} candidate{candidates.length === 1 ? "" : "s"}
-        </h2>
-        <ul className="mt-3 divide-y divide-ink/15 rounded-lg border border-ink/15">
-          {candidates.map((candidate) => (
-            <li
-              key={candidate.id}
-              className="flex flex-col gap-1 p-4 text-base text-ink sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div>
-                <p className="font-medium">{candidate.email}</p>
-                <p className="text-ink/70">
-                  {candidate.category_name ?? "No category"}
-                </p>
-              </div>
-              <div className="text-ink/70">
+          return (
+            <Row key={candidate.id}>
+              <Cell kind="primary">
+                <Breakable text={candidate.email} />
+              </Cell>
+              <Cell label="Category">
+                {candidate.current_category_name}
+                {candidate.current_category_name !== candidate.category_name && (
+                  <span className="block text-xs text-slate-600">Assigned: {candidate.category_name}</span>
+                )}
+              </Cell>
+              {isSuperadmin && (
+                <Cell label="Admin" breakAnywhere>
+                  <Breakable text={candidate.admin_email} />
+                </Cell>
+              )}
+              <Cell label="Status">
                 {candidate.is_blocked ? (
-                  <span className="text-red-700">Blocked</span>
-                ) : candidate.access_expires_at ? (
-                  <>
-                    Expires{" "}
-                    {new Date(candidate.access_expires_at).toLocaleDateString(
-                      "en-GB"
-                    )}
-                  </>
-                ) : null}
-              </div>
-            </li>
-          ))}
-          {candidates.length === 0 && (
-            <li className="p-4 text-base text-ink/70">
-              No candidates yet.
-            </li>
-          )}
-        </ul>
-      </div>
-    </div>
+                  <Badge tone="danger">Blocked</Badge>
+                ) : isExpired ? (
+                  <Badge tone="warning">Expired</Badge>
+                ) : (
+                  <Badge tone="success">Active</Badge>
+                )}
+              </Cell>
+              <Cell label="Access until" nowrap>
+                {expiryDate}
+              </Cell>
+              <Cell kind="actions">
+                {isSuperadmin ? (
+                  <SuperadminCandidateActions
+                    candidate={rowCandidate}
+                    admins={admins.map(({ id, label }) => ({ id, email: label }))}
+                  />
+                ) : (
+                  <AdminCandidateActions
+                    candidate={rowCandidate}
+                    categories={categories}
+                    minDate={minDate}
+                    maxDate={maxDate}
+                  />
+                )}
+              </Cell>
+            </Row>
+          );
+        })}
+      </Table>
+    </>
   );
+}
+
+function one(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function uuidOrNull(value: string | undefined): string | null {
+  return value && UUID_PATTERN.test(value) ? value : null;
+}
+
+// Treat the user's % and _ literally; Postgres LIKE uses backslash as its escape.
+function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, "\\$&");
 }

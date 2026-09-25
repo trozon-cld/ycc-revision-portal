@@ -2,9 +2,8 @@ import { redirect } from "next/navigation";
 import { getSession } from "./session";
 import type { SessionPayload, UserRole } from "./jwt";
 
-// Server Components AND Server Actions — Server Actions are independently
-// callable endpoints, so they must re-check authorization themselves rather
-// than trusting that the page that renders their form already did.
+// Use in Server Components AND Server Actions — actions are callable
+// endpoints, so they can't rely on the page having checked already.
 export async function requireRole(
   allowedRoles: UserRole[]
 ): Promise<SessionPayload> {
