@@ -11,6 +11,7 @@ type TargetType =
   | "section"
   | "chapter"
   | "page"
+  | "question"
   | "media"
   | "account";
 type Details = Record<string, string>;

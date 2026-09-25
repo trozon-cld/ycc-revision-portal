@@ -22,6 +22,7 @@ interface ChapterRow {
   title: string;
   status: "draft" | "published";
   page_count: number;
+  question_count: number;
 }
 
 export default async function HandbookPage() {
@@ -32,7 +33,8 @@ export default async function HandbookPage() {
     pool.query<ChapterRow>(
       `select c.id, c.section_id, c.position, c.title, c.status,
               row_number() over (order by s.position, c.position)::int as number,
-              (select count(*) from handbook_items i where i.chapter_id = c.id)::int as page_count
+              (select count(*) from handbook_items i where i.chapter_id = c.id and i.content_page_id is not null)::int as page_count,
+              (select count(*) from questions q where q.chapter_id = c.id)::int as question_count
        from chapters c
        join sections s on s.id = c.section_id
        order by s.position, c.position`
@@ -89,7 +91,7 @@ export default async function HandbookPage() {
               </div>
 
               <Table
-                columns={["Chapter", "Pages", "Status", ""]}
+                columns={["Chapter", "Pages", "Questions", "Status", ""]}
                 isEmpty={sectionChapters.length === 0}
                 emptyMessage="No chapters in this section yet."
               >
@@ -105,6 +107,7 @@ export default async function HandbookPage() {
                       </Link>
                     </Cell>
                     <Cell label="Pages">{chapter.page_count}</Cell>
+                    <Cell label="Questions">{chapter.question_count}</Cell>
                     <Cell label="Status" nowrap>
                       <Badge tone={chapter.status === "published" ? "success" : "neutral"}>
                         {chapter.status === "published" ? "Published" : "Draft"}
@@ -119,6 +122,7 @@ export default async function HandbookPage() {
                         isLast={index === sectionChapters.length - 1}
                         otherSections={sectionOptions.filter((option) => option.id !== section.id)}
                         pageCount={chapter.page_count}
+                        questionCount={chapter.question_count}
                       />
                     </Cell>
                   </Row>

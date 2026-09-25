@@ -50,6 +50,7 @@ export function ChapterRowActions({
   isLast,
   otherSections,
   pageCount,
+  questionCount,
 }: {
   id: string;
   title: string;
@@ -58,6 +59,7 @@ export function ChapterRowActions({
   isLast: boolean;
   otherSections: SectionOption[];
   pageCount: number;
+  questionCount: number;
 }) {
   const hidden = { chapterId: id };
   const description = `Chapter ${number} · ${title}`;
@@ -125,16 +127,16 @@ export function ChapterRowActions({
   actions.push({
     label: "Delete",
     danger: true,
-    title: pageCount > 0 ? "Can't delete this chapter" : "Delete chapter?",
+    title: pageCount > 0 || questionCount > 0 ? "Can't delete this chapter" : "Delete chapter?",
     variant: "confirm",
     render: (close) =>
-      pageCount > 0 ? (
+      pageCount > 0 || questionCount > 0 ? (
         <div>
           <p className="px-5 py-4 text-sm">
             <strong className="font-medium">
               {number} {title}
             </strong>{" "}
-            still has {pageCount} page{pageCount === 1 ? "" : "s"}. Delete them first.
+            still has {blockedBy(pageCount, questionCount)}. Delete them first.
           </p>
           <div className="flex justify-end border-t border-slate-200 px-5 py-3">
             <button type="button" onClick={close} className={buttonClass("secondary")}>
@@ -165,6 +167,13 @@ export function ChapterRowActions({
   });
 
   return <RowActions label={`Actions for ${title}`} actions={actions} />;
+}
+
+function blockedBy(pages: number, questions: number): string {
+  const parts: string[] = [];
+  if (pages > 0) parts.push(`${pages} page${pages === 1 ? "" : "s"}`);
+  if (questions > 0) parts.push(`${questions} question${questions === 1 ? "" : "s"}`);
+  return parts.join(" and ");
 }
 
 function SectionSelect({ id, options }: { id: string; options: SectionOption[] }) {

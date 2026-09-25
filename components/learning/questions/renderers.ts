@@ -1,0 +1,26 @@
+import type { ComponentType } from "react";
+import type { CheckResult, QuestionMode, QuestionType } from "@/lib/questions/types";
+
+// What every type's answer area receives from QuestionView. The frame owns the state.
+export type AnswerAreaProps = {
+  questionId: string;
+  mode: QuestionMode;
+  content: unknown;
+  // Only present in learn mode.
+  answer: unknown;
+  response: unknown;
+  onResponse: (response: unknown) => void;
+  // True once the question is checked or revealed: answers can no longer be changed.
+  locked: boolean;
+  // True when the correct answer should be shown (learn mode, after Check or Reveal).
+  showCorrect: boolean;
+  result: CheckResult | null;
+};
+
+// Each type step (C1–C4) adds its answer area here.
+export const QUESTION_RENDERERS: Record<QuestionType, ComponentType<AnswerAreaProps> | null> = {
+  single_text: null,
+  single_picture: null,
+  multi_pick: null,
+  hotspot: null,
+};

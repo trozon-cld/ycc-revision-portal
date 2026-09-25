@@ -8,7 +8,7 @@ import { buttonClass } from "./styles";
 import { ToastProvider } from "./toast";
 
 type Role = "admin" | "superadmin";
-type IconName = "admins" | "candidates" | "categories" | "handbook" | "media" | "activity" | "account";
+type IconName = "admins" | "candidates" | "categories" | "handbook" | "questions" | "media" | "activity" | "account";
 type NavItem = { href: string; label: string; icon: IconName };
 type NavGroup = { heading?: string; items: NavItem[] };
 
@@ -25,6 +25,7 @@ const NAV: Record<Role, NavGroup[]> = {
       heading: "Content",
       items: [
         { href: "/admin/handbook", label: "Handbook", icon: "handbook" },
+        { href: "/admin/questions", label: "Question bank", icon: "questions" },
         { href: "/admin/media", label: "Media", icon: "media" },
       ],
     },
@@ -213,6 +214,13 @@ function NavIcon({ name }: { name: IconName }) {
       <>
         <path d="M10 5.5C8.5 4.3 6.3 3.75 3 3.75v11.5c3.3 0 5.5.55 7 1.75 1.5-1.2 3.7-1.75 7-1.75V3.75c-3.3 0-5.5.55-7 1.75z" />
         <path d="M10 5.5V17" />
+      </>
+    ),
+    questions: (
+      <>
+        <circle cx="10" cy="10" r="7" />
+        <path d="M7.75 8a2.25 2.25 0 114 1.4c-.8.6-1.75 1.1-1.75 2.1" />
+        <path d="M10 14.25v.01" />
       </>
     ),
     media: (
