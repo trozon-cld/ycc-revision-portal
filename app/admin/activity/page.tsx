@@ -356,10 +356,10 @@ function Pagination({
 }
 
 function describeDetails(details: Record<string, string>): string | null {
-  if (details.from !== undefined && details.to !== undefined) {
-    return `${details.from} → ${details.to}`;
-  }
   const parts: string[] = [];
+  if (details.from !== undefined && details.to !== undefined) parts.push(`${details.from} → ${details.to}`);
+  if (details.previousCurrent) parts.push(`Was working in: ${details.previousCurrent}`);
+  if (details.group) parts.push(`Group: ${details.group}`);
   if (details.category) parts.push(`Category: ${details.category}`);
   if (details.accessUntil) parts.push(`Access until ${details.accessUntil}`);
   return parts.length > 0 ? parts.join(" · ") : null;

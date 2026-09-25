@@ -4,12 +4,27 @@ create extension if not exists pgcrypto;
 
 create type role_type as enum ('superadmin', 'admin', 'candidate');
 
+-- Candidates can switch only between categories of the same group. Managed by the Superadmin.
+create table category_groups (
+  id uuid primary key default gen_random_uuid(),
+  position integer not null check (position > 0),
+  name varchar(100) not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint category_groups_position_key unique (position) deferrable initially deferred
+);
+
+create unique index category_groups_name_key on category_groups (lower(name));
+
 -- A Candidate's assignment (e.g. Operative).
 create table categories (
   id uuid primary key default gen_random_uuid(),
   name varchar not null unique,
+  group_id uuid not null references category_groups (id) on delete restrict,
   created_at timestamptz not null default now()
 );
+
+create index categories_group_idx on categories (group_id);
 
 create table users (
   id uuid primary key default gen_random_uuid(),
@@ -18,6 +33,8 @@ create table users (
   role role_type not null,
   -- Candidates only (required for them, see check below). NULL for Admins/Superadmins.
   category_id uuid references categories (id),
+  -- Candidates only: their own choice, always in the same group as category_id (see trigger below).
+  current_category_id uuid references categories (id),
   -- Admin who owns this candidate. Restrict: an Admin can't be deleted while owning candidates.
   admin_id uuid references users (id) on delete restrict,
   -- Expiry/block checks apply only to candidates. Admins/Superadmins keep
@@ -29,10 +46,46 @@ create table users (
   constraint users_candidate_fields_check check (
     (role = 'candidate' and category_id is not null and admin_id is not null)
     or (role <> 'candidate' and admin_id is null)
-  )
+  ),
+  constraint users_current_category_check check ((role = 'candidate') = (current_category_id is not null))
 );
 
 create index users_admin_id_idx on users (admin_id);
+create index users_current_category_idx on users (current_category_id);
+
+create function check_candidate_category_group() returns trigger
+language plpgsql as $$
+begin
+  if new.role = 'candidate' and new.current_category_id is not null
+     and (select group_id from categories where id = new.category_id)
+         is distinct from (select group_id from categories where id = new.current_category_id) then
+    raise exception 'A candidate''s current category must be in the same group as their assigned category'
+      using errcode = '23514';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger users_category_group_check
+  before insert or update of category_id, current_category_id on users
+  for each row execute function check_candidate_category_group();
+
+-- Moving a category to another group would silently move its candidates too, so it's refused.
+create function check_category_group_move() returns trigger
+language plpgsql as $$
+begin
+  if new.group_id is distinct from old.group_id
+     and exists (select 1 from users where category_id = new.id or current_category_id = new.id) then
+    raise exception 'A category in use by candidates cannot move to another group'
+      using errcode = '23514';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger categories_group_move_check
+  before update of group_id on categories
+  for each row execute function check_category_group_move();
 
 create table login_logs (
   id uuid primary key default gen_random_uuid(),

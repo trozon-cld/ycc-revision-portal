@@ -6,13 +6,14 @@ import { PanelButton } from "@/components/admin/row-actions";
 import { inputClass } from "@/components/admin/styles";
 import { createCandidate } from "./actions";
 import { AccessLengthField } from "./access-length-field";
+import { CategoryOptions, type CategoryChoice } from "./category-options";
 
 export function NewCandidateButton({
   categories,
   minDate,
   maxDate,
 }: {
-  categories: { id: string; name: string }[];
+  categories: CategoryChoice[];
   minDate: string;
   maxDate: string;
 }) {
@@ -46,16 +47,16 @@ export function NewCandidateButton({
               className={inputClass}
             />
           </Field>
-          <Field id="new-candidate-category" label="Category">
+          <Field
+            id="new-candidate-category"
+            label="Category"
+            hint="The candidate starts here and can switch to others in the same group."
+          >
             <select id="new-candidate-category" name="categoryId" required defaultValue="" className={inputClass}>
               <option value="" disabled>
                 Select a category
               </option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
+              <CategoryOptions categories={categories} />
             </select>
           </Field>
           <AccessLengthField idPrefix="new-candidate" label="Access length" minDate={minDate} maxDate={maxDate} />

@@ -11,6 +11,7 @@ export type CategoryActionState = { error?: string; success?: boolean };
 const MAX_NAME_LENGTH = 100;
 const DUPLICATE_NAME = "A category with this name already exists.";
 const MAX_LINKED_CHAPTERS = 1000;
+const GROUP_GONE = "That group no longer exists. Close this and try again.";
 const CHAPTERS_CHANGED = "The chapter list has changed since you opened this. Close it, reopen and try again.";
 
 export async function createCategory(
@@ -20,27 +21,39 @@ export async function createCategory(
   const session = await requireRole(["superadmin"]);
 
   const name = normaliseName(formData.get("name"));
+  const groupId = String(formData.get("groupId") ?? "");
   const invalid = validateName(name);
   if (invalid) return { error: invalid };
+  if (!groupId) return { error: "Choose a group." };
 
   try {
     const result = await withTransaction<CategoryActionState>(async (client) => {
       if (await nameTaken(client, name, null)) return { error: DUPLICATE_NAME };
 
-      const { rows } = await client.query<{ id: string }>(
-        `insert into categories (name) values ($1) returning id`,
-        [name]
+      const { rows: groups } = await client.query<{ name: string }>(
+        `select name from category_groups where id = $1 for key share`,
+        [groupId]
       );
-      await logActivity(client, session, "category.created", {
-        type: "category",
-        id: rows[0].id,
-        label: name,
-      });
+      if (!groups[0]) return { error: GROUP_GONE };
+
+      const { rows } = await client.query<{ id: string }>(
+        `insert into categories (name, group_id) values ($1, $2) returning id`,
+        [name, groupId]
+      );
+      await logActivity(
+        client,
+        session,
+        "category.created",
+        { type: "category", id: rows[0].id, label: name },
+        { group: groups[0].name }
+      );
       return { success: true };
     });
     if (result.error) return result;
   } catch (error) {
-    if (getErrorCode(error) === "23505") return { error: DUPLICATE_NAME };
+    const code = getErrorCode(error);
+    if (code === "23505") return { error: DUPLICATE_NAME };
+    if (code === "22P02" || code === "23503") return { error: GROUP_GONE };
     throw error;
   }
 
@@ -108,7 +121,7 @@ export async function deleteCategory(
       if (!category) return { error: "This category has already been deleted." };
 
       const { rows } = await client.query<{ count: number }>(
-        `select count(*)::int as count from users where category_id = $1`,
+        `select count(*)::int as count from users where category_id = $1 or current_category_id = $1`,
         [categoryId]
       );
       if (rows[0].count > 0) return { error: blockedMessage(rows[0].count) };
@@ -125,6 +138,61 @@ export async function deleteCategory(
     const code = getErrorCode(error);
     if (code === "23503") return { error: blockedMessage(1) };
     if (code === "22P02") return { error: "Category not found." };
+    throw error;
+  }
+
+  revalidatePath("/admin/categories");
+  revalidatePath("/admin/candidates");
+  return result;
+}
+
+// Blocked while any candidate has the category, because candidates only switch within their group.
+export async function moveCategoryToGroup(
+  _prevState: CategoryActionState,
+  formData: FormData
+): Promise<CategoryActionState> {
+  const session = await requireRole(["superadmin"]);
+
+  const categoryId = String(formData.get("categoryId") ?? "");
+  const groupId = String(formData.get("groupId") ?? "");
+  if (!categoryId) return { error: "Category not found." };
+  if (!groupId) return { error: "Choose a group." };
+
+  let result: CategoryActionState;
+  try {
+    result = await withTransaction<CategoryActionState>(async (client) => {
+      const category = await lockCategory(client, categoryId);
+      if (!category) return { error: "This category no longer exists." };
+      if (category.group_id === groupId) return { success: true };
+
+      const { rows: counts } = await client.query<{ count: number }>(
+        `select count(*)::int as count from users where category_id = $1 or current_category_id = $1`,
+        [categoryId]
+      );
+      if (counts[0].count > 0) return { error: moveBlockedMessage(counts[0].count) };
+
+      const { rows: groups } = await client.query<{ id: string; name: string }>(
+        `select id, name from category_groups where id in ($1, $2) for key share`,
+        [category.group_id, groupId]
+      );
+      const from = groups.find((group) => group.id === category.group_id);
+      const to = groups.find((group) => group.id === groupId);
+      if (!to) return { error: GROUP_GONE };
+
+      await client.query(`update categories set group_id = $2 where id = $1`, [categoryId, groupId]);
+      await logActivity(
+        client,
+        session,
+        "category.group_changed",
+        { type: "category", id: categoryId, label: category.name },
+        { from: from?.name ?? "", to: to.name }
+      );
+      return { success: true };
+    });
+  } catch (error) {
+    const code = getErrorCode(error);
+    if (code === "23514") return { error: moveBlockedMessage(1) };
+    if (code === "22P02" || code === "23503") return { error: GROUP_GONE };
     throw error;
   }
 
@@ -175,8 +243,8 @@ export async function saveCategoryChapters(
 }
 
 async function lockCategory(client: PoolClient, categoryId: string) {
-  const { rows } = await client.query<{ name: string }>(
-    `select name from categories where id = $1 for update`,
+  const { rows } = await client.query<{ name: string; group_id: string }>(
+    `select name, group_id from categories where id = $1 for update`,
     [categoryId]
   );
   return rows[0];
@@ -200,6 +268,12 @@ function validateName(name: string): string | null {
     return `Category name must be ${MAX_NAME_LENGTH} characters or fewer.`;
   }
   return null;
+}
+
+function moveBlockedMessage(candidateCount: number) {
+  return `This category has ${candidateCount} candidate${
+    candidateCount === 1 ? "" : "s"
+  }. Candidates can only switch within their group, so it can't move while they use it.`;
 }
 
 function blockedMessage(candidateCount: number) {

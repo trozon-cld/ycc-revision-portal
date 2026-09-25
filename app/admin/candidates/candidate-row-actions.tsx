@@ -14,6 +14,7 @@ import {
   updateCandidatePassword,
 } from "./actions";
 import { AccessLengthField } from "./access-length-field";
+import { CategoryOptions, type CategoryChoice } from "./category-options";
 
 export interface RowCandidate {
   id: string;
@@ -31,7 +32,7 @@ export function AdminCandidateActions({
   maxDate,
 }: {
   candidate: RowCandidate;
-  categories: { id: string; name: string }[];
+  categories: CategoryChoice[];
   minDate: string;
   maxDate: string;
 }) {
@@ -96,7 +97,11 @@ export function AdminCandidateActions({
           onSuccess={close}
           onCancel={close}
         >
-          <Field id={`category-${id}`} label="Category">
+          <Field
+            id={`category-${id}`}
+            label="Assigned category"
+            hint="The candidate is moved to this category now. They can switch to others in the same group."
+          >
             <select
               id={`category-${id}`}
               name="categoryId"
@@ -104,11 +109,7 @@ export function AdminCandidateActions({
               defaultValue={candidate.categoryId}
               className={inputClass}
             >
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
+              <CategoryOptions categories={categories} />
             </select>
           </Field>
         </ActionForm>

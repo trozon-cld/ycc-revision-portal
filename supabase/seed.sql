@@ -6,14 +6,21 @@ insert into users (email, password_hash, role, access_start_at, access_expires_a
 values ('REPLACE_WITH_EMAIL', 'REPLACE_WITH_BCRYPT_HASH', 'superadmin', null, null, false)
 on conflict (email) do update set password_hash = excluded.password_hash;
 
--- Placeholders so the Candidate-creation form has real options — rename
--- freely, category management isn't built yet.
-insert into categories (name) values
+-- Placeholder category groups and categories, renameable by the Superadmin.
+insert into category_groups (position, name)
+select position, name
+from (values (1, 'General'), (2, 'Special')) as seed (position, name)
+where not exists (select 1 from category_groups);
+
+insert into categories (name, group_id)
+select name, (select id from category_groups order by position limit 1)
+from (values
   ('General Operative'),
   ('Skilled Trade'),
   ('Supervisor'),
   ('Site Manager'),
   ('Specialist Role')
+) as seed (name)
 on conflict (name) do nothing;
 
 -- Placeholder sections and chapters, all renameable. Each only seeds an empty table.

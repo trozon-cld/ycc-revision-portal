@@ -21,7 +21,9 @@ const INVALID_CATEGORY = "Selected category is invalid.";
 
 interface OwnedCandidate {
   email: string;
+  category_id: string;
   category_name: string;
+  current_category_name: string;
   access_expires_at: string | null;
   is_blocked: boolean;
 }
@@ -59,9 +61,10 @@ export async function createCandidate(
     await withTransaction(async (client) => {
       const { rows } = await client.query<{ id: string; access_expires_at: string }>(
         `insert into users
-           (email, password_hash, role, category_id, admin_id, access_start_at, access_expires_at, is_blocked)
+           (email, password_hash, role, category_id, current_category_id, admin_id,
+            access_start_at, access_expires_at, is_blocked)
          values
-           ($1, $2, 'candidate', $3, $4, now(), ${accessEndSql("$5")}, false)
+           ($1, $2, 'candidate', $3, $3, $4, now(), ${accessEndSql("$5")}, false)
          returning id, access_expires_at`,
         [email, passwordHash, categoryId, session.sub, access.date]
       );
@@ -150,16 +153,24 @@ export async function updateCandidateCategory(
     return { error: "Choose a category." };
   }
 
+  // A new assigned category also becomes the current one, so the candidate starts there.
   const result = await changeOwnCandidate(session, formData, async (client, id, candidate) => {
     const newName = await categoryName(client, categoryId);
-    if (newName === candidate.category_name) return;
-    await client.query(`update users set category_id = $2 where id = $1`, [id, categoryId]);
+    if (categoryId === candidate.category_id) return;
+    await client.query(`update users set category_id = $2, current_category_id = $2 where id = $1`, [
+      id,
+      categoryId,
+    ]);
+    const details: Record<string, string> = { from: candidate.category_name, to: newName };
+    if (candidate.current_category_name !== candidate.category_name) {
+      details.previousCurrent = candidate.current_category_name;
+    }
     await logActivity(
       client,
       session,
       "candidate.category_changed",
       { type: "candidate", id, label: candidate.email },
-      { from: candidate.category_name, to: newName }
+      details
     );
   });
   if (result.success) {
@@ -307,8 +318,11 @@ async function changeOwnCandidate(
   try {
     result = await withTransaction<CandidateActionState>(async (client) => {
       const { rows } = await client.query<OwnedCandidate>(
-        `select u.email, c.name as category_name, u.access_expires_at, u.is_blocked
-         from users u join categories c on c.id = u.category_id
+        `select u.email, u.category_id, c.name as category_name, cc.name as current_category_name,
+                u.access_expires_at, u.is_blocked
+         from users u
+         join categories c on c.id = u.category_id
+         join categories cc on cc.id = u.current_category_id
          where u.id = $1 and u.role = 'candidate' and u.admin_id = $2
          for update of u`,
         [candidateId, session.sub]

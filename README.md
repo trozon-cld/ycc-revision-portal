@@ -13,8 +13,8 @@ Status: in active development.
 ## Roles
 
 - **Superadmin** — manages Admins and has access to all candidates.
-- **Admin** — creates and manages candidates, each scoped to a category with an access expiry.
-- **Candidate** — logs in with an allotted credential to revise for their category.
+- **Admin** — creates and manages candidates, each with an assigned category and an access expiry.
+- **Candidate** — logs in with an allotted credential and revises in one category at a time, starting with the assigned one; they can switch within its category group.
 
 ## Getting started
 

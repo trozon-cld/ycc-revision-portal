@@ -8,12 +8,14 @@ import { PageHeader } from "@/components/admin/page-header";
 import { Cell, Row, Table } from "@/components/admin/table";
 import { NewCandidateButton } from "./create-candidate-form";
 import { AdminCandidateActions, SuperadminCandidateActions } from "./candidate-row-actions";
+import { CategoryOptions, type CategoryChoice } from "./category-options";
 
 interface CandidateRow {
   id: string;
   email: string;
   category_id: string;
   category_name: string;
+  current_category_name: string;
   admin_id: string;
   admin_email: string;
   access_expires_at: string | null;
@@ -45,15 +47,16 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
 
   const [{ rows: candidates }, { rows: categories }, { rows: admins }] = await Promise.all([
     pool.query<CandidateRow>(
-      `select u.id, u.email, u.category_id, c.name as category_name, u.admin_id,
-              a.email as admin_email, u.access_expires_at, u.is_blocked
+      `select u.id, u.email, u.category_id, c.name as category_name, cc.name as current_category_name,
+              u.admin_id, a.email as admin_email, u.access_expires_at, u.is_blocked
        from users u
        join categories c on c.id = u.category_id
+       join categories cc on cc.id = u.current_category_id
        join users a on a.id = u.admin_id
        where u.role = 'candidate'
          and ($1::uuid is null or u.admin_id = $1::uuid)
          and ($2::text is null or u.email ilike '%' || $2::text || '%')
-         and ($3::uuid is null or u.category_id = $3::uuid)
+         and ($3::uuid is null or u.category_id = $3::uuid or u.current_category_id = $3::uuid)
          and ($4::text is null
               or ($4::text = 'blocked' and u.is_blocked)
               or ($4::text = 'expired' and not u.is_blocked and u.access_expires_at <= now())
@@ -62,7 +65,11 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
        order by u.created_at desc`,
       [ownerFilter, search ? escapeLike(search) : null, categoryFilter, status]
     ),
-    pool.query<Option>(`select id, name as label from categories order by name`),
+    pool.query<CategoryChoice>(
+      `select c.id, c.name, g.name as "group"
+       from categories c join category_groups g on g.id = c.group_id
+       order by g.position, c.name`
+    ),
     isSuperadmin
       ? pool.query<Option>(`select id, email as label from users where role = 'admin' order by email`)
       : Promise.resolve({ rows: [] as Option[] }),
@@ -82,7 +89,7 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
         actions={
           !isSuperadmin && (
             <NewCandidateButton
-              categories={categories.map(({ id, label }) => ({ id, name: label }))}
+              categories={categories}
               minDate={minDate}
               maxDate={maxDate}
             />
@@ -94,11 +101,7 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
         <FilterSearch name="q" label="Search by email" defaultValue={search} />
         <FilterSelect name="category" label="Category" defaultValue={categoryFilter ?? ""}>
           <option value="">All categories</option>
-          {categories.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.label}
-            </option>
-          ))}
+          <CategoryOptions categories={categories} />
         </FilterSelect>
         <FilterSelect name="status" label="Status" defaultValue={status ?? ""}>
           <option value="">All statuses</option>
@@ -141,7 +144,12 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
               <Cell kind="primary">
                 <Breakable text={candidate.email} />
               </Cell>
-              <Cell label="Category">{candidate.category_name}</Cell>
+              <Cell label="Category">
+                {candidate.current_category_name}
+                {candidate.current_category_name !== candidate.category_name && (
+                  <span className="block text-xs text-slate-600">Assigned: {candidate.category_name}</span>
+                )}
+              </Cell>
               {isSuperadmin && (
                 <Cell label="Admin" breakAnywhere>
                   <Breakable text={candidate.admin_email} />
@@ -168,7 +176,7 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
                 ) : (
                   <AdminCandidateActions
                     candidate={rowCandidate}
-                    categories={categories.map(({ id, label }) => ({ id, name: label }))}
+                    categories={categories}
                     minDate={minDate}
                     maxDate={maxDate}
                   />
