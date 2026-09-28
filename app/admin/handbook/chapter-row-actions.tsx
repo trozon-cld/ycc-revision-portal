@@ -4,7 +4,15 @@ import { ActionForm } from "@/components/admin/action-form";
 import { Field } from "@/components/admin/field";
 import { PanelButton, RowActions, type RowAction } from "@/components/admin/row-actions";
 import { buttonClass, inputClass } from "@/components/admin/styles";
-import { createChapter, deleteChapter, moveChapter, moveChapterToSection, renameChapter } from "./chapter-actions";
+import {
+  createChapter,
+  deleteChapter,
+  moveChapter,
+  moveChapterToSection,
+  renameChapter,
+  setChapterStatus,
+  unpublishChapterForm,
+} from "./chapter-actions";
 import type { SectionOption } from "./section-row-actions";
 
 export function NewChapterButton({ sections }: { sections: SectionOption[] }) {
@@ -51,6 +59,7 @@ export function ChapterRowActions({
   otherSections,
   pageCount,
   questionCount,
+  status,
 }: {
   id: string;
   title: string;
@@ -60,6 +69,7 @@ export function ChapterRowActions({
   otherSections: SectionOption[];
   pageCount: number;
   questionCount: number;
+  status: "draft" | "published";
 }) {
   const hidden = { chapterId: id };
   const description = `Chapter ${number} · ${title}`;
@@ -123,6 +133,35 @@ export function ChapterRowActions({
       ),
     });
   }
+
+  actions.push(
+    status === "draft"
+      ? { label: "Publish", run: () => setChapterStatus(id, "published"), successMessage: "Chapter published." }
+      : {
+          label: "Unpublish",
+          title: "Unpublish chapter?",
+          variant: "confirm",
+          render: (close) => (
+            <ActionForm
+              action={unpublishChapterForm}
+              hidden={hidden}
+              submitLabel="Unpublish"
+              pendingLabel="Unpublishing…"
+              successMessage="Chapter is a draft again."
+              onSuccess={close}
+              onCancel={close}
+            >
+              <p className="text-sm [overflow-wrap:anywhere]">
+                Candidates will no longer see{" "}
+                <strong className="font-medium">
+                  {number} {title}
+                </strong>
+                . Its pages and questions stay as they are.
+              </p>
+            </ActionForm>
+          ),
+        }
+  );
 
   actions.push({
     label: "Delete",

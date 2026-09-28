@@ -9,7 +9,8 @@ import type { BookPageData, ResolvedMedia } from "./book";
 import { isUuid, resolveMedia } from "./pages";
 
 // The book as the reader shows it, for the admin preview: every chapter (or one), in Handbook
-// order, optionally only a category's chapters and only published items.
+// order, optionally only a category's chapters and only what candidates see (published items in
+// published chapters).
 
 export type PreviewScope = { chapterId: string | null; categoryId: string | null; includeDrafts: boolean };
 export type PreviewBook = {
@@ -49,7 +50,7 @@ export async function loadPreviewBook(scope: PreviewScope): Promise<PreviewBook>
   const categoryId = scope.categoryId && isUuid(scope.categoryId) ? scope.categoryId : null;
   const { rows } = await pool.query<Row>(
     `with numbered as (
-       select c.id, c.title, s.position as section_position, s.title as section_title,
+       select c.id, c.title, c.status, s.position as section_position, s.title as section_title,
               (row_number() over (order by s.position, c.position))::int as number
        from chapters c join sections s on s.id = c.section_id
      )
@@ -65,7 +66,7 @@ export async function loadPreviewBook(scope: PreviewScope): Promise<PreviewBook>
      left join questions q on q.id = i.question_id
      where ($1::uuid is null or n.id = $1)
        and ($2::uuid is null or exists (select 1 from category_chapters cc where cc.category_id = $2 and cc.chapter_id = n.id))
-       and ($3 or coalesce(p.status, q.status) = 'published')
+       and ($3 or (n.status = 'published' and coalesce(p.status, q.status) = 'published'))
      order by n.number, i.position`,
     [chapterId, categoryId, scope.includeDrafts]
   );
