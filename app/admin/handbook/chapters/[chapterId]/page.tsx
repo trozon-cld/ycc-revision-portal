@@ -7,6 +7,7 @@ import { questionLogLabel } from "@/lib/questions/labels";
 import { questionTypeLabel } from "@/lib/questions/registry";
 import type { QuestionType } from "@/lib/questions/types";
 import { PageHeader } from "@/components/admin/page-header";
+import { buttonClass } from "@/components/admin/styles";
 import { AddQuestionsButton, ChapterOrder, type AddableQuestion, type OrderItem } from "./chapter-order";
 import { NewPageButton } from "./page-row-actions";
 
@@ -116,6 +117,9 @@ export default async function ChapterPagesPage({ params }: PageProps<"/admin/han
         description={`${plural(items.length, "item")} · ${plural(pageCount, "page")} · ${plural(questionCount, "question")} · ${published} published`}
         actions={
           <div className="flex flex-wrap gap-2">
+            <Link href={`/admin/handbook/preview?chapter=${chapter.id}`} className={buttonClass("secondary")}>
+              Preview chapter
+            </Link>
             <AddQuestionsButton chapterId={chapter.id} questions={addable} />
             <NewPageButton chapterId={chapter.id} />
           </div>

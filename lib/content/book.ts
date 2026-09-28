@@ -10,6 +10,8 @@ export type BookPageData = {
   chapterLabel: string;
   blocks: Block[];
   question?: { data: ClientQuestion; label: string };
+  // Admin previews only, e.g. "Draft": a small marker in the page corner that doesn't affect layout.
+  badge?: string;
 };
 
 // Pictures resolved on the server: a short-lived link plus the size stored in Media.

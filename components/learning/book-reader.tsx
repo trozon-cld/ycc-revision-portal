@@ -5,6 +5,7 @@ import { buildSheets, type BookPageData, type ResolvedMedia, type Sheet, type Te
 import { getQuestionTypeDef } from "@/lib/questions/registry";
 import { BlockList } from "./blocks";
 import { FRESH_QUESTION_STATE, QuestionView, type QuestionViewState } from "./questions/question-view";
+import { ContentsPanel, GoToPanel, ReaderBar } from "./reader-tools";
 
 // A page's question is drawn several times (measuring layer, each sheet it spans); they share one
 // state, keyed by the question's content so an edited question starts afresh.
@@ -38,6 +39,8 @@ const NARROW_SHEET = 480;
 const PICTURE_SHARE = 0.6;
 const QUESTION_PICTURE_MIN = 80;
 const COMPACT_BELOW = 600;
+// Below this reader width the bar shows icons only, so it fits the smallest phones.
+const TINY_BELOW = 380;
 
 type Geometry = {
   spread: boolean;
@@ -86,6 +89,8 @@ export function BookReader({
   textSize,
   label = "Handbook",
   onLayout,
+  tools = false,
+  onTextSizeChange,
 }: {
   pages: BookPageData[];
   media: ResolvedMedia;
@@ -93,6 +98,9 @@ export function BookReader({
   label?: string;
   // Reports how many on-screen pages the content takes (used by the editor's readout).
   onLayout?: (info: { pages: number }) => void;
+  // The reader bar: Contents, Go to page, text size and the (future) Listen button.
+  tools?: boolean;
+  onTextSizeChange?: (size: TextSize) => void;
 }) {
   const stageRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
@@ -104,6 +112,7 @@ export function BookReader({
   const [position, setPosition] = useState({ pageIndex: 0, part: 0 });
   const [fontsReady, setFontsReady] = useState(0);
   const [questionStates, setQuestionStates] = useState<QuestionStates>({});
+  const [panel, setPanel] = useState<"contents" | "goto" | null>(null);
   const questions = useMemo<QuestionBinding>(
     () => ({ states: questionStates, setState: (key, state) => setQuestionStates((current) => ({ ...current, [key]: state })) }),
     [questionStates]
@@ -201,7 +210,7 @@ export function BookReader({
   const previous = () => canGoBack && goTo(viewStart - perView);
 
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
+    if (panel || event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
     if (event.key === "ArrowRight" || event.key === "PageDown") {
       event.preventDefault();
       next();
@@ -235,7 +244,40 @@ export function BookReader({
 
   return (
     <section aria-label={label} onKeyDown={onKeyDown} className="flex h-full min-h-0 flex-col bg-slate-100 text-ink">
+      {tools && (
+        <ReaderBar
+          compact={compact}
+          tiny={(stageSize?.width ?? COMPACT_BELOW) < TINY_BELOW}
+          ready={Boolean(partCounts)}
+          panel={panel}
+          onPanel={setPanel}
+          textSize={textSize}
+          onTextSizeChange={onTextSizeChange}
+        />
+      )}
       <div ref={stageRef} className="relative min-h-0 flex-1 overflow-hidden">
+        {tools && panel === "contents" && (
+          <ContentsPanel
+            pages={pages}
+            sheets={sheets}
+            currentPageIndex={position.pageIndex}
+            onGo={(sheetIndex) => {
+              goTo(sheetIndex);
+              setPanel(null);
+            }}
+            onClose={() => setPanel(null)}
+          />
+        )}
+        {tools && panel === "goto" && (
+          <GoToPanel
+            total={totalPages}
+            onGo={(number) => {
+              goTo(sheets.findIndex((sheet) => sheet.kind === "page" && sheet.number === number));
+              setPanel(null);
+            }}
+            onClose={() => setPanel(null)}
+          />
+        )}
         {geometry && (
           <>
             <div
@@ -453,7 +495,12 @@ function SheetView({
   // Question pages instead expose each part on the sheet where it shows (see above).
   const repeat = sheet.part > 0 && !page.question;
   return (
-    <article aria-label={`Page ${sheet.number}`} className={`flex shrink-0 flex-col ${edge}`} style={style}>
+    <article aria-label={`Page ${sheet.number}`} className={`relative flex shrink-0 flex-col ${edge}`} style={style}>
+      {page.badge && sheet.part === 0 && (
+        <span className="absolute right-1.5 top-1.5 rounded bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-900 ring-1 ring-amber-600/30">
+          {page.badge}
+        </span>
+      )}
       <header
         className="flex items-end justify-between gap-3 overflow-hidden border-b border-slate-200 pb-[0.35em] text-[0.72em] text-slate-700"
         style={{ height: geometry.headerHeight, marginLeft: geometry.padX, marginRight: geometry.padX }}

@@ -4,6 +4,7 @@ import { pool } from "@/lib/db/pool";
 import { chapterNumber, sectionLetter } from "@/lib/handbook/structure";
 import { Badge } from "@/components/admin/badge";
 import { PageHeader } from "@/components/admin/page-header";
+import { buttonClass } from "@/components/admin/styles";
 import { Cell, Row, Table } from "@/components/admin/table";
 import { ChapterRowActions, NewChapterButton } from "./chapter-row-actions";
 import { NewSectionButton, SectionRowActions, type SectionOption } from "./section-row-actions";
@@ -53,6 +54,9 @@ export default async function HandbookPage() {
         description={`${count(sections.length, "section")} · ${count(chapters.length, "chapter")}`}
         actions={
           <>
+            <Link href="/admin/handbook/preview" className={buttonClass("secondary")}>
+              Preview book
+            </Link>
             <NewSectionButton />
             <NewChapterButton sections={sectionOptions} />
           </>

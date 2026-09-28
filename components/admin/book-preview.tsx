@@ -24,11 +24,13 @@ export function BookPreview({
   onDeviceChange,
   textSize: controlledTextSize,
   onTextSizeChange,
+  readerTools = false,
+  allowFullWindow = false,
 }: {
   pages: BookPageData[];
   media: ResolvedMedia;
   label: string;
-  initialDevice?: PreviewDevice;
+  initialDevice?: PreviewDevice | "full";
   devices?: PreviewDevice[];
   readout?: (info: { pages: number; device: string; textSize: TextSize }) => ReactNode;
   // Optional: the host keeps screen and text size (the question preview shares them across modes).
@@ -36,12 +38,16 @@ export function BookPreview({
   onDeviceChange?: (device: PreviewDevice) => void;
   textSize?: TextSize;
   onTextSizeChange?: (size: TextSize) => void;
+  // The reader shows its own bar (Contents, Go to page, A−/A+), so the admin text size buttons go.
+  readerTools?: boolean;
+  // Adds "Full window": the reader fills the space below the toolbar.
+  allowFullWindow?: boolean;
 }) {
-  const [ownDevice, setOwnDevice] = useState<PreviewDevice>(initialDevice);
+  const [ownDevice, setOwnDevice] = useState<PreviewDevice | "full">(initialDevice);
   const [ownTextSize, setOwnTextSize] = useState<TextSize>(DEFAULT_TEXT_SIZE);
   const device = controlledDevice ?? ownDevice;
   const textSize = controlledTextSize ?? ownTextSize;
-  const setDevice = onDeviceChange ?? setOwnDevice;
+  const setDevice = (onDeviceChange ?? setOwnDevice) as (device: PreviewDevice | "full") => void;
   const setTextSize = onTextSizeChange ?? setOwnTextSize;
   const [pageCount, setPageCount] = useState<number | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -67,8 +73,9 @@ export function BookPreview({
 
   const onLayout = useCallback(({ pages: count }: { pages: number }) => setPageCount(count), []);
 
-  const frame = DEVICES[device];
-  const scale = available.width ? Math.min(1, available.width / frame.width, available.height / frame.height) : 1;
+  const frame =
+    device === "full" ? { label: "Full window", width: Math.max(320, available.width), height: Math.max(560, available.height) } : DEVICES[device];
+  const scale = device === "full" || !available.width ? 1 : Math.min(1, available.width / frame.width, available.height / frame.height);
   const sizeIndex = TEXT_SIZES.indexOf(textSize);
 
   return (
@@ -76,7 +83,7 @@ export function BookPreview({
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         {devices.length > 1 && (
           <div role="group" aria-label="Screen size" className="inline-flex rounded-md border border-slate-300 bg-white p-0.5">
-            {devices.map((key) => (
+            {[...devices, ...(allowFullWindow ? (["full"] as const) : [])].map((key) => (
               <button
                 key={key}
                 type="button"
@@ -86,32 +93,34 @@ export function BookPreview({
                   device === key ? "bg-primary text-white" : "text-ink hover:bg-slate-100"
                 }`}
               >
-                {DEVICES[key].label}
+                {key === "full" ? "Full window" : DEVICES[key].label}
               </button>
             ))}
           </div>
         )}
-        <div role="group" aria-label="Text size" className="inline-flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => setTextSize(TEXT_SIZES[Math.max(0, sizeIndex - 1)])}
-            disabled={sizeIndex === 0}
-            aria-label="Smaller text"
-            className={buttonClass("secondary", "sm")}
-          >
-            A−
-          </button>
-          <span className="w-14 text-center text-sm text-slate-700">{textSize} px</span>
-          <button
-            type="button"
-            onClick={() => setTextSize(TEXT_SIZES[Math.min(TEXT_SIZES.length - 1, sizeIndex + 1)])}
-            disabled={sizeIndex === TEXT_SIZES.length - 1}
-            aria-label="Larger text"
-            className={buttonClass("secondary", "sm")}
-          >
-            A+
-          </button>
-        </div>
+        {!readerTools && (
+          <div role="group" aria-label="Text size" className="inline-flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setTextSize(TEXT_SIZES[Math.max(0, sizeIndex - 1)])}
+              disabled={sizeIndex === 0}
+              aria-label="Smaller text"
+              className={buttonClass("secondary", "sm")}
+            >
+              A−
+            </button>
+            <span className="w-14 text-center text-sm text-slate-700">{textSize} px</span>
+            <button
+              type="button"
+              onClick={() => setTextSize(TEXT_SIZES[Math.min(TEXT_SIZES.length - 1, sizeIndex + 1)])}
+              disabled={sizeIndex === TEXT_SIZES.length - 1}
+              aria-label="Larger text"
+              className={buttonClass("secondary", "sm")}
+            >
+              A+
+            </button>
+          </div>
+        )}
         <p className="text-sm text-slate-600">
           {frame.width} × {frame.height}
           {scale < 1 && ` · shown at ${Math.round(scale * 100)}%`}
@@ -130,7 +139,15 @@ export function BookPreview({
           style={{ width: frame.width * scale, height: frame.height * scale }}
         >
           <div style={{ width: frame.width, height: frame.height, transform: `scale(${scale})`, transformOrigin: "top left" }}>
-            <BookReader pages={pages} media={media} textSize={textSize} label={label} onLayout={onLayout} />
+            <BookReader
+              pages={pages}
+              media={media}
+              textSize={textSize}
+              label={label}
+              onLayout={onLayout}
+              tools={readerTools}
+              onTextSizeChange={readerTools ? setTextSize : undefined}
+            />
           </div>
         </div>
       </div>
