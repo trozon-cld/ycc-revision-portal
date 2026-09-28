@@ -11,8 +11,8 @@ const LOGO = { src: "/ycc-logo-placeholder.svg", width: 120, height: 48 };
 // Candidate pages only: logo, Help and Log out, large and simple.
 export function CandidateHeader() {
   return (
-    <header className="border-b border-ink/15 bg-white">
-      <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3 px-4 py-3">
+    <header className="h-(--candidate-header) shrink-0 border-b border-ink/15 bg-white">
+      <div className="mx-auto flex h-full w-full max-w-5xl items-center justify-between gap-3 px-4">
         <Link
           href="/dashboard"
           className="flex min-h-12 items-center gap-2 rounded-lg text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary"

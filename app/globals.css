@@ -3,6 +3,8 @@
 :root {
   --background: #ffffff;
   --foreground: #1e293b; /* Navy Ink */
+  /* Candidate header height; the book reader fills the rest of the screen. */
+  --candidate-header: 4.5rem;
 }
 
 @theme inline {

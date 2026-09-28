@@ -99,6 +99,8 @@ export function BookReader({
   tools = false,
   onTextSizeChange,
   resultsNote,
+  initialPageId,
+  onPageChange,
 }: {
   pages: BookPageData[];
   media: ResolvedMedia;
@@ -111,6 +113,10 @@ export function BookReader({
   onTextSizeChange?: (size: TextSize) => void;
   // Shown under the Results tally, e.g. that a preview's results aren't saved.
   resultsNote?: string;
+  // Opens at this authored page (e.g. where a candidate left off); unknown ids open at the start.
+  initialPageId?: string | null;
+  // Called with the authored page's id whenever the reader moves to another authored page.
+  onPageChange?: (pageId: string) => void;
 }) {
   const stageRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
@@ -123,7 +129,10 @@ export function BookReader({
   const [counts, setCounts] = useState<Counts | null>(null);
   const [batch, setBatch] = useState<number[]>([]);
   const [fits, setFits] = useState<{ id: object; list: (Fit | undefined)[] } | null>(null);
-  const [position, setPosition] = useState({ pageIndex: 0, part: 0 });
+  const [position, setPosition] = useState(() => ({
+    pageIndex: Math.max(0, initialPageId ? pages.findIndex((page) => page.id === initialPageId) : 0),
+    part: 0,
+  }));
   const [fontsReady, setFontsReady] = useState(0);
   const [questionStates, setQuestionStates] = useState<QuestionStates>({});
   const [panel, setPanel] = useState<ReaderPanel | null>(null);
@@ -385,6 +394,14 @@ export function BookReader({
       }
     }
   }, [sheets, viewStart, perView, pages, media]);
+
+  const currentPageId = pages[position.pageIndex]?.id;
+  const reportedPageId = useRef(currentPageId);
+  useEffect(() => {
+    if (!currentPageId || currentPageId === reportedPageId.current) return;
+    reportedPageId.current = currentPageId;
+    onPageChange?.(currentPageId);
+  }, [currentPageId, onPageChange]);
 
   const totalPages = sheets.reduce((count, sheet) => (sheet.kind === "page" ? count + 1 : count), 0);
   const status = describeView(visible, totalPages, counted);

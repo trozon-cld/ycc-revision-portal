@@ -43,6 +43,8 @@ create table users (
   access_expires_at timestamptz,
   is_blocked boolean not null default false,
   created_at timestamptz not null default now(),
+  -- Chosen with A−/A+ in the reader; one setting per person, on every device. Empty = 16 px.
+  reader_text_size smallint check (reader_text_size in (14, 16, 18, 20, 22, 24)),
   constraint users_candidate_fields_check check (
     (role = 'candidate' and category_id is not null and admin_id is not null)
     or (role <> 'candidate' and admin_id is null)
@@ -279,3 +281,15 @@ create table content_page_media (
 );
 
 create index content_page_media_media_idx on content_page_media (media_id);
+
+-- Where each candidate last was in each category's book. A deleted page just resets it to the start.
+create table handbook_progress (
+  user_id uuid not null references users (id) on delete cascade,
+  category_id uuid not null references categories (id) on delete cascade,
+  item_id uuid references handbook_items (id) on delete set null,
+  updated_at timestamptz not null default now(),
+  primary key (user_id, category_id)
+);
+
+create index handbook_progress_category_idx on handbook_progress (category_id);
+create index handbook_progress_item_idx on handbook_progress (item_id);
