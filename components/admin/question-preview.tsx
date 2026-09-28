@@ -6,7 +6,7 @@ import { checkAnswer } from "@/lib/questions/check";
 import { toClientQuestion } from "@/lib/questions/public";
 import type { QuestionData, QuestionMode } from "@/lib/questions/types";
 import { QuestionView } from "@/components/learning/questions/question-view";
-import { BookPreview, DEVICES, type PreviewDevice } from "./book-preview";
+import { BookPreview, DEVICES, FitReadout, type PreviewDevice } from "./book-preview";
 import { buttonClass } from "./styles";
 
 const MODES: { key: QuestionMode; label: string }[] = [
@@ -14,7 +14,6 @@ const MODES: { key: QuestionMode; label: string }[] = [
   { key: "practice", label: "Practice" },
   { key: "exam", label: "Mock test" },
 ];
-const LONG_ON_PHONE = 2;
 
 // Admin tool: the question as candidates will see it. Handbook shows the real book page (the same
 // reader as the page builder); Practice and Mock test show the plain question screen.
@@ -74,12 +73,7 @@ export function QuestionPreview({
           onDeviceChange={setDevice}
           textSize={textSize}
           onTextSizeChange={setTextSize}
-          readout={({ pages, device: deviceLabel, textSize: size }) => (
-            <p className={pages >= LONG_ON_PHONE && deviceLabel === "Phone" ? "font-medium text-amber-900" : "text-slate-700"}>
-              On {deviceLabel.toLowerCase()} at {size} px, this question takes {pages} page{pages === 1 ? "" : "s"}.
-              {pages >= LONG_ON_PHONE && deviceLabel === "Phone" && " It's long for a phone: consider a smaller picture or shorter options."}
-            </p>
-          )}
+          readout={(info) => <FitReadout info={info} noun="question" hint="Shorten the explanation, use a smaller picture or shorter options." />}
         />
       ) : (
         <PlainScreen

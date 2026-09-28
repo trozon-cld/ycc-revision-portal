@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
-import { buildSheets, type BookPageData, type ResolvedMedia, type Sheet, type TextSize } from "@/lib/content/book";
+import { buildSheets, DEFAULT_TEXT_SIZE, type BookPageData, type ResolvedMedia, type Sheet, type TextSize } from "@/lib/content/book";
 import { getQuestionTypeDef } from "@/lib/questions/registry";
 import { BlockList } from "./blocks";
 import { FRESH_QUESTION_STATE, QuestionView, type QuestionViewState } from "./questions/question-view";
@@ -43,6 +43,9 @@ const QUESTION_PICTURE_MIN = 80;
 const COMPACT_BELOW = 600;
 // Pages measured per step; a book this size or smaller is measured in one go, before it's shown.
 const MEASURE_BATCH = 40;
+// At the default text size a page that would spill onto the next page is fitted: question pictures
+// shrink to half first, then the page's text steps down to this size at the smallest.
+const FIT_MIN_SIZE = 14;
 // Below this reader width the bar shows icons only, so it fits the smallest phones.
 const TINY_BELOW = 380;
 
@@ -102,7 +105,7 @@ export function BookReader({
   textSize: TextSize;
   label?: string;
   // Reports how many on-screen pages the content takes (used by the editor's readout).
-  onLayout?: (info: { pages: number }) => void;
+  onLayout?: (info: LayoutInfo) => void;
   // The reader bar: Contents, Go to page, text size and the (future) Listen button.
   tools?: boolean;
   onTextSizeChange?: (size: TextSize) => void;
@@ -119,6 +122,7 @@ export function BookReader({
   // background, so a long book opens fast. Until every page is measured, later numbers are estimates.
   const [counts, setCounts] = useState<Counts | null>(null);
   const [batch, setBatch] = useState<number[]>([]);
+  const [fits, setFits] = useState<{ id: object; list: (Fit | undefined)[] } | null>(null);
   const [position, setPosition] = useState({ pageIndex: 0, part: 0 });
   const [fontsReady, setFontsReady] = useState(0);
   const [questionStates, setQuestionStates] = useState<QuestionStates>({});
@@ -160,6 +164,12 @@ export function BookReader({
   // A new identity whenever everything must be measured again.
   const layoutId = useMemo(() => ({}), [geometry, textSize, fontsReady, pages, media]);
   const current = counts && counts.id === layoutId ? counts : null;
+  const fitting = textSize === DEFAULT_TEXT_SIZE;
+  const fitList = fits && fits.id === layoutId ? fits.list : null;
+  const sizeFor = useCallback(
+    (index: number) => (fitting ? (fitList?.[index]?.size ?? textSize) : textSize),
+    [fitting, fitList, textSize]
+  );
   const countsRef = useRef(counts);
   countsRef.current = counts;
   const positionRef = useRef(position.pageIndex);
@@ -196,20 +206,28 @@ export function BookReader({
   useLayoutEffect(() => {
     const layer = measureRef.current;
     if (!layer || !geometry || batch.length === 0) return;
-    // Question pictures get the height the rest of the question leaves (80px up to the usual 60%),
-    // fitted to how it looks after a wrong answer is checked, else to how it looks while answering.
+    // Question pictures get the height the rest of the question leaves (80px up to the usual 60%).
+    // When fitting, that's the tallest state (wrong answer checked, explanation showing), down to half
+    // the usual size; otherwise the checked state without the explanation, else while answering.
     const caps = [...pictureCaps];
     for (const index of batch) {
       const page = pages[index];
       if (!page?.question) continue;
+      const size = sizeFor(index);
       const share = Math.round(geometry.contentHeight * PICTURE_SHARE);
-      const pictureMargin = Math.ceil(textSize * 0.9) + 4;
+      const pictureMargin = Math.ceil(size * 0.9) + 4;
       const roomFor = (state: string, extra: number) => {
         const rest = restRef.current?.querySelector<HTMLElement>(`[data-rest-page="${index}"][data-rest-state="${state}"]`);
         return rest ? geometry.contentHeight - rest.offsetHeight - pictureMargin - extra : -1;
       };
       // Types without a sample wrong answer keep one extra line for their "Your answer" label.
-      const labelReserve = measuresWrongAnswer(page) ? 0 : Math.ceil(textSize * 1.4);
+      const labelReserve = measuresWrongAnswer(page) ? 0 : Math.ceil(size * 1.4);
+      if (fitting && !fitList?.[index]?.gaveUp) {
+        const half = Math.max(QUESTION_PICTURE_MIN, Math.round(share / 2));
+        const room = roomFor("full", labelReserve);
+        caps[index] = room >= half ? Math.min(share, room) : half;
+        continue;
+      }
       caps[index] = share;
       for (const room of [roomFor("checked", labelReserve), roomFor("answering", 0)]) {
         if (room >= QUESTION_PICTURE_MIN) {
@@ -223,12 +241,42 @@ export function BookReader({
       return;
     }
 
+    const partsOf = (element: HTMLElement) =>
+      Math.max(1, Math.round((element.scrollWidth + geometry.columnGap) / (geometry.contentWidth + geometry.columnGap)));
+
+    // Fitting: one page at 16px, else 15, else 14; if even 14 spills, back to 16 and let it continue.
+    if (fitting) {
+      const list = [...(fitList ?? [])];
+      let resized = false;
+      for (const index of batch) {
+        const fit = list[index];
+        if (fit?.final) continue;
+        const probe =
+          layer.querySelector<HTMLElement>(`[data-fit-index="${index}"]`) ?? layer.querySelector<HTMLElement>(`[data-page-index="${index}"]`);
+        if (!probe) continue;
+        const size = fit?.size ?? textSize;
+        if (partsOf(probe) <= 1) list[index] = { size, gaveUp: false, final: true };
+        else if (size > FIT_MIN_SIZE) {
+          list[index] = { size: size - 1, gaveUp: false, final: false };
+          resized = true;
+        } else {
+          list[index] = { size: textSize, gaveUp: true, final: true };
+          resized = true;
+        }
+      }
+      if (JSON.stringify(list) !== JSON.stringify(fitList ?? [])) {
+        setFits({ id: layoutId, list });
+        if (resized) return;
+      }
+    }
+
     const step = geometry.contentWidth + geometry.columnGap;
     const previous = countsRef.current;
     const base = previous && previous.id === layoutId ? previous : null;
     const values = pages.map((_, index) => base?.values[index] ?? previous?.values[index] ?? null);
     const fresh = pages.map((_, index) => base?.fresh[index] ?? false);
     for (const child of Array.from(layer.children) as HTMLElement[]) {
+      if (child.dataset.pageIndex === undefined) continue;
       const index = Number(child.dataset.pageIndex);
       values[index] = Math.max(1, Math.round((child.scrollWidth + geometry.columnGap) / step));
       fresh[index] = true;
@@ -244,10 +292,12 @@ export function BookReader({
     }
     const timer = window.setTimeout(() => setBatch(next), 0);
     return () => window.clearTimeout(timer);
-  }, [geometry, batch, pictureCaps, pages, textSize, layoutId, nextBatch]);
+  }, [geometry, batch, pictureCaps, pages, textSize, layoutId, nextBatch, fitting, fitList, sizeFor]);
 
   // Short books are re-measured before anything is painted, so their numbers are never estimates.
-  const complete = Boolean(counts) && (pages.length <= MEASURE_BATCH || Boolean(current?.fresh.every(Boolean)));
+  const counted = Boolean(counts) && (pages.length <= MEASURE_BATCH || Boolean(current?.fresh.every(Boolean)));
+  // Reported to the editors only once every page is fitted too.
+  const complete = counted && (!fitting || pages.every((_, index) => fitList?.[index]?.final));
   // Short books keep every page in the measuring layer, as they always have; long ones only the batch.
   const measuring = useMemo(
     () => (pages.length <= MEASURE_BATCH ? pages.map((_, index) => index) : batch),
@@ -337,11 +387,16 @@ export function BookReader({
   }, [sheets, viewStart, perView, pages, media]);
 
   const totalPages = sheets.reduce((count, sheet) => (sheet.kind === "page" ? count + 1 : count), 0);
-  const status = describeView(visible, totalPages, complete);
+  const status = describeView(visible, totalPages, counted);
 
   useEffect(() => {
-    if (complete && onLayout) onLayout({ pages: totalPages });
-  }, [complete, totalPages, onLayout]);
+    if (!complete || !onLayout) return;
+    onLayout({
+      pages: totalPages,
+      sizes: pages.map((_, index) => sizeFor(index)),
+      tooLong: pages.map((_, index) => Boolean(fitList?.[index]?.gaveUp)),
+    });
+  }, [complete, totalPages, onLayout, pages, sizeFor, fitList]);
   const shortStatus = status.replace(/^Pages? /, "");
   // Sized from the reader's own width (not the screen), so previews match real devices.
   const compact = (stageSize?.width ?? COMPACT_BELOW) < COMPACT_BELOW;
@@ -417,40 +472,70 @@ export function BookReader({
               className="pointer-events-none invisible absolute left-0 top-0 overflow-hidden"
               style={{ width: 0, height: 0, fontSize: textSize, ...sheetStyle, position: "absolute" }}
             >
-              {measuring.map((index) => pages[index]).map((page, i) => page && (
-                <FlowColumns
-                  key={page.id}
-                  pageIndex={measuring[i]}
-                  page={page}
-                  media={media}
-                  geometry={geometry}
-                  questions={questions}
-                  pictureCap={pictureCaps[measuring[i]] ?? null}
-                />
-              ))}
+              {measuring.map((index) => {
+                const page = pages[index];
+                if (!page) return null;
+                const probe = fitting && page.question && !fitList?.[index]?.final;
+                return [
+                  <FlowColumns
+                    key={page.id}
+                    pageIndex={index}
+                    page={page}
+                    media={media}
+                    geometry={geometry}
+                    questions={questions}
+                    pictureCap={pictureCaps[index] ?? null}
+                    fontSize={sizeFor(index)}
+                    baseSize={textSize}
+                  />,
+                  // The question in its tallest state, to test whether it fits one page.
+                  probe && (
+                    <FlowColumns
+                      key={`${page.id}-fit`}
+                      fitIndex={index}
+                      page={page}
+                      media={media}
+                      geometry={geometry}
+                      questions={questions}
+                      pictureCap={pictureCaps[index] ?? null}
+                      fontSize={sizeFor(index)}
+                      baseSize={textSize}
+                      stateOverride={checkedWrong(page)}
+                    />
+                  ),
+                ];
+              })}
             </div>
             {pages.some((page) => page.question) && (
               <div
                 ref={restRef}
                 aria-hidden="true"
-                className="pointer-events-none invisible absolute left-0 top-0 overflow-hidden leading-[1.6] [&_[data-question-explanation]]:hidden [&_[data-question-picture]]:hidden"
+                className="pointer-events-none invisible absolute left-0 top-0 overflow-hidden leading-[1.6] [&_[data-question-picture]]:hidden"
                 style={{ width: 0, height: 0, fontSize: textSize }}
                 inert
               >
                 {measuring.map((index) => {
                   const page = pages[index];
-                  return page?.question
-                    ? (["answering", "checked"] as const).map((state) => (
-                        <div key={`${page.id}-${state}`} data-rest-page={index} data-rest-state={state} style={{ width: geometry.contentWidth }}>
-                          <QuestionView
-                            question={page.question!.data}
-                            label={page.question!.label}
-                            media={media}
-                            state={state === "checked" ? checkedWrong(page) : FRESH_QUESTION_STATE}
-                          />
-                        </div>
-                      ))
-                    : null;
+                  if (!page?.question) return null;
+                  const size = sizeFor(index);
+                  const states = fitting && !fitList?.[index]?.gaveUp ? (["answering", "checked", "full"] as const) : (["answering", "checked"] as const);
+                  return states.map((state) => (
+                    <div
+                      key={`${page.id}-${state}`}
+                      data-rest-page={index}
+                      data-rest-state={state}
+                      // "full" keeps the explanation; the others leave it out.
+                      className={state === "full" ? undefined : "[&_[data-question-explanation]]:hidden"}
+                      style={{ width: geometry.contentWidth, ...(size !== textSize ? { fontSize: size } : {}) }}
+                    >
+                      <QuestionView
+                        question={page.question!.data}
+                        label={page.question!.label}
+                        media={media}
+                        state={state === "answering" ? FRESH_QUESTION_STATE : checkedWrong(page)}
+                      />
+                    </div>
+                  ));
                 })}
               </div>
             )}
@@ -467,6 +552,8 @@ export function BookReader({
                       geometry={geometry}
                       questions={questions}
                       pictureCaps={pictureCaps}
+                      pageSize={sheet.kind === "page" ? sizeFor(sheet.pageIndex) : textSize}
+                      textSize={textSize}
                       style={sheetStyle}
                       side={geometry.spread ? (index === 0 ? "left" : "right") : "single"}
                     />
@@ -540,8 +627,17 @@ function FlowColumns({
   pictureCap = null,
   offset = 0,
   pageIndex,
+  fitIndex,
+  fontSize,
+  baseSize,
+  stateOverride,
 }: {
   pageIndex?: number;
+  fitIndex?: number;
+  // The page's own text size, when fitting made it smaller than the sheet's.
+  fontSize?: number;
+  baseSize?: number;
+  stateOverride?: QuestionViewState;
   page: BookPageData;
   media: ResolvedMedia;
   geometry: Geometry;
@@ -557,7 +653,9 @@ function FlowColumns({
     <div
       className="leading-[1.6]"
       data-page-index={pageIndex}
+      data-fit-index={fitIndex}
       style={{
+        ...(fontSize && fontSize !== baseSize ? { fontSize } : {}),
         width: geometry.contentWidth,
         height: geometry.contentHeight,
         columnWidth: geometry.contentWidth,
@@ -572,8 +670,8 @@ function FlowColumns({
           question={page.question.data}
           label={page.question.label}
           media={media}
-          state={questions.states[key] ?? FRESH_QUESTION_STATE}
-          onStateChange={(state) => questions.setState(key, state)}
+          state={stateOverride ?? questions.states[key] ?? FRESH_QUESTION_STATE}
+          onStateChange={stateOverride ? undefined : (state) => questions.setState(key, state)}
         />
       ) : (
         <BlockList blocks={page.blocks} media={media} />
@@ -589,6 +687,8 @@ function SheetView({
   geometry,
   questions,
   pictureCaps,
+  pageSize,
+  textSize,
   style,
   side,
 }: {
@@ -598,6 +698,8 @@ function SheetView({
   geometry: Geometry;
   questions: QuestionBinding;
   pictureCaps: (number | null)[];
+  pageSize: number;
+  textSize: number;
   style?: CSSProperties;
   side: "left" | "right" | "single";
 }) {
@@ -673,6 +775,8 @@ function SheetView({
           questions={questions}
           pictureCap={pictureCaps[sheet.pageIndex] ?? null}
           offset={sheet.part}
+          fontSize={pageSize}
+          baseSize={textSize}
         />
       </div>
 
@@ -708,6 +812,15 @@ function pageMediaIds(page: BookPageData | undefined): string[] {
   }
   return [...(question.stemMediaId ? [question.stemMediaId] : []), ...own];
 }
+
+export type LayoutInfo = {
+  pages: number;
+  // Per authored page: its text size, and whether it doesn't fit one page even when fitted.
+  sizes: number[];
+  tooLong: boolean[];
+};
+
+type Fit = { size: number; gaveUp: boolean; final: boolean };
 
 type Counts = { id: object; values: (number | null)[]; fresh: boolean[] };
 

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { DEFAULT_TEXT_SIZE, TEXT_SIZES, type BookPageData, type ResolvedMedia, type TextSize } from "@/lib/content/book";
-import { BookReader } from "@/components/learning/book-reader";
+import { BookReader, type LayoutInfo } from "@/components/learning/book-reader";
 import { buttonClass } from "./styles";
 
 export const DEVICES = {
@@ -11,6 +11,43 @@ export const DEVICES = {
   desktop: { label: "Desktop", width: 1280, height: 780 },
 } as const;
 export type PreviewDevice = keyof typeof DEVICES;
+
+export type ReadoutInfo = {
+  pages: number;
+  device: string;
+  textSize: TextSize;
+  // At the standard size: the smallest text any page was fitted to, and whether one still doesn't fit.
+  smallest: number;
+  tooLong: boolean;
+};
+
+// The editors' line under the preview: whether the page or question fits one page on this screen.
+export function FitReadout({ info, noun, hint }: { info: ReadoutInfo; noun: "page" | "question"; hint: string }) {
+  const { pages, device, textSize, smallest, tooLong } = info;
+  const screen = device.toLowerCase();
+  if (textSize !== DEFAULT_TEXT_SIZE) {
+    return (
+      <p className="text-slate-700">
+        On {screen} at {textSize} px, this {noun} takes {pages} page{pages === 1 ? "" : "s"}.
+      </p>
+    );
+  }
+  if (tooLong) {
+    return (
+      <p className="font-medium text-amber-900">
+        {noun === "question"
+          ? `Too long for one ${screen} page once the answer is checked: the explanation continues on the next page. `
+          : `Too long for one ${screen} page at the standard text size (${pages} pages). `}
+        {hint}
+      </p>
+    );
+  }
+  return (
+    <p className="text-slate-700">
+      Fits on one {screen} page{smallest < textSize ? ` (text slightly smaller: ${smallest} px)` : ""}.
+    </p>
+  );
+}
 
 // Admin tool: the real candidate reader at a real device size, scaled down to fit when needed.
 export function BookPreview({
@@ -32,7 +69,7 @@ export function BookPreview({
   label: string;
   initialDevice?: PreviewDevice | "full";
   devices?: PreviewDevice[];
-  readout?: (info: { pages: number; device: string; textSize: TextSize }) => ReactNode;
+  readout?: (info: ReadoutInfo) => ReactNode;
   // Optional: the host keeps screen and text size (the question preview shares them across modes).
   device?: PreviewDevice;
   onDeviceChange?: (device: PreviewDevice) => void;
@@ -49,7 +86,7 @@ export function BookPreview({
   const textSize = controlledTextSize ?? ownTextSize;
   const setDevice = (onDeviceChange ?? setOwnDevice) as (device: PreviewDevice | "full") => void;
   const setTextSize = onTextSizeChange ?? setOwnTextSize;
-  const [pageCount, setPageCount] = useState<number | null>(null);
+  const [layout, setLayout] = useState<LayoutInfo | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [available, setAvailable] = useState({ width: 0, height: 0 });
 
@@ -71,7 +108,7 @@ export function BookPreview({
     };
   }, []);
 
-  const onLayout = useCallback(({ pages: count }: { pages: number }) => setPageCount(count), []);
+  const onLayout = useCallback((info: LayoutInfo) => setLayout(info), []);
 
   const frame =
     device === "full" ? { label: "Full window", width: Math.max(320, available.width), height: Math.max(560, available.height) } : DEVICES[device];
@@ -127,9 +164,15 @@ export function BookPreview({
         </p>
       </div>
 
-      {readout && pageCount !== null && (
+      {readout && layout !== null && (
         <div aria-live="polite" className="text-sm">
-          {readout({ pages: pageCount, device: frame.label, textSize })}
+          {readout({
+            pages: layout.pages,
+            device: frame.label,
+            textSize,
+            smallest: Math.min(...layout.sizes, textSize),
+            tooLong: layout.tooLong.some(Boolean),
+          })}
         </div>
       )}
 
