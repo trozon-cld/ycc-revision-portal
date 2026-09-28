@@ -15,6 +15,9 @@ export type QuestionViewState = {
   phase: "answering" | "checked" | "revealed";
   result: CheckResult | null;
   notice: string | null;
+  // A choice in progress that isn't an answer yet (e.g. the picture picked up in "Match pictures").
+  // Kept here so every copy of the question in the book shares it.
+  selection?: string | null;
 };
 
 export const FRESH_QUESTION_STATE: QuestionViewState = { response: null, phase: "answering", result: null, notice: null };
@@ -66,7 +69,7 @@ export function QuestionView({
 
   function changeResponse(next: unknown) {
     if (phase !== "answering") return;
-    setState({ response: next, notice: null });
+    setState({ response: next, notice: null, selection: null });
     onResponseChange?.(next);
   }
 
@@ -135,6 +138,8 @@ export function QuestionView({
               response={response}
               onResponse={changeResponse}
               onNotice={(message) => setState({ notice: message })}
+              selection={current.selection ?? null}
+              onSelection={(selection) => setState({ selection, notice: null })}
               onSubmit={canCheck && phase === "answering" && !checking ? check : undefined}
               locked={phase !== "answering"}
               showCorrect={mode === "learn" && phase !== "answering"}

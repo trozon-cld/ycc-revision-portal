@@ -2,6 +2,7 @@ import type { ComponentType } from "react";
 import type { ResolvedMedia } from "@/lib/content/book";
 import { cleanLine } from "@/lib/questions/text";
 import type { AreaChoiceDraft } from "@/lib/questions/types/area-choice";
+import type { MatchDraft } from "@/lib/questions/types/match-pictures";
 import type { HotspotContent, HotspotDraftAnswer } from "@/lib/questions/types/hotspot";
 import type { MultiPickContent } from "@/lib/questions/types/multi-pick";
 import type { PictureOptionDraft, SinglePictureContent } from "@/lib/questions/types/single-picture";
@@ -9,6 +10,7 @@ import type { SingleTextContent } from "@/lib/questions/types/single-text";
 import type { QuestionType } from "@/lib/questions/types";
 import { AreaChoiceFields } from "./area-choice-fields";
 import { HotspotFields } from "./hotspot-fields";
+import { MatchPicturesFields } from "./match-pictures-fields";
 import { MultiPickFields } from "./multi-pick-fields";
 import { SinglePictureFields } from "./single-picture-fields";
 import { SingleTextFields } from "./single-text-fields";
@@ -82,5 +84,23 @@ export const TYPE_EDITORS: Partial<Record<QuestionType, TypeEditor>> = {
     },
     shuffles: () => false,
     ownsPicture: true,
+  },
+  match_pictures: {
+    Fields: MatchPicturesFields,
+    // Pairs still missing a picture are left out of the preview.
+    previewable: (content, answer) => {
+      const data = content as MatchDraft["content"];
+      const matches = (answer as MatchDraft["answer"]).matches.filter((match) =>
+        data.items.some((item) => item.id === match.itemId && item.mediaId)
+      );
+      return {
+        content: {
+          items: data.items.filter((item) => item.mediaId),
+          targets: data.targets.filter((target) => matches.some((match) => match.targetId === target.id)),
+        },
+        answer: { matches },
+      };
+    },
+    shuffles: () => true,
   },
 };

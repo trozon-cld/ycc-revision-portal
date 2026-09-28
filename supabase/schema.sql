@@ -222,7 +222,7 @@ create table questions (
   ref_no integer generated always as identity unique,
   chapter_id uuid not null references chapters (id) on delete restrict,
   -- Keys match lib/questions/registry.ts. The app offers a type only once it is built.
-  type varchar(30) not null check (type in ('single_text', 'single_picture', 'multi_pick', 'hotspot', 'area_choice')),
+  type varchar(30) not null check (type in ('single_text', 'single_picture', 'multi_pick', 'hotspot', 'area_choice', 'match_pictures')),
   status content_status not null default 'draft',
   stem_text varchar(1000) not null check (length(trim(stem_text)) > 0),
   -- Optional picture for any type.

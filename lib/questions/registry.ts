@@ -1,6 +1,7 @@
 import type { AnyQuestionTypeDef } from "./define";
 import { areaChoiceDef } from "./types/area-choice";
 import { hotspotDef } from "./types/hotspot";
+import { matchPicturesDef } from "./types/match-pictures";
 import { multiPickDef } from "./types/multi-pick";
 import { singlePictureDef } from "./types/single-picture";
 import { singleTextDef } from "./types/single-text";
@@ -17,6 +18,7 @@ export const QUESTION_TYPES: Record<QuestionType, RegistryEntry> = {
   multi_pick: { label: "Multiple answers", def: multiPickDef },
   hotspot: { label: "Tap the area", def: hotspotDef },
   area_choice: { label: "Choose the area", def: areaChoiceDef },
+  match_pictures: { label: "Match pictures", def: matchPicturesDef },
 };
 
 export function questionTypeLabel(type: QuestionType): string {
