@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import type { ResolvedMedia } from "@/lib/content/book";
 import type { CheckResult, QuestionMode, QuestionType } from "@/lib/questions/types";
+import { AreaChoiceAnswer } from "./area-choice";
 import { HotspotAnswer } from "./hotspot";
 import { MultiPickAnswer } from "./multi-pick";
 import { SinglePictureAnswer } from "./single-picture";
@@ -36,4 +37,5 @@ export const QUESTION_RENDERERS: Record<QuestionType, ComponentType<AnswerAreaPr
   single_picture: SinglePictureAnswer,
   multi_pick: MultiPickAnswer,
   hotspot: HotspotAnswer,
+  area_choice: AreaChoiceAnswer,
 };

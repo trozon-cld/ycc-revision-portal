@@ -1,11 +1,13 @@
 import type { ComponentType } from "react";
 import type { ResolvedMedia } from "@/lib/content/book";
 import { cleanLine } from "@/lib/questions/text";
+import type { AreaChoiceDraft } from "@/lib/questions/types/area-choice";
 import type { HotspotContent, HotspotDraftAnswer } from "@/lib/questions/types/hotspot";
 import type { MultiPickContent } from "@/lib/questions/types/multi-pick";
 import type { PictureOptionDraft, SinglePictureContent } from "@/lib/questions/types/single-picture";
 import type { SingleTextContent } from "@/lib/questions/types/single-text";
 import type { QuestionType } from "@/lib/questions/types";
+import { AreaChoiceFields } from "./area-choice-fields";
 import { HotspotFields } from "./hotspot-fields";
 import { MultiPickFields } from "./multi-pick-fields";
 import { SinglePictureFields } from "./single-picture-fields";
@@ -64,6 +66,19 @@ export const TYPE_EDITORS: Partial<Record<QuestionType, TypeEditor>> = {
     previewable: (content, answer) => {
       const data = answer as HotspotDraftAnswer;
       return { content: content as HotspotContent, answer: { areas: data.areas, label: data.label.trim() || undefined } };
+    },
+    shuffles: () => false,
+    ownsPicture: true,
+  },
+  area_choice: {
+    Fields: AreaChoiceFields,
+    previewable: (content, answer) => {
+      const data = content as AreaChoiceDraft["content"];
+      const solution = answer as AreaChoiceDraft["answer"];
+      return {
+        content: { ...data, areas: data.areas.map(({ name, ...area }) => (name.trim() ? { ...area, name: name.trim() } : area)) },
+        answer: { correctAreaId: solution.correctAreaId, label: solution.label.trim() || undefined },
+      };
     },
     shuffles: () => false,
     ownsPicture: true,

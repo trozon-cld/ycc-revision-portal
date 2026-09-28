@@ -1,6 +1,6 @@
 // Shared question shapes. Pure types only, safe to import in the browser and on the server.
 
-export const QUESTION_TYPE_KEYS = ["single_text", "single_picture", "multi_pick", "hotspot"] as const;
+export const QUESTION_TYPE_KEYS = ["single_text", "single_picture", "multi_pick", "hotspot", "area_choice"] as const;
 export type QuestionType = (typeof QUESTION_TYPE_KEYS)[number];
 
 // learn: Handbook (Reveal, feedback, explanation). practice: feedback. exam: Mock, no feedback.

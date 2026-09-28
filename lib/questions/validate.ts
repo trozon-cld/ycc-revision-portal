@@ -31,7 +31,10 @@ export function parseQuestion(raw: unknown): QuestionParseResult {
   if (raw.stemMediaId !== null && raw.stemMediaId !== undefined && raw.stemMediaId !== "") {
     if (!isUuid(raw.stemMediaId)) return { ok: false, error: "The question picture is not valid. Choose it again." };
     stemMediaId = raw.stemMediaId.toLowerCase();
-    if (raw.type === "hotspot") return { ok: false, error: "This question uses the picture candidates tap. Remove the separate question picture." };
+    // These types show their own picture, which is the question picture.
+    if (raw.type === "hotspot" || raw.type === "area_choice") {
+      return { ok: false, error: "This question uses the picture candidates tap. Remove the separate question picture." };
+    }
   }
 
   // Same rules as picture blocks: "full" and "center" are the defaults and are stored as empty.

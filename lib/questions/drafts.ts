@@ -1,3 +1,4 @@
+import { editableAreaChoice, emptyAreaChoice } from "./types/area-choice";
 import { editableHotspot, emptyHotspot } from "./types/hotspot";
 import { editableMultiPick, emptyMultiPick } from "./types/multi-pick";
 import { editableSinglePicture, emptySinglePicture } from "./types/single-picture";
@@ -13,6 +14,7 @@ export function emptyDraft(type: QuestionType, makeId: Maker): Draft | null {
   if (type === "single_picture") return emptySinglePicture(makeId);
   if (type === "multi_pick") return emptyMultiPick(makeId);
   if (type === "hotspot") return emptyHotspot();
+  if (type === "area_choice") return emptyAreaChoice();
   return null;
 }
 
@@ -22,5 +24,6 @@ export function editableDraft(type: QuestionType, content: unknown, answer: unkn
   if (type === "single_picture") return editableSinglePicture(content, answer, makeId);
   if (type === "multi_pick") return editableMultiPick(content, answer, makeId);
   if (type === "hotspot") return editableHotspot(content, answer, makeId);
+  if (type === "area_choice") return editableAreaChoice(content, answer, makeId);
   return null;
 }

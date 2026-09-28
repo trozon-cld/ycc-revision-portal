@@ -32,6 +32,8 @@ export function HotspotCanvas({
   onSelect,
   onAdd,
   onUpdate,
+  areaName = (index) => `Correct area ${index + 1}`,
+  isCorrect = () => true,
 }: {
   picture: ResolvedMedia[string];
   areas: HotspotArea[];
@@ -41,6 +43,9 @@ export function HotspotCanvas({
   onSelect: (id: string | null) => void;
   onAdd: (box: Box) => void;
   onUpdate: (id: string, box: Box) => void;
+  // How an area is named for screen readers, and whether it's drawn as a right answer (green).
+  areaName?: (index: number) => string;
+  isCorrect?: (area: HotspotArea) => boolean;
 }) {
   const session = useRef<Session | null>(null);
   const [drawing, setDrawing] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
@@ -124,18 +129,18 @@ export function HotspotCanvas({
               key={area.id}
               type="button"
               data-area-id={area.id}
-              aria-label={`Correct area ${index + 1}: ${SHAPE_NAME[area.shape]}, ${area.x}% from the left, ${area.y}% from the top, ${area.w}% wide, ${area.h}% tall`}
+              aria-label={`${areaName(index)}: ${SHAPE_NAME[area.shape]}, ${area.x}% from the left, ${area.y}% from the top, ${area.w}% wide, ${area.h}% tall`}
               aria-describedby="hotspot-keys"
               onFocus={() => onSelect(area.id)}
               onKeyDown={(event) => onAreaKey(event, area)}
               className={`absolute cursor-move border-2 shadow-[0_0_0_1px_white] outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary ${
                 area.shape === "ellipse" ? "rounded-[50%]" : ""
-              } ${selected ? "z-10 border-primary bg-primary/20" : "border-green-700 bg-green-600/20"}`}
+              } ${selected ? "z-10 border-primary bg-primary/20" : isCorrect(area) ? "border-green-700 bg-green-600/20" : "border-slate-700 bg-slate-500/15"}`}
               style={{ left: `${area.x}%`, top: `${area.y}%`, width: `${area.w}%`, height: `${area.h}%` }}
             >
               <span
                 className={`pointer-events-none absolute left-1/2 top-1/2 grid size-6 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full text-xs font-bold text-white ${
-                  selected ? "bg-primary" : "bg-green-700"
+                  selected ? "bg-primary" : isCorrect(area) ? "bg-green-700" : "bg-slate-700"
                 }`}
               >
                 {index + 1}

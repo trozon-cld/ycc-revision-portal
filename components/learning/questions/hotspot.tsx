@@ -111,7 +111,7 @@ export function HotspotAnswer({ content, media, answer, response, onResponse, on
   );
 }
 
-function pictureWidth(ratio: number) {
+export function pictureWidth(ratio: number) {
   const r = ratio.toFixed(4);
   const fitted = `calc(var(--book-picture-max, 60vh) * ${r})`;
   const usable = `min(${MIN_WIDTH}px, calc(var(--book-picture-share, 60vh) * ${r}))`;
@@ -156,7 +156,7 @@ function Marker({ point, marked }: { point: HotspotPoint; marked: "right" | "wro
   );
 }
 
-function Icon({ name }: { name: "tick" | "cross" }) {
+export function Icon({ name }: { name: "tick" | "cross" }) {
   return (
     <svg viewBox="0 0 20 20" aria-hidden="true" className="size-[1.1em] shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
       {name === "tick" ? <path d="M4 10.5l4 4 8-9" /> : <path d="M5 5l10 10M15 5L5 15" />}

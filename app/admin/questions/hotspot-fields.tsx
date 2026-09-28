@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import {
   HOTSPOT_LIMITS,
   roundTenth,
@@ -15,7 +15,7 @@ import { HotspotCanvas } from "./hotspot-canvas";
 import type { Box } from "./hotspot-geometry";
 import type { TypeFieldsProps } from "./type-editors";
 
-const SHAPES: [string, string][] = [
+export const SHAPES: [string, string][] = [
   ["rect", "Rectangle"],
   ["ellipse", "Oval"],
 ];
@@ -165,13 +165,16 @@ const FIELDS = [
   ["h", "Height"],
 ] as const;
 
-function AreaRow({
+export function AreaRow({
   area,
   number,
   selected,
   onSelect,
   onChange,
   onRemove,
+  title = `Correct area ${number}`,
+  children,
+  problem,
 }: {
   area: HotspotArea;
   number: number;
@@ -179,6 +182,11 @@ function AreaRow({
   onSelect: () => void;
   onChange: (patch: Partial<HotspotArea>) => void;
   onRemove: () => void;
+  title?: string;
+  // Extra fields for the row (e.g. a spoken name, "Right answer").
+  children?: ReactNode;
+  // An extra warning, e.g. that this area overlaps another.
+  problem?: string;
 }) {
   const tooSmall = area.w < HOTSPOT_LIMITS.minSize || area.h < HOTSPOT_LIMITS.minSize;
   const outside = roundTenth(area.x + area.w) > 100 || roundTenth(area.y + area.h) > 100;
@@ -190,7 +198,7 @@ function AreaRow({
       className={`space-y-2 rounded-md border bg-white p-2 ${selected ? "border-primary ring-1 ring-primary" : "border-slate-200"}`}
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-semibold text-slate-700">Correct area {number}</p>
+        <p className="text-sm font-semibold text-slate-700">{title}</p>
         <div className="flex items-center gap-2">
           <Segmented label="Shape" value={area.shape} options={SHAPES} onChange={(value) => onChange({ shape: value as HotspotShape })} />
           <IconButton label={`Remove area ${number}`} onClick={onRemove} path="M5 6h10M8 6V4.5h4V6M6.5 6l.7 9.5h5.6l.7-9.5" danger />
@@ -223,11 +231,14 @@ function AreaRow({
           );
         })}
       </div>
-      {(tooSmall || outside) && (
+      {children}
+      {(tooSmall || outside || problem) && (
         <p className="text-sm font-medium text-amber-900">
           {tooSmall
             ? `Too small for a finger. Make it at least ${HOTSPOT_LIMITS.minSize}% wide and ${HOTSPOT_LIMITS.minSize}% tall.`
-            : "Goes outside the picture. Move it or make it smaller."}
+            : outside
+              ? "Goes outside the picture. Move it or make it smaller."
+              : problem}
         </p>
       )}
     </li>
