@@ -3,11 +3,13 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { TEXT_SIZES, type BookPageData, type Sheet, type TextSize } from "@/lib/content/book";
 
-// The reader bar and its two panels. Candidate style: big targets, words next to icons,
+// The reader bar and its panels. Candidate style: big targets, words next to icons,
 // high contrast. Panels cover the pages (no pop-up windows) and close with Escape.
 
 const barButton =
   "inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border-2 border-ink/25 bg-white font-semibold text-ink hover:bg-slate-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-45 aria-pressed:border-primary aria-pressed:bg-primary/[0.08]";
+
+export type ReaderPanel = "contents" | "goto" | "results";
 
 export function ReaderBar({
   compact,
@@ -17,41 +19,54 @@ export function ReaderBar({
   onPanel,
   textSize,
   onTextSizeChange,
+  hasQuestions,
 }: {
   compact: boolean;
   tiny: boolean;
   ready: boolean;
-  panel: "contents" | "goto" | null;
-  onPanel: (panel: "contents" | "goto" | null) => void;
+  panel: ReaderPanel | null;
+  onPanel: (panel: ReaderPanel | null) => void;
   textSize: TextSize;
   onTextSizeChange?: (size: TextSize) => void;
+  hasQuestions: boolean;
 }) {
   const index = TEXT_SIZES.indexOf(textSize);
-  const contentsRef = useRef<HTMLButtonElement>(null);
-  const gotoRef = useRef<HTMLButtonElement>(null);
+  const refs = { contents: useRef<HTMLButtonElement>(null), goto: useRef<HTMLButtonElement>(null), results: useRef<HTMLButtonElement>(null) };
   const previous = useRef(panel);
   // When a panel closes, focus goes back to the button that opened it.
   useEffect(() => {
-    if (previous.current && !panel) (previous.current === "contents" ? contentsRef : gotoRef).current?.focus();
+    if (previous.current && !panel) refs[previous.current].current?.focus();
     previous.current = panel;
-  }, [panel]);
-  const size = compact ? "h-12 min-w-12 px-3 text-base" : "h-14 min-w-14 px-4 text-lg";
-  const toggle = (key: "contents" | "goto") => onPanel(panel === key ? null : key);
+  });
+  // Phones: the word sits under the icon so six controls fit; the smallest phones show icons only.
+  const size = tiny
+    ? "h-12 min-w-11 px-2 text-base"
+    : compact
+      ? "h-14 min-w-12 flex-col gap-0 px-2 text-sm leading-tight"
+      : "h-14 min-w-14 px-4 text-lg";
+  const toggle = (key: ReaderPanel) => onPanel(panel === key ? null : key);
+  const panelButton = (key: ReaderPanel, icon: string, label: string, short: string) => (
+    <button ref={refs[key]} type="button" aria-pressed={panel === key} disabled={!ready} onClick={() => toggle(key)} className={`${barButton} ${size}`}>
+      <Icon path={icon} />
+      {tiny ? <span className="sr-only">{label}</span> : compact && short !== label ? (
+        <>
+          <span aria-hidden="true">{short}</span>
+          <span className="sr-only">{label}</span>
+        </>
+      ) : (
+        <span>{label}</span>
+      )}
+    </button>
+  );
   return (
     <div
       role="toolbar"
       aria-label="Reader tools"
-      className={`flex items-center gap-2 border-b border-slate-300 bg-white py-2 ${compact ? "px-3" : "px-6"}`}
+      className={`flex items-center border-b border-slate-300 bg-white py-2 ${tiny ? "gap-1.5 px-2" : compact ? "gap-2 px-3" : "gap-2 px-6"}`}
     >
-      <button ref={contentsRef} type="button" aria-pressed={panel === "contents"} disabled={!ready} onClick={() => toggle("contents")} className={`${barButton} ${size}`}>
-        <Icon path="M4 6h16M4 12h16M4 18h10" />
-        <span className={tiny ? "sr-only" : ""}>Contents</span>
-      </button>
-      <button ref={gotoRef} type="button" aria-pressed={panel === "goto"} disabled={!ready} onClick={() => toggle("goto")} className={`${barButton} ${size}`}>
-        <Icon path="M6 3h9l4 4v14H6zM14 3v5h5" />
-        <span className={tiny ? "sr-only" : ""}>{compact ? "Page" : "Go to page"}</span>
-        {tiny && <span className="sr-only">Go to page</span>}
-      </button>
+      {panelButton("contents", "M4 6h16M4 12h16M4 18h10", "Contents", "Contents")}
+      {panelButton("goto", "M6 3h9l4 4v14H6zM14 3v5h5", "Go to page", "Page")}
+      {hasQuestions && panelButton("results", "M5 13l4 4L19 7", "Results", "Results")}
       <span className="flex-1" />
       {onTextSizeChange && (
         <>
@@ -80,12 +95,14 @@ export function ReaderBar({
           </span>
         </>
       )}
-      {/* Reserved for reading aloud (phase 2). */}
-      <button type="button" disabled title="Listen is coming later" className={`${barButton} ${size}`}>
-        <Icon path="M5 10v4h3l4 4V6L8 10zM15.5 9a4 4 0 0 1 0 6M18 6.5a8 8 0 0 1 0 11" />
-        <span className={compact ? "sr-only" : ""}>Listen</span>
-        <span className="sr-only"> (coming later)</span>
-      </button>
+      {/* Reserved for reading aloud (phase 2); left out on phones, where there's no room for a button that does nothing yet. */}
+      {!compact && (
+        <button type="button" disabled title="Listen is coming later" className={`${barButton} ${size}`}>
+          <Icon path="M5 10v4h3l4 4V6L8 10zM15.5 9a4 4 0 0 1 0 6M18 6.5a8 8 0 0 1 0 11" />
+          <span>Listen</span>
+          <span className="sr-only"> (coming later)</span>
+        </button>
+      )}
     </div>
   );
 }
@@ -133,19 +150,30 @@ function Panel({ title, onClose, children }: { title: string; onClose: () => voi
   );
 }
 
-type ChapterEntry = { chapterId: string; chapterLabel: string; sectionLabel: string; sheetIndex: number; number: number; pageIndex: number };
+type ChapterEntry = {
+  chapterId: string;
+  chapterLabel: string;
+  sectionLabel: string;
+  sheetIndex: number;
+  number: number;
+  pageIndex: number;
+  exact: boolean;
+};
 
 // Contents: sections, then chapters with the page each starts on (for this screen and text size).
 export function ContentsPanel({
   pages,
   sheets,
   currentPageIndex,
+  measured,
   onGo,
   onClose,
 }: {
   pages: BookPageData[];
   sheets: Sheet[];
   currentPageIndex: number;
+  // Which pages are measured; a chapter's number is exact once every page before it is.
+  measured: boolean[] | null;
   onGo: (sheetIndex: number) => void;
   onClose: () => void;
 }) {
@@ -155,7 +183,8 @@ export function ContentsPanel({
     const sheetIndex = sheets.findIndex((sheet) => sheet.kind === "page" && sheet.pageIndex === pageIndex && sheet.part === 0);
     const sheet = sheets[sheetIndex];
     if (sheet?.kind !== "page") return;
-    chapters.push({ chapterId: page.chapterId, chapterLabel: page.chapterLabel, sectionLabel: page.sectionLabel, sheetIndex, number: sheet.number, pageIndex });
+    const exact = Boolean(measured && measured.slice(0, pageIndex).every(Boolean));
+    chapters.push({ chapterId: page.chapterId, chapterLabel: page.chapterLabel, sectionLabel: page.sectionLabel, sheetIndex, number: sheet.number, pageIndex, exact });
   });
   const currentChapter = pages[currentPageIndex]?.chapterId;
   const sections: { label: string; chapters: ChapterEntry[] }[] = [];
@@ -189,7 +218,9 @@ export function ContentsPanel({
                         <span className="font-semibold">{chapter.chapterLabel}</span>
                         {here && <span className="block text-base font-normal text-primary">You are here</span>}
                       </span>
-                      <span className="shrink-0 whitespace-nowrap text-base text-slate-700">Page {chapter.number}</span>
+                      <span className="shrink-0 whitespace-nowrap text-base text-slate-700">
+                        {chapter.exact ? `Page ${chapter.number}` : `About page ${chapter.number}`}
+                      </span>
                     </button>
                   </li>
                 );
@@ -251,6 +282,87 @@ export function GoToPanel({ total, onGo, onClose }: { total: number; onGo: (numb
           </p>
         )}
       </form>
+    </Panel>
+  );
+}
+
+export type ResultStatus = "correct" | "wrong" | "revealed" | "open";
+export type ResultEntry = { pageIndex: number; status: ResultStatus; text: string };
+
+const STATUS_TEXT: Record<ResultStatus, string> = { correct: "Correct", wrong: "Not quite", revealed: "Revealed", open: "Not tried yet" };
+const STATUS_TONE: Record<ResultStatus, string> = {
+  correct: "bg-green-50 text-green-900 ring-green-700/40",
+  wrong: "bg-amber-50 text-amber-950 ring-amber-600/40",
+  revealed: "bg-primary/[0.07] text-ink ring-primary/40",
+  open: "bg-slate-100 text-slate-800 ring-slate-400/50",
+};
+
+// Results: how the questions went, with a way back to each one and a clean start.
+export function ResultsPanel({
+  entries,
+  sheets,
+  note,
+  onGo,
+  onReset,
+  onClose,
+}: {
+  entries: ResultEntry[];
+  sheets: Sheet[];
+  note?: string;
+  onGo: (sheetIndex: number) => void;
+  onReset: () => void;
+  onClose: () => void;
+}) {
+  const count = (status: ResultStatus) => entries.filter((entry) => entry.status === status).length;
+  const correct = count("correct");
+  const tried = entries.length - count("open");
+  return (
+    <Panel title="Results" onClose={onClose}>
+      <div className="mx-auto max-w-2xl space-y-5">
+        <div aria-live="polite">
+          <p className="text-2xl font-bold text-ink">
+            {correct} of {entries.length} {entries.length === 1 ? "question" : "questions"} correct
+          </p>
+          <p className="mt-1 text-lg text-slate-700">
+            {count("wrong")} not quite · {count("revealed")} revealed · {count("open")} not tried yet
+          </p>
+          {note && <p className="mt-2 text-base text-slate-700">{note}</p>}
+        </div>
+        <ul className="space-y-2">
+          {entries.map((entry, number) => {
+            const sheetIndex = sheets.findIndex((sheet) => sheet.kind === "page" && sheet.pageIndex === entry.pageIndex && sheet.part === 0);
+            const sheet = sheets[sheetIndex];
+            return (
+              <li key={entry.pageIndex}>
+                <button
+                  type="button"
+                  onClick={() => onGo(sheetIndex)}
+                  className="flex min-h-14 w-full items-center gap-3 rounded-lg border-2 border-slate-300 bg-white px-4 py-2 text-left text-lg text-ink hover:border-primary focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                >
+                  <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
+                    <span className="font-semibold">Question {number + 1}</span>
+                    {sheet?.kind === "page" && <span className="text-base text-slate-700"> · page {sheet.number}</span>}
+                    <span className="block text-base text-slate-700">{entry.text}</span>
+                  </span>
+                  <span className={`shrink-0 rounded-full px-3 py-1 text-base font-semibold ring-1 ${STATUS_TONE[entry.status]}`}>
+                    {STATUS_TEXT[entry.status]}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+        {entries.length > 0 && (
+          <button
+            type="button"
+            aria-disabled={tried === 0 || undefined}
+            onClick={() => tried > 0 && onReset()}
+            className="inline-flex h-14 items-center justify-center rounded-lg border-2 border-ink/25 bg-white px-5 text-lg font-semibold text-ink hover:bg-slate-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary aria-disabled:cursor-not-allowed aria-disabled:opacity-45"
+          >
+            Clear all answers
+          </button>
+        )}
+      </div>
     </Panel>
   );
 }

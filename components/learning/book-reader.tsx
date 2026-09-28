@@ -5,7 +5,9 @@ import { buildSheets, type BookPageData, type ResolvedMedia, type Sheet, type Te
 import { getQuestionTypeDef } from "@/lib/questions/registry";
 import { BlockList } from "./blocks";
 import { FRESH_QUESTION_STATE, QuestionView, type QuestionViewState } from "./questions/question-view";
-import { ContentsPanel, GoToPanel, ReaderBar } from "./reader-tools";
+import { plainText } from "@/lib/content/inline";
+import { collectMediaIds } from "@/lib/content/blocks";
+import { ContentsPanel, GoToPanel, ReaderBar, ResultsPanel, type ReaderPanel, type ResultEntry } from "./reader-tools";
 
 // A page's question is drawn several times (measuring layer, each sheet it spans); they share one
 // state, keyed by the question's content so an edited question starts afresh.
@@ -39,6 +41,8 @@ const NARROW_SHEET = 480;
 const PICTURE_SHARE = 0.6;
 const QUESTION_PICTURE_MIN = 80;
 const COMPACT_BELOW = 600;
+// Pages measured per step; a book this size or smaller is measured in one go, before it's shown.
+const MEASURE_BATCH = 40;
 // Below this reader width the bar shows icons only, so it fits the smallest phones.
 const TINY_BELOW = 380;
 
@@ -91,6 +95,7 @@ export function BookReader({
   onLayout,
   tools = false,
   onTextSizeChange,
+  resultsNote,
 }: {
   pages: BookPageData[];
   media: ResolvedMedia;
@@ -101,6 +106,8 @@ export function BookReader({
   // The reader bar: Contents, Go to page, text size and the (future) Listen button.
   tools?: boolean;
   onTextSizeChange?: (size: TextSize) => void;
+  // Shown under the Results tally, e.g. that a preview's results aren't saved.
+  resultsNote?: string;
 }) {
   const stageRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
@@ -108,11 +115,14 @@ export function BookReader({
   // Per page: the tallest a question's picture may be so the whole question fits on one page.
   const [pictureCaps, setPictureCaps] = useState<(number | null)[]>([]);
   const [stageSize, setStageSize] = useState<{ width: number; height: number } | null>(null);
-  const [partCounts, setPartCounts] = useState<number[] | null>(null);
+  // Sheets per authored page. Measured in batches: the current chapter first, then the rest in the
+  // background, so a long book opens fast. Until every page is measured, later numbers are estimates.
+  const [counts, setCounts] = useState<Counts | null>(null);
+  const [batch, setBatch] = useState<number[]>([]);
   const [position, setPosition] = useState({ pageIndex: 0, part: 0 });
   const [fontsReady, setFontsReady] = useState(0);
   const [questionStates, setQuestionStates] = useState<QuestionStates>({});
-  const [panel, setPanel] = useState<"contents" | "goto" | null>(null);
+  const [panel, setPanel] = useState<ReaderPanel | null>(null);
   const questions = useMemo<QuestionBinding>(
     () => ({ states: questionStates, setState: (key, state) => setQuestionStates((current) => ({ ...current, [key]: state })) }),
     [questionStates]
@@ -147,13 +157,51 @@ export function BookReader({
     [stageSize, textSize]
   );
 
+  // A new identity whenever everything must be measured again.
+  const layoutId = useMemo(() => ({}), [geometry, textSize, fontsReady, pages, media]);
+  const current = counts && counts.id === layoutId ? counts : null;
+  const countsRef = useRef(counts);
+  countsRef.current = counts;
+  const positionRef = useRef(position.pageIndex);
+  positionRef.current = position.pageIndex;
+
+  const nextBatch = useCallback(
+    (fresh: boolean[] | null) => measureOrder(pages, positionRef.current).filter((index) => !fresh?.[index]).slice(0, MEASURE_BATCH),
+    [pages]
+  );
+
+  // New layout: measure again, starting with the current chapter (before anything is painted).
+  useLayoutEffect(() => {
+    setBatch(nextBatch(null));
+  }, [layoutId, nextBatch]);
+
+  // Jumped to a chapter that isn't measured yet (e.g. from Contents): measure it now.
+  useLayoutEffect(() => {
+    const fresh = countsRef.current?.id === layoutId ? countsRef.current.fresh : null;
+    if (!fresh?.[position.pageIndex]) setBatch(nextBatch(fresh));
+  }, [position.pageIndex, layoutId, nextBatch]);
+
+  // Feedback and explanations appear after Check, so a question page is measured again then.
+  const previousStates = useRef(questionStates);
+  useLayoutEffect(() => {
+    const before = previousStates.current;
+    previousStates.current = questionStates;
+    const changed = pages.flatMap((page, index) => {
+      const key = questionKey(page);
+      return page.question && before[key] !== questionStates[key] ? [index] : [];
+    });
+    if (changed.length) setBatch((current) => [...new Set([...changed, ...current])]);
+  }, [questionStates, pages]);
+
   useLayoutEffect(() => {
     const layer = measureRef.current;
-    if (!layer || !geometry) return;
+    if (!layer || !geometry || batch.length === 0) return;
     // Question pictures get the height the rest of the question leaves (80px up to the usual 60%),
     // fitted to how it looks after a wrong answer is checked, else to how it looks while answering.
-    const caps = pages.map((page, index) => {
-      if (!page.question) return null;
+    const caps = [...pictureCaps];
+    for (const index of batch) {
+      const page = pages[index];
+      if (!page?.question) continue;
       const share = Math.round(geometry.contentHeight * PICTURE_SHARE);
       const pictureMargin = Math.ceil(textSize * 0.9) + 4;
       const roomFor = (state: string, extra: number) => {
@@ -162,20 +210,56 @@ export function BookReader({
       };
       // Types without a sample wrong answer keep one extra line for their "Your answer" label.
       const labelReserve = measuresWrongAnswer(page) ? 0 : Math.ceil(textSize * 1.4);
+      caps[index] = share;
       for (const room of [roomFor("checked", labelReserve), roomFor("answering", 0)]) {
-        if (room >= QUESTION_PICTURE_MIN) return Math.min(share, room);
+        if (room >= QUESTION_PICTURE_MIN) {
+          caps[index] = Math.min(share, room);
+          break;
+        }
       }
-      return share;
-    });
-    setPictureCaps((current) => (current.join() === caps.join() ? current : caps));
-    const step = geometry.contentWidth + geometry.columnGap;
-    const counts = Array.from(layer.children, (child) =>
-      Math.max(1, Math.round(((child as HTMLElement).scrollWidth + geometry.columnGap) / step))
-    );
-    setPartCounts((current) => (current && current.join() === counts.join() ? current : counts));
-    // Feedback and explanations appear after Check, so a question page is measured again then.
-  }, [geometry, pages, media, fontsReady, questionStates, pictureCaps, textSize]);
+    }
+    if (caps.join() !== pictureCaps.join()) {
+      setPictureCaps(caps);
+      return;
+    }
 
+    const step = geometry.contentWidth + geometry.columnGap;
+    const previous = countsRef.current;
+    const base = previous && previous.id === layoutId ? previous : null;
+    const values = pages.map((_, index) => base?.values[index] ?? previous?.values[index] ?? null);
+    const fresh = pages.map((_, index) => base?.fresh[index] ?? false);
+    for (const child of Array.from(layer.children) as HTMLElement[]) {
+      const index = Number(child.dataset.pageIndex);
+      values[index] = Math.max(1, Math.round((child.scrollWidth + geometry.columnGap) / step));
+      fresh[index] = true;
+    }
+    const same = base && base.values.join() === values.join() && base.fresh.join() === fresh.join();
+    if (!same) setCounts({ id: layoutId, values, fresh });
+
+    // The rest of the book is measured a batch at a time, letting the reader paint in between.
+    const next = nextBatch(fresh);
+    if (next.length === 0) {
+      setBatch([]);
+      return;
+    }
+    const timer = window.setTimeout(() => setBatch(next), 0);
+    return () => window.clearTimeout(timer);
+  }, [geometry, batch, pictureCaps, pages, textSize, layoutId, nextBatch]);
+
+  // Short books are re-measured before anything is painted, so their numbers are never estimates.
+  const complete = Boolean(counts) && (pages.length <= MEASURE_BATCH || Boolean(current?.fresh.every(Boolean)));
+  // Short books keep every page in the measuring layer, as they always have; long ones only the batch.
+  const measuring = useMemo(
+    () => (pages.length <= MEASURE_BATCH ? pages.map((_, index) => index) : batch),
+    [pages, batch]
+  );
+  // Pages not measured yet count as the average so far, so estimates stay close.
+  const partCounts = useMemo(() => {
+    if (!counts) return null;
+    const known = counts.values.filter((value): value is number => value !== null);
+    const average = known.length ? Math.max(1, Math.round(known.reduce((sum, value) => sum + value, 0) / known.length)) : 1;
+    return pages.map((_, index) => counts.values[index] ?? average);
+  }, [counts, pages]);
   const sheets = useMemo(
     () => (partCounts && geometry ? buildSheets(pages, partCounts, geometry.spread) : []),
     [pages, partCounts, geometry]
@@ -220,12 +304,44 @@ export function BookReader({
     }
   }
 
+  // How each question page went, for the Results panel.
+  const results = useMemo<ResultEntry[]>(
+    () =>
+      pages.flatMap((page, pageIndex) => {
+        if (!page.question) return [];
+        const state = questionStates[questionKey(page)];
+        const status =
+          state?.phase === "checked" ? (state.result?.correct ? "correct" : "wrong") : state?.phase === "revealed" ? "revealed" : "open";
+        const text = plainText(page.question.data.stemText).replace(/\s+/g, " ").trim();
+        return [{ pageIndex, status, text: text.length > 90 ? `${text.slice(0, 89).trimEnd()}…` : text }];
+      }),
+    [pages, questionStates]
+  );
+
+  // Pictures on the next view start loading now, so turning the page shows them at once.
+  const preloaded = useRef(new Set<string>());
+  useEffect(() => {
+    const ahead = sheets.slice(viewStart + perView, viewStart + perView * 2);
+    for (const sheet of ahead) {
+      if (sheet.kind !== "page") continue;
+      const page = pages[sheet.pageIndex];
+      for (const id of pageMediaIds(page)) {
+        const src = media[id]?.src;
+        if (!src || preloaded.current.has(src)) continue;
+        preloaded.current.add(src);
+        const image = new Image();
+        image.decoding = "async";
+        image.src = src;
+      }
+    }
+  }, [sheets, viewStart, perView, pages, media]);
+
   const totalPages = sheets.reduce((count, sheet) => (sheet.kind === "page" ? count + 1 : count), 0);
-  const status = describeView(visible, totalPages);
+  const status = describeView(visible, totalPages, complete);
 
   useEffect(() => {
-    if (partCounts && onLayout) onLayout({ pages: totalPages });
-  }, [partCounts, totalPages, onLayout]);
+    if (complete && onLayout) onLayout({ pages: totalPages });
+  }, [complete, totalPages, onLayout]);
   const shortStatus = status.replace(/^Pages? /, "");
   // Sized from the reader's own width (not the screen), so previews match real devices.
   const compact = (stageSize?.width ?? COMPACT_BELOW) < COMPACT_BELOW;
@@ -253,6 +369,7 @@ export function BookReader({
           onPanel={setPanel}
           textSize={textSize}
           onTextSizeChange={onTextSizeChange}
+          hasQuestions={results.length > 0}
         />
       )}
       <div ref={stageRef} className="relative min-h-0 flex-1 overflow-hidden">
@@ -261,10 +378,24 @@ export function BookReader({
             pages={pages}
             sheets={sheets}
             currentPageIndex={position.pageIndex}
+            measured={current?.fresh ?? null}
             onGo={(sheetIndex) => {
               goTo(sheetIndex);
               setPanel(null);
             }}
+            onClose={() => setPanel(null)}
+          />
+        )}
+        {tools && panel === "results" && (
+          <ResultsPanel
+            entries={results}
+            sheets={sheets}
+            note={resultsNote}
+            onGo={(sheetIndex) => {
+              goTo(sheetIndex);
+              setPanel(null);
+            }}
+            onReset={() => setQuestionStates({})}
             onClose={() => setPanel(null)}
           />
         )}
@@ -286,14 +417,15 @@ export function BookReader({
               className="pointer-events-none invisible absolute left-0 top-0 overflow-hidden"
               style={{ width: 0, height: 0, fontSize: textSize, ...sheetStyle, position: "absolute" }}
             >
-              {pages.map((page, index) => (
+              {measuring.map((index) => pages[index]).map((page, i) => page && (
                 <FlowColumns
                   key={page.id}
+                  pageIndex={measuring[i]}
                   page={page}
                   media={media}
                   geometry={geometry}
                   questions={questions}
-                  pictureCap={pictureCaps[index] ?? null}
+                  pictureCap={pictureCaps[measuring[i]] ?? null}
                 />
               ))}
             </div>
@@ -305,8 +437,9 @@ export function BookReader({
                 style={{ width: 0, height: 0, fontSize: textSize }}
                 inert
               >
-                {pages.map((page, index) =>
-                  page.question
+                {measuring.map((index) => {
+                  const page = pages[index];
+                  return page?.question
                     ? (["answering", "checked"] as const).map((state) => (
                         <div key={`${page.id}-${state}`} data-rest-page={index} data-rest-state={state} style={{ width: geometry.contentWidth }}>
                           <QuestionView
@@ -317,8 +450,8 @@ export function BookReader({
                           />
                         </div>
                       ))
-                    : null
-                )}
+                    : null;
+                })}
               </div>
             )}
 
@@ -406,7 +539,9 @@ function FlowColumns({
   questions,
   pictureCap = null,
   offset = 0,
+  pageIndex,
 }: {
+  pageIndex?: number;
   page: BookPageData;
   media: ResolvedMedia;
   geometry: Geometry;
@@ -421,6 +556,7 @@ function FlowColumns({
   return (
     <div
       className="leading-[1.6]"
+      data-page-index={pageIndex}
       style={{
         width: geometry.contentWidth,
         height: geometry.contentHeight,
@@ -551,8 +687,36 @@ function SheetView({
   );
 }
 
-function describeView(visible: Sheet[], total: number) {
+function describeView(visible: Sheet[], total: number, exact: boolean) {
   const numbers = visible.flatMap((sheet) => (sheet.kind === "page" ? [sheet.number] : []));
   if (numbers.length === 0 || total === 0) return "";
-  return numbers.length === 1 ? `Page ${numbers[0]} of ${total}` : `Pages ${numbers[0]}–${numbers[1]} of ${total}`;
+  const of = exact ? `of ${total}` : `of about ${total}`;
+  return numbers.length === 1 ? `Page ${numbers[0]} ${of}` : `Pages ${numbers[0]}–${numbers[1]} ${of}`;
+}
+
+// Every picture a page shows: blocks, the question picture and any pictures in its answers.
+function pageMediaIds(page: BookPageData | undefined): string[] {
+  if (!page) return [];
+  if (!page.question) return collectMediaIds(page.blocks);
+  const question = page.question.data;
+  const def = getQuestionTypeDef(question.type);
+  let own: string[] = [];
+  try {
+    own = def ? def.mediaIds(question.content) : [];
+  } catch {
+    own = [];
+  }
+  return [...(question.stemMediaId ? [question.stemMediaId] : []), ...own];
+}
+
+type Counts = { id: object; values: (number | null)[]; fresh: boolean[] };
+
+// Which pages to measure first: the current chapter, then onwards, then the pages before it.
+function measureOrder(pages: BookPageData[], current: number): number[] {
+  const at = Math.min(Math.max(0, current), Math.max(0, pages.length - 1));
+  const chapter = pages[at]?.chapterId;
+  const inChapter = pages.flatMap((page, index) => (page.chapterId === chapter ? [index] : []));
+  const after = pages.flatMap((_, index) => (index > at ? [index] : []));
+  const before = pages.flatMap((_, index) => (index < at ? [index].reverse() : [])).reverse();
+  return [...new Set([...inChapter, ...after, ...before])];
 }

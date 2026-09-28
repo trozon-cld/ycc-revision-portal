@@ -147,6 +147,7 @@ export function BookPreview({
               onLayout={onLayout}
               tools={readerTools}
               onTextSizeChange={readerTools ? setTextSize : undefined}
+              resultsNote={readerTools ? "Preview only: these results aren't saved." : undefined}
             />
           </div>
         </div>
