@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="48" viewBox="0 0 120 48" role="img" aria-label="YCC">
+  <rect width="120" height="48" rx="8" fill="#005DA1"/>
+  <path d="M10 32a14 14 0 0 1 28 0z" fill="#00AAC5"/>
+  <rect x="8" y="31" width="32" height="4" rx="2" fill="#FFFFFF"/>
+  <text x="46" y="32" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#FFFFFF">YCC</text>
+</svg>

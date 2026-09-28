@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
 import { ACCESS_TIME_ZONE, daysLeftUk } from "@/lib/candidates/access";
@@ -7,10 +8,11 @@ import { SectionCard, SectionIcons } from "@/components/candidate/section-card";
 // Days left at which the access notice turns amber.
 const ACCESS_WARNING_DAYS = 7;
 
-export default async function CandidateHomePage() {
+export default async function CandidateHomePage({ searchParams }: PageProps<"/dashboard">) {
   const session = await requireRole(["candidate"]);
   const home = await loadCandidateHome(session.sub);
   if (!home) redirect("/login");
+  const justSwitched = (await searchParams).switched === "1";
 
   const daysLeft = home.accessExpiresAt ? daysLeftUk(home.accessExpiresAt) : null;
   const expiryLabel = home.accessExpiresAt
@@ -29,6 +31,12 @@ export default async function CandidateHomePage() {
         <h1 className="text-3xl font-bold text-ink">Welcome</h1>
         <p className="mt-1 text-lg text-ink/80 [overflow-wrap:anywhere]">{home.email}</p>
       </div>
+
+      {justSwitched && (
+        <p role="status" className="rounded-xl border-2 border-green-700 bg-green-50 p-4 text-lg font-semibold text-green-900">
+          You’re now studying {home.current.name}.
+        </p>
+      )}
 
       {expiryLabel && daysLeft !== null && (
         <div
@@ -50,6 +58,14 @@ export default async function CandidateHomePage() {
         </h2>
         <p className="mt-1 text-2xl font-bold text-ink [overflow-wrap:anywhere]">{home.current.name}</p>
         <p className="mt-1 text-base text-ink/80">Group: {home.current.groupName}</p>
+        {home.choices > 1 && (
+          <Link
+            href="/dashboard/category"
+            className="mt-4 inline-flex min-h-14 items-center justify-center rounded-lg border-2 border-primary bg-white px-6 text-lg font-semibold text-primary hover:bg-primary/5 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            Change category
+          </Link>
+        )}
       </section>
 
       <section aria-labelledby="sections-heading">

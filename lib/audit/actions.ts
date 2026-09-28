@@ -13,6 +13,7 @@ export const ACTIVITY_ACTIONS = {
   "candidate.unblocked": "Unblocked candidate",
   "candidate.deleted": "Deleted candidate",
   "candidate.admin_changed": "Moved candidate to another admin",
+  "candidate.category_switched": "Candidate switched category",
   "category_group.created": "Created category group",
   "category_group.renamed": "Renamed category group",
   "category_group.reordered": "Reordered category group",

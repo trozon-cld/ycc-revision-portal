@@ -4,6 +4,8 @@ export type CandidateHome = {
   email: string;
   accessExpiresAt: string | null;
   current: { id: string; name: string; groupName: string };
+  // How many categories the candidate can choose from (their group's size).
+  choices: number;
   assigned: { id: string; name: string };
 };
 
@@ -17,10 +19,12 @@ export async function loadCandidateHome(userId: string): Promise<CandidateHome |
     group_name: string;
     assigned_id: string;
     assigned_name: string;
+    choices: number;
   }>(
     `select u.email, u.access_expires_at,
             cur.id as current_id, cur.name as current_name, g.name as group_name,
-            asg.id as assigned_id, asg.name as assigned_name
+            asg.id as assigned_id, asg.name as assigned_name,
+            (select count(*)::int from categories c where c.group_id = asg.group_id) as choices
      from users u
      join categories cur on cur.id = u.current_category_id
      join category_groups g on g.id = cur.group_id
@@ -35,5 +39,6 @@ export async function loadCandidateHome(userId: string): Promise<CandidateHome |
     accessExpiresAt: row.access_expires_at ? row.access_expires_at.toISOString() : null,
     current: { id: row.current_id, name: row.current_name, groupName: row.group_name },
     assigned: { id: row.assigned_id, name: row.assigned_name },
+    choices: row.choices,
   };
 }

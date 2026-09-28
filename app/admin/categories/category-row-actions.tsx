@@ -61,7 +61,7 @@ export function CategoryRowActions({
     {
       label: "Chapters",
       title: `Chapters for ${name}`,
-      description: "Tick the chapters this category's Mock test will draw from.",
+      description: "Tick the chapters candidates studying this category see in Prepare, Practice and the Mock test.",
       render: (close) => (
         <CategoryChaptersForm categoryId={id} outline={outline} initialSelected={linkedChapterIds} onClose={close} />
       ),

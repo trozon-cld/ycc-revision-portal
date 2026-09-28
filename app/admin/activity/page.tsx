@@ -82,8 +82,8 @@ export default async function ActivityPage({ searchParams }: PageProps<"/admin/a
         title={isSuperadmin ? "Activity" : "My activity"}
         description={
           isSuperadmin
-            ? "Everything admins and the Superadmin have changed, and every login."
-            : "Changes you have made, and your logins."
+            ? "Everything admins and the Superadmin have changed, candidates’ category switches, and every login."
+            : "Changes you have made, category switches by your candidates, and your logins."
         }
       />
 
@@ -95,6 +95,7 @@ export default async function ActivityPage({ searchParams }: PageProps<"/admin/a
       {tab === "activity" ? (
         <ActivityTab
           isSuperadmin={isSuperadmin}
+          ownerId={isSuperadmin ? null : session.sub}
           actorId={actorId}
           action={action}
           allowedActions={allowedActions}
@@ -119,6 +120,7 @@ export default async function ActivityPage({ searchParams }: PageProps<"/admin/a
 
 async function ActivityTab({
   isSuperadmin,
+  ownerId,
   actorId,
   action,
   allowedActions,
@@ -127,6 +129,8 @@ async function ActivityTab({
   filters,
 }: {
   isSuperadmin: boolean;
+  // Admins: also shows category switches made by their own candidates.
+  ownerId: string | null;
   actorId: string | null;
   action: ActivityAction | null;
   allowedActions: ActivityAction[];
@@ -138,11 +142,13 @@ async function ActivityTab({
     pool.query<ActivityRow>(
       `select id, created_at, actor_email, actor_role, action, target_label, details, ip_address
        from activity_logs
-       where ($1::uuid is null or actor_id = $1::uuid)
+       where ($1::uuid is null or actor_id = $1::uuid
+              or ($5::uuid is not null and action = 'candidate.category_switched'
+                  and target_id in (select id from users where admin_id = $5::uuid)))
          and ($2::varchar is null or action = $2::varchar)
        order by created_at desc
        limit $3 offset $4`,
-      [actorId, action, PAGE_SIZE + 1, offset]
+      [actorId, action, PAGE_SIZE + 1, offset, ownerId]
     ),
     isSuperadmin
       ? pool.query<ActorRow>(
