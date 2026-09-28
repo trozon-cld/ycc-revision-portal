@@ -69,3 +69,15 @@ export function formatUkDate(value: string | Date): string {
     timeZone: ACCESS_TIME_ZONE,
   });
 }
+
+// Whole days left before access ends, counted in UK days (0 on the last day).
+export function daysLeftUk(expiresAt: string | Date): number {
+  const end = new Intl.DateTimeFormat("en-CA", {
+    timeZone: ACCESS_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(expiresAt));
+  const diff = Date.parse(`${end}T00:00:00Z`) - Date.parse(`${todayInUk()}T00:00:00Z`);
+  return Math.round(diff / 86_400_000);
+}

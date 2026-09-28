@@ -1,39 +1,107 @@
+import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
-import { LogoutButton } from "@/components/logout-button";
-import { ACCESS_TIME_ZONE } from "@/lib/candidates/access";
+import { ACCESS_TIME_ZONE, daysLeftUk } from "@/lib/candidates/access";
+import { loadCandidateHome } from "@/lib/candidates/home";
+import { SectionCard, SectionIcons } from "@/components/candidate/section-card";
 
-// Placeholder landing page — proves Candidate login + role gating works.
-// Prepare/Practice/Mock Test sections come later.
-export default async function CandidateDashboard() {
+// Days left at which the access notice turns amber.
+const ACCESS_WARNING_DAYS = 7;
+
+export default async function CandidateHomePage() {
   const session = await requireRole(["candidate"]);
+  const home = await loadCandidateHome(session.sub);
+  if (!home) redirect("/login");
 
-  const expiryLabel = session.accessExpiresAt
-    ? new Date(session.accessExpiresAt).toLocaleDateString("en-GB", {
+  const daysLeft = home.accessExpiresAt ? daysLeftUk(home.accessExpiresAt) : null;
+  const expiryLabel = home.accessExpiresAt
+    ? new Date(home.accessExpiresAt).toLocaleDateString("en-GB", {
         day: "numeric",
         month: "long",
         year: "numeric",
         timeZone: ACCESS_TIME_ZONE,
       })
     : null;
+  const warn = daysLeft !== null && daysLeft <= ACCESS_WARNING_DAYS;
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-4 p-4 text-center">
-      <h1 className="text-2xl font-semibold text-ink">
-        Welcome, {session.email}
-      </h1>
+    <div className="flex flex-col gap-8">
+      <div>
+        <h1 className="text-3xl font-bold text-ink">Welcome</h1>
+        <p className="mt-1 text-lg text-ink/80 [overflow-wrap:anywhere]">{home.email}</p>
+      </div>
 
-      {expiryLabel && (
-        <div className="w-full max-w-md rounded-lg border border-amber-300 bg-amber-50 p-4 text-base text-amber-900">
-          Your revision access is active until {expiryLabel}. Please complete
-          your study and mock tests before this date.
+      {expiryLabel && daysLeft !== null && (
+        <div
+          className={`rounded-xl border-2 p-5 text-lg leading-relaxed ${
+            warn ? "border-amber-500 bg-amber-50 text-amber-950" : "border-primary/30 bg-primary/5 text-ink"
+          }`}
+        >
+          <p className="font-bold">{daysLeftText(daysLeft)}</p>
+          <p className="mt-1">
+            Your revision access is active until {expiryLabel}. Please complete your study and mock tests before
+            this date.
+          </p>
         </div>
       )}
 
-      <p className="max-w-sm text-base text-ink/70">
-        This is a placeholder — Prepare, Practice, and Mock Test sections
-        come later.
-      </p>
-      <LogoutButton />
+      <section aria-labelledby="studying-heading" className="rounded-xl border-2 border-ink/15 bg-white p-5">
+        <h2 id="studying-heading" className="text-base font-semibold text-ink/80">
+          You’re studying
+        </h2>
+        <p className="mt-1 text-2xl font-bold text-ink [overflow-wrap:anywhere]">{home.current.name}</p>
+        <p className="mt-1 text-base text-ink/80">Group: {home.current.groupName}</p>
+      </section>
+
+      <section aria-labelledby="sections-heading">
+        <h2 id="sections-heading" className="mb-4 text-2xl font-bold text-ink">
+          What would you like to do?
+        </h2>
+        <ul className="grid gap-4 sm:grid-cols-2">
+          <li>
+            <SectionCard
+              title="General queries"
+              description="Answers to common questions and how to get help."
+              icon={SectionIcons.help}
+            />
+          </li>
+          <li>
+            <SectionCard
+              title="Prepare"
+              description="Read the Handbook chapter by chapter, with questions along the way."
+              icon={SectionIcons.book}
+            />
+          </li>
+          <li>
+            <SectionCard
+              title="Practice"
+              description="Answer questions at your own pace and see the right answer each time."
+              icon={SectionIcons.practice}
+            />
+          </li>
+          <li>
+            <SectionCard
+              title="Mock test"
+              description="A timed test in exam-style conditions, with your results at the end."
+              icon={SectionIcons.timer}
+            />
+          </li>
+          <li className="sm:col-span-2">
+            <SectionCard
+              title="My progress"
+              description="Your results from every section in one place."
+              icon={SectionIcons.progress}
+            />
+          </li>
+        </ul>
+      </section>
+
+      <p className="text-base text-ink/80">Designed to help you prepare with confidence.</p>
     </div>
   );
+}
+
+function daysLeftText(days: number): string {
+  if (days <= 0) return "Today is the last day of your access.";
+  if (days === 1) return "1 day left";
+  return `${days} days left`;
 }

@@ -46,11 +46,12 @@ Status: in active development.
 
 ## Project structure
 
-- `app/` — routes: `/login`, `/admin/*` (Admin/Superadmin, including `/admin/activity` logs and `/admin/handbook` sections and chapters, `/admin/handbook/chapters/[id]` page lists, `/admin/handbook/pages/[id]` page editor, `/admin/media` image library), `/dashboard` (Candidate), `/access-expired`
+- `app/` — routes: `/login`, `/admin/*` (Admin/Superadmin, including `/admin/activity` logs and `/admin/handbook` sections and chapters, `/admin/handbook/chapters/[id]` page lists, `/admin/handbook/pages/[id]` page editor, `/admin/media` image library), `/dashboard` (Candidate home, `/dashboard/help`), `/access-expired`
 - `lib/auth/` — JWT signing/verification, session cookie, role guard
 - `components/admin/` — compact admin console UI (sidebar shell, tables, row menus, slide-in panels); admin pages must build from these. Candidate pages keep the large, simple style.
 - `lib/db/` — shared Postgres pool and transaction helper
 - `lib/content/` — Handbook page blocks (types, validation, **bold** markup) and book sheet rules
+- `components/candidate/` — candidate page shell (header) and home-screen section cards
 - `components/learning/` — candidate-facing renderers: blocks and the fixed-page book reader (large-target style)
 - `lib/storage/` — the only code that talks to the storage provider (upload, delete, signed links)
 - `lib/media/` — image checks (real type and size from the file) and in-browser WebP conversion
