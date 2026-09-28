@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { HTMLAttributes, ReactNode } from "react";
 
 // Below md each row becomes a card: cells stack, and each shows its column label.
 export function Table({
@@ -43,9 +43,11 @@ export function Table({
   );
 }
 
-export function Row({ children }: { children: ReactNode }) {
+// `extra` adds data attributes and classes, e.g. for drag and drop.
+export function Row({ children, extra }: { children: ReactNode; extra?: HTMLAttributes<HTMLTableRowElement> & Record<`data-${string}`, string> }) {
+  const { className = "", ...rest } = extra ?? {};
   return (
-    <tr className="relative block space-y-1.5 px-4 py-3 md:table-row md:space-y-0 md:p-0 md:hover:bg-slate-50/60">
+    <tr {...rest} className={`relative block space-y-1.5 px-4 py-3 md:table-row md:space-y-0 md:p-0 md:hover:bg-slate-50/60 ${className}`}>
       {children}
     </tr>
   );
