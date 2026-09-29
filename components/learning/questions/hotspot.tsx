@@ -114,7 +114,7 @@ export function HotspotAnswer({ content, media, answer, response, onResponse, on
 export function pictureWidth(ratio: number) {
   const r = ratio.toFixed(4);
   const fitted = `calc(var(--book-picture-max, 60vh) * ${r})`;
-  const usable = `min(${MIN_WIDTH}px, calc(var(--book-picture-share, 60vh) * ${r}))`;
+  const usable = `min(var(--tap-picture-min, ${MIN_WIDTH}px), calc(var(--book-picture-share, 60vh) * ${r}))`;
   return { width: `min(100%, max(${fitted}, ${usable}))` };
 }
 

@@ -6,10 +6,13 @@ import { TEXT_SIZES, type BookPageData, type Sheet, type TextSize } from "@/lib/
 // The reader bar and its panels. Candidate style: big targets, words next to icons,
 // high contrast. Panels cover the pages (no pop-up windows) and close with Escape.
 
-const barButton =
+export const barButton =
   "inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border-2 border-ink/25 bg-white font-semibold text-ink hover:bg-slate-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-45 aria-pressed:border-primary aria-pressed:bg-primary/[0.08]";
 
 export type ReaderPanel = "contents" | "goto" | "results";
+
+// Bar buttons on laptops and desktops (48px high), also used for the page's own items in the bar.
+export const BAR_BUTTON_DENSE = "h-12 min-w-12 px-3 text-base";
 
 export function ReaderBar({
   compact,
@@ -20,6 +23,11 @@ export function ReaderBar({
   textSize,
   onTextSizeChange,
   hasQuestions,
+  dense = false,
+  narrow = false,
+  start,
+  end,
+  status,
 }: {
   compact: boolean;
   tiny: boolean;
@@ -29,6 +37,14 @@ export function ReaderBar({
   textSize: TextSize;
   onTextSizeChange?: (size: TextSize) => void;
   hasQuestions: boolean;
+  // Laptops and desktops: one slimmer bar that also holds the page's own items at each end.
+  dense?: boolean;
+  // Dense bar on a smaller laptop: short labels, no Listen.
+  narrow?: boolean;
+  start?: ReactNode;
+  end?: ReactNode;
+  // Dense bar only: "Pages 5–6 of 11", shown between the tools (read out by the reader itself).
+  status?: string;
 }) {
   const index = TEXT_SIZES.indexOf(textSize);
   const refs = { contents: useRef<HTMLButtonElement>(null), goto: useRef<HTMLButtonElement>(null), results: useRef<HTMLButtonElement>(null) };
@@ -41,14 +57,21 @@ export function ReaderBar({
   // Phones: the word sits under the icon so six controls fit; the smallest phones show icons only.
   const size = tiny
     ? "h-12 min-w-11 px-2 text-base"
-    : compact
+    : dense
+      ? BAR_BUTTON_DENSE
+      : compact
       ? "h-14 min-w-12 flex-col gap-0 px-2 text-sm leading-tight"
       : "h-14 min-w-14 px-4 text-lg";
   const toggle = (key: ReaderPanel) => onPanel(panel === key ? null : key);
   const panelButton = (key: ReaderPanel, icon: string, label: string, short: string) => (
     <button ref={refs[key]} type="button" aria-pressed={panel === key} disabled={!ready} onClick={() => toggle(key)} className={`${barButton} ${size}`}>
       <Icon path={icon} />
-      {tiny ? <span className="sr-only">{label}</span> : compact && short !== label ? (
+      {tiny ? <span className="sr-only">{label}</span> : dense && narrow && short !== label ? (
+        <>
+          <span aria-hidden="true">{short}</span>
+          <span className="sr-only">{label}</span>
+        </>
+      ) : compact && short !== label ? (
         <>
           <span aria-hidden="true">{short}</span>
           <span className="sr-only">{label}</span>
@@ -64,10 +87,17 @@ export function ReaderBar({
       aria-label="Reader tools"
       className={`flex items-center border-b border-slate-300 bg-white py-2 ${tiny ? "gap-1.5 px-2" : compact ? "gap-2 px-3" : "gap-2 px-6"}`}
     >
+      {start && <div className="mr-2 flex shrink-0 items-center">{start}</div>}
       {panelButton("contents", "M4 6h16M4 12h16M4 18h10", "Contents", "Contents")}
       {panelButton("goto", "M6 3h9l4 4v14H6zM14 3v5h5", "Go to page", "Page")}
       {hasQuestions && panelButton("results", "M5 13l4 4L19 7", "Results", "Results")}
-      <span className="flex-1" />
+      {status ? (
+        <span aria-hidden="true" className="flex flex-1 justify-center whitespace-nowrap px-2 text-base font-medium text-ink">
+          {status}
+        </span>
+      ) : (
+        <span className="flex-1" />
+      )}
       {onTextSizeChange && (
         <>
           <button
@@ -96,13 +126,14 @@ export function ReaderBar({
         </>
       )}
       {/* Reserved for reading aloud (phase 2); left out on phones, where there's no room for a button that does nothing yet. */}
-      {!compact && (
+      {!compact && !(dense && narrow) && (
         <button type="button" disabled title="Listen is coming later" className={`${barButton} ${size}`}>
           <Icon path="M5 10v4h3l4 4V6L8 10zM15.5 9a4 4 0 0 1 0 6M18 6.5a8 8 0 0 1 0 11" />
           <span>Listen</span>
           <span className="sr-only"> (coming later)</span>
         </button>
       )}
+      {end && <div className="ml-2 flex shrink-0 items-center gap-2 border-l border-slate-200 pl-4">{end}</div>}
     </div>
   );
 }

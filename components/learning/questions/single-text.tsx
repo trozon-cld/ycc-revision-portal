@@ -37,7 +37,7 @@ export function SingleTextAnswer({ mode, seed, content, answer, response, onResp
             <label
               htmlFor={inputId}
               data-option={option.id}
-              className={`relative flex min-h-[max(56px,3.5em)] items-center gap-[0.75em] rounded-lg border-2 px-[0.9em] py-[0.55em] leading-snug text-ink has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary ${tone} ${
+              className={`relative flex min-h-[max(var(--answer-min-h,56px),var(--answer-min-em,3.5em))] items-center gap-[0.75em] rounded-lg border-2 px-[0.9em] py-[0.55em] leading-snug text-ink has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary ${tone} ${
                 locked ? "cursor-default" : "cursor-pointer hover:border-primary"
               }`}
             >

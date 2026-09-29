@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
-import { buildSheets, DEFAULT_TEXT_SIZE, type BookPageData, type ResolvedMedia, type Sheet, type TextSize } from "@/lib/content/book";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
+import { buildSheets, type BookPageData, type ResolvedMedia, type Sheet, type TextSize } from "@/lib/content/book";
 import { getQuestionTypeDef } from "@/lib/questions/registry";
 import { BlockList } from "./blocks";
 import { FRESH_QUESTION_STATE, QuestionView, type QuestionViewState } from "./questions/question-view";
@@ -35,7 +35,9 @@ function questionKey(page: BookPageData): string {
 // columns become extra sheets. Spread (two sheets) when the reader is at least 1024px wide.
 
 const SPREAD_MIN_WIDTH = 1024;
-const SHEET_RATIO = 0.75; // width / height of a sheet in a spread
+const SHEET_RATIO = 0.95; // widest a sheet in a spread may be, as width / height
+// ...and never wider than this many ems, so lines stay easy to read on big screens.
+const SHEET_MAX_EMS = 42;
 const STAGE_PADDING = 12;
 const NARROW_SHEET = 480;
 const PICTURE_SHARE = 0.6;
@@ -43,9 +45,25 @@ const QUESTION_PICTURE_MIN = 80;
 const COMPACT_BELOW = 600;
 // Pages measured per step; a book this size or smaller is measured in one go, before it's shown.
 const MEASURE_BATCH = 40;
-// At the default text size a page that would spill onto the next page is fitted: question pictures
-// shrink to half first, then the page's text steps down to this size at the smallest.
+// A page that would spill onto the next page is fitted first: question pictures shrink (to half at
+// most), then its text steps down FIT_STEPS px (never below FIT_MIN_SIZE), then content pictures
+// shrink to CONTENT_PICTURE_FIT of the page height. Only a page that still doesn't fit continues.
 const FIT_MIN_SIZE = 14;
+const FIT_STEPS = 2;
+const CONTENT_PICTURE_FIT = 0.4;
+// Spreads (laptops, desktops) have Previous/Next beside the pages; this is the room each side takes.
+const SIDE_NAV = 88;
+const SPREAD_PADDING = 8;
+// Below this width the laptop bar uses short labels and leaves out Listen, so everything fits.
+const ROOMY_BAR = 1200;
+// Spreads: picture answer options are at most this share of the page height, so a question keeps room
+// for its explanation.
+const OPTION_PICTURE_SHARE = 0.22;
+// Fitting a question may shrink its picture down to this share of the usual limit.
+const QUESTION_PICTURE_FIT = 0.25;
+// Last fitting step, as shares of the page height: a question's own picture and its answer pictures.
+const QUESTION_PICTURE_LAST = 0.15;
+const OPTION_PICTURE_LAST = 0.15;
 // Below this reader width the bar shows icons only, so it fits the smallest phones.
 const TINY_BELOW = 380;
 
@@ -63,17 +81,21 @@ type Geometry = {
 };
 
 function computeGeometry(width: number, height: number, textSize: TextSize): Geometry | null {
-  const availableWidth = width - STAGE_PADDING * 2;
-  const availableHeight = height - STAGE_PADDING * 2;
+  const spread = width >= SPREAD_MIN_WIDTH;
+  const padding = spread ? SPREAD_PADDING : STAGE_PADDING;
+  const availableWidth = width - padding * 2;
+  const availableHeight = height - padding * 2;
   if (availableWidth < 200 || availableHeight < 200) return null;
 
-  const spread = width >= SPREAD_MIN_WIDTH;
   const sheetHeight = Math.floor(availableHeight);
-  const sheetWidth = Math.floor(spread ? Math.min(availableWidth / 2, sheetHeight * SHEET_RATIO) : availableWidth);
-  const padX = Math.round(Math.min(56, Math.max(20, sheetWidth * 0.08)));
-  const headerHeight = Math.round(textSize * 2.6);
-  const contentTop = Math.round(textSize * 0.9);
-  const footerHeight = Math.round(textSize * 2.4);
+  const sheetWidth = Math.floor(
+    spread ? Math.min((availableWidth - SIDE_NAV * 2) / 2, sheetHeight * SHEET_RATIO, textSize * SHEET_MAX_EMS) : availableWidth
+  );
+  const padX = Math.round(Math.min(spread ? 44 : 56, Math.max(20, sheetWidth * (spread ? 0.07 : 0.08))));
+  // Spreads keep the running header and page number slimmer, leaving more of the page for content.
+  const headerHeight = Math.round(textSize * (spread ? 2.1 : 2.6));
+  const contentTop = Math.round(textSize * (spread ? 0.7 : 0.9));
+  const footerHeight = Math.round(textSize * (spread ? 1.9 : 2.4));
   const contentWidth = sheetWidth - padX * 2;
   const contentHeight = sheetHeight - headerHeight - contentTop - footerHeight;
   return {
@@ -101,6 +123,8 @@ export function BookReader({
   resultsNote,
   initialPageId,
   onPageChange,
+  barStart,
+  barEnd,
 }: {
   pages: BookPageData[];
   media: ResolvedMedia;
@@ -117,6 +141,9 @@ export function BookReader({
   initialPageId?: string | null;
   // Called with the authored page's id whenever the reader moves to another authored page.
   onPageChange?: (pageId: string) => void;
+  // Extra items at the ends of the reader bar on laptops and desktops (e.g. the logo, Help, Log out).
+  barStart?: ReactNode;
+  barEnd?: ReactNode;
 }) {
   const stageRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
@@ -173,11 +200,26 @@ export function BookReader({
   // A new identity whenever everything must be measured again.
   const layoutId = useMemo(() => ({}), [geometry, textSize, fontsReady, pages, media]);
   const current = counts && counts.id === layoutId ? counts : null;
-  const fitting = textSize === DEFAULT_TEXT_SIZE;
   const fitList = fits && fits.id === layoutId ? fits.list : null;
-  const sizeFor = useCallback(
-    (index: number) => (fitting ? (fitList?.[index]?.size ?? textSize) : textSize),
-    [fitting, fitList, textSize]
+  const fitFloor = Math.max(FIT_MIN_SIZE, textSize - FIT_STEPS);
+  const sizeFor = useCallback((index: number) => fitList?.[index]?.size ?? textSize, [fitList, textSize]);
+  // Smaller picture limits once a page's text is as small as fitting allows (the last step before it
+  // continues on the next page): content pictures, and a question's own and answer pictures.
+  const capFor = useCallback(
+    (index: number): number | null => {
+      const small = Boolean(fitList?.[index]?.smallPictures && geometry);
+      if (pages[index]?.question) {
+        const cap = pictureCaps[index] ?? null;
+        return small && geometry ? Math.min(cap ?? Infinity, Math.round(geometry.contentHeight * QUESTION_PICTURE_LAST)) : cap;
+      }
+      return small && geometry ? Math.round(geometry.contentHeight * CONTENT_PICTURE_FIT) : null;
+    },
+    [pages, pictureCaps, fitList, geometry]
+  );
+  const optionCapFor = useCallback(
+    (index: number): number | null =>
+      fitList?.[index]?.smallPictures && pages[index]?.question && geometry ? Math.round(geometry.contentHeight * OPTION_PICTURE_LAST) : null,
+    [pages, fitList, geometry]
   );
   const countsRef = useRef(counts);
   countsRef.current = counts;
@@ -215,9 +257,9 @@ export function BookReader({
   useLayoutEffect(() => {
     const layer = measureRef.current;
     if (!layer || !geometry || batch.length === 0) return;
-    // Question pictures get the height the rest of the question leaves (80px up to the usual 60%).
-    // When fitting, that's the tallest state (wrong answer checked, explanation showing), down to half
-    // the usual size; otherwise the checked state without the explanation, else while answering.
+    // Question pictures get the height the rest of the question leaves (80px up to the usual 60%) in its
+    // tallest state (wrong answer checked, explanation showing), down to half the usual size. A question
+    // that can't fit even then keeps the checked state without the explanation, else while answering.
     const caps = [...pictureCaps];
     for (const index of batch) {
       const page = pages[index];
@@ -231,8 +273,8 @@ export function BookReader({
       };
       // Types without a sample wrong answer keep one extra line for their "Your answer" label.
       const labelReserve = measuresWrongAnswer(page) ? 0 : Math.ceil(size * 1.4);
-      if (fitting && !fitList?.[index]?.gaveUp) {
-        const half = Math.max(QUESTION_PICTURE_MIN, Math.round(share / 2));
+      if (!fitList?.[index]?.gaveUp) {
+        const half = Math.max(QUESTION_PICTURE_MIN, Math.round(share * QUESTION_PICTURE_FIT));
         const room = roomFor("full", labelReserve);
         caps[index] = room >= half ? Math.min(share, room) : half;
         continue;
@@ -253,8 +295,9 @@ export function BookReader({
     const partsOf = (element: HTMLElement) =>
       Math.max(1, Math.round((element.scrollWidth + geometry.columnGap) / (geometry.contentWidth + geometry.columnGap)));
 
-    // Fitting: one page at 16px, else 15, else 14; if even 14 spills, back to 16 and let it continue.
-    if (fitting) {
+    // Fitting, e.g. at 18px: one page at 18, else 17, else 16 (then smaller content pictures); if it
+    // still spills, back to 18 with the usual pictures, and it continues on the next page.
+    {
       const list = [...(fitList ?? [])];
       let resized = false;
       for (const index of batch) {
@@ -264,12 +307,17 @@ export function BookReader({
           layer.querySelector<HTMLElement>(`[data-fit-index="${index}"]`) ?? layer.querySelector<HTMLElement>(`[data-page-index="${index}"]`);
         if (!probe) continue;
         const size = fit?.size ?? textSize;
-        if (partsOf(probe) <= 1) list[index] = { size, gaveUp: false, final: true };
-        else if (size > FIT_MIN_SIZE) {
-          list[index] = { size: size - 1, gaveUp: false, final: false };
+        const smallPictures = fit?.smallPictures ?? false;
+        const page = pages[index];
+        if (partsOf(probe) <= 1) list[index] = { size, smallPictures, gaveUp: false, final: true };
+        else if (size > fitFloor) {
+          list[index] = { size: size - 1, smallPictures, gaveUp: false, final: false };
+          resized = true;
+        } else if (!smallPictures && page && pageMediaIds(page).length > 0) {
+          list[index] = { size, smallPictures: true, gaveUp: false, final: false };
           resized = true;
         } else {
-          list[index] = { size: textSize, gaveUp: true, final: true };
+          list[index] = { size: textSize, smallPictures: false, gaveUp: true, final: true };
           resized = true;
         }
       }
@@ -301,12 +349,12 @@ export function BookReader({
     }
     const timer = window.setTimeout(() => setBatch(next), 0);
     return () => window.clearTimeout(timer);
-  }, [geometry, batch, pictureCaps, pages, textSize, layoutId, nextBatch, fitting, fitList, sizeFor]);
+  }, [geometry, batch, pictureCaps, pages, textSize, layoutId, nextBatch, fitList, fitFloor, sizeFor]);
 
   // Short books are re-measured before anything is painted, so their numbers are never estimates.
   const counted = Boolean(counts) && (pages.length <= MEASURE_BATCH || Boolean(current?.fresh.every(Boolean)));
   // Reported to the editors only once every page is fitted too.
-  const complete = counted && (!fitting || pages.every((_, index) => fitList?.[index]?.final));
+  const complete = counted && pages.every((_, index) => fitList?.[index]?.final);
   // Short books keep every page in the measuring layer, as they always have; long ones only the batch.
   const measuring = useMemo(
     () => (pages.length <= MEASURE_BATCH ? pages.map((_, index) => index) : batch),
@@ -417,6 +465,7 @@ export function BookReader({
   const shortStatus = status.replace(/^Pages? /, "");
   // Sized from the reader's own width (not the screen), so previews match real devices.
   const compact = (stageSize?.width ?? COMPACT_BELOW) < COMPACT_BELOW;
+  const wide = (stageSize?.width ?? 0) >= SPREAD_MIN_WIDTH;
 
   const sheetStyle = geometry
     ? ({
@@ -427,6 +476,15 @@ export function BookReader({
         "--book-picture-max": `${Math.max(120, Math.round(geometry.contentHeight * PICTURE_SHARE))}px`,
         // The usual limit before any per-page fitting; tap pictures never shrink below it on small pages.
         "--book-picture-share": `${Math.max(120, Math.round(geometry.contentHeight * PICTURE_SHARE))}px`,
+        // Laptops and desktops (mouse or trackpad): answers and question buttons are 48px high, not 56.
+        ...(geometry.spread
+          ? {
+              "--book-option-picture-max": `${Math.round(geometry.contentHeight * OPTION_PICTURE_SHARE)}px`,
+              "--answer-min-h": "48px",
+              "--answer-min-em": "3em",
+              "--tap-picture-min": "200px",
+            }
+          : {}),
       } as CSSProperties)
     : undefined;
 
@@ -442,6 +500,11 @@ export function BookReader({
           textSize={textSize}
           onTextSizeChange={onTextSizeChange}
           hasQuestions={results.length > 0}
+          dense={wide}
+          narrow={(stageSize?.width ?? 0) < ROOMY_BAR}
+          status={wide ? status : undefined}
+          start={wide ? barStart : undefined}
+          end={wide ? barEnd : undefined}
         />
       )}
       <div ref={stageRef} className="relative min-h-0 flex-1 overflow-hidden">
@@ -492,7 +555,7 @@ export function BookReader({
               {measuring.map((index) => {
                 const page = pages[index];
                 if (!page) return null;
-                const probe = fitting && page.question && !fitList?.[index]?.final;
+                const probe = page.question && !fitList?.[index]?.final;
                 return [
                   <FlowColumns
                     key={page.id}
@@ -501,7 +564,8 @@ export function BookReader({
                     media={media}
                     geometry={geometry}
                     questions={questions}
-                    pictureCap={pictureCaps[index] ?? null}
+                    pictureCap={capFor(index)}
+                    optionCap={optionCapFor(index)}
                     fontSize={sizeFor(index)}
                     baseSize={textSize}
                   />,
@@ -514,7 +578,8 @@ export function BookReader({
                       media={media}
                       geometry={geometry}
                       questions={questions}
-                      pictureCap={pictureCaps[index] ?? null}
+                      pictureCap={capFor(index)}
+                      optionCap={optionCapFor(index)}
                       fontSize={sizeFor(index)}
                       baseSize={textSize}
                       stateOverride={checkedWrong(page)}
@@ -535,7 +600,7 @@ export function BookReader({
                   const page = pages[index];
                   if (!page?.question) return null;
                   const size = sizeFor(index);
-                  const states = fitting && !fitList?.[index]?.gaveUp ? (["answering", "checked", "full"] as const) : (["answering", "checked"] as const);
+                  const states = !fitList?.[index]?.gaveUp ? (["answering", "checked", "full"] as const) : (["answering", "checked"] as const);
                   return states.map((state) => (
                     <div
                       key={`${page.id}-${state}`}
@@ -558,7 +623,8 @@ export function BookReader({
             )}
 
             {partCounts && (
-              <div className="flex h-full items-center justify-center" style={{ padding: STAGE_PADDING }}>
+              <div className="flex h-full items-center justify-center gap-4" style={{ padding: geometry.spread ? SPREAD_PADDING : STAGE_PADDING }}>
+                {geometry.spread && <SideButton direction="previous" disabled={!canGoBack} onClick={previous} />}
                 <div className={`flex ${geometry.spread ? "shadow-xl" : "shadow-md"}`}>
                   {visible.map((sheet, index) => (
                     <SheetView
@@ -568,7 +634,8 @@ export function BookReader({
                       media={media}
                       geometry={geometry}
                       questions={questions}
-                      pictureCaps={pictureCaps}
+                      pictureCap={sheet.kind === "page" ? capFor(sheet.pageIndex) : null}
+                      optionCap={sheet.kind === "page" ? optionCapFor(sheet.pageIndex) : null}
                       pageSize={sheet.kind === "page" ? sizeFor(sheet.pageIndex) : textSize}
                       textSize={textSize}
                       style={sheetStyle}
@@ -577,26 +644,54 @@ export function BookReader({
                   ))}
                   {geometry.spread && visible.length === 1 && <div aria-hidden="true" style={{ width: geometry.sheetWidth }} />}
                 </div>
+                {geometry.spread && <SideButton direction="next" disabled={!canGoForward} onClick={next} />}
               </div>
             )}
           </>
         )}
       </div>
 
-      <nav
-        aria-label="Page controls"
-        className={`flex items-center justify-between gap-3 border-t border-slate-300 bg-white py-3 ${compact ? "px-3" : "px-6"}`}
-      >
-        <PageButton direction="previous" compact={compact} disabled={!canGoBack} onClick={previous} />
-        <p className="min-w-0 whitespace-nowrap text-center text-lg font-medium text-ink">
-          <span aria-hidden="true">{compact ? shortStatus : status}</span>
-          <span className="sr-only" aria-live="polite">
-            {status}
-          </span>
+      {wide ? (
+        // Laptops and desktops: Previous/Next sit beside the pages and the page status is in the bar.
+        <p className="sr-only" aria-live="polite">
+          {status}
         </p>
-        <PageButton direction="next" compact={compact} disabled={!canGoForward} onClick={next} />
-      </nav>
+      ) : (
+        <nav
+          aria-label="Page controls"
+          className={`flex items-center justify-between gap-3 border-t border-slate-300 bg-white py-3 ${compact ? "px-3" : "px-6"}`}
+        >
+          <PageButton direction="previous" compact={compact} disabled={!canGoBack} onClick={previous} />
+          <p className="min-w-0 whitespace-nowrap text-center text-lg font-medium text-ink">
+            <span aria-hidden="true">{compact ? shortStatus : status}</span>
+            <span className="sr-only" aria-live="polite">
+              {status}
+            </span>
+          </p>
+          <PageButton direction="next" compact={compact} disabled={!canGoForward} onClick={next} />
+        </nav>
+      )}
     </section>
+  );
+}
+
+// Laptops and desktops: a tall Previous/Next button beside the spread.
+function SideButton({ direction, disabled, onClick }: { direction: "previous" | "next"; disabled: boolean; onClick: () => void }) {
+  const isNext = direction === "next";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`flex h-36 w-[72px] shrink-0 flex-col items-center justify-center gap-1 rounded-xl text-sm font-semibold transition-colors focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-40 ${
+        isNext ? "bg-primary text-white hover:bg-primary/90" : "border-2 border-ink/25 bg-white text-ink hover:bg-slate-50"
+      }`}
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true" className="size-8" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d={isNext ? "M9 5l7 7-7 7" : "M15 5l-7 7 7 7"} />
+      </svg>
+      {isNext ? "Next" : "Previous"}
+    </button>
   );
 }
 
@@ -642,6 +737,7 @@ function FlowColumns({
   geometry,
   questions,
   pictureCap = null,
+  optionCap = null,
   offset = 0,
   pageIndex,
   fitIndex,
@@ -660,12 +756,15 @@ function FlowColumns({
   geometry: Geometry;
   questions: QuestionBinding;
   pictureCap?: number | null;
+  optionCap?: number | null;
   offset?: number;
 }) {
   const key = questionKey(page);
-  const questionStyle = page.question
-    ? ({ position: "relative", ...(pictureCap ? { "--book-picture-max": `${pictureCap}px` } : {}) } as CSSProperties)
-    : undefined;
+  const pageStyle = {
+    ...(page.question ? { position: "relative" } : {}),
+    ...(pictureCap ? { "--book-picture-max": `${pictureCap}px` } : {}),
+    ...(optionCap ? { "--book-option-picture-max": `${optionCap}px` } : {}),
+  } as CSSProperties;
   return (
     <div
       className="leading-[1.6]"
@@ -679,7 +778,7 @@ function FlowColumns({
         columnGap: geometry.columnGap,
         columnFill: "auto",
         transform: offset ? `translateX(-${offset * (geometry.contentWidth + geometry.columnGap)}px)` : undefined,
-        ...questionStyle,
+        ...pageStyle,
       }}
     >
       {page.question ? (
@@ -703,7 +802,8 @@ function SheetView({
   media,
   geometry,
   questions,
-  pictureCaps,
+  pictureCap,
+  optionCap,
   pageSize,
   textSize,
   style,
@@ -714,7 +814,8 @@ function SheetView({
   media: ResolvedMedia;
   geometry: Geometry;
   questions: QuestionBinding;
-  pictureCaps: (number | null)[];
+  pictureCap: number | null;
+  optionCap: number | null;
   pageSize: number;
   textSize: number;
   style?: CSSProperties;
@@ -790,7 +891,8 @@ function SheetView({
           media={media}
           geometry={geometry}
           questions={questions}
-          pictureCap={pictureCaps[sheet.pageIndex] ?? null}
+          pictureCap={pictureCap}
+          optionCap={optionCap}
           offset={sheet.part}
           fontSize={pageSize}
           baseSize={textSize}
@@ -837,7 +939,7 @@ export type LayoutInfo = {
   tooLong: boolean[];
 };
 
-type Fit = { size: number; gaveUp: boolean; final: boolean };
+type Fit = { size: number; smallPictures: boolean; gaveUp: boolean; final: boolean };
 
 type Counts = { id: object; values: (number | null)[]; fresh: boolean[] };
 

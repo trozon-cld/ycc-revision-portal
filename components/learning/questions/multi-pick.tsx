@@ -54,7 +54,7 @@ export function MultiPickAnswer({ mode, seed, content, answer, response, onRespo
                 type="button"
                 onClick={() => toggle(option.id)}
                 disabled={locked}
-                className="flex min-h-[max(56px,3.5em)] items-center gap-[0.5em] rounded-lg border-2 border-primary bg-primary/[0.06] px-[0.7em] py-[0.4em] text-left text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-default"
+                className="flex min-h-[max(var(--answer-min-h,56px),var(--answer-min-em,3.5em))] items-center gap-[0.5em] rounded-lg border-2 border-primary bg-primary/[0.06] px-[0.7em] py-[0.4em] text-left text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-default"
               >
                 <span aria-hidden="true" className="grid size-[1.8em] shrink-0 place-items-center rounded-md bg-primary text-[0.85em] font-bold text-white">
                   {letterOf(option.id)}
@@ -67,7 +67,7 @@ export function MultiPickAnswer({ mode, seed, content, answer, response, onRespo
             ) : (
               <div
                 key={slot}
-                className="flex min-h-[max(56px,3.5em)] items-center justify-center rounded-lg border-2 border-dashed border-slate-400 px-[0.7em] text-slate-700"
+                className="flex min-h-[max(var(--answer-min-h,56px),var(--answer-min-em,3.5em))] items-center justify-center rounded-lg border-2 border-dashed border-slate-400 px-[0.7em] text-slate-700"
               >
                 Answer {slot + 1}
               </div>
@@ -93,7 +93,7 @@ export function MultiPickAnswer({ mode, seed, content, answer, response, onRespo
               <label
                 htmlFor={inputId}
                 data-option={option.id}
-                className={`relative flex min-h-[max(56px,3.5em)] items-center gap-[0.75em] rounded-lg border-2 px-[0.9em] py-[0.55em] leading-snug text-ink has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary ${tone} ${
+                className={`relative flex min-h-[max(var(--answer-min-h,56px),var(--answer-min-em,3.5em))] items-center gap-[0.75em] rounded-lg border-2 px-[0.9em] py-[0.55em] leading-snug text-ink has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary ${tone} ${
                   locked ? "cursor-default" : "cursor-pointer hover:border-primary"
                 }`}
               >

@@ -1,5 +1,8 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { LogoutButton } from "@/components/logout-button";
 
 const NAV_BUTTON =
@@ -8,24 +11,49 @@ const NAV_BUTTON =
 // Placeholder until the real logo file is added to public/; change src, width and height here.
 const LOGO = { src: "/ycc-logo-placeholder.svg", width: 120, height: 48 };
 
-// Candidate pages only: logo, Help and Log out, large and simple.
-export function CandidateHeader() {
+// Pages whose content puts these items in its own bar on laptops and desktops (the Handbook).
+const OWN_BAR_PATHS = ["/dashboard/prepare"];
+
+export function HomeLogo({ showName = true }: { showName?: boolean }) {
   return (
-    <header className="h-(--candidate-header) shrink-0 border-b border-ink/15 bg-white">
-      <div className="mx-auto flex h-full w-full max-w-5xl items-center justify-between gap-3 px-4">
-        <Link
-          href="/dashboard"
-          className="flex min-h-12 items-center gap-2 rounded-lg text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary"
-        >
-          <Image src={LOGO.src} width={LOGO.width} height={LOGO.height} alt="YCC" unoptimized className="h-10 w-auto" />
+    <Link
+      href="/dashboard"
+      className="flex min-h-12 items-center gap-2 rounded-lg text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary"
+    >
+      <Image src={LOGO.src} width={LOGO.width} height={LOGO.height} alt="YCC" unoptimized className="h-10 w-auto" />
+      {showName ? (
+        <>
           <span className="hidden text-lg font-semibold min-[420px]:inline">Revision Portal</span>
           <span className="sr-only min-[420px]:hidden">Revision Portal, home</span>
-        </Link>
+        </>
+      ) : (
+        <span className="sr-only">Revision Portal, home</span>
+      )}
+    </Link>
+  );
+}
+
+export function AccountLinks({ buttonClass = NAV_BUTTON }: { buttonClass?: string }) {
+  return (
+    <>
+      <Link href="/dashboard/help" className={buttonClass}>
+        Help
+      </Link>
+      <LogoutButton className={buttonClass} />
+    </>
+  );
+}
+
+// Candidate pages: logo, Help and Log out, large and simple.
+export function CandidateHeader() {
+  const pathname = usePathname();
+  const ownBar = OWN_BAR_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+  return (
+    <header className={`h-(--candidate-header) shrink-0 border-b border-ink/15 bg-white ${ownBar ? "lg:hidden" : ""}`}>
+      <div className="mx-auto flex h-full w-full max-w-5xl items-center justify-between gap-3 px-4">
+        <HomeLogo />
         <nav aria-label="Account" className="flex items-center gap-2">
-          <Link href="/dashboard/help" className={NAV_BUTTON}>
-            Help
-          </Link>
-          <LogoutButton className={NAV_BUTTON} />
+          <AccountLinks />
         </nav>
       </div>
     </header>

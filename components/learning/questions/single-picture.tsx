@@ -56,7 +56,7 @@ export function SinglePictureAnswer({ mode, seed, content, media, answer, respon
               />
               {/* Screen readers hear: "A: picture description, label, result". */}
               <span className="sr-only">{optionLetter(index)}: </span>
-              <span className="relative block aspect-[4/3] w-full overflow-hidden rounded-md bg-slate-100">
+              <span className="relative block aspect-[4/3] max-h-(--book-option-picture-max) w-full overflow-hidden rounded-md bg-slate-100">
                 {picture ? (
                   // eslint-disable-next-line @next/next/no-img-element -- short-lived signed link; files are pre-shrunk WebP
                   <img src={picture.src} alt={picture.alt} loading="lazy" decoding="async" className="absolute inset-0 size-full object-contain" />
