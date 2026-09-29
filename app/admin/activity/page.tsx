@@ -390,6 +390,10 @@ function describeDetails(details: Record<string, string>): string | null {
     parts.push(`Chapters +${details.added ?? 0} −${details.removed ?? 0} (${details.total} in total)`);
   }
   if (details.category) parts.push(`Category: ${details.category}`);
+  if (details.categories) parts.push(`Categories: ${details.categories}`);
+  if (details.addedCategories) parts.push(`Added: ${details.addedCategories}`);
+  if (details.removedCategories) parts.push(`Removed: ${details.removedCategories}`);
+  if (details.categoryTotal !== undefined) parts.push(`In ${details.categoryTotal} categor${details.categoryTotal === "1" ? "y" : "ies"}`);
   if (details.accessUntil) parts.push(`Access until ${details.accessUntil}`);
   return parts.length > 0 ? parts.join(" · ") : null;
 }

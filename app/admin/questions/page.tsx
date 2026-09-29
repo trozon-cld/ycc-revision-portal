@@ -6,6 +6,7 @@ import { countQuestions, listBankQuestions, listChapterOptions, type BankFilters
 import { availableQuestionTypes, QUESTION_TYPES } from "@/lib/questions/registry";
 import { isQuestionType, QUESTION_TYPE_KEYS } from "@/lib/questions/types";
 import { isUuid } from "@/lib/questions/validate";
+import { loadCategoryGroups } from "@/lib/handbook/categories";
 import { Badge } from "@/components/admin/badge";
 import { FilterBar, FilterSearch, FilterSelect } from "@/components/admin/filter-bar";
 import { PageHeader } from "@/components/admin/page-header";
@@ -23,22 +24,27 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
     search: (one(params.q) ?? "").trim().slice(0, 100),
     sectionId: uuidOrNull(one(params.section)),
     chapterId: uuidOrNull(one(params.chapter)),
+    categoryId: uuidOrNull(one(params.category)),
     type: isQuestionType(typeParam) ? typeParam : null,
     status: statusParam === "draft" || statusParam === "published" ? statusParam : null,
     page: Math.max(1, Number.parseInt(one(params.page) ?? "1", 10) || 1),
   };
-  const isFiltered = Boolean(filters.search || filters.sectionId || filters.chapterId || filters.type || filters.status);
+  const isFiltered = Boolean(
+    filters.search || filters.sectionId || filters.chapterId || filters.categoryId || filters.type || filters.status
+  );
 
-  const [{ rows, hasMore }, total, sections] = await Promise.all([
+  const [{ rows, hasMore }, total, sections, categoryGroups] = await Promise.all([
     listBankQuestions(filters),
     countQuestions(),
     listChapterOptions(),
+    loadCategoryGroups(),
   ]);
 
   const query = {
     q: filters.search,
     section: filters.sectionId ?? "",
     chapter: filters.chapterId ?? "",
+    category: filters.categoryId ?? "",
     type: filters.type ?? "",
     status: filters.status ?? "",
   };
@@ -76,6 +82,20 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
                 {section.chapters.map((chapter) => (
                   <option key={chapter.id} value={chapter.id}>
                     {chapter.label}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+        </FilterSelect>
+        <FilterSelect name="category" label="Category" defaultValue={filters.categoryId ?? ""}>
+          <option value="">All categories</option>
+          {categoryGroups
+            .filter((group) => group.categories.length > 0)
+            .map((group) => (
+              <optgroup key={group.id} label={group.label}>
+                {group.categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
                   </option>
                 ))}
               </optgroup>

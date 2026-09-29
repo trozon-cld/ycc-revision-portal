@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
 import { pool } from "@/lib/db/pool";
 import { getChapterContext } from "@/lib/content/pages";
+import { listNames, loadCategoryGroups, loadChapterCategoryIds } from "@/lib/handbook/categories";
 import { questionLogLabel } from "@/lib/questions/labels";
 import { questionTypeLabel } from "@/lib/questions/registry";
 import type { QuestionType } from "@/lib/questions/types";
@@ -10,6 +11,7 @@ import { PageHeader } from "@/components/admin/page-header";
 import { buttonClass } from "@/components/admin/styles";
 import { AddQuestionsButton, ChapterOrder, type AddableQuestion, type OrderItem } from "./chapter-order";
 import { NewPageButton } from "./page-row-actions";
+import { ChapterCategoriesButton } from "../../chapter-row-actions";
 
 interface ItemRow {
   id: string;
@@ -40,7 +42,7 @@ export default async function ChapterPagesPage({ params }: PageProps<"/admin/han
   const chapter = await getChapterContext(chapterId);
   if (!chapter) notFound();
 
-  const [{ rows }, { rows: unplaced }] = await Promise.all([
+  const [{ rows }, { rows: unplaced }, categoryGroups, links] = await Promise.all([
     pool.query<ItemRow>(
       `select i.id, i.position,
               p.id as page_id, p.title as page_title, p.status as page_status,
@@ -62,7 +64,11 @@ export default async function ChapterPagesPage({ params }: PageProps<"/admin/han
        order by q.ref_no`,
       [chapter.id]
     ),
+    loadCategoryGroups(),
+    loadChapterCategoryIds([chapter.id]),
   ]);
+  const categoryIds = links.get(chapter.id) ?? [];
+  const categoryNames = categoryGroups.flatMap((group) => group.categories).filter((category) => categoryIds.includes(category.id)).map((category) => category.name);
 
   const items: OrderItem[] = rows.map((row) =>
     row.page_id
@@ -120,11 +126,22 @@ export default async function ChapterPagesPage({ params }: PageProps<"/admin/han
             <Link href={`/admin/handbook/preview?chapter=${chapter.id}`} className={buttonClass("secondary")}>
               Preview chapter
             </Link>
+            <ChapterCategoriesButton chapterId={chapter.id} groups={categoryGroups} initialSelected={categoryIds} />
             <AddQuestionsButton chapterId={chapter.id} questions={addable} />
             <NewPageButton chapterId={chapter.id} />
           </div>
         }
       />
+
+      {categoryNames.length > 0 ? (
+        <p className="mb-3 text-sm text-slate-700 [overflow-wrap:anywhere]">
+          <span className="font-medium text-ink">In categories:</span> {listNames(categoryNames, 12)}
+        </p>
+      ) : (
+        <p className="mb-3 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-600/25">
+          Not in any category yet. Candidates won&apos;t see this chapter until it&apos;s added to one with Categories.
+        </p>
+      )}
 
       {drafts > 0 && (
         <p className="mb-3 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-600/25">

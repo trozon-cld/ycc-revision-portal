@@ -12,6 +12,8 @@ export type BankFilters = {
   search: string;
   sectionId: string | null;
   chapterId: string | null;
+  // Questions whose chapter this category includes.
+  categoryId: string | null;
   type: QuestionType | null;
   status: QuestionStatus | null;
   page: number;
@@ -65,6 +67,7 @@ export async function listBankQuestions(filters: BankFilters): Promise<{ rows: B
        and ($3::text is null or q.type = $3)
        and ($4::content_status is null or q.status = $4)
        and ($5 = '' or q.stem_text ilike '%' || $5 || '%' escape '\\' or q.ref_no = $6::int)
+       and ($9::uuid is null or exists (select 1 from category_chapters cc where cc.category_id = $9 and cc.chapter_id = q.chapter_id))
      order by n.section_position, n.position, q.ref_no
      limit $7 offset $8`,
     [
@@ -76,6 +79,7 @@ export async function listBankQuestions(filters: BankFilters): Promise<{ rows: B
       refNo,
       BANK_PAGE_SIZE + 1,
       (filters.page - 1) * BANK_PAGE_SIZE,
+      filters.categoryId,
     ]
   );
 
