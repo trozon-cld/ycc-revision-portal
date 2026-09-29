@@ -1,6 +1,18 @@
 "use client";
 
-import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent,
+  type PointerEvent,
+  type ReactNode,
+} from "react";
 import Link from "next/link";
 import { buildSheets, type BookPageData, type ResolvedMedia, type Sheet, type TextSize } from "@/lib/content/book";
 import type { BookCovers } from "@/lib/content/covers";
@@ -44,7 +56,8 @@ function questionKey(page: BookPageData): string {
 }
 
 // Fixed-size book sheets. Each authored page is laid out in CSS columns one sheet wide; extra
-// columns become extra sheets. Spread (two sheets) when the reader is at least 1024px wide.
+// columns become extra sheets. Spread (two sheets) when the reader is at least 1024px wide; on touch
+// screens (tablets) only in landscape and when each page has room for TOUCH_SPREAD_MIN_EMS.
 
 const SPREAD_MIN_WIDTH = 1024;
 const SHEET_RATIO = 0.95; // widest a sheet in a spread may be, as width / height
@@ -65,6 +78,12 @@ const FIT_STEPS = 2;
 const CONTENT_PICTURE_FIT = 0.4;
 // Spreads (laptops, desktops) have Previous/Next beside the pages; this is the room each side takes.
 const SIDE_NAV = 88;
+const TOUCH_SPREAD_MIN_EMS = 26;
+// A horizontal swipe of at least this many px (and mostly sideways, fairly quick) turns the page.
+const SWIPE_MIN = 50;
+const SWIPE_MAX_MS = 800;
+// Below this width (tablets held upright) the bar's words sit under the icons, so it fits.
+const STACKED_BAR_BELOW = 820;
 // This browser's choice of button labels on or off (a small display preference, not saved to the account).
 const LABELS_KEY = "ycc-reader-labels";
 const SPREAD_PADDING = 8;
@@ -95,6 +114,9 @@ type Turn = { id: number; direction: "forward" | "back"; from: Sheet[]; to: Shee
 
 type Geometry = {
   spread: boolean;
+  // Reader at least 1024px wide: Previous/Next beside the pages, slimmer running header.
+  wide: boolean;
+  touch: boolean;
   sheetWidth: number;
   sheetHeight: number;
   padX: number;
@@ -106,26 +128,35 @@ type Geometry = {
   columnGap: number;
 };
 
-function computeGeometry(width: number, height: number, textSize: TextSize): Geometry | null {
-  const spread = width >= SPREAD_MIN_WIDTH;
-  const padding = spread ? SPREAD_PADDING : STAGE_PADDING;
+// With a mouse or trackpad (`touch` false) this is exactly the laptop and desktop layout.
+function computeGeometry(width: number, height: number, textSize: TextSize, touch: boolean): Geometry | null {
+  const wide = width >= SPREAD_MIN_WIDTH;
+  const padding = wide ? SPREAD_PADDING : STAGE_PADDING;
   const availableWidth = width - padding * 2;
   const availableHeight = height - padding * 2;
   if (availableWidth < 200 || availableHeight < 200) return null;
 
   const sheetHeight = Math.floor(availableHeight);
+  const pairWidth = (availableWidth - SIDE_NAV * 2) / 2;
+  const spread = wide && (!touch || (width > height && pairWidth >= textSize * TOUCH_SPREAD_MIN_EMS));
   const sheetWidth = Math.floor(
-    spread ? Math.min((availableWidth - SIDE_NAV * 2) / 2, sheetHeight * SHEET_RATIO, textSize * SHEET_MAX_EMS) : availableWidth
+    spread
+      ? Math.min(pairWidth, sheetHeight * SHEET_RATIO, textSize * SHEET_MAX_EMS)
+      : wide
+        ? Math.min(availableWidth - SIDE_NAV * 2, textSize * SHEET_MAX_EMS)
+        : availableWidth
   );
-  const padX = Math.round(Math.min(spread ? 44 : 56, Math.max(20, sheetWidth * (spread ? 0.07 : 0.08))));
-  // Spreads keep the running header and page number slimmer, leaving more of the page for content.
-  const headerHeight = Math.round(textSize * (spread ? 2.1 : 2.6));
-  const contentTop = Math.round(textSize * (spread ? 0.7 : 0.9));
-  const footerHeight = Math.round(textSize * (spread ? 1.9 : 2.4));
+  const padX = Math.round(Math.min(wide ? 44 : 56, Math.max(20, sheetWidth * (wide ? 0.07 : 0.08))));
+  // Wide readers keep the running header and page number slimmer, leaving more of the page for content.
+  const headerHeight = Math.round(textSize * (wide ? 2.1 : 2.6));
+  const contentTop = Math.round(textSize * (wide ? 0.7 : 0.9));
+  const footerHeight = Math.round(textSize * (wide ? 1.9 : 2.4));
   const contentWidth = sheetWidth - padX * 2;
   const contentHeight = sheetHeight - headerHeight - contentTop - footerHeight;
   return {
     spread,
+    wide,
+    touch,
     sheetWidth,
     sheetHeight,
     padX,
@@ -197,7 +228,12 @@ export function BookReader({
   const [pageTurn, setPageTurn] = useState(true);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [turn, setTurn] = useState<Turn | null>(null);
+  // Touch screens (tablets, phones): swipe to turn, 56px answers, and two pages only when there's room.
+  // Read after the first render, so the server's HTML and the browser's first render match.
+  const [touch, setTouch] = useState(false);
   const turnCount = useRef(0);
+  const swipe = useRef<{ id: number; x: number; y: number; t: number } | null>(null);
+  const swipedAt = useRef(-Infinity);
   useEffect(() => {
     try {
       if (window.localStorage.getItem(LABELS_KEY) === "off") setShowLabels(false);
@@ -206,10 +242,18 @@ export function BookReader({
       // Storage can be blocked (private windows); the defaults simply stay.
     }
     const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const update = () => setReducedMotion(query.matches);
+    const coarse = window.matchMedia("(pointer: coarse)");
+    const update = () => {
+      setReducedMotion(query.matches);
+      setTouch(coarse.matches);
+    };
     update();
     query.addEventListener("change", update);
-    return () => query.removeEventListener("change", update);
+    coarse.addEventListener("change", update);
+    return () => {
+      query.removeEventListener("change", update);
+      coarse.removeEventListener("change", update);
+    };
   }, []);
   const togglePageTurn = useCallback(() => {
     setPageTurn((current) => {
@@ -261,8 +305,8 @@ export function BookReader({
   }, []);
 
   const geometry = useMemo(
-    () => (stageSize ? computeGeometry(stageSize.width, stageSize.height, textSize) : null),
-    [stageSize, textSize]
+    () => (stageSize ? computeGeometry(stageSize.width, stageSize.height, textSize, touch) : null),
+    [stageSize, textSize, touch]
   );
 
   // A new identity whenever everything must be measured again.
@@ -578,16 +622,31 @@ export function BookReader({
         // The usual limit before any per-page fitting; tap pictures never shrink below it on small pages.
         "--book-picture-share": `${Math.max(120, Math.round(geometry.contentHeight * PICTURE_SHARE))}px`,
         // Laptops and desktops (mouse or trackpad): answers and question buttons are 48px high, not 56.
-        ...(geometry.spread
+        // Touch screens keep the full-size answers and tap pictures in a spread too. Wide single pages
+        // (tablets in landscape) cap answer pictures like a spread; with a mouse, wide always means spread.
+        ...(geometry.wide
           ? {
               "--book-option-picture-max": `${Math.round(geometry.contentHeight * OPTION_PICTURE_SHARE)}px`,
-              "--answer-min-h": "48px",
-              "--answer-min-em": "3em",
-              "--tap-picture-min": "200px",
+              ...(geometry.touch ? {} : { "--answer-min-h": "48px", "--answer-min-em": "3em", "--tap-picture-min": "200px" }),
             }
           : {}),
       } as CSSProperties)
     : undefined;
+
+  function endSwipe(event: PointerEvent<HTMLDivElement>, finished: boolean) {
+    if (event.pointerType === "mouse") return;
+    const start = swipe.current;
+    if (!start || start.id !== event.pointerId) return;
+    swipe.current = null;
+    const dx = event.clientX - start.x;
+    const dy = event.clientY - start.y;
+    // Pinch-zoomed in: sideways moves pan the page instead.
+    const zoomed = (window.visualViewport?.scale ?? 1) > 1.01;
+    if (!finished || zoomed || Math.abs(dx) < SWIPE_MIN || Math.abs(dx) < Math.abs(dy) * 1.5 || event.timeStamp - start.t > SWIPE_MAX_MS) return;
+    swipedAt.current = event.timeStamp;
+    if (dx < 0) next();
+    else previous();
+  }
 
   const turnHasNone = Boolean(turn && [...turn.from, ...turn.to].some((sheet) => sheet.kind === "none"));
 
@@ -705,12 +764,37 @@ export function BookReader({
           hasQuestions={results.length > 0}
           dense={wide}
           narrow={(stageSize?.width ?? 0) < ROOMY_BAR}
+          stacked={!wide && !compact && (stageSize?.width ?? 0) < STACKED_BAR_BELOW}
           status={wide ? status : undefined}
           start={wide ? barStart : undefined}
           end={wide ? barEnd : undefined}
         />
       )}
-      <div ref={stageRef} className="relative min-h-0 flex-1 overflow-hidden">
+      <div
+        ref={stageRef}
+        // Pictures aren't dragged out of the book, so a swipe that starts on one still turns the page.
+        className="relative min-h-0 flex-1 overflow-hidden [&_img]:[-webkit-user-drag:none]"
+        // Sideways swipes are the reader's; up/down scrolling and pinch zoom stay the browser's.
+        style={touch ? { touchAction: "pan-y pinch-zoom" } : undefined}
+        onPointerDown={(event) => {
+          if (event.pointerType === "mouse") return;
+          // A second finger (pinch zoom) is never the first pointer; it cancels the swipe.
+          const target = event.target as Element;
+          swipe.current =
+            event.isPrimary && !panel && !target.closest("[data-no-swipe], input, textarea")
+              ? { id: event.pointerId, x: event.clientX, y: event.clientY, t: event.timeStamp }
+              : null;
+        }}
+        onPointerUp={(event) => endSwipe(event, true)}
+        onPointerCancel={(event) => endSwipe(event, false)}
+        // A swipe that started on an answer mustn't also choose it.
+        onClickCapture={(event) => {
+          if (event.timeStamp - swipedAt.current < 500) {
+            event.preventDefault();
+            event.stopPropagation();
+          }
+        }}
+      >
         {tools && panel === "contents" && (
           <ContentsPanel
             pages={pages}
@@ -841,16 +925,16 @@ export function BookReader({
             )}
 
             {partCounts && (
-              <div className="flex h-full items-center justify-center gap-4" style={{ padding: geometry.spread ? SPREAD_PADDING : STAGE_PADDING }}>
-                {geometry.spread && <SideButton direction="previous" disabled={!canGoBack} onClick={previous} />}
-                <div className={`relative flex ${closedBook || turnHasNone ? "" : geometry.spread ? "shadow-xl" : "shadow-md"}`}>
+              <div className="flex h-full items-center justify-center gap-4" style={{ padding: geometry.wide ? SPREAD_PADDING : STAGE_PADDING }}>
+                {geometry.wide && <SideButton direction="previous" disabled={!canGoBack} onClick={previous} />}
+                <div className={`relative flex ${closedBook || turnHasNone ? "" : geometry.wide ? "shadow-xl" : "shadow-md"}`}>
                   {visible.map((sheet, index) =>
                     drawSheet(sheet, `${viewStart + index}`, geometry.spread ? (index === 0 ? "left" : "right") : "single")
                   )}
                   {geometry.spread && visible.length === 1 && <div aria-hidden="true" style={{ width: geometry.sheetWidth }} />}
                   {turn && drawTurn(turn, geometry)}
                 </div>
-                {geometry.spread && <SideButton direction="next" disabled={!canGoForward} onClick={next} />}
+                {geometry.wide && <SideButton direction="next" disabled={!canGoForward} onClick={next} />}
               </div>
             )}
           </>
@@ -1104,7 +1188,12 @@ function SheetView({
       <div className="relative" style={{ marginLeft: geometry.padX, marginTop: geometry.contentTop }}>
         <div
           ref={boxRef}
-          className={scroll ? "overflow-x-hidden overflow-y-auto overscroll-contain focus-visible:outline-3 focus-visible:outline-primary" : "overflow-hidden"}
+          // A scrolling box starts its own touch rules: sideways swipes stay the reader's here too.
+          className={
+            scroll
+              ? "touch-pan-y touch-pinch-zoom overflow-x-hidden overflow-y-auto overscroll-contain focus-visible:outline-3 focus-visible:outline-primary"
+              : "overflow-hidden"
+          }
           // Nothing may scroll a sheet sideways (e.g. find-in-page); that would show the wrong part.
           // Only a question too long for any page scrolls, and only downwards.
           onScroll={(event) => {

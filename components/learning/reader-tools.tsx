@@ -29,6 +29,7 @@ export function ReaderBar({
   hasQuestions,
   dense = false,
   narrow = false,
+  stacked = false,
   start,
   end,
   status,
@@ -45,6 +46,8 @@ export function ReaderBar({
   dense?: boolean;
   // Under 1280px wide: no Listen yet (a placeholder); in the dense bar also short labels.
   narrow?: boolean;
+  // Tablets held upright: with labels on, each word sits under its icon so the bar fits.
+  stacked?: boolean;
   start?: ReactNode;
   end?: ReactNode;
   // Dense bar only: "Pages 5–6 of 11", shown between the tools (read out by the reader itself).
@@ -73,24 +76,33 @@ export function ReaderBar({
       ? "h-14 min-w-12 flex-col gap-0 px-2 text-sm leading-tight"
       : "h-14 min-w-14 px-4 text-lg";
   // Smaller laptops with labels on: the word sits under the icon, so the page status keeps the middle.
-  const panelSize = dense && narrow && showLabels ? "h-12 min-w-14 flex-col gap-0 px-2 text-sm leading-tight [&_svg]:size-5" : size;
+  const panelSize =
+    dense && narrow && showLabels
+      ? "h-12 min-w-14 flex-col gap-0 px-2 text-sm leading-tight [&_svg]:size-5"
+      : stacked && showLabels
+        ? "h-14 min-w-14 flex-col gap-0 px-2.5 text-sm leading-tight"
+        : size;
   const toggle = (key: ReaderPanel) => onPanel(panel === key ? null : key);
-  const panelButton = (key: ReaderPanel, icon: string, label: string, short: string, always = false, iconOnly = false) => (
+  const panelButton = (key: ReaderPanel, icon: string, label: string, short: string, always = false) => (
     <button
       ref={refs[key]}
       type="button"
       aria-pressed={panel === key}
       disabled={!ready && !always}
       onClick={() => toggle(key)}
-      title={showLabels && !iconOnly ? undefined : label}
-      className={`${barButton} ${iconOnly ? size : panelSize}`}
+      title={showLabels ? undefined : label}
+      className={`${barButton} ${panelSize}`}
     >
       <Icon path={icon} />
-      {tiny || !showLabels || iconOnly ? <span className="sr-only">{label}</span> : dense && narrow && short !== label ? (
-        <>
-          <span aria-hidden="true">{short}</span>
-          <span className="sr-only">{label}</span>
-        </>
+      {tiny || !showLabels ? <span className="sr-only">{label}</span> : (dense && narrow) || stacked ? (
+        short !== label ? (
+          <>
+            <span aria-hidden="true">{short}</span>
+            <span className="sr-only">{label}</span>
+          </>
+        ) : (
+          <span>{label}</span>
+        )
       ) : compact && short !== label ? (
         <>
           <span aria-hidden="true">{short}</span>
@@ -111,8 +123,8 @@ export function ReaderBar({
   );
   const rightTools = (
     <>
-      {/* Tablets (no room yet for its word, see E3b-2) show the icon; phones keep text size in Settings only. */}
-      {panelButton("settings", SETTINGS_ICON, "Settings", "Settings", true, !dense && !compact)}
+      {/* Phones keep text size in Settings only; there's no room for A−/A+ as well. */}
+      {panelButton("settings", SETTINGS_ICON, "Settings", "Settings", true)}
       {onTextSizeChange && !compact && (
         <>
           <button

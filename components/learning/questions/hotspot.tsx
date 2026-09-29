@@ -62,7 +62,7 @@ export function HotspotAnswer({ content, media, answer, response, onResponse, on
         Tap the picture to answer.
       </p>
 
-      <div data-flow-unit data-question-picture className="mx-auto [break-inside:avoid]" style={pictureWidth(ratio)}>
+      <div data-flow-unit data-question-picture data-no-swipe className="mx-auto [break-inside:avoid]" style={pictureWidth(ratio)}>
         <div
           role="application"
           aria-roledescription="picture to tap"
