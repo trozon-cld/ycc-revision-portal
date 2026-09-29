@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { TEXT_SIZES, type BookPageData, type Sheet, type TextSize } from "@/lib/content/book";
 
 // The reader bar and its panels. Candidate style: big targets, words next to icons,
@@ -10,6 +10,10 @@ export const barButton =
   "inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border-2 border-ink/25 bg-white font-semibold text-ink hover:bg-slate-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-45 aria-pressed:border-primary aria-pressed:bg-primary/[0.08]";
 
 export type ReaderPanel = "contents" | "goto" | "results";
+
+// Whether the reader's buttons show their words (Contents, Close, Next…) or icons only. The reader
+// provides it; each button keeps its name for screen readers and as a tooltip either way.
+export const ReaderLabelsContext = createContext(true);
 
 // Bar buttons on laptops and desktops (48px high), also used for the page's own items in the bar.
 export const BAR_BUTTON_DENSE = "h-12 min-w-12 px-3 text-base";
@@ -28,6 +32,7 @@ export function ReaderBar({
   start,
   end,
   status,
+  onToggleLabels,
 }: {
   compact: boolean;
   tiny: boolean;
@@ -39,13 +44,16 @@ export function ReaderBar({
   hasQuestions: boolean;
   // Laptops and desktops: one slimmer bar that also holds the page's own items at each end.
   dense?: boolean;
-  // Dense bar on a smaller laptop: short labels, no Listen.
+  // Under 1280px wide: no Listen yet (a placeholder); in the dense bar also short labels.
   narrow?: boolean;
   start?: ReactNode;
   end?: ReactNode;
   // Dense bar only: "Pages 5–6 of 11", shown between the tools (read out by the reader itself).
   status?: string;
+  // Shows the "Labels" on/off button.
+  onToggleLabels?: () => void;
 }) {
+  const showLabels = useContext(ReaderLabelsContext);
   const index = TEXT_SIZES.indexOf(textSize);
   const refs = { contents: useRef<HTMLButtonElement>(null), goto: useRef<HTMLButtonElement>(null), results: useRef<HTMLButtonElement>(null) };
   const previous = useRef(panel);
@@ -64,9 +72,17 @@ export function ReaderBar({
       : "h-14 min-w-14 px-4 text-lg";
   const toggle = (key: ReaderPanel) => onPanel(panel === key ? null : key);
   const panelButton = (key: ReaderPanel, icon: string, label: string, short: string) => (
-    <button ref={refs[key]} type="button" aria-pressed={panel === key} disabled={!ready} onClick={() => toggle(key)} className={`${barButton} ${size}`}>
+    <button
+      ref={refs[key]}
+      type="button"
+      aria-pressed={panel === key}
+      disabled={!ready}
+      onClick={() => toggle(key)}
+      title={showLabels ? undefined : label}
+      className={`${barButton} ${size}`}
+    >
       <Icon path={icon} />
-      {tiny ? <span className="sr-only">{label}</span> : dense && narrow && short !== label ? (
+      {tiny || !showLabels ? <span className="sr-only">{label}</span> : dense && narrow && short !== label ? (
         <>
           <span aria-hidden="true">{short}</span>
           <span className="sr-only">{label}</span>
@@ -98,6 +114,18 @@ export function ReaderBar({
       ) : (
         <span className="flex-1" />
       )}
+      {onToggleLabels && !compact && (
+        <button
+          type="button"
+          aria-pressed={showLabels}
+          onClick={onToggleLabels}
+          title={showLabels ? "Hide button labels" : "Show button labels"}
+          className={`${barButton} ${size}`}
+        >
+          <Icon path="M4 7h10l4 5-4 5H4zM8 12h4" />
+          {showLabels && dense && !narrow ? <span>Labels</span> : <span className="sr-only">Button labels</span>}
+        </button>
+      )}
       {onTextSizeChange && (
         <>
           <button
@@ -126,10 +154,10 @@ export function ReaderBar({
         </>
       )}
       {/* Reserved for reading aloud (phase 2); left out on phones, where there's no room for a button that does nothing yet. */}
-      {!compact && !(dense && narrow) && (
+      {!compact && !narrow && (
         <button type="button" disabled title="Listen is coming later" className={`${barButton} ${size}`}>
           <Icon path="M5 10v4h3l4 4V6L8 10zM15.5 9a4 4 0 0 1 0 6M18 6.5a8 8 0 0 1 0 11" />
-          <span>Listen</span>
+          <span className={showLabels ? undefined : "sr-only"}>Listen</span>
           <span className="sr-only"> (coming later)</span>
         </button>
       )}
@@ -148,6 +176,7 @@ function Icon({ path }: { path: string }) {
 
 // Covers the pages; focus moves in on open and Escape closes it.
 function Panel({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+  const showLabels = useContext(ReaderLabelsContext);
   const ref = useRef<HTMLDivElement>(null);
   const headingId = useId();
   useEffect(() => {
@@ -171,9 +200,9 @@ function Panel({ title, onClose, children }: { title: string; onClose: () => voi
         <h2 id={headingId} className="text-xl font-bold text-ink">
           {title}
         </h2>
-        <button type="button" onClick={onClose} className={`${barButton} h-12 px-4 text-base`}>
+        <button type="button" onClick={onClose} title={showLabels ? undefined : "Close"} className={`${barButton} h-12 min-w-12 px-3 text-base`}>
           <Icon path="M6 6l12 12M18 6L6 18" />
-          Close
+          <span className={showLabels ? "pr-1" : "sr-only"}>Close</span>
         </button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">{children}</div>
@@ -272,7 +301,7 @@ export function GoToPanel({ total, onGo, onClose }: { total: number; onGo: (numb
   return (
     <Panel title="Go to page" onClose={onClose}>
       <form
-        className="mx-auto max-w-md space-y-4"
+        className="mx-auto flex w-fit max-w-full flex-col items-center space-y-4 pt-4 text-center"
         onSubmit={(event) => {
           event.preventDefault();
           const number = Number(value);
@@ -301,7 +330,7 @@ export function GoToPanel({ total, onGo, onClose }: { total: number; onGo: (numb
               setValue(event.target.value.replace(/[^0-9]/g, "").slice(0, 5));
               setError(null);
             }}
-            className="h-14 w-32 rounded-lg border-2 border-ink/40 px-4 text-2xl text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="h-14 w-32 rounded-lg border-2 border-ink/40 px-4 text-center text-2xl text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary"
           />
           <button type="submit" className="inline-flex h-14 min-w-24 items-center justify-center rounded-lg bg-primary px-6 text-lg font-semibold text-white hover:bg-primary/90 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary">
             Go

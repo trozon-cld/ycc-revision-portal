@@ -28,20 +28,14 @@ export type Sheet =
   | { kind: "blank" };
 
 // Pure layout rule, kept separate so it can be tested without a browser.
-export function buildSheets(
-  pages: Pick<BookPageData, "chapterId" | "question">[],
-  partCounts: number[],
-  spread: boolean
-): Sheet[] {
+export function buildSheets(pages: Pick<BookPageData, "chapterId">[], partCounts: number[], spread: boolean): Sheet[] {
   const sheets: Sheet[] = [];
   let number = 0; // blank fillers are left unnumbered, as in a printed book
   pages.forEach((page, pageIndex) => {
     const startsChapter = pageIndex === 0 || pages[pageIndex - 1].chapterId !== page.chapterId;
     const parts = Math.max(1, partCounts[pageIndex] ?? 1);
-    // In a spread, a chapter always opens on a left-hand sheet, and so does a question too long for one
-    // page, so both of its halves face each other instead of needing a page turn.
-    const keepFacing = Boolean(page.question) && parts === 2;
-    if (spread && (startsChapter || keepFacing) && sheets.length % 2 === 1) sheets.push({ kind: "blank" });
+    // In a spread, a chapter always opens on a left-hand sheet.
+    if (spread && startsChapter && sheets.length % 2 === 1) sheets.push({ kind: "blank" });
     for (let part = 0; part < parts; part++) sheets.push({ kind: "page", pageIndex, part, parts, number: ++number });
   });
   return sheets;

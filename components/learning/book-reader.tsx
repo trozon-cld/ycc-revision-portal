@@ -1,13 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
+import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 import { buildSheets, type BookPageData, type ResolvedMedia, type Sheet, type TextSize } from "@/lib/content/book";
 import { getQuestionTypeDef } from "@/lib/questions/registry";
 import { BlockList } from "./blocks";
 import { FRESH_QUESTION_STATE, QuestionView, type QuestionViewState } from "./questions/question-view";
 import { plainText } from "@/lib/content/inline";
 import { collectMediaIds } from "@/lib/content/blocks";
-import { ContentsPanel, GoToPanel, ReaderBar, ResultsPanel, type ReaderPanel, type ResultEntry } from "./reader-tools";
+import { ContentsPanel, GoToPanel, ReaderBar, ReaderLabelsContext, ResultsPanel, type ReaderPanel, type ResultEntry } from "./reader-tools";
 
 // A page's question is drawn several times (measuring layer, each sheet it spans); they share one
 // state, keyed by the question's content so an edited question starts afresh.
@@ -53,9 +53,11 @@ const FIT_STEPS = 2;
 const CONTENT_PICTURE_FIT = 0.4;
 // Spreads (laptops, desktops) have Previous/Next beside the pages; this is the room each side takes.
 const SIDE_NAV = 88;
+// This browser's choice of button labels on or off (a small display preference, not saved to the account).
+const LABELS_KEY = "ycc-reader-labels";
 const SPREAD_PADDING = 8;
 // Below this width the laptop bar uses short labels and leaves out Listen, so everything fits.
-const ROOMY_BAR = 1200;
+const ROOMY_BAR = 1280;
 // Spreads: picture answer options are at most this share of the page height, so a question keeps room
 // for its explanation.
 const OPTION_PICTURE_SHARE = 0.22;
@@ -63,6 +65,8 @@ const OPTION_PICTURE_SHARE = 0.22;
 const QUESTION_PICTURE_FIT = 0.25;
 // Last fitting step, as shares of the page height: a question's own picture and its answer pictures.
 const QUESTION_PICTURE_LAST = 0.15;
+// First fitting step for a question: its spacing at this share of the usual.
+const COMPACT_SPACE = 0.5;
 const OPTION_PICTURE_LAST = 0.15;
 // Below this reader width the bar shows icons only, so it fits the smallest phones.
 const TINY_BELOW = 380;
@@ -163,6 +167,24 @@ export function BookReader({
   const [fontsReady, setFontsReady] = useState(0);
   const [questionStates, setQuestionStates] = useState<QuestionStates>({});
   const [panel, setPanel] = useState<ReaderPanel | null>(null);
+  const [showLabels, setShowLabels] = useState(true);
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem(LABELS_KEY) === "off") setShowLabels(false);
+    } catch {
+      // Storage can be blocked (private windows); labels simply stay on.
+    }
+  }, []);
+  const toggleLabels = useCallback(() => {
+    setShowLabels((current) => {
+      try {
+        window.localStorage.setItem(LABELS_KEY, current ? "off" : "on");
+      } catch {
+        // Not remembered, but still switched for this visit.
+      }
+      return !current;
+    });
+  }, []);
   const questions = useMemo<QuestionBinding>(
     () => ({ states: questionStates, setState: (key, state) => setQuestionStates((current) => ({ ...current, [key]: state })) }),
     [questionStates]
@@ -308,18 +330,17 @@ export function BookReader({
         if (!probe) continue;
         const size = fit?.size ?? textSize;
         const smallPictures = fit?.smallPictures ?? false;
+        const compact = fit?.compact ?? false;
         const page = pages[index];
-        if (partsOf(probe) <= 1) list[index] = { size, smallPictures, gaveUp: false, final: true };
-        else if (size > fitFloor) {
-          list[index] = { size: size - 1, smallPictures, gaveUp: false, final: false };
-          resized = true;
-        } else if (!smallPictures && page && pageMediaIds(page).length > 0) {
-          list[index] = { size, smallPictures: true, gaveUp: false, final: false };
-          resized = true;
-        } else {
-          list[index] = { size: textSize, smallPictures: false, gaveUp: true, final: true };
-          resized = true;
-        }
+        const step = { size, smallPictures, compact, gaveUp: false, scroll: false, final: false };
+        if (partsOf(probe) <= 1) list[index] = { ...step, final: true };
+        else if (page?.question && !compact) list[index] = { ...step, compact: true };
+        else if (size > fitFloor) list[index] = { ...step, size: size - 1 };
+        else if (!smallPictures && page && pageMediaIds(page).length > 0) list[index] = { ...step, smallPictures: true };
+        // A question never continues on another page: as it is now, it scrolls within its page.
+        else if (page?.question) list[index] = { ...step, scroll: true, final: true };
+        else list[index] = { size: textSize, smallPictures: false, compact: false, gaveUp: true, scroll: false, final: true };
+        if (!list[index]?.final || list[index]?.scroll || list[index]?.gaveUp) resized = true;
       }
       if (JSON.stringify(list) !== JSON.stringify(fitList ?? [])) {
         setFits({ id: layoutId, list });
@@ -335,7 +356,7 @@ export function BookReader({
     for (const child of Array.from(layer.children) as HTMLElement[]) {
       if (child.dataset.pageIndex === undefined) continue;
       const index = Number(child.dataset.pageIndex);
-      values[index] = Math.max(1, Math.round((child.scrollWidth + geometry.columnGap) / step));
+      values[index] = fitList?.[index]?.scroll ? 1 : Math.max(1, Math.round((child.scrollWidth + geometry.columnGap) / step));
       fresh[index] = true;
     }
     const same = base && base.values.join() === values.join() && base.fresh.join() === fresh.join();
@@ -459,7 +480,7 @@ export function BookReader({
     onLayout({
       pages: totalPages,
       sizes: pages.map((_, index) => sizeFor(index)),
-      tooLong: pages.map((_, index) => Boolean(fitList?.[index]?.gaveUp)),
+      tooLong: pages.map((_, index) => Boolean(fitList?.[index]?.gaveUp || fitList?.[index]?.scroll)),
     });
   }, [complete, totalPages, onLayout, pages, sizeFor, fitList]);
   const shortStatus = status.replace(/^Pages? /, "");
@@ -489,6 +510,7 @@ export function BookReader({
     : undefined;
 
   return (
+    <ReaderLabelsContext.Provider value={showLabels}>
     <section aria-label={label} onKeyDown={onKeyDown} className="flex h-full min-h-0 flex-col bg-slate-100 text-ink">
       {tools && (
         <ReaderBar
@@ -503,6 +525,7 @@ export function BookReader({
           dense={wide}
           narrow={(stageSize?.width ?? 0) < ROOMY_BAR}
           status={wide ? status : undefined}
+          onToggleLabels={toggleLabels}
           start={wide ? barStart : undefined}
           end={wide ? barEnd : undefined}
         />
@@ -566,6 +589,8 @@ export function BookReader({
                     questions={questions}
                     pictureCap={capFor(index)}
                     optionCap={optionCapFor(index)}
+                    compact={fitList?.[index]?.compact}
+                    scroll={fitList?.[index]?.scroll}
                     fontSize={sizeFor(index)}
                     baseSize={textSize}
                   />,
@@ -580,6 +605,7 @@ export function BookReader({
                       questions={questions}
                       pictureCap={capFor(index)}
                       optionCap={optionCapFor(index)}
+                      compact={fitList?.[index]?.compact}
                       fontSize={sizeFor(index)}
                       baseSize={textSize}
                       stateOverride={checkedWrong(page)}
@@ -636,6 +662,8 @@ export function BookReader({
                       questions={questions}
                       pictureCap={sheet.kind === "page" ? capFor(sheet.pageIndex) : null}
                       optionCap={sheet.kind === "page" ? optionCapFor(sheet.pageIndex) : null}
+                      compact={sheet.kind === "page" && Boolean(fitList?.[sheet.pageIndex]?.compact)}
+                      scroll={sheet.kind === "page" && Boolean(fitList?.[sheet.pageIndex]?.scroll)}
                       pageSize={sheet.kind === "page" ? sizeFor(sheet.pageIndex) : textSize}
                       textSize={textSize}
                       style={sheetStyle}
@@ -672,17 +700,20 @@ export function BookReader({
         </nav>
       )}
     </section>
+    </ReaderLabelsContext.Provider>
   );
 }
 
 // Laptops and desktops: a tall Previous/Next button beside the spread.
 function SideButton({ direction, disabled, onClick }: { direction: "previous" | "next"; disabled: boolean; onClick: () => void }) {
   const isNext = direction === "next";
+  const showLabels = useContext(ReaderLabelsContext);
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
+      title={showLabels ? undefined : isNext ? "Next page" : "Previous page"}
       className={`flex h-36 w-[72px] shrink-0 flex-col items-center justify-center gap-1 rounded-xl text-sm font-semibold transition-colors focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-40 ${
         isNext ? "bg-primary text-white hover:bg-primary/90" : "border-2 border-ink/25 bg-white text-ink hover:bg-slate-50"
       }`}
@@ -690,7 +721,7 @@ function SideButton({ direction, disabled, onClick }: { direction: "previous" | 
       <svg viewBox="0 0 24 24" aria-hidden="true" className="size-8" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
         <path d={isNext ? "M9 5l7 7-7 7" : "M15 5l-7 7 7 7"} />
       </svg>
-      {isNext ? "Next" : "Previous"}
+      <span className={showLabels ? undefined : "sr-only"}>{isNext ? "Next" : "Previous"}</span>
     </button>
   );
 }
@@ -707,12 +738,14 @@ function PageButton({
   onClick: () => void;
 }) {
   const isNext = direction === "next";
+  const showLabels = useContext(ReaderLabelsContext);
+  const iconOnly = compact || !showLabels;
   const tone = isNext
     ? "bg-primary text-white hover:bg-primary/90"
     : "border-2 border-ink/25 bg-white text-ink hover:bg-slate-50";
-  const size = compact ? "size-14" : "h-14 min-w-36 gap-2 px-5";
+  const size = iconOnly ? "size-14" : "h-14 min-w-36 gap-2 px-5";
   const arrow = (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className={compact ? "size-7" : "size-5"} fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={iconOnly ? "size-7" : "size-5"} fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
       <path d={isNext ? "M9 5l7 7-7 7" : "M15 5l-7 7 7 7"} />
     </svg>
   );
@@ -721,11 +754,12 @@ function PageButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      aria-label={compact ? (isNext ? "Next page" : "Previous page") : undefined}
+      aria-label={iconOnly ? (isNext ? "Next page" : "Previous page") : undefined}
+      title={iconOnly && !compact ? (isNext ? "Next page" : "Previous page") : undefined}
       className={`inline-flex shrink-0 items-center justify-center rounded-xl text-lg font-semibold transition-colors focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-40 ${tone} ${size}`}
     >
       {!isNext && arrow}
-      {!compact && (isNext ? "Next" : "Previous")}
+      {!iconOnly && (isNext ? "Next" : "Previous")}
       {isNext && arrow}
     </button>
   );
@@ -738,6 +772,8 @@ function FlowColumns({
   questions,
   pictureCap = null,
   optionCap = null,
+  compact = false,
+  scroll = false,
   offset = 0,
   pageIndex,
   fitIndex,
@@ -757,6 +793,9 @@ function FlowColumns({
   questions: QuestionBinding;
   pictureCap?: number | null;
   optionCap?: number | null;
+  // Fitting: tighter spacing in a question; or, when it can't fit at all, one tall column that scrolls.
+  compact?: boolean;
+  scroll?: boolean;
   offset?: number;
 }) {
   const key = questionKey(page);
@@ -764,6 +803,7 @@ function FlowColumns({
     ...(page.question ? { position: "relative" } : {}),
     ...(pictureCap ? { "--book-picture-max": `${pictureCap}px` } : {}),
     ...(optionCap ? { "--book-option-picture-max": `${optionCap}px` } : {}),
+    ...(compact ? { "--q-space": COMPACT_SPACE } : {}),
   } as CSSProperties;
   return (
     <div
@@ -773,11 +813,15 @@ function FlowColumns({
       style={{
         ...(fontSize && fontSize !== baseSize ? { fontSize } : {}),
         width: geometry.contentWidth,
-        height: geometry.contentHeight,
-        columnWidth: geometry.contentWidth,
-        columnGap: geometry.columnGap,
-        columnFill: "auto",
-        transform: offset ? `translateX(-${offset * (geometry.contentWidth + geometry.columnGap)}px)` : undefined,
+        ...(scroll
+          ? {}
+          : {
+              height: geometry.contentHeight,
+              columnWidth: geometry.contentWidth,
+              columnGap: geometry.columnGap,
+              columnFill: "auto" as const,
+              transform: offset ? `translateX(-${offset * (geometry.contentWidth + geometry.columnGap)}px)` : undefined,
+            }),
         ...pageStyle,
       }}
     >
@@ -804,6 +848,8 @@ function SheetView({
   questions,
   pictureCap,
   optionCap,
+  compact,
+  scroll,
   pageSize,
   textSize,
   style,
@@ -816,12 +862,21 @@ function SheetView({
   questions: QuestionBinding;
   pictureCap: number | null;
   optionCap: number | null;
+  compact: boolean;
+  scroll: boolean;
   pageSize: number;
   textSize: number;
   style?: CSSProperties;
   side: "left" | "right" | "single";
 }) {
   const boxRef = useRef<HTMLDivElement>(null);
+  // Scrolling question pages: whether there is more below what shows, for the "More below" cue.
+  const [moreBelow, setMoreBelow] = useState(false);
+  const checkMore = useCallback(() => {
+    const box = boxRef.current;
+    setMoreBelow(Boolean(scroll && box && box.scrollHeight - box.scrollTop - box.clientHeight > 4));
+  }, [scroll]);
+  useLayoutEffect(checkMore);
   const page = sheet.kind === "page" ? pages[sheet.pageIndex] : null;
   const part = sheet.kind === "page" ? sheet.part : 0;
 
@@ -868,35 +923,58 @@ function SheetView({
         </span>
       </header>
 
-      <div
-        ref={boxRef}
-        className="overflow-hidden"
-        // Nothing may scroll a sheet sideways (e.g. find-in-page); that would show the wrong part.
-        onScroll={(event) => {
-          event.currentTarget.scrollLeft = 0;
-          event.currentTarget.scrollTop = 0;
-        }}
-        aria-hidden={repeat || undefined}
-        // Repeats are also out of reach of the keyboard (a question's buttons, for example).
-        inert={repeat || undefined}
-        style={{
-          width: geometry.contentWidth,
-          height: geometry.contentHeight,
-          marginLeft: geometry.padX,
-          marginTop: geometry.contentTop,
-        }}
-      >
-        <FlowColumns
-          page={page}
-          media={media}
-          geometry={geometry}
-          questions={questions}
-          pictureCap={pictureCap}
-          optionCap={optionCap}
-          offset={sheet.part}
-          fontSize={pageSize}
-          baseSize={textSize}
-        />
+      <div className="relative" style={{ marginLeft: geometry.padX, marginTop: geometry.contentTop }}>
+        <div
+          ref={boxRef}
+          className={scroll ? "overflow-x-hidden overflow-y-auto overscroll-contain focus-visible:outline-3 focus-visible:outline-primary" : "overflow-hidden"}
+          // Nothing may scroll a sheet sideways (e.g. find-in-page); that would show the wrong part.
+          // Only a question too long for any page scrolls, and only downwards.
+          onScroll={(event) => {
+            event.currentTarget.scrollLeft = 0;
+            if (!scroll) event.currentTarget.scrollTop = 0;
+            checkMore();
+          }}
+          tabIndex={scroll ? 0 : undefined}
+          aria-label={scroll ? "Question. Scroll down to see all of it." : undefined}
+          role={scroll ? "region" : undefined}
+          aria-hidden={repeat || undefined}
+          // Repeats are also out of reach of the keyboard (a question's buttons, for example).
+          inert={repeat || undefined}
+          style={{ width: geometry.contentWidth, height: geometry.contentHeight }}
+        >
+          <FlowColumns
+            page={page}
+            media={media}
+            geometry={geometry}
+            questions={questions}
+            pictureCap={pictureCap}
+            optionCap={optionCap}
+            compact={compact}
+            scroll={scroll}
+            offset={sheet.part}
+            fontSize={pageSize}
+            baseSize={textSize}
+          />
+        </div>
+        {moreBelow && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex h-[4em] items-end justify-center bg-gradient-to-t from-white via-white/90 to-transparent">
+            <button
+              type="button"
+              className="pointer-events-auto mb-[0.2em] inline-flex min-h-10 items-center gap-2 rounded-full border-2 border-primary bg-white px-4 text-[0.9em] font-semibold text-primary shadow-sm hover:bg-primary/[0.06] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              onClick={() =>
+                boxRef.current?.scrollBy({
+                  top: Math.round(geometry.contentHeight * 0.7),
+                  behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+                })
+              }
+            >
+              More below
+              <svg viewBox="0 0 20 20" aria-hidden="true" className="size-[1em]" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 8l5 5 5-5" />
+              </svg>
+            </button>
+          </div>
+        )}
       </div>
 
       <footer
@@ -939,7 +1017,7 @@ export type LayoutInfo = {
   tooLong: boolean[];
 };
 
-type Fit = { size: number; smallPictures: boolean; gaveUp: boolean; final: boolean };
+type Fit = { size: number; smallPictures: boolean; compact: boolean; gaveUp: boolean; scroll: boolean; final: boolean };
 
 type Counts = { id: object; values: (number | null)[]; fresh: boolean[] };
 

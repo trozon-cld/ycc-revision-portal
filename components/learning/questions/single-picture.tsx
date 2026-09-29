@@ -22,7 +22,7 @@ export function SinglePictureAnswer({ mode, seed, content, media, answer, respon
   );
 
   return (
-    <ul className="m-0 grid list-none grid-cols-2 gap-[0.6em] p-0">
+    <ul className="m-0 grid list-none grid-cols-2 gap-[calc(0.6em*var(--q-space,1))] p-0">
       {options.map((option, index) => {
         const selected = response === option.id;
         const isCorrect = correctId === option.id;

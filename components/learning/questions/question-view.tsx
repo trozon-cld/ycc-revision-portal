@@ -107,7 +107,7 @@ export function QuestionView({
   return (
     <section aria-labelledby={stemId} className="question-view">
       <fieldset className="m-0 min-w-0 border-0 p-0">
-        <legend id={stemId} data-flow-unit className="mb-[0.8em] w-full p-0 [break-after:avoid] [break-inside:avoid]">
+        <legend id={stemId} data-flow-unit className="mb-[calc(0.8em*var(--q-space,1))] w-full p-0 [break-after:avoid] [break-inside:avoid]">
           <span className="mb-[0.3em] block text-[0.8em] font-bold uppercase tracking-wide text-primary">{label}</span>
           <span className="block whitespace-pre-line text-[1.1em] font-medium leading-snug text-ink">
             <InlineText text={question.stemText} />
@@ -151,7 +151,7 @@ export function QuestionView({
       </fieldset>
 
       {canCheck && AnswerArea && phase === "answering" && (
-        <div data-flow-unit className="mt-[0.9em] flex flex-wrap gap-[0.6em] [break-inside:avoid]">
+        <div data-flow-unit className="mt-[calc(0.9em*var(--q-space,1))] flex flex-wrap gap-[0.6em] [break-inside:avoid]">
           <FrameButton key="check" primary onClick={check} disabled={checking}>
             {checking ? "Checking…" : "Check answer"}
           </FrameButton>
@@ -162,10 +162,10 @@ export function QuestionView({
       {/* After Check or Reveal, the message and "Try again" share one row, so the question stays compact. */}
       <div
         data-flow-unit
-        className={phase === "answering" ? "[break-inside:avoid]" : "mt-[0.9em] flex flex-wrap items-center gap-[0.6em] [break-inside:avoid]"}
+        className={phase === "answering" ? "[break-inside:avoid]" : "mt-[calc(0.9em*var(--q-space,1))] flex flex-wrap items-center gap-[0.6em] [break-inside:avoid]"}
       >
         <div role="status" aria-live="polite" className="min-w-0 flex-1 basis-[12em]">
-          {notice && <p className="mt-[0.9em] font-semibold text-ink">{notice}</p>}
+          {notice && <p className="mt-[calc(0.9em*var(--q-space,1))] font-semibold text-ink">{notice}</p>}
           {phase === "checked" && result && <Feedback correct={result.correct} showsAnswer={mode === "learn"} />}
           {phase === "revealed" && (
             <p className="rounded-lg border-l-[0.3em] border-primary bg-primary/[0.07] px-[0.9em] py-[0.6em] font-semibold text-ink">
@@ -181,7 +181,7 @@ export function QuestionView({
       </div>
 
       {showExplanation && (
-        <div data-flow-unit data-question-explanation className="mt-[0.9em]">
+        <div data-flow-unit data-question-explanation className="mt-[calc(0.9em*var(--q-space,1))]">
           <p className="mb-[0.2em] text-[0.8em] font-bold uppercase tracking-wide text-primary [break-after:avoid]">Explanation</p>
           <p className="whitespace-pre-line [orphans:2] [widows:2]">
             <InlineText text={question.explanation ?? ""} />
