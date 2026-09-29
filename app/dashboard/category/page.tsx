@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
+import { SESSION_ENDED_LOGIN } from "@/lib/auth/constants";
 import { PageBody } from "@/components/candidate/page-body";
 import { loadSwitchableCategories } from "@/lib/candidates/categories";
 import { switchCategory } from "./actions";
@@ -13,7 +14,7 @@ const ERRORS: Record<string, string> = {
 export default async function ChangeCategoryPage({ searchParams }: PageProps<"/dashboard/category">) {
   const session = await requireRole(["candidate"]);
   const categories = await loadSwitchableCategories(session.sub);
-  if (categories.length === 0) redirect("/login");
+  if (categories.length === 0) redirect(SESSION_ENDED_LOGIN);
 
   const params = await searchParams;
   const errorKey = Array.isArray(params.error) ? params.error[0] : params.error;

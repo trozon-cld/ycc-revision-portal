@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
+import { SESSION_ENDED_LOGIN } from "@/lib/auth/constants";
 import { ACCESS_TIME_ZONE, daysLeftUk } from "@/lib/candidates/access";
 import { loadCandidateHome } from "@/lib/candidates/home";
 import { PageBody } from "@/components/candidate/page-body";
@@ -12,7 +13,7 @@ const ACCESS_WARNING_DAYS = 7;
 export default async function CandidateHomePage({ searchParams }: PageProps<"/dashboard">) {
   const session = await requireRole(["candidate"]);
   const home = await loadCandidateHome(session.sub);
-  if (!home) redirect("/login");
+  if (!home) redirect(SESSION_ENDED_LOGIN);
   const justSwitched = (await searchParams).switched === "1";
 
   const daysLeft = home.accessExpiresAt ? daysLeftUk(home.accessExpiresAt) : null;

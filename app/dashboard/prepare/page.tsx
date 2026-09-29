@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
+import { SESSION_ENDED_LOGIN } from "@/lib/auth/constants";
 import { loadCandidateBook } from "@/lib/content/candidate-book";
 import { PrepareReader } from "./prepare-reader";
 
 export default async function PreparePage() {
   const session = await requireRole(["candidate"]);
   const book = await loadCandidateBook(session.sub);
-  if (!book) redirect("/login");
+  if (!book) redirect(SESSION_ENDED_LOGIN);
 
   if (book.pages.length === 0) {
     return (
