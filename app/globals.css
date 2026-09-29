@@ -63,3 +63,74 @@ body {
     transform: translateY(4px);
   }
 }
+
+/* Handbook page turn. The reader only adds these classes when the candidate has it on and the
+   device doesn't ask for reduced motion; the media query is a second guard. */
+@media (prefers-reduced-motion: no-preference) {
+  .book-leaf {
+    animation-duration: var(--book-turn-ms, 480ms);
+    animation-timing-function: cubic-bezier(0.35, 0.1, 0.3, 1);
+    animation-fill-mode: forwards;
+  }
+  .book-leaf-forward {
+    animation-name: book-turn-forward;
+  }
+  .book-leaf-back {
+    animation-name: book-turn-back;
+  }
+  .book-leaf-away {
+    animation-name: book-leaf-away;
+  }
+  .book-leaf-return {
+    animation-name: book-leaf-return;
+  }
+  .book-shade {
+    animation: book-shade var(--book-turn-ms, 480ms) ease-in-out forwards;
+  }
+}
+
+@keyframes book-turn-forward {
+  from {
+    transform: rotateY(0deg);
+  }
+  to {
+    transform: rotateY(-180deg);
+  }
+}
+
+@keyframes book-turn-back {
+  from {
+    transform: rotateY(0deg);
+  }
+  to {
+    transform: rotateY(180deg);
+  }
+}
+
+@keyframes book-leaf-away {
+  from {
+    transform: rotateY(0deg);
+  }
+  to {
+    transform: rotateY(-100deg);
+  }
+}
+
+@keyframes book-leaf-return {
+  from {
+    transform: rotateY(-100deg);
+  }
+  to {
+    transform: rotateY(0deg);
+  }
+}
+
+@keyframes book-shade {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+}

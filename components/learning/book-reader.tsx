@@ -10,7 +10,16 @@ import { BlockList } from "./blocks";
 import { FRESH_QUESTION_STATE, QuestionView, type QuestionViewState } from "./questions/question-view";
 import { plainText } from "@/lib/content/inline";
 import { collectMediaIds } from "@/lib/content/blocks";
-import { ContentsPanel, GoToPanel, ReaderBar, ReaderLabelsContext, ResultsPanel, type ReaderPanel, type ResultEntry } from "./reader-tools";
+import {
+  ContentsPanel,
+  GoToPanel,
+  ReaderBar,
+  ReaderLabelsContext,
+  ResultsPanel,
+  SettingsPanel,
+  type ReaderPanel,
+  type ResultEntry,
+} from "./reader-tools";
 
 // A page's question is drawn several times (measuring layer, each sheet it spans); they share one
 // state, keyed by the question's content so an edited question starts afresh.
@@ -75,6 +84,14 @@ const OPTION_PICTURE_LAST = 0.15;
 const TINY_BELOW = 380;
 // The reader's position on the front cover; the back cover is pages.length.
 const FRONT_COVER = -1;
+// This browser's choice of the page-turn animation (on unless switched off; never with reduced motion).
+const PAGE_TURN_KEY = "ycc-reader-page-turn";
+const TURN_MS_SPREAD = 520;
+const TURN_MS_SINGLE = 400;
+
+// Previous/Next with the animation on: the view being left and the one arriving, drawn over the
+// (already live) new view until the turning page lands. Jumps (Contents, Go to page) don't animate.
+type Turn = { id: number; direction: "forward" | "back"; from: Sheet[]; to: Sheet[] };
 
 type Geometry = {
   spread: boolean;
@@ -177,12 +194,32 @@ export function BookReader({
   const [questionStates, setQuestionStates] = useState<QuestionStates>({});
   const [panel, setPanel] = useState<ReaderPanel | null>(null);
   const [showLabels, setShowLabels] = useState(true);
+  const [pageTurn, setPageTurn] = useState(true);
+  const [reducedMotion, setReducedMotion] = useState(false);
+  const [turn, setTurn] = useState<Turn | null>(null);
+  const turnCount = useRef(0);
   useEffect(() => {
     try {
       if (window.localStorage.getItem(LABELS_KEY) === "off") setShowLabels(false);
+      if (window.localStorage.getItem(PAGE_TURN_KEY) === "off") setPageTurn(false);
     } catch {
-      // Storage can be blocked (private windows); labels simply stay on.
+      // Storage can be blocked (private windows); the defaults simply stay.
     }
+    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setReducedMotion(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+  const togglePageTurn = useCallback(() => {
+    setPageTurn((current) => {
+      try {
+        window.localStorage.setItem(PAGE_TURN_KEY, current ? "off" : "on");
+      } catch {
+        // Not remembered, but still switched for this visit.
+      }
+      return !current;
+    });
   }, []);
   const toggleLabels = useCallback(() => {
     setShowLabels((current) => {
@@ -441,8 +478,25 @@ export function BookReader({
     sectionRef.current?.focus();
   };
 
-  const next = () => canGoForward && goTo(viewStart + perView);
-  const previous = () => canGoBack && goTo(viewStart - perView);
+  const animate = pageTurn && !reducedMotion;
+  const turnMs = geometry?.spread ? TURN_MS_SPREAD : TURN_MS_SINGLE;
+  const turnTo = (start: number, direction: Turn["direction"]) => {
+    if (animate) {
+      const pad = (list: Sheet[]) => (perView === 2 && list.length === 1 ? [...list, { kind: "none" } as Sheet] : list);
+      turnCount.current += 1;
+      setTurn({ id: turnCount.current, direction, from: pad(visible), to: pad(sheets.slice(start, start + perView)) });
+    }
+    goTo(start);
+  };
+  const next = () => canGoForward && turnTo(viewStart + perView, "forward");
+  const previous = () => canGoBack && turnTo(viewStart - perView, "back");
+  // A turn in progress ends with its animation; this is a backstop (e.g. a hidden tab skips animations).
+  useEffect(() => {
+    if (!turn) return;
+    const timer = window.setTimeout(() => setTurn(null), turnMs + 200);
+    return () => window.clearTimeout(timer);
+  }, [turn, turnMs]);
+  useEffect(() => setTurn(null), [layoutId, animate]);
 
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (panel || event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
@@ -535,6 +589,101 @@ export function BookReader({
       } as CSSProperties)
     : undefined;
 
+  const turnHasNone = Boolean(turn && [...turn.from, ...turn.to].some((sheet) => sheet.kind === "none"));
+
+  // One sheet of the book. `still` copies (in a turning page) fill the empty space beside a cover, so
+  // the live view underneath never shows through.
+  function drawSheet(sheet: Sheet, slot: string, side: "left" | "right" | "single", still = false): ReactNode {
+    if (!geometry) return null;
+    if (sheet.kind === "cover" && covers) {
+      return <CoverSheet key={`cover-${sheet.side}`} side={sheet.side} covers={covers} style={sheetStyle} spread={geometry.spread} onStart={startAgain} />;
+    }
+    if (sheet.kind === "none" || sheet.kind === "cover") {
+      return <div key={`none-${slot}`} aria-hidden="true" className={`shrink-0 ${still ? "bg-slate-100" : ""}`} style={{ width: geometry.sheetWidth, height: geometry.sheetHeight }} />;
+    }
+    const page = sheet.kind === "page" ? sheet.pageIndex : null;
+    return (
+      <SheetView
+        key={page !== null && sheet.kind === "page" ? `${page}-${sheet.part}` : `blank-${slot}`}
+        sheet={sheet}
+        pages={pages}
+        media={media}
+        geometry={geometry}
+        questions={questions}
+        pictureCap={page !== null ? capFor(page) : null}
+        optionCap={page !== null ? optionCapFor(page) : null}
+        compact={page !== null && Boolean(fitList?.[page]?.compact)}
+        scroll={page !== null && Boolean(fitList?.[page]?.scroll)}
+        pageSize={page !== null ? sizeFor(page) : textSize}
+        textSize={textSize}
+        style={sheetStyle}
+        side={side}
+      />
+    );
+  }
+
+  // The turning page: in a spread it hinges on the spine and shows the next page on its back; a single
+  // page folds away from its left edge (or folds back in when going back).
+  function drawTurn(current: Turn, shape: Geometry): ReactNode {
+    const forward = current.direction === "forward";
+    const { from, to } = current;
+    const width = shape.sheetWidth;
+    const base = shape.spread ? (forward ? [from[0], to[1]] : [to[0], from[1]]) : [forward ? to[0] : from[0]];
+    const front = shape.spread ? (forward ? from[1] : from[0]) : forward ? from[0] : to[0];
+    const back = shape.spread ? (forward ? to[0] : to[1]) : null;
+    const leafClass = shape.spread ? (forward ? "book-leaf-forward" : "book-leaf-back") : forward ? "book-leaf-away" : "book-leaf-return";
+    const hingeRight = shape.spread && !forward;
+    const face = "absolute inset-0 overflow-hidden [backface-visibility:hidden]";
+    const shade = (
+      <div
+        aria-hidden="true"
+        className={`book-shade pointer-events-none absolute inset-0 opacity-0 ${hingeRight ? "bg-gradient-to-l" : "bg-gradient-to-r"} from-black/20 via-black/5 to-transparent`}
+      />
+    );
+    return (
+      <div
+        key={current.id}
+        aria-hidden="true"
+        inert
+        data-turn={current.direction}
+        className="pointer-events-none absolute inset-0 flex"
+        style={{ perspective: `${Math.round(width * 4.5)}px`, "--book-turn-ms": `${turnMs}ms` } as CSSProperties}
+      >
+        {base.map((sheet, index) =>
+          sheet ? drawSheet(sheet, `turn-base-${index}`, shape.spread ? (index === 0 ? "left" : "right") : "single", true) : null
+        )}
+        {front && (
+          <div
+            data-turn-leaf=""
+            className={`book-leaf ${leafClass} absolute top-0`}
+            style={{
+              left: shape.spread && forward ? width : 0,
+              width,
+              height: shape.sheetHeight,
+              transformOrigin: hingeRight ? "right center" : "left center",
+              transformStyle: "preserve-3d",
+              ...(forward || shape.spread ? {} : { transform: "rotateY(-100deg)" }),
+            }}
+            onAnimationEnd={(event) => {
+              if (event.target === event.currentTarget) setTurn((active) => (active?.id === current.id ? null : active));
+            }}
+          >
+            <div className={face}>
+              {drawSheet(front, "turn-front", shape.spread ? (forward ? "right" : "left") : "single", true)}
+              {shade}
+            </div>
+            {back && (
+              <div className={face} style={{ transform: "rotateY(180deg)" }}>
+                {drawSheet(back, "turn-back", forward ? "left" : "right", true)}
+                {shade}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <ReaderLabelsContext.Provider value={showLabels}>
     <section
@@ -557,7 +706,6 @@ export function BookReader({
           dense={wide}
           narrow={(stageSize?.width ?? 0) < ROOMY_BAR}
           status={wide ? status : undefined}
-          onToggleLabels={toggleLabels}
           start={wide ? barStart : undefined}
           end={wide ? barEnd : undefined}
         />
@@ -586,6 +734,18 @@ export function BookReader({
               setPanel(null);
             }}
             onReset={() => setQuestionStates({})}
+            onClose={() => setPanel(null)}
+          />
+        )}
+        {tools && panel === "settings" && (
+          <SettingsPanel
+            textSize={textSize}
+            onTextSizeChange={onTextSizeChange}
+            showLabels={showLabels}
+            onToggleLabels={toggleLabels}
+            pageTurn={pageTurn}
+            onTogglePageTurn={togglePageTurn}
+            reducedMotion={reducedMotion}
             onClose={() => setPanel(null)}
           />
         )}
@@ -683,39 +843,12 @@ export function BookReader({
             {partCounts && (
               <div className="flex h-full items-center justify-center gap-4" style={{ padding: geometry.spread ? SPREAD_PADDING : STAGE_PADDING }}>
                 {geometry.spread && <SideButton direction="previous" disabled={!canGoBack} onClick={previous} />}
-                <div className={`flex ${closedBook ? "" : geometry.spread ? "shadow-xl" : "shadow-md"}`}>
+                <div className={`relative flex ${closedBook || turnHasNone ? "" : geometry.spread ? "shadow-xl" : "shadow-md"}`}>
                   {visible.map((sheet, index) =>
-                    sheet.kind === "cover" && covers ? (
-                      <CoverSheet
-                        key={`cover-${sheet.side}`}
-                        side={sheet.side}
-                        covers={covers}
-                        style={sheetStyle}
-                        spread={geometry.spread}
-                        onStart={startAgain}
-                      />
-                    ) : sheet.kind === "none" ? (
-                      <div key={`none-${viewStart + index}`} aria-hidden="true" className="shrink-0" style={{ width: geometry.sheetWidth }} />
-                    ) : (
-                    <SheetView
-                      key={sheet.kind === "page" ? `${sheet.pageIndex}-${sheet.part}` : `blank-${viewStart + index}`}
-                      sheet={sheet}
-                      pages={pages}
-                      media={media}
-                      geometry={geometry}
-                      questions={questions}
-                      pictureCap={sheet.kind === "page" ? capFor(sheet.pageIndex) : null}
-                      optionCap={sheet.kind === "page" ? optionCapFor(sheet.pageIndex) : null}
-                      compact={sheet.kind === "page" && Boolean(fitList?.[sheet.pageIndex]?.compact)}
-                      scroll={sheet.kind === "page" && Boolean(fitList?.[sheet.pageIndex]?.scroll)}
-                      pageSize={sheet.kind === "page" ? sizeFor(sheet.pageIndex) : textSize}
-                      textSize={textSize}
-                      style={sheetStyle}
-                      side={geometry.spread ? (index === 0 ? "left" : "right") : "single"}
-                    />
-                    )
+                    drawSheet(sheet, `${viewStart + index}`, geometry.spread ? (index === 0 ? "left" : "right") : "single")
                   )}
                   {geometry.spread && visible.length === 1 && <div aria-hidden="true" style={{ width: geometry.sheetWidth }} />}
+                  {turn && drawTurn(turn, geometry)}
                 </div>
                 {geometry.spread && <SideButton direction="next" disabled={!canGoForward} onClick={next} />}
               </div>

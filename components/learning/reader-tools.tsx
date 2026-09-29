@@ -9,7 +9,7 @@ import { TEXT_SIZES, type BookPageData, type Sheet, type TextSize } from "@/lib/
 export const barButton =
   "inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border-2 border-ink/25 bg-white font-semibold text-ink hover:bg-slate-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-45 aria-pressed:border-primary aria-pressed:bg-primary/[0.08]";
 
-export type ReaderPanel = "contents" | "goto" | "results";
+export type ReaderPanel = "contents" | "goto" | "results" | "settings";
 
 // Whether the reader's buttons show their words (Contents, Close, Next…) or icons only. The reader
 // provides it; each button keeps its name for screen readers and as a tooltip either way.
@@ -32,7 +32,6 @@ export function ReaderBar({
   start,
   end,
   status,
-  onToggleLabels,
 }: {
   compact: boolean;
   tiny: boolean;
@@ -50,19 +49,22 @@ export function ReaderBar({
   end?: ReactNode;
   // Dense bar only: "Pages 5–6 of 11", shown between the tools (read out by the reader itself).
   status?: string;
-  // Shows the "Labels" on/off button.
-  onToggleLabels?: () => void;
 }) {
   const showLabels = useContext(ReaderLabelsContext);
   const index = TEXT_SIZES.indexOf(textSize);
-  const refs = { contents: useRef<HTMLButtonElement>(null), goto: useRef<HTMLButtonElement>(null), results: useRef<HTMLButtonElement>(null) };
+  const refs = {
+    contents: useRef<HTMLButtonElement>(null),
+    goto: useRef<HTMLButtonElement>(null),
+    results: useRef<HTMLButtonElement>(null),
+    settings: useRef<HTMLButtonElement>(null),
+  };
   const previous = useRef(panel);
   // When a panel closes, focus goes back to the button that opened it.
   useEffect(() => {
     if (previous.current && !panel) refs[previous.current].current?.focus();
     previous.current = panel;
   });
-  // Phones: the word sits under the icon so six controls fit; the smallest phones show icons only.
+  // Phones: the word sits under the icon (text size lives in Settings there); the smallest phones show icons only.
   const size = tiny
     ? "h-12 min-w-11 px-2 text-base"
     : dense
@@ -73,18 +75,18 @@ export function ReaderBar({
   // Smaller laptops with labels on: the word sits under the icon, so the page status keeps the middle.
   const panelSize = dense && narrow && showLabels ? "h-12 min-w-14 flex-col gap-0 px-2 text-sm leading-tight [&_svg]:size-5" : size;
   const toggle = (key: ReaderPanel) => onPanel(panel === key ? null : key);
-  const panelButton = (key: ReaderPanel, icon: string, label: string, short: string) => (
+  const panelButton = (key: ReaderPanel, icon: string, label: string, short: string, always = false, iconOnly = false) => (
     <button
       ref={refs[key]}
       type="button"
       aria-pressed={panel === key}
-      disabled={!ready}
+      disabled={!ready && !always}
       onClick={() => toggle(key)}
-      title={showLabels ? undefined : label}
-      className={`${barButton} ${panelSize}`}
+      title={showLabels && !iconOnly ? undefined : label}
+      className={`${barButton} ${iconOnly ? size : panelSize}`}
     >
       <Icon path={icon} />
-      {tiny || !showLabels ? <span className="sr-only">{label}</span> : dense && narrow && short !== label ? (
+      {tiny || !showLabels || iconOnly ? <span className="sr-only">{label}</span> : dense && narrow && short !== label ? (
         <>
           <span aria-hidden="true">{short}</span>
           <span className="sr-only">{label}</span>
@@ -109,19 +111,9 @@ export function ReaderBar({
   );
   const rightTools = (
     <>
-      {onToggleLabels && !compact && (
-        <button
-          type="button"
-          aria-pressed={showLabels}
-          onClick={onToggleLabels}
-          title={showLabels ? "Hide button labels" : "Show button labels"}
-          className={`${barButton} ${size}`}
-        >
-          <Icon path="M4 7h10l4 5-4 5H4zM8 12h4" />
-          {showLabels && dense && !narrow ? <span>Labels</span> : <span className="sr-only">Button labels</span>}
-        </button>
-      )}
-      {onTextSizeChange && (
+      {/* Tablets (no room yet for its word, see E3b-2) show the icon; phones keep text size in Settings only. */}
+      {panelButton("settings", SETTINGS_ICON, "Settings", "Settings", true, !dense && !compact)}
+      {onTextSizeChange && !compact && (
         <>
           <button
             type="button"
@@ -188,6 +180,8 @@ export function ReaderBar({
   );
 }
 
+const SETTINGS_ICON = "M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1M15 4v4M9 10v4M17 16v4";
+
 function Icon({ path }: { path: string }) {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className="size-6 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -205,19 +199,21 @@ function Panel({ title, onClose, children }: { title: string; onClose: () => voi
     const first = ref.current?.querySelector<HTMLElement>("[data-autofocus]") ?? ref.current?.querySelector<HTMLElement>("button");
     first?.focus();
   }, []);
+  // On the whole page, so Escape still works when focus was lost (e.g. A+ turned disabled at 24px).
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+  useEffect(() => {
+    const onKey = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "Escape" && !event.defaultPrevented) {
+        event.preventDefault();
+        closeRef.current();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
   return (
-    <div
-      ref={ref}
-      role="region"
-      aria-labelledby={headingId}
-      onKeyDown={(event) => {
-        if (event.key === "Escape") {
-          event.stopPropagation();
-          onClose();
-        }
-      }}
-      className="absolute inset-0 z-20 flex flex-col bg-white"
-    >
+    <div ref={ref} role="region" aria-labelledby={headingId} className="absolute inset-0 z-20 flex flex-col bg-white">
       <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
         <h2 id={headingId} className="text-xl font-bold text-ink">
           {title}
@@ -463,5 +459,132 @@ export function ResultsPanel({
         )}
       </div>
     </Panel>
+  );
+}
+
+// Reader settings: text size, button labels and the page-turn animation. Labels and page turn are
+// remembered in this browser only.
+export function SettingsPanel({
+  textSize,
+  onTextSizeChange,
+  showLabels,
+  onToggleLabels,
+  pageTurn,
+  onTogglePageTurn,
+  reducedMotion,
+  onClose,
+}: {
+  textSize: TextSize;
+  onTextSizeChange?: (size: TextSize) => void;
+  showLabels: boolean;
+  onToggleLabels: () => void;
+  pageTurn: boolean;
+  onTogglePageTurn: () => void;
+  reducedMotion: boolean;
+  onClose: () => void;
+}) {
+  const index = TEXT_SIZES.indexOf(textSize);
+  const sizeButton = `${barButton} h-14 min-w-16 px-4 text-xl`;
+  return (
+    <Panel title="Settings" onClose={onClose}>
+      <div className="mx-auto max-w-xl space-y-4">
+        {onTextSizeChange && (
+          <div role="group" aria-labelledby="reader-text-size" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border-2 border-slate-300 px-4 py-3">
+            <span id="reader-text-size" className="text-lg font-semibold text-ink">
+              Text size
+            </span>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                aria-label="Smaller text"
+                disabled={index <= 0}
+                onClick={() => onTextSizeChange(TEXT_SIZES[Math.max(0, index - 1)])}
+                className={sizeButton}
+              >
+                <span aria-hidden="true">A−</span>
+              </button>
+              <span className="min-w-[4.5ch] text-center text-lg font-semibold tabular-nums text-ink" aria-live="polite">
+                {textSize}
+                <span className="sr-only"> pixels</span>
+              </span>
+              <button
+                type="button"
+                aria-label="Larger text"
+                disabled={index >= TEXT_SIZES.length - 1}
+                onClick={() => onTextSizeChange(TEXT_SIZES[Math.min(TEXT_SIZES.length - 1, index + 1)])}
+                className={sizeButton}
+              >
+                <span aria-hidden="true" className="text-[1.15em]">
+                  A+
+                </span>
+              </button>
+            </div>
+          </div>
+        )}
+        <SettingSwitch
+          label="Button labels"
+          description="Show words next to the icons on the buttons."
+          checked={showLabels}
+          onChange={onToggleLabels}
+        />
+        <SettingSwitch
+          label="Page turn animation"
+          description={
+            reducedMotion
+              ? "Your device is set to reduce motion, so pages change without animation."
+              : "Pages turn over like a paper book."
+          }
+          checked={pageTurn && !reducedMotion}
+          disabled={reducedMotion}
+          onChange={onTogglePageTurn}
+        />
+        <p className="text-base text-slate-700">Button labels and page turn are remembered on this device.</p>
+      </div>
+    </Panel>
+  );
+}
+
+function SettingSwitch({
+  label,
+  description,
+  checked,
+  disabled = false,
+  onChange,
+}: {
+  label: string;
+  description: string;
+  checked: boolean;
+  disabled?: boolean;
+  onChange: () => void;
+}) {
+  const descriptionId = useId();
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-describedby={descriptionId}
+      disabled={disabled}
+      onClick={onChange}
+      className="flex min-h-16 w-full items-center justify-between gap-4 rounded-lg border-2 border-slate-300 bg-white px-4 py-3 text-left hover:border-primary focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:hover:border-slate-300"
+    >
+      <span className="min-w-0">
+        <span className="block text-lg font-semibold text-ink">{label}</span>
+        <span id={descriptionId} className="block text-base text-slate-700">
+          {description}
+        </span>
+      </span>
+      <span className="flex shrink-0 items-center gap-2">
+        <span aria-hidden="true" className="w-8 text-right text-base font-semibold text-ink">
+          {checked ? "On" : "Off"}
+        </span>
+        <span
+          aria-hidden="true"
+          className={`relative h-8 w-14 rounded-full transition-colors motion-reduce:transition-none ${checked ? "bg-primary" : "bg-slate-500"} ${disabled ? "opacity-50" : ""}`}
+        >
+          <span className={`absolute top-1 size-6 rounded-full bg-white shadow transition-[left] motion-reduce:transition-none ${checked ? "left-7" : "left-1"}`} />
+        </span>
+      </span>
+    </button>
   );
 }
