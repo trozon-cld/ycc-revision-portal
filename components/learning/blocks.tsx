@@ -1,7 +1,9 @@
-import { Fragment } from "react";
-import type { Block, CalloutBlock, PictureBlock, PictureSize } from "@/lib/content/blocks";
+import type { Block, CalloutBlock, PictureBlock } from "@/lib/content/blocks";
 import type { ResolvedMedia } from "@/lib/content/book";
-import { parseInline } from "@/lib/content/inline";
+import { InlineText } from "./inline-text";
+import { BookPicture } from "./picture";
+
+export { InlineText };
 
 // Candidate-facing block renderers. Sizes are in em so the A−/A+ text size scales everything.
 // Pictures and boxes never split across sheets; headings stay with what follows.
@@ -58,46 +60,7 @@ function BlockView({ block, media }: { block: Block; media: ResolvedMedia }) {
 }
 
 function PictureView({ block, media }: { block: PictureBlock; media: ResolvedMedia }) {
-  const picture = media[block.mediaId];
-  const ratio = picture ? picture.width / picture.height : 4 / 3;
-  const margin = block.align === "left" ? "mr-auto" : block.align === "right" ? "ml-auto" : "mx-auto";
-  return (
-    <figure className={`mb-[0.9em] [break-inside:avoid] ${margin}`} style={fitToSheet(ratio, block.size ?? "full")}>
-      {picture ? (
-        // eslint-disable-next-line @next/next/no-img-element -- short-lived signed link; files are pre-shrunk WebP
-        <img
-          src={picture.src}
-          alt={picture.alt}
-          width={picture.width}
-          height={picture.height}
-          loading="lazy"
-          decoding="async"
-          className="block h-auto w-full rounded-md"
-          style={{ aspectRatio: String(ratio) }}
-        />
-      ) : (
-        <div
-          className="flex w-full items-center justify-center rounded-md bg-slate-100 text-[0.85em] text-slate-700"
-          style={{ aspectRatio: String(ratio) }}
-        >
-          Picture unavailable
-        </div>
-      )}
-      {block.caption && (
-        <figcaption className="mt-[0.4em] text-center text-[0.85em] leading-snug text-slate-700">
-          <InlineText text={block.caption} />
-        </figcaption>
-      )}
-    </figure>
-  );
-}
-
-const SIZE_SHARE: Record<PictureSize, string> = { small: "33.333%", medium: "50%", large: "75%", full: "100%" };
-
-// Size comes from the known aspect ratio, never from the loaded file, so pages are counted the
-// same before and after pictures arrive. Capped by the chosen size and the sheet height.
-function fitToSheet(ratio: number, size: PictureSize) {
-  return { width: `min(${SIZE_SHARE[size]}, calc(var(--book-picture-max, 60vh) * ${ratio.toFixed(4)}))` };
+  return <BookPicture picture={media[block.mediaId]} size={block.size} align={block.align} caption={block.caption} />;
 }
 
 const CALLOUT_STYLE = {
@@ -117,21 +80,5 @@ function CalloutView({ block }: { block: CalloutBlock }) {
         <InlineText text={block.text} />
       </p>
     </aside>
-  );
-}
-
-export function InlineText({ text }: { text: string }) {
-  return (
-    <>
-      {parseInline(text).map((segment, index) =>
-        segment.bold ? (
-          <strong key={index} className="font-bold">
-            {segment.text}
-          </strong>
-        ) : (
-          <Fragment key={index}>{segment.text}</Fragment>
-        )
-      )}
-    </>
   );
 }

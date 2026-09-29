@@ -4,7 +4,15 @@ import { ActionForm } from "@/components/admin/action-form";
 import { Field } from "@/components/admin/field";
 import { PanelButton, RowActions, type RowAction } from "@/components/admin/row-actions";
 import { buttonClass, inputClass } from "@/components/admin/styles";
-import { createChapter, deleteChapter, moveChapter, moveChapterToSection, renameChapter } from "./chapter-actions";
+import {
+  createChapter,
+  deleteChapter,
+  moveChapter,
+  moveChapterToSection,
+  renameChapter,
+  setChapterStatus,
+  unpublishChapterForm,
+} from "./chapter-actions";
 import type { SectionOption } from "./section-row-actions";
 
 export function NewChapterButton({ sections }: { sections: SectionOption[] }) {
@@ -50,6 +58,8 @@ export function ChapterRowActions({
   isLast,
   otherSections,
   pageCount,
+  questionCount,
+  status,
 }: {
   id: string;
   title: string;
@@ -58,6 +68,8 @@ export function ChapterRowActions({
   isLast: boolean;
   otherSections: SectionOption[];
   pageCount: number;
+  questionCount: number;
+  status: "draft" | "published";
 }) {
   const hidden = { chapterId: id };
   const description = `Chapter ${number} · ${title}`;
@@ -122,19 +134,48 @@ export function ChapterRowActions({
     });
   }
 
+  actions.push(
+    status === "draft"
+      ? { label: "Publish", run: () => setChapterStatus(id, "published"), successMessage: "Chapter published." }
+      : {
+          label: "Unpublish",
+          title: "Unpublish chapter?",
+          variant: "confirm",
+          render: (close) => (
+            <ActionForm
+              action={unpublishChapterForm}
+              hidden={hidden}
+              submitLabel="Unpublish"
+              pendingLabel="Unpublishing…"
+              successMessage="Chapter is a draft again."
+              onSuccess={close}
+              onCancel={close}
+            >
+              <p className="text-sm [overflow-wrap:anywhere]">
+                Candidates will no longer see{" "}
+                <strong className="font-medium">
+                  {number} {title}
+                </strong>
+                . Its pages and questions stay as they are.
+              </p>
+            </ActionForm>
+          ),
+        }
+  );
+
   actions.push({
     label: "Delete",
     danger: true,
-    title: pageCount > 0 ? "Can't delete this chapter" : "Delete chapter?",
+    title: pageCount > 0 || questionCount > 0 ? "Can't delete this chapter" : "Delete chapter?",
     variant: "confirm",
     render: (close) =>
-      pageCount > 0 ? (
+      pageCount > 0 || questionCount > 0 ? (
         <div>
           <p className="px-5 py-4 text-sm">
             <strong className="font-medium">
               {number} {title}
             </strong>{" "}
-            still has {pageCount} page{pageCount === 1 ? "" : "s"}. Delete them first.
+            still has {blockedBy(pageCount, questionCount)}. Delete them first.
           </p>
           <div className="flex justify-end border-t border-slate-200 px-5 py-3">
             <button type="button" onClick={close} className={buttonClass("secondary")}>
@@ -165,6 +206,13 @@ export function ChapterRowActions({
   });
 
   return <RowActions label={`Actions for ${title}`} actions={actions} />;
+}
+
+function blockedBy(pages: number, questions: number): string {
+  const parts: string[] = [];
+  if (pages > 0) parts.push(`${pages} page${pages === 1 ? "" : "s"}`);
+  if (questions > 0) parts.push(`${questions} question${questions === 1 ? "" : "s"}`);
+  return parts.join(" and ");
 }
 
 function SectionSelect({ id, options }: { id: string; options: SectionOption[] }) {

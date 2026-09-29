@@ -4,6 +4,7 @@ import { pool } from "@/lib/db/pool";
 import { chapterNumber, sectionLetter } from "@/lib/handbook/structure";
 import { Badge } from "@/components/admin/badge";
 import { PageHeader } from "@/components/admin/page-header";
+import { buttonClass } from "@/components/admin/styles";
 import { Cell, Row, Table } from "@/components/admin/table";
 import { ChapterRowActions, NewChapterButton } from "./chapter-row-actions";
 import { NewSectionButton, SectionRowActions, type SectionOption } from "./section-row-actions";
@@ -22,6 +23,9 @@ interface ChapterRow {
   title: string;
   status: "draft" | "published";
   page_count: number;
+  question_count: number;
+  item_count: number;
+  draft_count: number;
 }
 
 export default async function HandbookPage() {
@@ -32,7 +36,13 @@ export default async function HandbookPage() {
     pool.query<ChapterRow>(
       `select c.id, c.section_id, c.position, c.title, c.status,
               row_number() over (order by s.position, c.position)::int as number,
-              (select count(*) from handbook_items i where i.chapter_id = c.id)::int as page_count
+              (select count(*) from handbook_items i where i.chapter_id = c.id and i.content_page_id is not null)::int as page_count,
+              (select count(*) from questions q where q.chapter_id = c.id)::int as question_count,
+              (select count(*) from handbook_items i where i.chapter_id = c.id)::int as item_count,
+              (select count(*) from handbook_items i
+                 left join content_pages p on p.id = i.content_page_id
+                 left join questions q on q.id = i.question_id
+                 where i.chapter_id = c.id and coalesce(p.status, q.status) <> 'published')::int as draft_count
        from chapters c
        join sections s on s.id = c.section_id
        order by s.position, c.position`
@@ -51,6 +61,9 @@ export default async function HandbookPage() {
         description={`${count(sections.length, "section")} · ${count(chapters.length, "chapter")}`}
         actions={
           <>
+            <Link href="/admin/handbook/preview" className={buttonClass("secondary")}>
+              Preview book
+            </Link>
             <NewSectionButton />
             <NewChapterButton sections={sectionOptions} />
           </>
@@ -76,7 +89,11 @@ export default async function HandbookPage() {
                   <h2 id={headingId} className="text-base font-semibold text-ink [overflow-wrap:anywhere]">
                     {label}
                   </h2>
-                  <p className="text-sm text-slate-600">{count(sectionChapters.length, "chapter")}</p>
+                  <p className="text-sm text-slate-600">
+                    {count(sectionChapters.length, "chapter")}
+                    {/* A section is in the book once one of its chapters is published. */}
+                    {!sectionChapters.some((chapter) => chapter.status === "published") && " · Not in the book yet"}
+                  </p>
                 </div>
                 <SectionRowActions
                   id={section.id}
@@ -89,7 +106,7 @@ export default async function HandbookPage() {
               </div>
 
               <Table
-                columns={["Chapter", "Pages", "Status", ""]}
+                columns={["Chapter", "Pages", "Questions", "Status", ""]}
                 isEmpty={sectionChapters.length === 0}
                 emptyMessage="No chapters in this section yet."
               >
@@ -105,10 +122,14 @@ export default async function HandbookPage() {
                       </Link>
                     </Cell>
                     <Cell label="Pages">{chapter.page_count}</Cell>
-                    <Cell label="Status" nowrap>
-                      <Badge tone={chapter.status === "published" ? "success" : "neutral"}>
-                        {chapter.status === "published" ? "Published" : "Draft"}
-                      </Badge>
+                    <Cell label="Questions">{chapter.question_count}</Cell>
+                    <Cell label="Status">
+                      <span className="inline-flex flex-wrap items-center justify-end gap-x-2 gap-y-1 md:justify-start">
+                        <Badge tone={chapter.status === "published" ? "success" : "neutral"}>
+                          {chapter.status === "published" ? "Published" : "Draft"}
+                        </Badge>
+                        <Readiness status={chapter.status} items={chapter.item_count} drafts={chapter.draft_count} />
+                      </span>
                     </Cell>
                     <Cell kind="actions">
                       <ChapterRowActions
@@ -119,6 +140,8 @@ export default async function HandbookPage() {
                         isLast={index === sectionChapters.length - 1}
                         otherSections={sectionOptions.filter((option) => option.id !== section.id)}
                         pageCount={chapter.page_count}
+                        questionCount={chapter.question_count}
+                        status={chapter.status}
                       />
                     </Cell>
                   </Row>
@@ -134,4 +157,17 @@ export default async function HandbookPage() {
 
 function count(n: number, noun: string) {
   return `${n} ${noun}${n === 1 ? "" : "s"}`;
+}
+
+// Whether a draft chapter can be published, or what a published one is missing.
+function Readiness({ status, items, drafts }: { status: "draft" | "published"; items: number; drafts: number }) {
+  const itemsWord = (n: number) => (n === 1 ? "1 item is a draft" : `${n} items are drafts`);
+  if (status === "published") {
+    if (items === 0) return <span className="text-sm font-medium text-amber-900">No pages or questions</span>;
+    if (drafts > 0) return <span className="text-sm font-medium text-amber-900">{itemsWord(drafts)}</span>;
+    return null;
+  }
+  if (items === 0) return <span className="text-sm text-slate-600">Empty</span>;
+  if (drafts > 0) return <span className="text-sm text-slate-600">{drafts} of {items} items are drafts</span>;
+  return <span className="text-sm font-medium text-green-800">Ready to publish</span>;
 }

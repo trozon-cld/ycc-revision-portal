@@ -4,6 +4,7 @@ import { ActionForm } from "@/components/admin/action-form";
 import { Field } from "@/components/admin/field";
 import { RowActions, type RowAction } from "@/components/admin/row-actions";
 import { buttonClass, textareaClass } from "@/components/admin/styles";
+import { describeMediaUse } from "@/lib/media/usage";
 import { deleteMedia, updateAltText } from "./actions";
 
 export function MediaRowActions({
@@ -12,13 +13,16 @@ export function MediaRowActions({
   name,
   thumbUrl,
   usedIn,
+  usedInQuestions,
 }: {
   id: string;
   altText: string;
   name: string;
   thumbUrl?: string;
   usedIn: number;
+  usedInQuestions: number;
 }) {
+  const inUse = usedIn > 0 || usedInQuestions > 0;
   const hidden = { mediaId: id };
 
   const actions: RowAction[] = [
@@ -56,14 +60,14 @@ export function MediaRowActions({
     {
       label: "Delete",
       danger: true,
-      title: usedIn > 0 ? "Can't delete this picture" : "Delete picture?",
+      title: inUse ? "Can't delete this picture" : "Delete picture?",
       variant: "confirm",
       render: (close) =>
-        usedIn > 0 ? (
+        inUse ? (
           <div>
             <p className="px-5 py-4 text-sm [overflow-wrap:anywhere]">
-              <strong className="font-medium">{name}</strong> is used in {usedIn} Handbook page{usedIn === 1 ? "" : "s"}.
-              Remove it from {usedIn === 1 ? "that page" : "those pages"} first.
+              <strong className="font-medium">{name}</strong> is used in {describeMediaUse(usedIn, usedInQuestions)}.
+              Remove it from {removeFrom(usedIn, usedInQuestions)} first.
             </p>
             <div className="flex justify-end border-t border-slate-200 px-5 py-3">
               <button type="button" onClick={close} className={buttonClass("secondary")}>
@@ -91,4 +95,10 @@ export function MediaRowActions({
   ];
 
   return <RowActions label={`Actions for picture ${name}`} actions={actions} />;
+}
+
+function removeFrom(pages: number, questions: number): string {
+  if (questions === 0) return pages === 1 ? "that page" : "those pages";
+  if (pages === 0) return questions === 1 ? "that question" : "those questions";
+  return "all of them";
 }

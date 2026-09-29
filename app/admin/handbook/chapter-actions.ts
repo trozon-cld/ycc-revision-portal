@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/guard";
 import { getErrorCode, withTransaction } from "@/lib/db/transaction";
 import { logActivity } from "@/lib/audit/log";
+import { questionRef } from "@/lib/questions/labels";
 import {
   lockHandbookStructure,
   normaliseTitle,
@@ -256,6 +257,66 @@ export async function deleteChapter(
 
   revalidatePath(PAGE_PATH);
   return result;
+}
+
+// Publish: the chapter needs at least one item, and every item must be published. Unpublish: always.
+// Later edits don't unpublish it; candidates only ever see published items in published chapters.
+export async function setChapterStatus(id: string, status: "draft" | "published"): Promise<StructureActionState> {
+  const session = await requireRole(["superadmin"]);
+  const chapterId = String(id ?? "");
+  if (!/^[0-9a-f-]{36}$/i.test(chapterId) || (status !== "draft" && status !== "published")) return { error: NOT_FOUND };
+
+  const result = await withTransaction<StructureActionState>(async (client) => {
+    const { rows } = await client.query<{ title: string; status: string }>(
+      `select title, status from chapters where id = $1 for update`,
+      [chapterId]
+    );
+    const chapter = rows[0];
+    if (!chapter) return { error: NOT_FOUND };
+    if (chapter.status === status) return { success: true };
+
+    let itemCount = 0;
+    if (status === "published") {
+      // Holds the page order still while the items are checked.
+      await client.query(`lock table handbook_items in share mode`);
+      const { rows: items } = await client.query<{ status: string; title: string | null; ref_no: number | null }>(
+        `select coalesce(p.status, q.status)::text as status, p.title, q.ref_no
+         from handbook_items i
+         left join content_pages p on p.id = i.content_page_id
+         left join questions q on q.id = i.question_id
+         where i.chapter_id = $1
+         order by i.position`,
+        [chapterId]
+      );
+      if (items.length === 0) return { error: "This chapter can't be published yet. Add at least one page or question first." };
+      const drafts = items.filter((item) => item.status !== "published");
+      if (drafts.length > 0) {
+        const names = drafts.map((item) => (item.ref_no !== null ? questionRef(item.ref_no) : `"${item.title}"`));
+        const shown = names.slice(0, 5).join(", ") + (names.length > 5 ? ` and ${names.length - 5} more` : "");
+        return {
+          error: `This chapter can't be published yet. ${drafts.length === 1 ? "1 item is" : `${drafts.length} items are`} still ${drafts.length === 1 ? "a draft" : "drafts"}: ${shown}.`,
+        };
+      }
+      itemCount = items.length;
+    }
+
+    await client.query(`update chapters set status = $2, updated_at = now() where id = $1`, [chapterId, status]);
+    await logActivity(
+      client,
+      session,
+      status === "published" ? "chapter.published" : "chapter.unpublished",
+      { type: "chapter", id: chapterId, label: chapter.title },
+      status === "published" ? { items: `${itemCount} ${itemCount === 1 ? "item" : "items"}` } : {}
+    );
+    return { success: true };
+  });
+
+  revalidatePath(PAGE_PATH, "layout");
+  return result;
+}
+
+export async function unpublishChapterForm(_prev: StructureActionState, formData: FormData): Promise<StructureActionState> {
+  return setChapterStatus(String(formData.get("chapterId") ?? ""), "draft");
 }
 
 async function closeGap(client: PoolClient, sectionId: string, removedPosition: number) {

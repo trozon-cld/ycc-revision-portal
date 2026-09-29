@@ -1,10 +1,10 @@
 "use client";
 
-import { useRef, type ReactNode } from "react";
 import type { Block, PictureAlign, PictureSize } from "@/lib/content/blocks";
 import { BLOCK_LIMITS } from "@/lib/content/blocks";
-import { BLOCK_LABELS, applyBold } from "@/lib/content/editor";
-import { buttonClass, cardClass, inputClass, labelClass, textareaClass } from "@/components/admin/styles";
+import { BLOCK_LABELS } from "@/lib/content/editor";
+import { BoldTextarea, IconButton, Segmented } from "@/components/admin/editor-fields";
+import { buttonClass, cardClass, inputClass, labelClass } from "@/components/admin/styles";
 
 export function BlockEditor({
   block,
@@ -216,123 +216,6 @@ function BlockFields({
   }
 }
 
-// A textarea with a Bold button (and Ctrl/Cmd+B) that wraps the selection in ** markers.
-function BoldTextarea({
-  id,
-  label,
-  hint,
-  value,
-  maxLength,
-  rows,
-  onChange,
-}: {
-  id: string;
-  label: string;
-  hint?: ReactNode;
-  value: string;
-  maxLength: number;
-  rows: number;
-  onChange: (value: string) => void;
-}) {
-  const ref = useRef<HTMLTextAreaElement>(null);
-
-  function bold() {
-    const area = ref.current;
-    if (!area) return;
-    const result = applyBold(area.value, area.selectionStart, area.selectionEnd);
-    onChange(result.text);
-    requestAnimationFrame(() => {
-      area.focus();
-      area.setSelectionRange(result.start, result.end);
-    });
-  }
-
-  return (
-    <div className="space-y-1">
-      <div className="flex items-end justify-between gap-2">
-        <label htmlFor={id} className={labelClass}>
-          {label}
-        </label>
-        <button
-          type="button"
-          onClick={bold}
-          aria-label="Bold: make the selected words bold"
-          title="Bold (Ctrl+B)"
-          className={`${buttonClass("secondary", "sm")} min-w-9 font-bold`}
-        >
-          B
-        </button>
-      </div>
-      <textarea
-        ref={ref}
-        id={id}
-        value={value}
-        rows={rows}
-        maxLength={maxLength}
-        onChange={(event) => onChange(event.target.value)}
-        onKeyDown={(event) => {
-          if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "b") {
-            event.preventDefault();
-            bold();
-          }
-        }}
-        className={textareaClass}
-      />
-      <p className="text-xs text-slate-600">
-        {hint ? <>{hint} </> : null}Select words and press B to make them bold (shown as **words** here).
-      </p>
-    </div>
-  );
-}
-
-// A row of toggle buttons; the pressed one is the current choice.
-function Segmented({
-  label,
-  value,
-  options,
-  onChange,
-  disabled,
-  disabledHint,
-}: {
-  label: string;
-  value: string;
-  options: [string, string][];
-  onChange: (value: string) => void;
-  disabled?: boolean;
-  disabledHint?: string;
-}) {
-  return (
-    <div className="space-y-1">
-      <p className={labelClass}>{label}</p>
-      <div
-        role="group"
-        aria-label={label}
-        title={disabled ? disabledHint : undefined}
-        className="inline-flex flex-wrap rounded-md border border-slate-300 bg-white p-0.5"
-      >
-        {options.map(([optionValue, optionLabel]) => {
-          const pressed = value === optionValue;
-          return (
-            <button
-              key={optionValue}
-              type="button"
-              aria-pressed={pressed}
-              disabled={disabled}
-              onClick={() => onChange(optionValue)}
-              className={`h-9 rounded px-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 sm:h-8 ${
-                pressed && !disabled ? "bg-primary text-white" : "text-ink hover:bg-slate-100"
-              }`}
-            >
-              {optionLabel}
-            </button>
-          );
-        })}
-      </div>
-      {disabled && disabledHint && <p className="text-xs text-slate-600">{disabledHint}</p>}
-    </div>
-  );
-}
-
 function Select({
   id,
   label,
@@ -359,34 +242,5 @@ function Select({
         ))}
       </select>
     </div>
-  );
-}
-
-function IconButton({
-  label,
-  path,
-  onClick,
-  disabled,
-  danger,
-}: {
-  label: string;
-  path: string;
-  onClick: () => void;
-  disabled?: boolean;
-  danger?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      onClick={onClick}
-      disabled={disabled}
-      className={`${buttonClass("ghost", "icon")} ${danger ? "text-red-700 hover:bg-red-50" : ""}`}
-    >
-      <svg viewBox="0 0 20 20" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-        <path d={path} />
-      </svg>
-    </button>
   );
 }

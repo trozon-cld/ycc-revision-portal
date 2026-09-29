@@ -18,6 +18,7 @@ interface MediaRow {
   byte_size: number;
   alt_text: string;
   used_in: number;
+  used_in_questions: number;
 }
 
 const PAGE_LIMIT = 300;
@@ -32,7 +33,8 @@ export default async function MediaPage({ searchParams }: PageProps<"/admin/medi
 
   const { rows: media } = await pool.query<MediaRow>(
     `select id, thumb_path, original_name, mime_type, width, height, byte_size, alt_text,
-            (select count(*) from content_page_media u where u.media_id = media.id)::int as used_in
+            (select count(*) from content_page_media u where u.media_id = media.id)::int as used_in,
+            (select count(*) from question_media u where u.media_id = media.id)::int as used_in_questions
      from media
      where $1 = '' or alt_text ilike '%' || $1 || '%' escape '\\' or original_name ilike '%' || $1 || '%' escape '\\'
      order by created_at desc
@@ -114,7 +116,7 @@ export default async function MediaPage({ searchParams }: PageProps<"/admin/medi
                       {item.width} × {item.height} · {formatBytes(item.byte_size)} · {formatType(item.mime_type)}
                     </p>
                     <p className="mt-0.5 text-xs text-slate-600">
-                      {item.used_in === 0 ? "Not used yet" : `Used in ${item.used_in} page${item.used_in === 1 ? "" : "s"}`}
+                      {item.used_in === 0 && item.used_in_questions === 0 ? "Not used yet" : usedLabel(item.used_in, item.used_in_questions)}
                     </p>
                   </div>
                   <MediaRowActions
@@ -123,6 +125,7 @@ export default async function MediaPage({ searchParams }: PageProps<"/admin/medi
                     name={item.original_name}
                     thumbUrl={thumbUrl}
                     usedIn={item.used_in}
+                    usedInQuestions={item.used_in_questions}
                   />
                 </div>
               </li>
@@ -153,4 +156,12 @@ function formatBytes(bytes: number) {
 
 function formatType(mime: string) {
   return mime === "image/webp" ? "WebP" : mime === "image/png" ? "PNG" : "JPEG";
+}
+
+// Keeps the Day 3 wording ("Used in 2 pages") and adds questions when there are any.
+function usedLabel(pages: number, questions: number): string {
+  const parts: string[] = [];
+  if (pages > 0) parts.push(`${pages} page${pages === 1 ? "" : "s"}`);
+  if (questions > 0) parts.push(`${questions} question${questions === 1 ? "" : "s"}`);
+  return `Used in ${parts.join(" · ")}`;
 }

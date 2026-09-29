@@ -133,7 +133,9 @@ export async function deleteMedia(_prevState: MediaActionState, formData: FormDa
   } catch (error) {
     const code = getErrorCode(error);
     if (code === "22P02") return { error: NOT_FOUND };
-    if (code === "23503") return { error: "This picture is used in the Handbook. Remove it from there first." };
+    if (code === "23503") {
+      return { error: "This picture is used in the Handbook or the question bank. Remove it from there first." };
+    }
     throw error;
   }
 

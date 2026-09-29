@@ -8,16 +8,15 @@ import type { BookPageData, ResolvedMedia } from "@/lib/content/book";
 import { BLOCK_LABELS, duplicateBlock, newBlock, previewableBlocks, toSavable } from "@/lib/content/editor";
 import type { ChapterContext } from "@/lib/content/pages";
 import { Badge } from "@/components/admin/badge";
-import { BookPreview } from "@/components/admin/book-preview";
+import { BookPreview, FitReadout } from "@/components/admin/book-preview";
 import { Dialog } from "@/components/admin/dialog";
 import { buttonClass, inputClass, labelClass } from "@/components/admin/styles";
 import { useToast } from "@/components/admin/toast";
-import { getPreviewMedia, savePageContent, type PickerItem } from "../actions";
+import { PicturePicker } from "@/components/admin/picture-picker";
+import { getPreviewMedia, listPickerMedia, savePageContent, type PickerItem } from "../actions";
 import { BlockEditor } from "./block-editor";
-import { PicturePicker } from "./picture-picker";
 
 const ADD_ORDER: BlockType[] = ["heading", "paragraph", "list", "picture", "callout"];
-const LONG_ON_PHONE = 4;
 
 type SaveProblem = { message: string; conflict?: boolean } | null;
 
@@ -307,18 +306,15 @@ export function PageEditor({
               label="Page preview"
               initialDevice="phone"
               devices={["phone", "tablet", "desktop"]}
-              readout={({ pages, device, textSize }) => (
-                <p className={pages >= LONG_ON_PHONE && device === "Phone" ? "font-medium text-amber-900" : "text-slate-700"}>
-                  On {device.toLowerCase()} at {textSize} px, this page takes {pages} page{pages === 1 ? "" : "s"}.
-                  {pages >= LONG_ON_PHONE && device === "Phone" && " It's quite long: consider splitting it into two pages."}
-                </p>
-              )}
+              readout={(info) => <FitReadout info={info} noun="page" hint="Shorten it or split it into two pages." />}
             />
           </div>
         </section>
       </div>
 
-      {pickingFor && <PicturePicker storageReady={storageReady} onPick={pick} onClose={() => setPickingFor(null)} />}
+      {pickingFor && (
+        <PicturePicker load={listPickerMedia} storageReady={storageReady} onPick={pick} onClose={() => setPickingFor(null)} />
+      )}
 
       {leaveTo && (
         <Dialog title="Leave without saving?" variant="confirm" onClose={() => setLeaveTo(null)}>

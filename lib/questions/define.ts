@@ -1,0 +1,38 @@
+import type { CheckResult } from "./types";
+
+type Parsed<C, A> = { ok: true; content: C; answer: A } | { ok: false; error: string };
+
+// Everything a question type knows about its own data. Pure functions only.
+export type QuestionTypeDef<C, A, R> = {
+  // Checks untrusted content and answer (from the editor or the database) and returns clean copies.
+  parse(content: unknown, answer: unknown): Parsed<C, A>;
+  // Turns an untrusted candidate response into a typed one; null means "not answered".
+  parseResponse(raw: unknown, content: C): R | null;
+  check(content: C, answer: A, response: R): boolean;
+  // Every picture the content uses (not the question picture, which is shared).
+  mediaIds(content: C): string[];
+  // Optional: a message when a started answer isn't complete yet (e.g. "Choose 1 more answer").
+  incomplete?(content: C, raw: unknown): string | null;
+  // Optional: a typical wrong answer, so the book can measure how the question looks after Check.
+  sampleWrongResponse?(content: C, answer: A): unknown;
+};
+
+export type AnyQuestionTypeDef = {
+  parse(content: unknown, answer: unknown): Parsed<unknown, unknown>;
+  parseResponse(raw: unknown, content: unknown): unknown;
+  check(content: unknown, answer: unknown, response: unknown): boolean;
+  mediaIds(content: unknown): string[];
+  incomplete?(content: unknown, raw: unknown): string | null;
+  sampleWrongResponse?(content: unknown, answer: unknown): unknown;
+};
+
+// Erases the type parameters so every type fits in one registry.
+export function defineQuestionType<C, A, R>(def: QuestionTypeDef<C, A, R>): AnyQuestionTypeDef {
+  return def as unknown as AnyQuestionTypeDef;
+}
+
+export function checkWith(def: AnyQuestionTypeDef, content: unknown, answer: unknown, raw: unknown): CheckResult {
+  const response = def.parseResponse(raw, content);
+  if (response === null || response === undefined) return { answered: false, correct: false };
+  return { answered: true, correct: def.check(content, answer, response) };
+}

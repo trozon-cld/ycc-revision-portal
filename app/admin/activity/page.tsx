@@ -377,6 +377,9 @@ function describeDetails(details: Record<string, string>): string | null {
   if (details.group) parts.push(`Group: ${details.group}`);
   if (details.section) parts.push(`Section: ${details.section}`);
   if (details.chapter) parts.push(`Chapter: ${details.chapter}`);
+  if (details.position) parts.push(details.position);
+  if (details.items) parts.push(details.items);
+  if (details.questionType) parts.push(`Type: ${details.questionType}`);
   if (details.total !== undefined) {
     parts.push(`Chapters +${details.added ?? 0} −${details.removed ?? 0} (${details.total} in total)`);
   }
