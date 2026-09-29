@@ -70,6 +70,8 @@ export function ReaderBar({
       : compact
       ? "h-14 min-w-12 flex-col gap-0 px-2 text-sm leading-tight"
       : "h-14 min-w-14 px-4 text-lg";
+  // Smaller laptops with labels on: the word sits under the icon, so the page status keeps the middle.
+  const panelSize = dense && narrow && showLabels ? "h-12 min-w-14 flex-col gap-0 px-2 text-sm leading-tight [&_svg]:size-5" : size;
   const toggle = (key: ReaderPanel) => onPanel(panel === key ? null : key);
   const panelButton = (key: ReaderPanel, icon: string, label: string, short: string) => (
     <button
@@ -79,7 +81,7 @@ export function ReaderBar({
       disabled={!ready}
       onClick={() => toggle(key)}
       title={showLabels ? undefined : label}
-      className={`${barButton} ${size}`}
+      className={`${barButton} ${panelSize}`}
     >
       <Icon path={icon} />
       {tiny || !showLabels ? <span className="sr-only">{label}</span> : dense && narrow && short !== label ? (
@@ -97,23 +99,16 @@ export function ReaderBar({
       )}
     </button>
   );
-  return (
-    <div
-      role="toolbar"
-      aria-label="Reader tools"
-      className={`flex items-center border-b border-slate-300 bg-white py-2 ${tiny ? "gap-1.5 px-2" : compact ? "gap-2 px-3" : "gap-2 px-6"}`}
-    >
+  const leftTools = (
+    <>
       {start && <div className="mr-2 flex shrink-0 items-center">{start}</div>}
       {panelButton("contents", "M4 6h16M4 12h16M4 18h10", "Contents", "Contents")}
       {panelButton("goto", "M6 3h9l4 4v14H6zM14 3v5h5", "Go to page", "Page")}
       {hasQuestions && panelButton("results", "M5 13l4 4L19 7", "Results", "Results")}
-      {status ? (
-        <span aria-hidden="true" className="flex flex-1 justify-center whitespace-nowrap px-2 text-base font-medium text-ink">
-          {status}
-        </span>
-      ) : (
-        <span className="flex-1" />
-      )}
+    </>
+  );
+  const rightTools = (
+    <>
       {onToggleLabels && !compact && (
         <button
           type="button"
@@ -162,6 +157,33 @@ export function ReaderBar({
         </button>
       )}
       {end && <div className="ml-2 flex shrink-0 items-center gap-2 border-l border-slate-200 pl-4">{end}</div>}
+    </>
+  );
+  // Dense bar: three columns, so the page status stays exactly in the middle whatever the buttons show.
+  if (status) {
+    return (
+      <div
+        role="toolbar"
+        aria-label="Reader tools"
+        className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-slate-300 bg-white px-6 py-2"
+      >
+        <div className="flex min-w-0 items-center gap-2">{leftTools}</div>
+        <span aria-hidden="true" className="whitespace-nowrap px-2 text-center text-base font-medium text-ink">
+          {status}
+        </span>
+        <div className="flex min-w-0 items-center justify-end gap-2">{rightTools}</div>
+      </div>
+    );
+  }
+  return (
+    <div
+      role="toolbar"
+      aria-label="Reader tools"
+      className={`flex items-center border-b border-slate-300 bg-white py-2 ${tiny ? "gap-1.5 px-2" : compact ? "gap-2 px-3" : "gap-2 px-6"}`}
+    >
+      {leftTools}
+      <span className="flex-1" />
+      {rightTools}
     </div>
   );
 }
