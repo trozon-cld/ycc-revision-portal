@@ -379,6 +379,7 @@ function Pagination({
 function describeDetails(details: Record<string, string>): string | null {
   const parts: string[] = [];
   if (details.from !== undefined && details.to !== undefined) parts.push(`${details.from} → ${details.to}`);
+  if (details.name) parts.push(`Name: ${details.name}`);
   if (details.previousCurrent) parts.push(`Was working in: ${details.previousCurrent}`);
   if (details.group) parts.push(`Group: ${details.group}`);
   if (details.section) parts.push(`Section: ${details.section}`);

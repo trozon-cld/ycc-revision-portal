@@ -11,14 +11,17 @@ import {
   updateCandidateAccess,
   updateCandidateCategory,
   updateCandidateEmail,
+  updateCandidateName,
   updateCandidatePassword,
 } from "./actions";
+import { NAME_MAX_LENGTH } from "@/lib/users/name";
 import { AccessLengthField } from "./access-length-field";
 import { CategoryOptions, type CategoryChoice } from "./category-options";
 
 export interface RowCandidate {
   id: string;
   email: string;
+  name: string | null;
   categoryId: string;
   adminId: string;
   isBlocked: boolean;
@@ -40,6 +43,34 @@ export function AdminCandidateActions({
   const hidden = { candidateId: id };
 
   const actions: RowAction[] = [
+    {
+      label: "Change name",
+      title: "Change name",
+      description: email,
+      render: (close) => (
+        <ActionForm
+          action={updateCandidateName}
+          hidden={hidden}
+          submitLabel="Save name"
+          successMessage="Name updated."
+          onSuccess={close}
+          onCancel={close}
+        >
+          <Field id={`name-${id}`} label="Name">
+            <input
+              id={`name-${id}`}
+              name="name"
+              type="text"
+              required
+              maxLength={NAME_MAX_LENGTH}
+              defaultValue={candidate.name ?? ""}
+              autoComplete="off"
+              className={inputClass}
+            />
+          </Field>
+        </ActionForm>
+      ),
+    },
     {
       label: "Change email",
       title: "Change email",

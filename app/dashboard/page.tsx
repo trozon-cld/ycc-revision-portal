@@ -30,7 +30,7 @@ export default async function CandidateHomePage({ searchParams }: PageProps<"/da
     <PageBody>
       <div className="flex flex-col gap-8">
         <div>
-          <h1 className="text-3xl font-bold text-ink">Welcome</h1>
+          <h1 className="text-3xl font-bold text-ink [overflow-wrap:anywhere]">{home.name ? `Welcome, ${home.name}` : "Welcome"}</h1>
           <p className="mt-1 text-lg text-ink/80 [overflow-wrap:anywhere]">{home.email}</p>
         </div>
 

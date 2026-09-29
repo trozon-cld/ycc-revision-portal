@@ -2,6 +2,7 @@ import { pool } from "@/lib/db/pool";
 
 export type CandidateHome = {
   email: string;
+  name: string | null;
   accessExpiresAt: string | null;
   current: { id: string; name: string; groupName: string };
   // How many categories the candidate can choose from (their group's size).
@@ -13,6 +14,7 @@ export type CandidateHome = {
 export async function loadCandidateHome(userId: string): Promise<CandidateHome | null> {
   const { rows } = await pool.query<{
     email: string;
+    full_name: string | null;
     access_expires_at: Date | null;
     current_id: string;
     current_name: string;
@@ -21,7 +23,7 @@ export async function loadCandidateHome(userId: string): Promise<CandidateHome |
     assigned_name: string;
     choices: number;
   }>(
-    `select u.email, u.access_expires_at,
+    `select u.email, u.full_name, u.access_expires_at,
             cur.id as current_id, cur.name as current_name, g.name as group_name,
             asg.id as assigned_id, asg.name as assigned_name,
             (select count(*)::int from categories c where c.group_id = asg.group_id) as choices
@@ -36,6 +38,7 @@ export async function loadCandidateHome(userId: string): Promise<CandidateHome |
   if (!row) return null;
   return {
     email: row.email,
+    name: row.full_name,
     accessExpiresAt: row.access_expires_at ? row.access_expires_at.toISOString() : null,
     current: { id: row.current_id, name: row.current_name, groupName: row.group_name },
     assigned: { id: row.assigned_id, name: row.assigned_name },

@@ -45,6 +45,8 @@ create table users (
   created_at timestamptz not null default now(),
   -- Chosen with A−/A+ in the reader; one setting per person, on every device. Empty = 16 px.
   reader_text_size smallint check (reader_text_size in (14, 16, 18, 20, 22, 24)),
+  -- Display name. Required when admins and candidates are created in the app; older users may have none.
+  full_name varchar(100) check (full_name is null or length(trim(full_name)) > 0),
   constraint users_candidate_fields_check check (
     (role = 'candidate' and category_id is not null and admin_id is not null)
     or (role <> 'candidate' and admin_id is null)

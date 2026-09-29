@@ -50,6 +50,7 @@ Status: in active development.
 - `lib/auth/` — JWT signing/verification, session cookie, role guard
 - `components/admin/` — compact admin console UI (sidebar shell, tables, row menus, slide-in panels); admin pages must build from these. Candidate pages keep the large, simple style.
 - `lib/db/` — shared Postgres pool and transaction helper
+- `lib/users/` — display-name rules shared by account, admin and candidate forms
 - `lib/content/` — Handbook page blocks (types, validation, **bold** markup) and book sheet rules
 - `components/candidate/` — candidate page shell (header, `PageBody`) and home-screen section cards
 - `components/learning/` — candidate-facing renderers: blocks and the fixed-page book reader (large-target style)

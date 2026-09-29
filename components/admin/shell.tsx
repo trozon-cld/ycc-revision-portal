@@ -41,6 +41,7 @@ const NAV: Record<Role, NavGroup[]> = {
       items: [
         { href: "/admin/candidates", label: "Candidates", icon: "candidates" },
         { href: "/admin/activity", label: "My activity", icon: "activity" },
+        { href: "/admin/account", label: "My account", icon: "account" },
       ],
     },
   ],
@@ -48,14 +49,14 @@ const NAV: Record<Role, NavGroup[]> = {
 
 const ROLE_LABEL: Record<Role, string> = { superadmin: "Superadmin", admin: "Admin" };
 
-export function AdminShell({ role, email, children }: { role: Role; email: string; children: ReactNode }) {
+export function AdminShell({ role, email, name, children }: { role: Role; email: string; name: string | null; children: ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <ToastProvider>
       <div className="flex min-h-dvh flex-1 flex-col bg-slate-50 lg:flex-row">
         <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-slate-200 bg-white lg:flex">
-          <SidebarContent role={role} email={email} />
+          <SidebarContent role={role} email={email} name={name} />
         </aside>
 
         <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-slate-200 bg-white px-4 lg:hidden">
@@ -75,7 +76,7 @@ export function AdminShell({ role, email, children }: { role: Role; email: strin
 
         {menuOpen && (
           <MobileDrawer onClose={() => setMenuOpen(false)}>
-            <SidebarContent role={role} email={email} onNavigate={() => setMenuOpen(false)} />
+            <SidebarContent role={role} email={email} name={name} onNavigate={() => setMenuOpen(false)} />
           </MobileDrawer>
         )}
 
@@ -101,7 +102,7 @@ function Brand({ role }: { role: Role }) {
   );
 }
 
-function SidebarContent({ role, email, onNavigate }: { role: Role; email: string; onNavigate?: () => void }) {
+function SidebarContent({ role, email, name, onNavigate }: { role: Role; email: string; name: string | null; onNavigate?: () => void }) {
   const pathname = usePathname();
 
   return (
@@ -144,7 +145,10 @@ function SidebarContent({ role, email, onNavigate }: { role: Role; email: string
         <p className="truncate px-1 text-sm font-medium text-ink" title={email}>
           {email}
         </p>
-        <p className="px-1 text-xs text-slate-600">{ROLE_LABEL[role]}</p>
+        {/* The header already names the console, so the name takes the role's place once set. */}
+        <p className="truncate px-1 text-xs text-slate-600" title={name ?? undefined}>
+          {name ?? ROLE_LABEL[role]}
+        </p>
         <LogoutButton className={`${buttonClass("secondary", "sm")} mt-2 w-full`} />
       </div>
     </>

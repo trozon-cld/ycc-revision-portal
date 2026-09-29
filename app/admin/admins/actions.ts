@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/guard";
 import { getErrorCode, withTransaction } from "@/lib/db/transaction";
 import { logActivity } from "@/lib/audit/log";
+import { NO_NAME, normaliseName, validateName } from "@/lib/users/name";
 
 export type CreateAdminState = { error?: string; success?: boolean };
 export type AdminActionState = { error?: string; success?: boolean };
@@ -25,7 +26,10 @@ export async function createAdmin(
     .trim()
     .toLowerCase();
   const password = String(formData.get("password") ?? "");
+  const name = normaliseName(formData.get("name"));
 
+  const invalidName = validateName(name);
+  if (invalidName) return { error: invalidName };
   if (!email || !password) {
     return { error: "Email and password are required." };
   }
@@ -41,16 +45,12 @@ export async function createAdmin(
   try {
     await withTransaction(async (client) => {
       const { rows } = await client.query<{ id: string }>(
-        `insert into users (email, password_hash, role, access_start_at, access_expires_at, is_blocked)
-         values ($1, $2, 'admin', null, null, false)
+        `insert into users (email, password_hash, role, access_start_at, access_expires_at, is_blocked, full_name)
+         values ($1, $2, 'admin', null, null, false, $3)
          returning id`,
-        [email, passwordHash]
+        [email, passwordHash, name]
       );
-      await logActivity(client, session, "admin.created", {
-        type: "admin",
-        id: rows[0].id,
-        label: email,
-      });
+      await logActivity(client, session, "admin.created", { type: "admin", id: rows[0].id, label: email }, { name });
     });
   } catch (error) {
     if (getErrorCode(error) === "23505") {
@@ -65,6 +65,43 @@ export async function createAdmin(
 
 // Every query below is pinned to role = 'admin', so these actions can
 // never touch the Superadmin or a candidate even with a forged adminId.
+
+export async function updateAdminName(
+  _prevState: AdminActionState,
+  formData: FormData
+): Promise<AdminActionState> {
+  const session = await requireRole(["superadmin"]);
+  const adminId = String(formData.get("adminId") ?? "");
+  const name = normaliseName(formData.get("name"));
+  const invalid = validateName(name);
+  if (invalid) return { error: invalid };
+
+  try {
+    const result = await withTransaction<AdminActionState>(async (client) => {
+      const admin = await lockAdmin(client, adminId);
+      if (!admin) return { error: NOT_FOUND };
+      if (admin.full_name === name) return { success: true };
+
+      await client.query(`update users set full_name = $2 where id = $1`, [adminId, name]);
+      await logActivity(
+        client,
+        session,
+        "admin.name_changed",
+        { type: "admin", id: adminId, label: admin.email },
+        { from: admin.full_name ?? NO_NAME, to: name }
+      );
+      return { success: true };
+    });
+    if (result.error) return result;
+  } catch (error) {
+    if (getErrorCode(error) === "22P02") return { error: NOT_FOUND };
+    throw error;
+  }
+
+  revalidatePath("/admin/admins");
+  revalidatePath("/admin/candidates");
+  return { success: true };
+}
 
 export async function updateAdminEmail(
   _prevState: AdminActionState,
@@ -191,9 +228,9 @@ export async function deleteAdmin(
 async function lockAdmin(
   client: PoolClient,
   adminId: string
-): Promise<{ email: string } | undefined> {
-  const { rows } = await client.query<{ email: string }>(
-    `select email from users where id = $1 and role = 'admin' for update`,
+): Promise<{ email: string; full_name: string | null } | undefined> {
+  const { rows } = await client.query<{ email: string; full_name: string | null }>(
+    `select email, full_name from users where id = $1 and role = 'admin' for update`,
     [adminId]
   );
   return rows[0];

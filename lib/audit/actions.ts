@@ -3,9 +3,11 @@ export const ACTIVITY_ACTIONS = {
   "admin.created": "Created admin",
   "admin.email_changed": "Changed admin email",
   "admin.password_changed": "Changed admin password",
+  "admin.name_changed": "Changed admin name",
   "admin.deleted": "Deleted admin",
   "candidate.created": "Created candidate",
   "candidate.email_changed": "Changed candidate email",
+  "candidate.name_changed": "Changed candidate name",
   "candidate.password_changed": "Changed candidate password",
   "candidate.category_changed": "Changed candidate category",
   "candidate.access_changed": "Changed candidate access",
@@ -56,6 +58,7 @@ export const ACTIVITY_ACTIONS = {
   "media.alt_text_changed": "Changed picture description",
   "media.deleted": "Deleted picture",
   "account.email_changed": "Changed own email",
+  "account.name_changed": "Changed own name",
   "account.password_changed": "Changed own password",
 } as const;
 

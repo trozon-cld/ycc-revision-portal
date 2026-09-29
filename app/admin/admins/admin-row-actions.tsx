@@ -4,7 +4,8 @@ import { ActionForm } from "@/components/admin/action-form";
 import { Field } from "@/components/admin/field";
 import { PanelButton, RowActions, type RowAction } from "@/components/admin/row-actions";
 import { buttonClass, inputClass } from "@/components/admin/styles";
-import { createAdmin, deleteAdmin, updateAdminEmail, updateAdminPassword } from "./actions";
+import { NAME_MAX_LENGTH } from "@/lib/users/name";
+import { createAdmin, deleteAdmin, updateAdminEmail, updateAdminName, updateAdminPassword } from "./actions";
 
 export function NewAdminButton() {
   return (
@@ -18,6 +19,9 @@ export function NewAdminButton() {
           onSuccess={close}
           onCancel={close}
         >
+          <Field id="new-admin-name" label="Name">
+            <input id="new-admin-name" name="name" type="text" required maxLength={NAME_MAX_LENGTH} autoComplete="off" className={inputClass} />
+          </Field>
           <Field id="new-admin-email" label="Email">
             <input id="new-admin-email" name="email" type="email" required autoComplete="off" className={inputClass} />
           </Field>
@@ -41,16 +45,46 @@ export function NewAdminButton() {
 export function AdminRowActions({
   id,
   email,
+  name,
   candidateCount,
 }: {
   id: string;
   email: string;
+  name: string | null;
   candidateCount: number;
 }) {
   const hidden = { adminId: id };
   const countLabel = `${candidateCount} candidate${candidateCount === 1 ? "" : "s"}`;
 
   const actions: RowAction[] = [
+    {
+      label: "Change name",
+      title: "Change name",
+      description: email,
+      render: (close) => (
+        <ActionForm
+          action={updateAdminName}
+          hidden={hidden}
+          submitLabel="Save name"
+          successMessage="Name updated."
+          onSuccess={close}
+          onCancel={close}
+        >
+          <Field id={`name-${id}`} label="Name">
+            <input
+              id={`name-${id}`}
+              name="name"
+              type="text"
+              required
+              maxLength={NAME_MAX_LENGTH}
+              defaultValue={name ?? ""}
+              autoComplete="off"
+              className={inputClass}
+            />
+          </Field>
+        </ActionForm>
+      ),
+    },
     {
       label: "Change email",
       title: "Change email",

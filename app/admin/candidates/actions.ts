@@ -7,6 +7,7 @@ import { requireRole } from "@/lib/auth/guard";
 import type { SessionPayload } from "@/lib/auth/jwt";
 import { getErrorCode, withTransaction } from "@/lib/db/transaction";
 import { logActivity } from "@/lib/audit/log";
+import { NO_NAME, normaliseName, validateName } from "@/lib/users/name";
 import { accessEndSql, formatUkDate, resolveAccessEndDate } from "@/lib/candidates/access";
 
 export type CandidateActionState = { error?: string; success?: boolean };
@@ -21,6 +22,7 @@ const INVALID_CATEGORY = "Selected category is invalid.";
 
 interface OwnedCandidate {
   email: string;
+  full_name: string | null;
   category_id: string;
   category_name: string;
   current_category_name: string;
@@ -40,7 +42,10 @@ export async function createCandidate(
     .toLowerCase();
   const password = String(formData.get("password") ?? "");
   const categoryId = String(formData.get("categoryId") ?? "");
+  const name = normaliseName(formData.get("name"));
 
+  const invalidName = validateName(name);
+  if (invalidName) return { error: invalidName };
   if (!email || !password || !categoryId) {
     return { error: "Email, password, and category are required." };
   }
@@ -62,11 +67,11 @@ export async function createCandidate(
       const { rows } = await client.query<{ id: string; access_expires_at: string }>(
         `insert into users
            (email, password_hash, role, category_id, current_category_id, admin_id,
-            access_start_at, access_expires_at, is_blocked)
+            access_start_at, access_expires_at, is_blocked, full_name)
          values
-           ($1, $2, 'candidate', $3, $3, $4, now(), ${accessEndSql("$5")}, false)
+           ($1, $2, 'candidate', $3, $3, $4, now(), ${accessEndSql("$5")}, false, $6)
          returning id, access_expires_at`,
-        [email, passwordHash, categoryId, session.sub, access.date]
+        [email, passwordHash, categoryId, session.sub, access.date, name]
       );
       await logActivity(
         client,
@@ -74,6 +79,7 @@ export async function createCandidate(
         "candidate.created",
         { type: "candidate", id: rows[0].id, label: email },
         {
+          name,
           category: await categoryName(client, categoryId),
           accessUntil: formatUkDate(rows[0].access_expires_at),
         }
@@ -88,6 +94,28 @@ export async function createCandidate(
 
   revalidatePath("/admin/candidates");
   return { success: true };
+}
+
+export async function updateCandidateName(
+  _prevState: CandidateActionState,
+  formData: FormData
+): Promise<CandidateActionState> {
+  const session = await requireRole(["admin"]);
+  const name = normaliseName(formData.get("name"));
+  const invalid = validateName(name);
+  if (invalid) return { error: invalid };
+
+  return changeOwnCandidate(session, formData, async (client, id, candidate) => {
+    if (candidate.full_name === name) return;
+    await client.query(`update users set full_name = $2 where id = $1`, [id, name]);
+    await logActivity(
+      client,
+      session,
+      "candidate.name_changed",
+      { type: "candidate", id, label: candidate.email },
+      { from: candidate.full_name ?? NO_NAME, to: name }
+    );
+  });
 }
 
 export async function updateCandidateEmail(
@@ -318,7 +346,7 @@ async function changeOwnCandidate(
   try {
     result = await withTransaction<CandidateActionState>(async (client) => {
       const { rows } = await client.query<OwnedCandidate>(
-        `select u.email, u.category_id, c.name as category_name, cc.name as current_category_name,
+        `select u.email, u.full_name, u.category_id, c.name as category_name, cc.name as current_category_name,
                 u.access_expires_at, u.is_blocked
          from users u
          join categories c on c.id = u.category_id

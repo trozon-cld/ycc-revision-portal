@@ -3,7 +3,27 @@
 import { ActionForm } from "@/components/admin/action-form";
 import { Field } from "@/components/admin/field";
 import { inputClass } from "@/components/admin/styles";
-import { updateOwnEmail, updateOwnPassword } from "./actions";
+import { NAME_MAX_LENGTH } from "@/lib/users/name";
+import { updateOwnEmail, updateOwnName, updateOwnPassword } from "./actions";
+
+export function ChangeNameForm({ currentName }: { currentName: string | null }) {
+  return (
+    <ActionForm action={updateOwnName} layout="inline" submitLabel="Save name" successMessage="Name updated.">
+      <Field id="account-name" label="Your name" hint="Shown in the sidebar, under your email.">
+        <input
+          id="account-name"
+          name="name"
+          type="text"
+          required
+          maxLength={NAME_MAX_LENGTH}
+          defaultValue={currentName ?? ""}
+          autoComplete="name"
+          className={inputClass}
+        />
+      </Field>
+    </ActionForm>
+  );
+}
 
 export function ChangeEmailForm({ currentEmail }: { currentEmail: string }) {
   return (
