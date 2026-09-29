@@ -21,16 +21,29 @@ export const TEXT_SIZES = [14, 16, 18, 20, 22, 24] as const;
 export type TextSize = (typeof TEXT_SIZES)[number];
 export const DEFAULT_TEXT_SIZE: TextSize = 16;
 
-// A sheet is one book page on screen: part k of an authored page, or a blank filler.
-// Page numbers belong to sheets, so they change with screen and text size (e-reader style).
+// A sheet is one book page on screen: part k of an authored page, a blank filler, a cover, or (spreads
+// only) the empty space beside a closed book's cover. Page numbers belong to page sheets, so they change
+// with screen and text size (e-reader style).
 export type Sheet =
   | { kind: "page"; pageIndex: number; part: number; parts: number; number: number }
-  | { kind: "blank" };
+  | { kind: "blank" }
+  | { kind: "cover"; side: "front" | "back" }
+  | { kind: "none" };
 
-// Pure layout rule, kept separate so it can be tested without a browser.
-export function buildSheets(pages: Pick<BookPageData, "chapterId">[], partCounts: number[], spread: boolean): Sheet[] {
+// Pure layout rule, kept separate so it can be tested without a browser. With covers, a spread shows the
+// front cover alone on the right and the back cover alone on the left, like a closed book.
+export function buildSheets(
+  pages: Pick<BookPageData, "chapterId">[],
+  partCounts: number[],
+  spread: boolean,
+  covers = false
+): Sheet[] {
   const sheets: Sheet[] = [];
-  let number = 0; // blank fillers are left unnumbered, as in a printed book
+  if (covers) {
+    if (spread) sheets.push({ kind: "none" });
+    sheets.push({ kind: "cover", side: "front" });
+  }
+  let number = 0; // blank fillers and covers are left unnumbered, as in a printed book
   pages.forEach((page, pageIndex) => {
     const startsChapter = pageIndex === 0 || pages[pageIndex - 1].chapterId !== page.chapterId;
     const parts = Math.max(1, partCounts[pageIndex] ?? 1);
@@ -38,5 +51,10 @@ export function buildSheets(pages: Pick<BookPageData, "chapterId">[], partCounts
     if (spread && startsChapter && sheets.length % 2 === 1) sheets.push({ kind: "blank" });
     for (let part = 0; part < parts; part++) sheets.push({ kind: "page", pageIndex, part, parts, number: ++number });
   });
+  if (covers) {
+    if (spread && sheets.length % 2 === 1) sheets.push({ kind: "blank" });
+    sheets.push({ kind: "cover", side: "back" });
+    if (spread) sheets.push({ kind: "none" });
+  }
   return sheets;
 }

@@ -4,12 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogoutButton } from "@/components/logout-button";
+import { LOGO } from "@/lib/brand";
 
 const NAV_BUTTON =
   "inline-flex min-h-12 items-center justify-center rounded-lg border-2 border-ink/25 bg-white px-4 text-base font-semibold text-ink hover:border-primary hover:text-primary focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary";
-
-// Placeholder until the real logo file is added to public/; change src, width and height here.
-const LOGO = { src: "/ycc-logo-placeholder.svg", width: 120, height: 48 };
 
 // Pages whose content puts these items in its own bar on laptops and desktops (the Handbook).
 const OWN_BAR_PATHS = ["/dashboard/prepare"];

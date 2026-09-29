@@ -204,6 +204,14 @@ create table media (
 
 create index media_created_at_idx on media (created_at desc);
 
+-- Optional Handbook cover pictures per category (declared here because media comes after categories).
+alter table categories
+  add column front_cover_media_id uuid references media (id) on delete restrict,
+  add column back_cover_media_id uuid references media (id) on delete restrict;
+
+create index categories_front_cover_idx on categories (front_cover_media_id);
+create index categories_back_cover_idx on categories (back_cover_media_id);
+
 create table content_pages (
   id uuid primary key default gen_random_uuid(),
   chapter_id uuid not null references chapters (id) on delete restrict,

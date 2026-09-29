@@ -1,7 +1,10 @@
 "use client";
 
 import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
+import Link from "next/link";
 import { buildSheets, type BookPageData, type ResolvedMedia, type Sheet, type TextSize } from "@/lib/content/book";
+import type { BookCovers } from "@/lib/content/covers";
+import { BackCoverFace, FrontCoverFace } from "./book-covers";
 import { getQuestionTypeDef } from "@/lib/questions/registry";
 import { BlockList } from "./blocks";
 import { FRESH_QUESTION_STATE, QuestionView, type QuestionViewState } from "./questions/question-view";
@@ -70,6 +73,8 @@ const COMPACT_SPACE = 0.5;
 const OPTION_PICTURE_LAST = 0.15;
 // Below this reader width the bar shows icons only, so it fits the smallest phones.
 const TINY_BELOW = 380;
+// The reader's position on the front cover; the back cover is pages.length.
+const FRONT_COVER = -1;
 
 type Geometry = {
   spread: boolean;
@@ -129,6 +134,7 @@ export function BookReader({
   onPageChange,
   barStart,
   barEnd,
+  covers,
 }: {
   pages: BookPageData[];
   media: ResolvedMedia;
@@ -148,7 +154,10 @@ export function BookReader({
   // Extra items at the ends of the reader bar on laptops and desktops (e.g. the logo, Help, Log out).
   barStart?: ReactNode;
   barEnd?: ReactNode;
+  // A category's whole book: unnumbered front and back covers. A new reader opens on the front cover.
+  covers?: BookCovers;
 }) {
+  const sectionRef = useRef<HTMLElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
   const restRef = useRef<HTMLDivElement>(null);
@@ -160,10 +169,10 @@ export function BookReader({
   const [counts, setCounts] = useState<Counts | null>(null);
   const [batch, setBatch] = useState<number[]>([]);
   const [fits, setFits] = useState<{ id: object; list: (Fit | undefined)[] } | null>(null);
-  const [position, setPosition] = useState(() => ({
-    pageIndex: Math.max(0, initialPageId ? pages.findIndex((page) => page.id === initialPageId) : 0),
-    part: 0,
-  }));
+  const [position, setPosition] = useState(() => {
+    const found = initialPageId ? pages.findIndex((page) => page.id === initialPageId) : -1;
+    return { pageIndex: found >= 0 ? found : covers ? FRONT_COVER : 0, part: 0 };
+  });
   const [fontsReady, setFontsReady] = useState(0);
   const [questionStates, setQuestionStates] = useState<QuestionStates>({});
   const [panel, setPanel] = useState<ReaderPanel | null>(null);
@@ -245,8 +254,10 @@ export function BookReader({
   );
   const countsRef = useRef(counts);
   countsRef.current = counts;
-  const positionRef = useRef(position.pageIndex);
-  positionRef.current = position.pageIndex;
+  // The authored page nearest the reader (a cover counts as the first or last page) for measuring order.
+  const nearestPage = Math.min(Math.max(0, position.pageIndex), Math.max(0, pages.length - 1));
+  const positionRef = useRef(nearestPage);
+  positionRef.current = nearestPage;
 
   const nextBatch = useCallback(
     (fresh: boolean[] | null) => measureOrder(pages, positionRef.current).filter((index) => !fresh?.[index]).slice(0, MEASURE_BATCH),
@@ -261,8 +272,8 @@ export function BookReader({
   // Jumped to a chapter that isn't measured yet (e.g. from Contents): measure it now.
   useLayoutEffect(() => {
     const fresh = countsRef.current?.id === layoutId ? countsRef.current.fresh : null;
-    if (!fresh?.[position.pageIndex]) setBatch(nextBatch(fresh));
-  }, [position.pageIndex, layoutId, nextBatch]);
+    if (!fresh?.[nearestPage]) setBatch(nextBatch(fresh));
+  }, [nearestPage, layoutId, nextBatch]);
 
   // Feedback and explanations appear after Check, so a question page is measured again then.
   const previousStates = useRef(questionStates);
@@ -389,34 +400,46 @@ export function BookReader({
     return pages.map((_, index) => counts.values[index] ?? average);
   }, [counts, pages]);
   const sheets = useMemo(
-    () => (partCounts && geometry ? buildSheets(pages, partCounts, geometry.spread) : []),
-    [pages, partCounts, geometry]
+    () => (partCounts && geometry ? buildSheets(pages, partCounts, geometry.spread, Boolean(covers)) : []),
+    [pages, partCounts, geometry, covers]
   );
 
   // Keep the reader on the same authored page when the layout changes.
   const currentSheetIndex = useMemo(() => {
     if (sheets.length === 0) return 0;
-    const exact = sheets.findIndex(
-      (sheet) => sheet.kind === "page" && sheet.pageIndex === position.pageIndex && sheet.part === Math.min(position.part, sheet.parts - 1)
+    const exact = sheets.findIndex((sheet) =>
+      sheet.kind === "page"
+        ? sheet.pageIndex === position.pageIndex && sheet.part === Math.min(position.part, sheet.parts - 1)
+        : sheet.kind === "cover" && (sheet.side === "front" ? position.pageIndex < 0 : position.pageIndex >= pages.length)
     );
     return exact === -1 ? 0 : exact;
-  }, [sheets, position]);
+  }, [sheets, position, pages.length]);
 
   const perView = geometry?.spread ? 2 : 1;
   const viewStart = Math.floor(currentSheetIndex / perView) * perView;
   const visible = sheets.slice(viewStart, viewStart + perView);
+  // A spread showing one cover alone: the cover casts its own shadow, not the empty space beside it.
+  const closedBook = visible.some((sheet) => sheet.kind === "none");
   const canGoBack = viewStart > 0;
   const canGoForward = viewStart + perView < sheets.length;
 
   const goTo = useCallback(
     (sheetIndex: number) => {
       const clamped = Math.max(0, Math.min(sheets.length - 1, sheetIndex));
-      // A blank filler sheet has no page of its own; land on its neighbour.
-      const target = sheets[clamped]?.kind === "page" ? sheets[clamped] : sheets[clamped + 1] ?? sheets[clamped - 1];
+      // A blank filler (or the space beside a cover) has no page of its own; land on its neighbour.
+      const landable = (sheet: Sheet | undefined) => sheet?.kind === "page" || sheet?.kind === "cover";
+      const target = [sheets[clamped], sheets[clamped + 1], sheets[clamped - 1]].find(landable);
       if (target?.kind === "page") setPosition({ pageIndex: target.pageIndex, part: target.part });
+      else if (target?.kind === "cover") setPosition({ pageIndex: target.side === "front" ? FRONT_COVER : pages.length, part: 0 });
     },
-    [sheets]
+    [sheets, pages.length]
   );
+
+  // Back cover: "Start from the beginning" opens page 1 and keeps the keyboard in the reader.
+  const startAgain = () => {
+    goTo(sheets.findIndex((sheet) => sheet.kind === "page"));
+    sectionRef.current?.focus();
+  };
 
   const next = () => canGoForward && goTo(viewStart + perView);
   const previous = () => canGoBack && goTo(viewStart - perView);
@@ -451,10 +474,13 @@ export function BookReader({
   useEffect(() => {
     const ahead = sheets.slice(viewStart + perView, viewStart + perView * 2);
     for (const sheet of ahead) {
-      if (sheet.kind !== "page") continue;
-      const page = pages[sheet.pageIndex];
-      for (const id of pageMediaIds(page)) {
-        const src = media[id]?.src;
+      const sources =
+        sheet.kind === "page"
+          ? pageMediaIds(pages[sheet.pageIndex]).map((id) => media[id]?.src)
+          : sheet.kind === "cover"
+            ? [(sheet.side === "front" ? covers?.front : covers?.back)?.src]
+            : [];
+      for (const src of sources) {
         if (!src || preloaded.current.has(src)) continue;
         preloaded.current.add(src);
         const image = new Image();
@@ -462,7 +488,7 @@ export function BookReader({
         image.src = src;
       }
     }
-  }, [sheets, viewStart, perView, pages, media]);
+  }, [sheets, viewStart, perView, pages, media, covers]);
 
   const currentPageId = pages[position.pageIndex]?.id;
   const reportedPageId = useRef(currentPageId);
@@ -511,7 +537,13 @@ export function BookReader({
 
   return (
     <ReaderLabelsContext.Provider value={showLabels}>
-    <section aria-label={label} onKeyDown={onKeyDown} className="flex h-full min-h-0 flex-col bg-slate-100 text-ink">
+    <section
+      ref={sectionRef}
+      aria-label={label}
+      tabIndex={-1}
+      onKeyDown={onKeyDown}
+      className="flex h-full min-h-0 flex-col bg-slate-100 text-ink outline-none"
+    >
       {tools && (
         <ReaderBar
           compact={compact}
@@ -651,8 +683,20 @@ export function BookReader({
             {partCounts && (
               <div className="flex h-full items-center justify-center gap-4" style={{ padding: geometry.spread ? SPREAD_PADDING : STAGE_PADDING }}>
                 {geometry.spread && <SideButton direction="previous" disabled={!canGoBack} onClick={previous} />}
-                <div className={`flex ${geometry.spread ? "shadow-xl" : "shadow-md"}`}>
-                  {visible.map((sheet, index) => (
+                <div className={`flex ${closedBook ? "" : geometry.spread ? "shadow-xl" : "shadow-md"}`}>
+                  {visible.map((sheet, index) =>
+                    sheet.kind === "cover" && covers ? (
+                      <CoverSheet
+                        key={`cover-${sheet.side}`}
+                        side={sheet.side}
+                        covers={covers}
+                        style={sheetStyle}
+                        spread={geometry.spread}
+                        onStart={startAgain}
+                      />
+                    ) : sheet.kind === "none" ? (
+                      <div key={`none-${viewStart + index}`} aria-hidden="true" className="shrink-0" style={{ width: geometry.sheetWidth }} />
+                    ) : (
                     <SheetView
                       key={sheet.kind === "page" ? `${sheet.pageIndex}-${sheet.part}` : `blank-${viewStart + index}`}
                       sheet={sheet}
@@ -669,7 +713,8 @@ export function BookReader({
                       style={sheetStyle}
                       side={geometry.spread ? (index === 0 ? "left" : "right") : "single"}
                     />
-                  ))}
+                    )
+                  )}
                   {geometry.spread && visible.length === 1 && <div aria-hidden="true" style={{ width: geometry.sheetWidth }} />}
                 </div>
                 {geometry.spread && <SideButton direction="next" disabled={!canGoForward} onClick={next} />}
@@ -897,7 +942,7 @@ function SheetView({
         ? "bg-gradient-to-r from-slate-200/70 via-white via-[3%] to-white"
         : "bg-white rounded-sm";
 
-  if (sheet.kind === "blank") {
+  if (sheet.kind !== "page") {
     return <div aria-hidden="true" className={`shrink-0 ${edge}`} style={style} />;
   }
 
@@ -988,8 +1033,56 @@ function SheetView({
   );
 }
 
+// Buttons on the back cover: the reader's large targets (56px on touch screens, 48px on laptops).
+const COVER_BUTTON =
+  "inline-flex min-h-[max(var(--answer-min-h,56px),var(--answer-min-em,3.5em))] items-center justify-center rounded-xl px-[1.2em] text-[1em] font-semibold transition-colors focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-primary";
+
+function CoverSheet({
+  side,
+  covers,
+  style,
+  spread,
+  onStart,
+}: {
+  side: "front" | "back";
+  covers: BookCovers;
+  style?: CSSProperties;
+  spread: boolean;
+  onStart: () => void;
+}) {
+  // In a spread the book's spine is on the cover's inner edge; only the outer corners are rounded.
+  const shape = spread ? `shadow-xl ${side === "front" ? "rounded-r-md" : "rounded-l-md"}` : "rounded-sm";
+  const picture = side === "front" ? covers.front : covers.back;
+  return (
+    <article aria-label={side === "front" ? "Front cover" : "Back cover"} className={`relative shrink-0 overflow-hidden ${shape}`} style={style}>
+      {side === "front" ? (
+        <FrontCoverFace categoryName={covers.categoryName} picture={picture} />
+      ) : (
+        <BackCoverFace
+          categoryName={covers.categoryName}
+          picture={picture}
+          actions={
+            <>
+              {covers.homeHref && (
+                <Link href={covers.homeHref} className={`${COVER_BUTTON} bg-primary text-white hover:bg-primary/90`}>
+                  Back to home
+                </Link>
+              )}
+              <button type="button" onClick={onStart} className={`${COVER_BUTTON} border-2 border-ink/25 bg-white text-ink hover:bg-slate-50`}>
+                Start from the beginning
+              </button>
+            </>
+          }
+        />
+      )}
+    </article>
+  );
+}
+
 function describeView(visible: Sheet[], total: number, exact: boolean) {
   const numbers = visible.flatMap((sheet) => (sheet.kind === "page" ? [sheet.number] : []));
+  const cover = visible.find((sheet) => sheet.kind === "cover");
+  if (numbers.length === 0 && cover?.kind === "cover") return cover.side === "front" ? "Front cover" : "Back cover";
   if (numbers.length === 0 || total === 0) return "";
   const of = exact ? `of ${total}` : `of about ${total}`;
   return numbers.length === 1 ? `Page ${numbers[0]} ${of}` : `Pages ${numbers[0]}–${numbers[1]} ${of}`;

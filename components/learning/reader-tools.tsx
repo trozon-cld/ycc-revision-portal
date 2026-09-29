@@ -269,6 +269,7 @@ export function ContentsPanel({
     chapters.push({ chapterId: page.chapterId, chapterLabel: page.chapterLabel, sectionLabel: page.sectionLabel, sheetIndex, number: sheet.number, pageIndex, exact });
   });
   const currentChapter = pages[currentPageIndex]?.chapterId;
+  const frontCover = sheets.findIndex((sheet) => sheet.kind === "cover" && sheet.side === "front");
   const sections: { label: string; chapters: ChapterEntry[] }[] = [];
   for (const chapter of chapters) {
     const last = sections.at(-1);
@@ -279,6 +280,22 @@ export function ContentsPanel({
   return (
     <Panel title="Contents" onClose={onClose}>
       <div className="mx-auto max-w-2xl space-y-6">
+        {frontCover >= 0 && (
+          <button
+            type="button"
+            aria-current={currentPageIndex < 0 ? "true" : undefined}
+            data-autofocus={currentPageIndex < 0 ? "" : undefined}
+            onClick={() => onGo(frontCover)}
+            className={`flex min-h-14 w-full items-center gap-4 rounded-lg border-2 px-4 py-2 text-left text-lg text-ink hover:border-primary focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+              currentPageIndex < 0 ? "border-primary bg-primary/[0.06]" : "border-slate-300 bg-white"
+            }`}
+          >
+            <span>
+              <span className="font-semibold">Front cover</span>
+              {currentPageIndex < 0 && <span className="block text-base font-normal text-primary">You are here</span>}
+            </span>
+          </button>
+        )}
         {sections.map((section, index) => (
           <section key={`${section.label}-${index}`} aria-label={section.label}>
             <h3 className="mb-2 text-base font-bold uppercase tracking-wide text-primary">{section.label}</h3>

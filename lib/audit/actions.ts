@@ -24,6 +24,7 @@ export const ACTIVITY_ACTIONS = {
   "category.renamed": "Renamed category",
   "category.group_changed": "Moved category to another group",
   "category.chapters_changed": "Changed category chapters",
+  "category.covers_changed": "Changed Handbook covers",
   "category.deleted": "Deleted category",
   "section.created": "Created section",
   "section.renamed": "Renamed section",

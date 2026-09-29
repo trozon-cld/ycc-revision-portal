@@ -117,7 +117,7 @@ export async function deleteMedia(_prevState: MediaActionState, formData: FormDa
 
   let paths: string[];
   try {
-    // Pages and questions will reference media with ON DELETE RESTRICT, so an in-use picture fails here.
+    // Pages, questions and category covers reference media with ON DELETE RESTRICT, so an in-use picture fails here.
     const deleted = await withTransaction(async (client) => {
       const { rows } = await client.query<{ storage_path: string; thumb_path: string; original_name: string }>(
         `delete from media where id = $1 returning storage_path, thumb_path, original_name`,
@@ -134,7 +134,7 @@ export async function deleteMedia(_prevState: MediaActionState, formData: FormDa
     const code = getErrorCode(error);
     if (code === "22P02") return { error: NOT_FOUND };
     if (code === "23503") {
-      return { error: "This picture is used in the Handbook or the question bank. Remove it from there first." };
+      return { error: "This picture is used in the Handbook, the question bank or as a Handbook cover. Remove it from there first." };
     }
     throw error;
   }

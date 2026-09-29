@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/auth/guard";
 import { isUuid } from "@/lib/content/pages";
-import { loadPreviewBook, loadPreviewOptions } from "@/lib/content/preview";
+import { loadBookCovers, loadPreviewBook, loadPreviewOptions } from "@/lib/content/preview";
 import { PageHeader } from "@/components/admin/page-header";
 import { PreviewControls, PreviewReader } from "./preview-client";
 
@@ -12,7 +12,11 @@ export default async function BookPreviewPage({ searchParams }: PageProps<"/admi
   const chapterId = pick(params.chapter, options.chapters.map((chapter) => chapter.id));
   const categoryId = pick(params.category, options.categories.map((category) => category.id));
   const includeDrafts = one(params.content) !== "published";
-  const book = await loadPreviewBook({ chapterId, categoryId, includeDrafts });
+  // Covers belong to a category's whole book, not to a single chapter.
+  const [book, covers] = await Promise.all([
+    loadPreviewBook({ chapterId, categoryId, includeDrafts }),
+    categoryId && !chapterId ? loadBookCovers(categoryId) : null,
+  ]);
 
   const chapter = options.chapters.find((item) => item.id === chapterId);
   const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? "" : "s"}`;
@@ -71,7 +75,7 @@ export default async function BookPreviewPage({ searchParams }: PageProps<"/admi
       ) : (
         <>
           <p className="mb-3 text-sm text-slate-700">{summary}</p>
-          <PreviewReader pages={book.pages} media={book.media} />
+          <PreviewReader pages={book.pages} media={book.media} covers={covers ?? undefined} />
         </>
       )}
     </>

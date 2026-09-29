@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/guard";
 import { getErrorCode, withTransaction } from "@/lib/db/transaction";
 import { logActivity } from "@/lib/audit/log";
+import { isUuid } from "@/lib/content/pages";
 
 export type CategoryActionState = { error?: string; success?: boolean };
 
@@ -12,6 +13,7 @@ const MAX_NAME_LENGTH = 100;
 const DUPLICATE_NAME = "A category with this name already exists.";
 const MAX_LINKED_CHAPTERS = 1000;
 const GROUP_GONE = "That group no longer exists. Close this and try again.";
+const COVER_PICTURE_GONE = "That picture is no longer in the Media library. Choose another one.";
 const CHAPTERS_CHANGED = "The chapter list has changed since you opened this. Close it, reopen and try again.";
 
 export async function createCategory(
@@ -256,6 +258,87 @@ export async function saveCategoryChapters(
 
   revalidatePath("/admin/categories");
   return result;
+}
+
+// Both covers are saved together; an empty value means the standard brand cover.
+export async function saveCategoryCovers(
+  _prevState: CategoryActionState,
+  formData: FormData
+): Promise<CategoryActionState> {
+  const session = await requireRole(["superadmin"]);
+
+  const categoryId = String(formData.get("categoryId") ?? "");
+  const frontId = String(formData.get("frontMediaId") ?? "") || null;
+  const backId = String(formData.get("backMediaId") ?? "") || null;
+  if (!isUuid(categoryId)) return { error: "Category not found." };
+  if ((frontId && !isUuid(frontId)) || (backId && !isUuid(backId))) return { error: COVER_PICTURE_GONE };
+
+  let result: CategoryActionState;
+  try {
+    result = await withTransaction<CategoryActionState>(async (client) => {
+      const { rows } = await client.query<{
+        name: string;
+        front_id: string | null;
+        back_id: string | null;
+        front_name: string | null;
+        back_name: string | null;
+      }>(
+        `select c.name, c.front_cover_media_id as front_id, c.back_cover_media_id as back_id,
+                fm.original_name as front_name, bm.original_name as back_name
+         from categories c
+         left join media fm on fm.id = c.front_cover_media_id
+         left join media bm on bm.id = c.back_cover_media_id
+         where c.id = $1
+         for update of c`,
+        [categoryId]
+      );
+      const category = rows[0];
+      if (!category) return { error: "This category no longer exists." };
+      if (category.front_id === frontId && category.back_id === backId) return { success: true };
+
+      // FOR KEY SHARE keeps the chosen pictures from being deleted until this save commits.
+      const wanted = [frontId, backId].filter((id): id is string => Boolean(id));
+      const { rows: pictures } = await client.query<{ id: string; original_name: string }>(
+        `select id, original_name from media where id = any($1::uuid[]) for key share`,
+        [wanted]
+      );
+      const nameOf = new Map(pictures.map((picture) => [picture.id, picture.original_name]));
+      if (wanted.some((id) => !nameOf.has(id))) return { error: COVER_PICTURE_GONE };
+
+      await client.query(
+        `update categories set front_cover_media_id = $2, back_cover_media_id = $3 where id = $1`,
+        [categoryId, frontId, backId]
+      );
+      const details: Record<string, string> = {};
+      if (category.front_id !== frontId) {
+        details.frontCover = describeCoverChange(category.front_name, frontId ? nameOf.get(frontId)! : null);
+      }
+      if (category.back_id !== backId) {
+        details.backCover = describeCoverChange(category.back_name, backId ? nameOf.get(backId)! : null);
+      }
+      await logActivity(
+        client,
+        session,
+        "category.covers_changed",
+        { type: "category", id: categoryId, label: category.name },
+        details
+      );
+      return { success: true };
+    });
+  } catch (error) {
+    const code = getErrorCode(error);
+    if (code === "22P02" || code === "23503") return { error: COVER_PICTURE_GONE };
+    throw error;
+  }
+
+  revalidatePath("/admin/categories");
+  revalidatePath("/admin/media");
+  return result;
+}
+
+function describeCoverChange(before: string | null, after: string | null): string {
+  if (!after) return `Standard cover (was “${before ?? "a picture"}”)`;
+  return before ? `“${after}” (was “${before}”)` : `“${after}”`;
 }
 
 async function lockCategory(client: PoolClient, categoryId: string) {

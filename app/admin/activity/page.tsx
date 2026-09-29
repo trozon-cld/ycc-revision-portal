@@ -395,6 +395,8 @@ function describeDetails(details: Record<string, string>): string | null {
   if (details.addedCategories) parts.push(`Added: ${details.addedCategories}`);
   if (details.removedCategories) parts.push(`Removed: ${details.removedCategories}`);
   if (details.categoryTotal !== undefined) parts.push(`In ${details.categoryTotal} categor${details.categoryTotal === "1" ? "y" : "ies"}`);
+  if (details.frontCover) parts.push(`Front cover: ${details.frontCover}`);
+  if (details.backCover) parts.push(`Back cover: ${details.backCover}`);
   if (details.accessUntil) parts.push(`Access until ${details.accessUntil}`);
   return parts.length > 0 ? parts.join(" · ") : null;
 }

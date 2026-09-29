@@ -1,10 +1,12 @@
 import { requireRole } from "@/lib/auth/guard";
 import { pool } from "@/lib/db/pool";
+import { getSignedUrls, isStorageConfigured } from "@/lib/storage/storage";
 import { chapterNumber, sectionLetter } from "@/lib/handbook/structure";
 import { Badge } from "@/components/admin/badge";
 import { PageHeader } from "@/components/admin/page-header";
 import { Cell, Row, Table } from "@/components/admin/table";
 import type { ChapterOutline } from "./category-chapters-form";
+import type { CoverChoice } from "./category-covers-form";
 import { CategoryRowActions, NewCategoryButton, type GroupOption } from "./category-row-actions";
 import { GroupRowActions, NewGroupButton } from "./group-row-actions";
 
@@ -20,6 +22,19 @@ interface CategoryRow {
   candidate_count: number;
 }
 
+interface CoverRow {
+  category_id: string;
+  side: "front" | "back";
+  id: string;
+  thumb_path: string;
+  original_name: string;
+  alt_text: string;
+  width: number;
+  height: number;
+}
+
+const THUMB_LINK_SECONDS = 60 * 60;
+
 interface OutlineRow {
   section_id: string;
   section_position: number;
@@ -32,7 +47,7 @@ interface OutlineRow {
 export default async function CategoriesPage() {
   await requireRole(["superadmin"]);
 
-  const [{ rows: groups }, { rows: categories }, { rows: outlineRows }, { rows: links }] = await Promise.all([
+  const [{ rows: groups }, { rows: categories }, { rows: outlineRows }, { rows: links }, { rows: coverRows }] = await Promise.all([
     pool.query<GroupRow>(`select id, name from category_groups order by position`),
     // A candidate counts once, whether the category is their assigned one, their current one, or both.
     pool.query<CategoryRow>(
@@ -51,7 +66,36 @@ export default async function CategoriesPage() {
        order by s.position, c.position`
     ),
     pool.query<{ category_id: string; chapter_id: string }>(`select category_id, chapter_id from category_chapters`),
+    pool.query<CoverRow>(
+      `select c.id as category_id, s.side, m.id, m.thumb_path, m.original_name, m.alt_text, m.width, m.height
+       from categories c
+       cross join lateral (values ('front', c.front_cover_media_id), ('back', c.back_cover_media_id)) as s (side, media_id)
+       join media m on m.id = s.media_id`
+    ),
   ]);
+
+  const storageReady = isStorageConfigured();
+  let thumbs = new Map<string, string>();
+  if (storageReady && coverRows.length > 0) {
+    try {
+      thumbs = await getSignedUrls([...new Set(coverRows.map((row) => row.thumb_path))], THUMB_LINK_SECONDS);
+    } catch (error) {
+      console.error("Could not create cover picture links", error);
+    }
+  }
+  const coversByCategory = new Map<string, { front: CoverChoice | null; back: CoverChoice | null }>();
+  for (const row of coverRows) {
+    const entry = coversByCategory.get(row.category_id) ?? { front: null, back: null };
+    entry[row.side] = {
+      id: row.id,
+      thumbUrl: thumbs.get(row.thumb_path) ?? null,
+      alt: row.alt_text,
+      name: row.original_name,
+      width: row.width,
+      height: row.height,
+    };
+    coversByCategory.set(row.category_id, entry);
+  }
 
   const outline = buildOutline(outlineRows);
   const totalChapters = outline.reduce((sum, section) => sum + section.chapters.length, 0);
@@ -102,12 +146,13 @@ export default async function CategoriesPage() {
               </div>
 
               <Table
-                columns={["Name", "Candidates", "Chapters", ""]}
+                columns={["Name", "Candidates", "Chapters", "Covers", ""]}
                 isEmpty={groupCategories.length === 0}
                 emptyMessage="No categories in this group yet."
               >
                 {groupCategories.map((category) => {
                   const linked = linkedByCategory.get(category.id) ?? [];
+                  const covers = coversByCategory.get(category.id) ?? { front: null, back: null };
                   return (
                     <Row key={category.id}>
                       <Cell kind="primary">{category.name}</Cell>
@@ -119,6 +164,9 @@ export default async function CategoriesPage() {
                           `${linked.length} of ${totalChapters}`
                         )}
                       </Cell>
+                      <Cell label="Covers" nowrap>
+                        {describeCovers(covers.front !== null, covers.back !== null)}
+                      </Cell>
                       <Cell kind="actions">
                         <CategoryRowActions
                           id={category.id}
@@ -127,6 +175,8 @@ export default async function CategoriesPage() {
                           outline={outline}
                           linkedChapterIds={linked}
                           otherGroups={groupOptions.filter((option) => option.id !== group.id)}
+                          covers={covers}
+                          storageReady={storageReady}
                         />
                       </Cell>
                     </Row>
@@ -143,6 +193,13 @@ export default async function CategoriesPage() {
 
 function count(n: number, singular: string, plural: string) {
   return `${n} ${n === 1 ? singular : plural}`;
+}
+
+function describeCovers(front: boolean, back: boolean) {
+  if (front && back) return "Front and back";
+  if (front) return "Front only";
+  if (back) return "Back only";
+  return "Standard";
 }
 
 function buildOutline(rows: OutlineRow[]): ChapterOutline {

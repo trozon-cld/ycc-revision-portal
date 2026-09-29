@@ -1,6 +1,7 @@
 import { pool } from "@/lib/db/pool";
 import { DEFAULT_TEXT_SIZE, TEXT_SIZES, type BookPageData, type ResolvedMedia, type TextSize } from "./book";
-import { loadPreviewBook } from "./preview";
+import type { BookCovers } from "./covers";
+import { loadBookCovers, loadPreviewBook } from "./preview";
 
 export type CandidateBook = {
   categoryName: string;
@@ -8,6 +9,7 @@ export type CandidateBook = {
   media: ResolvedMedia;
   startPageId: string | null;
   textSize: TextSize;
+  covers: BookCovers;
 };
 
 // The candidate's current category, as candidates see it: published items in published chapters only.
@@ -28,7 +30,10 @@ export async function loadCandidateBook(userId: string): Promise<CandidateBook |
   const row = rows[0];
   if (!row) return null;
 
-  const book = await loadPreviewBook({ chapterId: null, categoryId: row.category_id, includeDrafts: false });
+  const [book, covers] = await Promise.all([
+    loadPreviewBook({ chapterId: null, categoryId: row.category_id, includeDrafts: false }),
+    loadBookCovers(row.category_id),
+  ]);
   const size = TEXT_SIZES.find((value) => value === row.reader_text_size) ?? DEFAULT_TEXT_SIZE;
   return {
     categoryName: row.category_name,
@@ -36,5 +41,6 @@ export async function loadCandidateBook(userId: string): Promise<CandidateBook |
     media: book.media,
     startPageId: row.item_id && book.pages.some((page) => page.id === row.item_id) ? row.item_id : null,
     textSize: size,
+    covers: { ...(covers ?? { categoryName: row.category_name, front: null, back: null }), homeHref: "/dashboard" },
   };
 }

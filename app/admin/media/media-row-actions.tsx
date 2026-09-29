@@ -14,6 +14,7 @@ export function MediaRowActions({
   thumbUrl,
   usedIn,
   usedInQuestions,
+  usedInCovers = 0,
 }: {
   id: string;
   altText: string;
@@ -21,8 +22,9 @@ export function MediaRowActions({
   thumbUrl?: string;
   usedIn: number;
   usedInQuestions: number;
+  usedInCovers?: number;
 }) {
-  const inUse = usedIn > 0 || usedInQuestions > 0;
+  const inUse = usedIn > 0 || usedInQuestions > 0 || usedInCovers > 0;
   const hidden = { mediaId: id };
 
   const actions: RowAction[] = [
@@ -66,8 +68,8 @@ export function MediaRowActions({
         inUse ? (
           <div>
             <p className="px-5 py-4 text-sm [overflow-wrap:anywhere]">
-              <strong className="font-medium">{name}</strong> is used in {describeMediaUse(usedIn, usedInQuestions)}.
-              Remove it from {removeFrom(usedIn, usedInQuestions)} first.
+              <strong className="font-medium">{name}</strong> is used in {describeMediaUse(usedIn, usedInQuestions, usedInCovers)}.
+              {" "}{removeFrom(usedIn, usedInQuestions, usedInCovers)}
             </p>
             <div className="flex justify-end border-t border-slate-200 px-5 py-3">
               <button type="button" onClick={close} className={buttonClass("secondary")}>
@@ -97,8 +99,10 @@ export function MediaRowActions({
   return <RowActions label={`Actions for picture ${name}`} actions={actions} />;
 }
 
-function removeFrom(pages: number, questions: number): string {
-  if (questions === 0) return pages === 1 ? "that page" : "those pages";
-  if (pages === 0) return questions === 1 ? "that question" : "those questions";
-  return "all of them";
+function removeFrom(pages: number, questions: number, covers: number): string {
+  const kinds = [pages > 0, questions > 0, covers > 0].filter(Boolean).length;
+  if (kinds > 1) return "Remove it from all of them first (covers are chosen on the Categories page).";
+  if (covers > 0) return `Choose another cover for ${covers === 1 ? "that category" : "those categories"} on the Categories page first.`;
+  if (questions === 0) return `Remove it from ${pages === 1 ? "that page" : "those pages"} first.`;
+  return `Remove it from ${questions === 1 ? "that question" : "those questions"} first.`;
 }

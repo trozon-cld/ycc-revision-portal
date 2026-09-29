@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { BookPageData, ResolvedMedia, TextSize } from "@/lib/content/book";
+import type { BookCovers } from "@/lib/content/covers";
 import { BookReader } from "@/components/learning/book-reader";
 import { BAR_BUTTON_DENSE, barButton } from "@/components/learning/reader-tools";
 import { AccountLinks, HomeLogo } from "@/components/candidate/header";
@@ -38,11 +39,13 @@ export function PrepareReader({
   media,
   startPageId,
   initialTextSize,
+  covers,
 }: {
   pages: BookPageData[];
   media: ResolvedMedia;
   startPageId: string | null;
   initialTextSize: TextSize;
+  covers: BookCovers;
 }) {
   const [textSize, setTextSize] = useState<TextSize>(initialTextSize);
   const savePosition = useDebounced(saveReadingPosition, POSITION_DELAY);
@@ -59,6 +62,7 @@ export function PrepareReader({
         setTextSize(size);
         saveSize(size);
       }}
+      covers={covers}
       initialPageId={startPageId}
       onPageChange={savePosition}
       resultsNote="These results are for this visit only."

@@ -6,6 +6,7 @@ import { PanelButton, RowActions, type RowAction } from "@/components/admin/row-
 import { buttonClass, inputClass } from "@/components/admin/styles";
 import { createCategory, deleteCategory, moveCategoryToGroup, renameCategory } from "./actions";
 import { CategoryChaptersForm, type ChapterOutline } from "./category-chapters-form";
+import { CategoryCoversForm, type CoverChoice } from "./category-covers-form";
 
 export type GroupOption = { id: string; name: string };
 
@@ -46,6 +47,8 @@ export function CategoryRowActions({
   outline,
   linkedChapterIds,
   otherGroups,
+  covers,
+  storageReady,
 }: {
   id: string;
   name: string;
@@ -53,6 +56,8 @@ export function CategoryRowActions({
   outline: ChapterOutline;
   linkedChapterIds: string[];
   otherGroups: GroupOption[];
+  covers: { front: CoverChoice | null; back: CoverChoice | null };
+  storageReady: boolean;
 }) {
   const hidden = { categoryId: id };
   const countLabel = `${candidateCount} candidate${candidateCount === 1 ? "" : "s"}`;
@@ -64,6 +69,21 @@ export function CategoryRowActions({
       description: "Tick the chapters candidates studying this category see in Prepare, Practice and the Mock test.",
       render: (close) => (
         <CategoryChaptersForm categoryId={id} outline={outline} initialSelected={linkedChapterIds} onClose={close} />
+      ),
+    },
+    {
+      label: "Covers",
+      title: `Covers for ${name}`,
+      description: "The front and back of this category's Handbook.",
+      render: (close) => (
+        <CategoryCoversForm
+          categoryId={id}
+          categoryName={name}
+          initialFront={covers.front}
+          initialBack={covers.back}
+          storageReady={storageReady}
+          onClose={close}
+        />
       ),
     },
     {

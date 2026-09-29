@@ -6,6 +6,7 @@ import { parseQuestion } from "@/lib/questions/validate";
 import type { QuestionType, StemPictureAlign, StemPictureSize } from "@/lib/questions/types";
 import { collectMediaIds, parseBlocks } from "./blocks";
 import type { BookPageData, ResolvedMedia } from "./book";
+import type { BookCovers } from "./covers";
 import { isUuid, resolveMedia } from "./pages";
 
 // The book as the reader shows it, for the admin preview: every chapter (or one), in Handbook
@@ -120,6 +121,24 @@ export async function loadPreviewBook(scope: PreviewScope): Promise<PreviewBook>
     chapterCount: new Set(pages.map((page) => page.chapterId)).size,
     drafts,
     leftOut,
+  };
+}
+
+// A category's covers with their pictures resolved; null when the category doesn't exist.
+export async function loadBookCovers(categoryId: string): Promise<BookCovers | null> {
+  if (!isUuid(categoryId)) return null;
+  const { rows } = await pool.query<{ name: string; front_id: string | null; back_id: string | null }>(
+    `select name, front_cover_media_id as front_id, back_cover_media_id as back_id from categories where id = $1`,
+    [categoryId]
+  );
+  const row = rows[0];
+  if (!row) return null;
+  const ids = [row.front_id, row.back_id].filter((id): id is string => Boolean(id));
+  const media = ids.length > 0 ? await resolveMedia(ids) : {};
+  return {
+    categoryName: row.name,
+    front: row.front_id ? (media[row.front_id] ?? null) : null,
+    back: row.back_id ? (media[row.back_id] ?? null) : null,
   };
 }
 
