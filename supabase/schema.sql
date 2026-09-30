@@ -115,6 +115,9 @@ create table activity_logs (
 
 create index activity_logs_created_at_idx on activity_logs (created_at desc);
 create index activity_logs_actor_idx on activity_logs (actor_id, created_at desc);
+-- An admin's Activity page: their candidates' category switches.
+create index activity_logs_switch_target_idx on activity_logs (target_id, created_at desc)
+  where action = 'candidate.category_switched';
 
 create table auth_events (
   id uuid primary key default gen_random_uuid(),

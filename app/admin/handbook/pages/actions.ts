@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
 import { pool } from "@/lib/db/pool";
+import { PICKER_LIMIT } from "@/lib/media/limits";
 import { getErrorCode, withTransaction } from "@/lib/db/transaction";
 import { logActivity } from "@/lib/audit/log";
 import { collectMediaIds, parseBlocks } from "@/lib/content/blocks";
@@ -233,9 +234,9 @@ export async function savePageContent(input: {
   let result: SaveResult;
   try {
     result = await withTransaction<SaveResult>(async (client) => {
-      const { rows } = await client.query<{ content_version: number; title: string }>(
-        `select content_version, title from content_pages where id = $1 for update`,
-        [pageId]
+      const { rows } = await client.query<{ content_version: number; title: string; same_blocks: boolean }>(
+        `select content_version, title, blocks = $2::jsonb as same_blocks from content_pages where id = $1 for update`,
+        [pageId, JSON.stringify(parsed.blocks)]
       );
       if (!rows[0]) return { ok: false, error: NOT_FOUND };
       if (rows[0].content_version !== expectedVersion) {
@@ -245,6 +246,8 @@ export async function savePageContent(input: {
           error: "Someone else saved this page while you were editing. Copy anything you need, then reload the page.",
         };
       }
+      // Nothing changed: nothing to write or log.
+      if (rows[0].same_blocks && rows[0].title === title) return { ok: true, version: expectedVersion };
 
       if (mediaIds.length > 0) {
         // FOR SHARE keeps these pictures from being deleted until this save commits.
@@ -307,8 +310,8 @@ export async function listPickerMedia(search: string): Promise<PickerItem[]> {
      from media
      where $1 = '' or alt_text ilike '%' || $1 || '%' escape '\\' or original_name ilike '%' || $1 || '%' escape '\\'
      order by created_at desc
-     limit 60`,
-    [term]
+     limit $2`,
+    [term, PICKER_LIMIT]
   );
   let thumbs = new Map<string, string>();
   if (isStorageConfigured() && rows.length > 0) {
