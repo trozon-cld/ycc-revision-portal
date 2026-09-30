@@ -161,7 +161,11 @@ export async function updateCandidatePassword(
 
   const passwordHash = await bcrypt.hash(password, 12);
   return changeOwnCandidate(session, formData, async (client, id, candidate) => {
-    await client.query(`update users set password_hash = $2 where id = $1`, [id, passwordHash]);
+    // Also signs the candidate out everywhere (their sign-ins carry the old version).
+    await client.query(`update users set password_hash = $2, session_version = session_version + 1 where id = $1`, [
+      id,
+      passwordHash,
+    ]);
     await logActivity(client, session, "candidate.password_changed", {
       type: "candidate",
       id,

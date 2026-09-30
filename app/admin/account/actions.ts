@@ -6,8 +6,7 @@ import { pool } from "@/lib/db/pool";
 import { getErrorCode, withTransaction } from "@/lib/db/transaction";
 import { logActivity } from "@/lib/audit/log";
 import { requireRole } from "@/lib/auth/guard";
-import { signToken } from "@/lib/auth/jwt";
-import { setAuthCookie } from "@/lib/auth/cookies";
+import { setSessionCookie } from "@/lib/auth/cookies";
 import { NO_NAME, normaliseName, validateName } from "@/lib/users/name";
 
 export type AccountActionState = { error?: string; success?: boolean };
@@ -90,15 +89,7 @@ export async function updateOwnEmail(
   }
 
   // Re-issue the session so "Signed in as" shows the new email straight away.
-  await setAuthCookie(
-    await signToken({
-      sub: session.sub,
-      email,
-      role: session.role,
-      isBlocked: session.isBlocked,
-      accessExpiresAt: session.accessExpiresAt,
-    })
-  );
+  await setSessionCookie({ sub: session.sub, email, role: session.role, ver: session.ver, loginAt: session.loginAt });
 
   revalidatePath("/admin", "layout");
   return { success: true };
@@ -124,9 +115,11 @@ export async function updateOwnPassword(
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
-  await withTransaction(async (client) => {
-    await client.query(
-      `update users set password_hash = $2 where id = $1 and role = 'superadmin'`,
+  // A new password signs out every other device; this one gets a fresh sign-in so it stays in.
+  const version = await withTransaction(async (client) => {
+    const { rows } = await client.query<{ session_version: number }>(
+      `update users set password_hash = $2, session_version = session_version + 1
+       where id = $1 and role = 'superadmin' returning session_version`,
       [session.sub, passwordHash]
     );
     await logActivity(client, session, "account.password_changed", {
@@ -134,7 +127,11 @@ export async function updateOwnPassword(
       id: session.sub,
       label: session.email,
     });
+    return rows[0]?.session_version;
   });
+  if (version) {
+    await setSessionCookie({ sub: session.sub, email: session.email, role: session.role, ver: version, loginAt: session.loginAt });
+  }
 
   return { success: true };
 }
