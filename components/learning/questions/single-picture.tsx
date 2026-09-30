@@ -1,16 +1,18 @@
 "use client";
 
-import { useId, useMemo } from "react";
+import { useId, useMemo, useContext } from "react";
 import { seededShuffle } from "@/lib/questions/shuffle";
 import type { SinglePictureAnswer as Answer, SinglePictureContent } from "@/lib/questions/types/single-picture";
 import { optionLetter } from "@/lib/questions/types/single-text";
 import { InlineText } from "../inline-text";
 import type { AnswerAreaProps } from "./renderers";
+import { MeasuringContext } from "../measuring";
 
 // Candidate answer area for "Single answer, picture options": a 2-per-row grid of picture cards.
 // Each card is one large tap target over a real radio button. Pictures sit in same-shape tiles,
 // shown whole, so cards line up and the book measures them before the pictures load.
 export function SinglePictureAnswer({ mode, seed, content, media, answer, response, onResponse, locked, showCorrect }: AnswerAreaProps) {
+  const measuring = useContext(MeasuringContext);
   const name = useId();
   const data = content as SinglePictureContent;
   const correctId = showCorrect ? ((answer as Answer | undefined)?.correctOptionId ?? null) : null;
@@ -59,7 +61,7 @@ export function SinglePictureAnswer({ mode, seed, content, media, answer, respon
               <span className="relative block aspect-[4/3] max-h-(--book-option-picture-max) w-full overflow-hidden rounded-md bg-slate-100">
                 {picture ? (
                   // eslint-disable-next-line @next/next/no-img-element -- short-lived signed link; files are pre-shrunk WebP
-                  <img src={picture.src} alt={picture.alt} loading="lazy" decoding="async" className="absolute inset-0 size-full object-contain" />
+                  <img src={measuring ? undefined : picture.src} alt={picture.alt} loading="lazy" decoding="async" className="absolute inset-0 size-full object-contain" />
                 ) : (
                   <span className="absolute inset-0 grid place-items-center p-[0.4em] text-center text-[0.8em] text-slate-700">
                     Picture unavailable

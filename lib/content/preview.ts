@@ -46,7 +46,11 @@ type Row = {
   explanation: string | null;
 };
 
-export async function loadPreviewBook(scope: PreviewScope): Promise<PreviewBook> {
+// `extraMedia`: more pictures (e.g. covers, with their small copies) signed in the same request.
+export async function loadPreviewBook(
+  scope: PreviewScope,
+  extraMedia: { ids: string[]; thumbIds: string[] } = { ids: [], thumbIds: [] }
+): Promise<PreviewBook> {
   const chapterId = scope.chapterId && isUuid(scope.chapterId) ? scope.chapterId : null;
   const categoryId = scope.categoryId && isUuid(scope.categoryId) ? scope.categoryId : null;
   const { rows } = await pool.query<Row>(
@@ -117,7 +121,7 @@ export async function loadPreviewBook(scope: PreviewScope): Promise<PreviewBook>
 
   return {
     pages,
-    media: await resolveMedia([...mediaIds]),
+    media: await resolveMedia([...mediaIds, ...extraMedia.ids], extraMedia.thumbIds),
     chapterCount: new Set(pages.map((page) => page.chapterId)).size,
     drafts,
     leftOut,
@@ -134,7 +138,7 @@ export async function loadBookCovers(categoryId: string): Promise<BookCovers | n
   const row = rows[0];
   if (!row) return null;
   const ids = [row.front_id, row.back_id].filter((id): id is string => Boolean(id));
-  const media = ids.length > 0 ? await resolveMedia(ids) : {};
+  const media = ids.length > 0 ? await resolveMedia(ids, ids) : {};
   return {
     categoryName: row.name,
     front: row.front_id ? (media[row.front_id] ?? null) : null,

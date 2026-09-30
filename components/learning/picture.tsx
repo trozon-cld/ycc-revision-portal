@@ -1,6 +1,7 @@
 import type { PictureAlign, PictureSize } from "@/lib/content/blocks";
 import type { ResolvedMedia } from "@/lib/content/book";
 import { InlineText } from "./inline-text";
+import { usePictureSrc } from "./measuring";
 
 // Shared by Handbook picture blocks and question pictures, so both size the same way.
 export function BookPicture({
@@ -14,6 +15,7 @@ export function BookPicture({
   align?: PictureAlign;
   caption?: string;
 }) {
+  const src = usePictureSrc(picture?.src);
   const ratio = picture ? picture.width / picture.height : 4 / 3;
   const margin = align === "left" ? "mr-auto" : align === "right" ? "ml-auto" : "mx-auto";
   return (
@@ -21,7 +23,7 @@ export function BookPicture({
       {picture ? (
         // eslint-disable-next-line @next/next/no-img-element -- short-lived signed link; files are pre-shrunk WebP
         <img
-          src={picture.src}
+          src={src}
           alt={picture.alt}
           width={picture.width}
           height={picture.height}

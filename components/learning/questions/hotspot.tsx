@@ -1,8 +1,9 @@
 "use client";
 
-import { type KeyboardEvent, type MouseEvent } from "react";
+import { type KeyboardEvent, type MouseEvent, useContext } from "react";
 import { roundTenth, type HotspotAnswer, type HotspotArea, type HotspotContent, type HotspotPoint } from "@/lib/questions/types/hotspot";
 import type { AnswerAreaProps } from "./renderers";
+import { MeasuringContext } from "../measuring";
 
 const STEP = 2;
 // Taps need room: the picture is at least this wide (or as wide as the page allows); if the
@@ -22,6 +23,7 @@ const clamp = (value: number) => Math.min(100, Math.max(0, roundTenth(value)));
 // keyboard users move it with the arrow keys and check with Enter. Results are drawn over the
 // picture, so nothing changes height after Check and nothing moves page in the book.
 export function HotspotAnswer({ content, media, answer, response, onResponse, onSubmit, locked, showCorrect, result }: AnswerAreaProps) {
+  const measuring = useContext(MeasuringContext);
   const data = content as HotspotContent;
   const picture = media[data.mediaId];
   const ratio = picture ? picture.width / picture.height : 4 / 3;
@@ -80,7 +82,7 @@ export function HotspotAnswer({ content, media, answer, response, onResponse, on
           {picture ? (
             // eslint-disable-next-line @next/next/no-img-element -- short-lived signed link; files are pre-shrunk WebP
             <img
-              src={picture.src}
+              src={measuring ? undefined : picture.src}
               alt=""
               width={picture.width}
               height={picture.height}
