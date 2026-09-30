@@ -1,24 +1,58 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { LOGO } from "@/lib/brand";
 
-type CoverImage = { src: string; alt: string };
+type CoverImage = { src: string; alt: string; thumb?: string };
 
 // The whole picture always shows; any room around it is filled with a blurred copy, so no picture
-// shape leaves empty bars. `blur` is in px, smaller for the admin's small previews.
-export function CoverPicture({ picture, blur = 28, decorative = false }: { picture: CoverImage; blur?: number; decorative?: boolean }) {
+// shape leaves empty bars. With a small copy (`thumb`) that shows at once, blurred, and the full
+// picture fades in over it when it has arrived. `blur` is in px, smaller for the admin's previews.
+export function CoverPicture({
+  picture,
+  blur = 28,
+  decorative = false,
+  priority = false,
+}: {
+  picture: CoverImage;
+  blur?: number;
+  decorative?: boolean;
+  priority?: boolean;
+}) {
+  const fullRef = useRef<HTMLImageElement>(null);
+  const [loaded, setLoaded] = useState(false);
+  // Already in the browser's cache (e.g. preloaded): it may have finished before React attached onLoad.
+  useEffect(() => {
+    const image = fullRef.current;
+    if (image?.complete && image.naturalWidth > 0) setLoaded(true);
+  }, [picture.src]);
+  const fill = picture.thumb ?? picture.src;
+  const showFull = loaded || !picture.thumb;
   return (
     <div className="relative size-full overflow-hidden bg-primary">
       {/* eslint-disable-next-line @next/next/no-img-element -- short-lived signed link */}
       <img
-        src={picture.src}
+        src={fill}
         alt=""
         aria-hidden="true"
         decoding="async"
         className="absolute inset-0 size-full scale-110 object-cover opacity-85"
         style={{ filter: `blur(${blur}px)` }}
       />
+      {picture.thumb && !loaded && (
+        // eslint-disable-next-line @next/next/no-img-element -- short-lived signed link
+        <img src={picture.thumb} alt="" aria-hidden="true" className="absolute inset-0 size-full object-contain blur-[3px]" />
+      )}
       {/* eslint-disable-next-line @next/next/no-img-element -- short-lived signed link */}
-      <img src={picture.src} alt={decorative ? "" : picture.alt} decoding="async" className="relative size-full object-contain" />
+      <img
+        ref={fullRef}
+        src={picture.src}
+        alt={decorative ? "" : picture.alt}
+        decoding="async"
+        fetchPriority={priority ? "high" : undefined}
+        onLoad={() => setLoaded(true)}
+        className={`relative size-full object-contain transition-opacity duration-300 motion-reduce:transition-none ${showFull ? "opacity-100" : "opacity-0"}`}
+      />
     </div>
   );
 }
@@ -35,7 +69,7 @@ export function FrontCoverFace({
   blur?: number;
   decorative?: boolean;
 }) {
-  if (picture) return <CoverPicture picture={picture} blur={blur} decorative={decorative} />;
+  if (picture) return <CoverPicture picture={picture} blur={blur} decorative={decorative} priority={!decorative} />;
   return (
     <div className="flex size-full flex-col bg-primary text-white">
       <div aria-hidden="true" className="h-[0.6em] shrink-0 bg-accent" />

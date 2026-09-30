@@ -171,7 +171,11 @@ export async function updateAdminPassword(
       const admin = await lockAdmin(client, adminId);
       if (!admin) return { error: NOT_FOUND };
 
-      await client.query(`update users set password_hash = $2 where id = $1`, [adminId, passwordHash]);
+      // Also signs the admin out everywhere (their sign-ins carry the old version).
+      await client.query(`update users set password_hash = $2, session_version = session_version + 1 where id = $1`, [
+        adminId,
+        passwordHash,
+      ]);
       await logActivity(client, session, "admin.password_changed", {
         type: "admin",
         id: adminId,

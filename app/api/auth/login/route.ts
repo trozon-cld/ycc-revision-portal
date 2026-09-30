@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { pool } from "@/lib/db/pool";
-import { signToken, type UserRole } from "@/lib/auth/jwt";
-import { setAuthCookie } from "@/lib/auth/cookies";
+import type { UserRole } from "@/lib/auth/jwt";
+import { setSessionCookie } from "@/lib/auth/cookies";
+import { loginPause, pausedMessage } from "@/lib/auth/rate-limit";
 import { ipFromHeaders, logAuthEvent } from "@/lib/audit/log";
 
-// Valid credentials always log in, even if blocked/expired — proxy.ts
-// then redirects that candidate to /access-expired.
+// Valid credentials always log in, even if blocked/expired — requireRole then sends that candidate
+// to /access-expired.
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
@@ -23,21 +24,29 @@ export async function POST(request: NextRequest) {
 
   const ipAddress = ipFromHeaders(request.headers);
 
+  // Paused: refused before the password is checked, and not logged again (keeps the log bounded).
+  const pausedSeconds = await loginPause(pool, email, ipAddress);
+  if (pausedSeconds > 0) {
+    return NextResponse.json({ error: pausedMessage(pausedSeconds) }, { status: 429 });
+  }
+
   const invalidCredentials = async (user?: { id: string; role: UserRole }) => {
-    await logAuthEvent(
-      pool,
-      "login_failed",
-      { id: user?.id ?? null, email, role: user?.role ?? null },
-      ipAddress
-    );
+    const who = { id: user?.id ?? null, email, role: user?.role ?? null };
+    await logAuthEvent(pool, "login_failed", who, ipAddress);
+    // This failure reached a limit: note the pause once and say so now.
+    const nowPaused = await loginPause(pool, email, ipAddress);
+    if (nowPaused > 0) {
+      await logAuthEvent(pool, "login_paused", who, ipAddress);
+      return NextResponse.json({ error: pausedMessage(nowPaused) }, { status: 429 });
+    }
     return NextResponse.json(
       { error: "Invalid email or password." },
       { status: 401 }
     );
   };
 
-  const { rows } = await pool.query(
-    `select id, email, password_hash, role, is_blocked, access_expires_at
+  const { rows } = await pool.query<{ id: string; email: string; password_hash: string; role: UserRole; session_version: number }>(
+    `select id, email, password_hash, role, session_version
      from users where email = $1`,
     [email]
   );
@@ -54,20 +63,6 @@ export async function POST(request: NextRequest) {
     return invalidCredentials({ id: user.id, role: user.role });
   }
 
-  const token = await signToken({
-    sub: user.id,
-    email: user.email,
-    role: user.role,
-    isBlocked: user.is_blocked,
-    accessExpiresAt: user.access_expires_at
-      ? new Date(user.access_expires_at).toISOString()
-      : null,
-  });
-
-  await pool.query(
-    `insert into login_logs (user_id, ip_address) values ($1, $2)`,
-    [user.id, ipAddress]
-  );
   await logAuthEvent(
     pool,
     "login_success",
@@ -75,8 +70,13 @@ export async function POST(request: NextRequest) {
     ipAddress
   );
 
+  await setSessionCookie({
+    sub: user.id,
+    email: user.email,
+    role: user.role,
+    ver: user.session_version,
+    loginAt: Math.floor(Date.now() / 1000),
+  });
   const redirectTo = user.role === "candidate" ? "/dashboard" : "/admin";
-
-  await setAuthCookie(token);
   return NextResponse.json({ role: user.role, redirectTo });
 }

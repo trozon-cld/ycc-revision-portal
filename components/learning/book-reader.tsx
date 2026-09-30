@@ -19,6 +19,8 @@ import { buildSheets, type BookPageData, type ResolvedMedia, type Sheet, type Te
 import type { BookCovers } from "@/lib/content/covers";
 import { PHONE_SIDEWAYS_QUERY } from "@/lib/layout";
 import { BackCoverFace, FrontCoverFace } from "./book-covers";
+import { MeasuringContext } from "./measuring";
+import { OpeningMessage } from "./opening-message";
 import { getQuestionTypeDef } from "@/lib/questions/registry";
 import { BlockList } from "./blocks";
 import { FRESH_QUESTION_STATE, QuestionView, type QuestionViewState } from "./questions/question-view";
@@ -876,6 +878,8 @@ export function BookReader({
             onClose={() => setPanel(null)}
           />
         )}
+        {/* Before the reader knows its size (also the server's HTML): the same message, never a blank. */}
+        {!geometry && <OpeningMessage />}
         {geometry && (
           <>
             <div
@@ -884,6 +888,7 @@ export function BookReader({
               className="pointer-events-none invisible absolute left-0 top-0 overflow-hidden"
               style={{ width: 0, height: 0, fontSize: textSize, ...sheetStyle, position: "absolute" }}
             >
+              <MeasuringContext.Provider value={true}>
               {measuring.map((index) => {
                 const page = pages[index];
                 if (!page) return null;
@@ -922,6 +927,7 @@ export function BookReader({
                   ),
                 ];
               })}
+              </MeasuringContext.Provider>
             </div>
             {pages.some((page) => page.question) && (
               <div
@@ -931,6 +937,7 @@ export function BookReader({
                 style={{ width: 0, height: 0, fontSize: textSize }}
                 inert
               >
+                <MeasuringContext.Provider value={true}>
                 {measuring.map((index) => {
                   const page = pages[index];
                   if (!page?.question) return null;
@@ -954,9 +961,11 @@ export function BookReader({
                     </div>
                   ));
                 })}
+                </MeasuringContext.Provider>
               </div>
             )}
 
+            {!partCounts && <OpeningMessage />}
             {partCounts && (
               <div className="flex h-full items-center justify-center gap-4" style={{ padding: geometry.wide ? SPREAD_PADDING : STAGE_PADDING }}>
                 {geometry.wide && <SideButton direction="previous" disabled={!canGoBack} onClick={previous} />}

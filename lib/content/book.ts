@@ -15,7 +15,8 @@ export type BookPageData = {
 };
 
 // Pictures resolved on the server: a short-lived link plus the size stored in Media.
-export type ResolvedMedia = Record<string, { src: string; width: number; height: number; alt: string }>;
+// `thumb` (the small copy) only where asked for, e.g. covers, to show while the full picture loads.
+export type ResolvedMedia = Record<string, { src: string; width: number; height: number; alt: string; thumb?: string }>;
 
 export const TEXT_SIZES = [14, 16, 18, 20, 22, 24] as const;
 export type TextSize = (typeof TEXT_SIZES)[number];

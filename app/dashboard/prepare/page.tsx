@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { preload } from "react-dom";
 import { requireRole } from "@/lib/auth/guard";
 import { SESSION_ENDED_LOGIN } from "@/lib/auth/constants";
-import { loadCandidateBook } from "@/lib/content/candidate-book";
+import { coverPreloads, loadCandidateBook } from "@/lib/content/candidate-book";
 import { PrepareReader } from "./prepare-reader";
 
 export default async function PreparePage() {
@@ -26,6 +27,9 @@ export default async function PreparePage() {
       </div>
     );
   }
+
+  // The front cover starts downloading with the page, not once the reader has started.
+  for (const { href, priority } of coverPreloads(book)) preload(href, { as: "image", fetchPriority: priority });
 
   return (
     <div className="flex h-[calc(100dvh-var(--candidate-header))] min-h-[480px] flex-col lg:h-dvh phone-upright:h-dvh phone-sideways:h-dvh phone-sideways:min-h-0">

@@ -38,7 +38,7 @@ create table users (
   -- Admin who owns this candidate. Restrict: an Admin can't be deleted while owning candidates.
   admin_id uuid references users (id) on delete restrict,
   -- Expiry/block checks apply only to candidates. Admins/Superadmins keep
-  -- these NULL and bypass the checks (see proxy.ts).
+  -- these NULL and bypass the checks (see lib/auth/guard.ts).
   access_start_at timestamptz,
   access_expires_at timestamptz,
   is_blocked boolean not null default false,
@@ -47,6 +47,8 @@ create table users (
   reader_text_size smallint check (reader_text_size in (14, 16, 18, 20, 22, 24)),
   -- Display name. Required when admins and candidates are created in the app; older users may have none.
   full_name varchar(100) check (full_name is null or length(trim(full_name)) > 0),
+  -- Goes up when the password changes; sign-ins carrying an older number are signed out.
+  session_version integer not null default 1 check (session_version > 0),
   constraint users_candidate_fields_check check (
     (role = 'candidate' and category_id is not null and admin_id is not null)
     or (role <> 'candidate' and admin_id is null)
@@ -91,13 +93,6 @@ create trigger categories_group_move_check
   before update of group_id on categories
   for each row execute function check_category_group_move();
 
-create table login_logs (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references users (id) on delete cascade,
-  ip_address varchar,
-  logged_in_at timestamptz not null default now()
-);
-
 -- No foreign keys: entries must outlive the users and categories they mention.
 create table activity_logs (
   id uuid primary key default gen_random_uuid(),
@@ -115,11 +110,14 @@ create table activity_logs (
 
 create index activity_logs_created_at_idx on activity_logs (created_at desc);
 create index activity_logs_actor_idx on activity_logs (actor_id, created_at desc);
+-- An admin's Activity page: their candidates' category switches.
+create index activity_logs_switch_target_idx on activity_logs (target_id, created_at desc)
+  where action = 'candidate.category_switched';
 
 create table auth_events (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz not null default now(),
-  event varchar not null check (event in ('login_success', 'login_failed', 'logout')),
+  event varchar not null check (event in ('login_success', 'login_failed', 'logout', 'login_paused')),
   user_id uuid,
   email varchar not null,
   role role_type,
@@ -128,6 +126,9 @@ create table auth_events (
 
 create index auth_events_created_at_idx on auth_events (created_at desc);
 create index auth_events_user_idx on auth_events (user_id, created_at desc);
+-- Rate limiting counts recent failed logins per email and per address.
+create index auth_events_failed_email_idx on auth_events (email, created_at desc) where event = 'login_failed';
+create index auth_events_failed_ip_idx on auth_events (ip_address, created_at desc) where event = 'login_failed';
 
 -- Logs are append-only. TRUNCATE (a deliberate DB-level reset) still works.
 create function prevent_log_changes() returns trigger

@@ -7,6 +7,7 @@ import { seededShuffle } from "@/lib/questions/shuffle";
 import type { MatchAnswer, MatchContent, MatchItem, MatchResponse } from "@/lib/questions/types/match-pictures";
 import { Icon } from "./hotspot";
 import type { AnswerAreaProps } from "./renderers";
+import { usePictureSrc } from "../measuring";
 
 // Past this distance a press on a picture becomes a drag; anything shorter is a tap.
 const DRAG_START = 6;
@@ -264,9 +265,10 @@ function dropTargetAt(x: number, y: number): string | null {
 
 function Picture({ media, item }: { media: ResolvedMedia; item: MatchItem | undefined }) {
   const picture = item ? media[item.mediaId] : undefined;
+  const src = usePictureSrc(picture?.src);
   if (!picture) return <span className="text-[0.7em] text-slate-700">Picture unavailable</span>;
   return (
     // eslint-disable-next-line @next/next/no-img-element -- short-lived signed link; files are pre-shrunk WebP
-    <img src={picture.src} alt="" draggable={false} loading="lazy" decoding="async" className="pointer-events-none size-full object-contain" />
+    <img src={src} alt="" draggable={false} loading="lazy" decoding="async" className="pointer-events-none size-full object-contain" />
   );
 }

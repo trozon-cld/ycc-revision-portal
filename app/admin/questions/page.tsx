@@ -10,7 +10,7 @@ import { loadCategoryGroups } from "@/lib/handbook/categories";
 import { Badge } from "@/components/admin/badge";
 import { FilterBar, FilterSearch, FilterSelect } from "@/components/admin/filter-bar";
 import { PageHeader } from "@/components/admin/page-header";
-import { buttonClass } from "@/components/admin/styles";
+import { Pagination } from "@/components/admin/pagination";
 import { Cell, Row, Table } from "@/components/admin/table";
 import { NewQuestionButton, QuestionRowActions } from "./question-row-actions";
 
@@ -165,39 +165,8 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
         })}
       </Table>
 
-      <Pagination page={filters.page} hasMore={hasMore} query={query} />
+      <Pagination basePath="/admin/questions" page={filters.page} hasMore={hasMore} query={query} />
     </>
-  );
-}
-
-function Pagination({ page, hasMore, query }: { page: number; hasMore: boolean; query: Record<string, string> }) {
-  if (page === 1 && !hasMore) return null;
-
-  const hrefFor = (target: number) => {
-    const search = new URLSearchParams(
-      Object.entries({ ...query, page: target === 1 ? "" : String(target) }).filter(([, value]) => value !== "")
-    ).toString();
-    return search ? `/admin/questions?${search}` : "/admin/questions";
-  };
-
-  return (
-    <div className="mt-4 flex items-center justify-between gap-2">
-      {page > 1 ? (
-        <Link href={hrefFor(page - 1)} className={buttonClass("secondary", "sm")}>
-          ← Previous
-        </Link>
-      ) : (
-        <span />
-      )}
-      <span className="text-sm text-slate-600">Page {page}</span>
-      {hasMore ? (
-        <Link href={hrefFor(page + 1)} className={buttonClass("secondary", "sm")}>
-          Next →
-        </Link>
-      ) : (
-        <span />
-      )}
-    </div>
   );
 }
 

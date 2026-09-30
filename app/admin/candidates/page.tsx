@@ -6,6 +6,7 @@ import { FilterBar, FilterSearch, FilterSelect } from "@/components/admin/filter
 import { Breakable } from "@/components/admin/breakable";
 import { PersonLabel } from "@/components/admin/person-label";
 import { PageHeader } from "@/components/admin/page-header";
+import { Pagination, pageFromParam } from "@/components/admin/pagination";
 import { Cell, Row, Table } from "@/components/admin/table";
 import { NewCandidateButton } from "./create-candidate-form";
 import { AdminCandidateActions, SuperadminCandidateActions } from "./candidate-row-actions";
@@ -30,6 +31,7 @@ interface Option {
   label: string;
 }
 
+const PAGE_SIZE = 50;
 const STATUSES = ["active", "expired", "blocked"] as const;
 type Status = (typeof STATUSES)[number];
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -48,6 +50,24 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
   const ownerFilter = isSuperadmin ? uuidOrNull(one(params.admin)) : session.sub;
   const isFiltered = Boolean(search || categoryFilter || status || (isSuperadmin && ownerFilter));
 
+  // Shared by the count and the page, so both always use the same filters.
+  const where = `u.role = 'candidate'
+         and ($1::uuid is null or u.admin_id = $1::uuid)
+         and ($2::text is null or u.email ilike '%' || $2::text || '%' or u.full_name ilike '%' || $2::text || '%')
+         and ($3::uuid is null or u.category_id = $3::uuid or u.current_category_id = $3::uuid)
+         and ($4::text is null
+              or ($4::text = 'blocked' and u.is_blocked)
+              or ($4::text = 'expired' and not u.is_blocked and u.access_expires_at <= now())
+              or ($4::text = 'active' and not u.is_blocked
+                  and (u.access_expires_at is null or u.access_expires_at > now())))`;
+  const filterValues = [ownerFilter, search ? escapeLike(search) : null, categoryFilter, status];
+  const { rows: counted } = await pool.query<{ total: number }>(
+    `select count(*)::int as total from users u where ${where}`,
+    filterValues
+  );
+  const total = counted[0].total;
+  const page = pageFromParam(one(params.page), total, PAGE_SIZE);
+
   const [{ rows: candidates }, { rows: categories }, { rows: admins }] = await Promise.all([
     pool.query<CandidateRow>(
       `select u.id, u.email, u.full_name, u.category_id, c.name as category_name, cc.name as current_category_name,
@@ -56,17 +76,10 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
        join categories c on c.id = u.category_id
        join categories cc on cc.id = u.current_category_id
        join users a on a.id = u.admin_id
-       where u.role = 'candidate'
-         and ($1::uuid is null or u.admin_id = $1::uuid)
-         and ($2::text is null or u.email ilike '%' || $2::text || '%' or u.full_name ilike '%' || $2::text || '%')
-         and ($3::uuid is null or u.category_id = $3::uuid or u.current_category_id = $3::uuid)
-         and ($4::text is null
-              or ($4::text = 'blocked' and u.is_blocked)
-              or ($4::text = 'expired' and not u.is_blocked and u.access_expires_at <= now())
-              or ($4::text = 'active' and not u.is_blocked
-                  and (u.access_expires_at is null or u.access_expires_at > now())))
-       order by u.created_at desc`,
-      [ownerFilter, search ? escapeLike(search) : null, categoryFilter, status]
+       where ${where}
+       order by u.created_at desc, u.id
+       limit $5 offset $6`,
+      [...filterValues, PAGE_SIZE, (page - 1) * PAGE_SIZE]
     ),
     pool.query<CategoryChoice>(
       `select c.id, c.name, g.name as "group"
@@ -85,7 +98,13 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
   const columns = isSuperadmin
     ? ["Candidate", "Category", "Admin", "Status", "Access until", ""]
     : ["Candidate", "Category", "Status", "Access until", ""];
-  const countLabel = `${candidates.length} candidate${candidates.length === 1 ? "" : "s"}`;
+  const countLabel = `${total.toLocaleString("en-GB")} candidate${total === 1 ? "" : "s"}`;
+  const query: Record<string, string> = {
+    q: search,
+    category: categoryFilter ?? "",
+    status: status ?? "",
+    admin: isSuperadmin ? (ownerFilter ?? "") : "",
+  };
 
   return (
     <>
@@ -193,6 +212,15 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
           );
         })}
       </Table>
+
+      <Pagination
+        basePath="/admin/candidates"
+        page={page}
+        hasMore={page * PAGE_SIZE < total}
+        query={query}
+        total={total}
+        pageSize={PAGE_SIZE}
+      />
     </>
   );
 }

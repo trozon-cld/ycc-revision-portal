@@ -152,10 +152,10 @@ async function ActivityTab({
     ),
     isSuperadmin
       ? pool.query<ActorRow>(
-          `select * from (
-             select distinct on (actor_id) actor_id, actor_email, actor_role
-             from activity_logs order by actor_id, created_at desc
-           ) latest order by actor_email`
+          // Staff accounts, read from users: scanning the whole log for its actors would slow down as it grows.
+          `select id as actor_id, email as actor_email, role as actor_role
+           from users where role in ('superadmin', 'admin')
+           order by lower(email)`
         )
       : Promise.resolve({ rows: [] as ActorRow[] }),
   ]);
@@ -301,7 +301,7 @@ async function LoginsTab({
               </span>
             </Cell>
             <Cell label="Event">
-              <Badge tone={entry.event === "login_failed" ? "danger" : entry.event === "logout" ? "neutral" : "success"}>
+              <Badge tone={entry.event === "login_failed" ? "danger" : entry.event === "login_paused" ? "warning" : entry.event === "logout" ? "neutral" : "success"}>
                 {AUTH_EVENTS[entry.event]}
               </Badge>
             </Cell>

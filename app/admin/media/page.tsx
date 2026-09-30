@@ -4,6 +4,7 @@ import { pool } from "@/lib/db/pool";
 import { getSignedUrls, isStorageConfigured } from "@/lib/storage/storage";
 import { FilterBar, FilterSearch } from "@/components/admin/filter-bar";
 import { PageHeader } from "@/components/admin/page-header";
+import { Pagination, pageFromParam } from "@/components/admin/pagination";
 import { cardClass } from "@/components/admin/styles";
 import { MediaRowActions } from "./media-row-actions";
 import { UploadMediaButton } from "./upload-media-form";
@@ -22,7 +23,7 @@ interface MediaRow {
   used_in_covers: number;
 }
 
-const PAGE_LIMIT = 300;
+const PAGE_SIZE = 60;
 const THUMB_EDGE = 400;
 const LINK_LIFETIME_SECONDS = 60 * 60;
 
@@ -32,6 +33,14 @@ export default async function MediaPage({ searchParams }: PageProps<"/admin/medi
   const search = (one(params.q) ?? "").trim().slice(0, 100);
   const configured = isStorageConfigured();
 
+  const matches = `$1 = '' or alt_text ilike '%' || $1 || '%' escape '\\' or original_name ilike '%' || $1 || '%' escape '\\'`;
+  const { rows: counted } = await pool.query<{ total: number }>(
+    `select count(*)::int as total from media where ${matches}`,
+    [escapeLike(search)]
+  );
+  const total = counted[0].total;
+  const page = pageFromParam(one(params.page), total, PAGE_SIZE);
+
   const { rows: media } = await pool.query<MediaRow>(
     `select id, thumb_path, original_name, mime_type, width, height, byte_size, alt_text,
             (select count(*) from content_page_media u where u.media_id = media.id)::int as used_in,
@@ -39,10 +48,10 @@ export default async function MediaPage({ searchParams }: PageProps<"/admin/medi
             (select count(*) from categories u where u.front_cover_media_id = media.id or u.back_cover_media_id = media.id)::int
               as used_in_covers
      from media
-     where $1 = '' or alt_text ilike '%' || $1 || '%' escape '\\' or original_name ilike '%' || $1 || '%' escape '\\'
-     order by created_at desc
-     limit ${PAGE_LIMIT}`,
-    [escapeLike(search)]
+     where ${matches}
+     order by created_at desc, id
+     limit $2 offset $3`,
+    [escapeLike(search), PAGE_SIZE, (page - 1) * PAGE_SIZE]
   );
 
   let thumbs = new Map<string, string>();
@@ -63,9 +72,7 @@ export default async function MediaPage({ searchParams }: PageProps<"/admin/medi
     <>
       <PageHeader
         title="Media"
-        description={`${media.length}${media.length === PAGE_LIMIT ? "+" : ""} picture${media.length === 1 ? "" : "s"}${
-          search ? " found" : ""
-        }`}
+        description={`${total.toLocaleString("en-GB")} picture${total === 1 ? "" : "s"}${search ? " found" : ""}`}
         actions={<UploadMediaButton configured={configured} />}
       />
 
@@ -139,6 +146,15 @@ export default async function MediaPage({ searchParams }: PageProps<"/admin/medi
           })}
         </ul>
       )}
+
+      <Pagination
+        basePath="/admin/media"
+        page={page}
+        hasMore={page * PAGE_SIZE < total}
+        query={{ q: search }}
+        total={total}
+        pageSize={PAGE_SIZE}
+      />
     </>
   );
 }

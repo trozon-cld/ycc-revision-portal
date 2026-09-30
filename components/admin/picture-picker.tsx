@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { PickerItem } from "@/app/admin/handbook/pages/actions";
 import { Dialog } from "./dialog";
+import { PICKER_LIMIT } from "@/lib/media/limits";
 import { inputClass } from "./styles";
 
 // Media library picker, shared by the page and question editors. `load` is a server action.
@@ -68,6 +69,11 @@ export function PicturePicker({
             {items?.length === 0 && (
               <p className="text-sm text-slate-700">
                 {search ? "No pictures match your search." : "No pictures yet. Upload them on the Media page first."}
+              </p>
+            )}
+            {items && items.length >= PICKER_LIMIT && (
+              <p className="text-sm text-slate-700">
+                {search ? `Showing the first ${PICKER_LIMIT} matches. Add more words to narrow it down.` : `Showing the newest ${PICKER_LIMIT} pictures. Search to find older ones.`}
               </p>
             )}
             {items && items.length > 0 && (

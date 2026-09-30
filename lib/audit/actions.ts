@@ -84,6 +84,8 @@ export const AUTH_EVENTS = {
   login_success: "Logged in",
   login_failed: "Failed login attempt",
   logout: "Logged out",
+  // Written once when too many failed attempts pause logins for an email or address (lib/auth/rate-limit.ts).
+  login_paused: "Logins paused (too many failed attempts)",
 } as const;
 
 export type AuthEvent = keyof typeof AUTH_EVENTS;
