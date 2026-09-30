@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import Link from "next/link";
 import { TEXT_SIZES, type BookPageData, type Sheet, type TextSize } from "@/lib/content/book";
 
 // The reader bar and its panels. Candidate style: big targets, words next to icons,
@@ -18,6 +19,9 @@ export const ReaderLabelsContext = createContext(true);
 // Bar buttons on laptops and desktops (48px high), also used for the page's own items in the bar.
 export const BAR_BUTTON_DENSE = "h-12 min-w-12 px-3 text-base";
 
+// Large full-width buttons in panels (e.g. Back to home, Help and Log out in Settings on phones).
+export const PANEL_LINK = `${barButton} h-14 w-full px-4 text-lg`;
+
 export function ReaderBar({
   compact,
   tiny,
@@ -30,6 +34,9 @@ export function ReaderBar({
   dense = false,
   narrow = false,
   stacked = false,
+  home,
+  textSizeInBar = true,
+  centreStatus = true,
   start,
   end,
   status,
@@ -48,6 +55,12 @@ export function ReaderBar({
   narrow?: boolean;
   // Tablets held upright: with labels on, each word sits under its icon so the bar fits.
   stacked?: boolean;
+  // Phones (the header is hidden there): a Home button at the start of the bar.
+  home?: string;
+  // Phones keep text size in Settings only; there's no room for A−/A+ as well.
+  textSizeInBar?: boolean;
+  // Laptops keep the status exactly in the middle; sideways phones let it take the room left over.
+  centreStatus?: boolean;
   start?: ReactNode;
   end?: ReactNode;
   // Dense bar only: "Pages 5–6 of 11", shown between the tools (read out by the reader itself).
@@ -68,18 +81,42 @@ export function ReaderBar({
     previous.current = panel;
   });
   // Phones: the word sits under the icon (text size lives in Settings there); the smallest phones show icons only.
-  const size = tiny
+  // Phone bars with Home: if the words ever don't fit (a wider font, a narrow phone), show icons only
+  // rather than overflow. Names stay for screen readers and as tooltips.
+  const barRef = useRef<HTMLDivElement>(null);
+  const [crowdedAt, setCrowdedAt] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const bar = barRef.current;
+    if (!bar || !home) return;
+    const check = () => {
+      if (crowdedAt === null && bar.scrollWidth > bar.clientWidth + 1) setCrowdedAt(bar.clientWidth);
+      else if (crowdedAt !== null && bar.clientWidth > crowdedAt) setCrowdedAt(null);
+    };
+    check();
+    const observer = new ResizeObserver(check);
+    observer.observe(bar);
+    let live = true;
+    document.fonts?.ready.then(() => live && check());
+    return () => {
+      live = false;
+      observer.disconnect();
+    };
+  });
+  const iconsOnly = tiny || crowdedAt !== null;
+  const labelled = showLabels && crowdedAt === null;
+  const size = iconsOnly
     ? "h-12 min-w-11 px-2 text-base"
     : dense
       ? BAR_BUTTON_DENSE
       : compact
-      ? "h-14 min-w-12 flex-col gap-0 px-2 text-sm leading-tight"
+      ? // Phones with the Home button: a little less padding, so five buttons fit from 380px.
+        `h-14 min-w-12 flex-col gap-0 ${home ? "px-1.5" : "px-2"} text-sm leading-tight`
       : "h-14 min-w-14 px-4 text-lg";
   // Smaller laptops with labels on: the word sits under the icon, so the page status keeps the middle.
   const panelSize =
-    dense && narrow && showLabels
+    dense && narrow && labelled
       ? "h-12 min-w-14 flex-col gap-0 px-2 text-sm leading-tight [&_svg]:size-5"
-      : stacked && showLabels
+      : stacked && labelled
         ? "h-14 min-w-14 flex-col gap-0 px-2.5 text-sm leading-tight"
         : size;
   const toggle = (key: ReaderPanel) => onPanel(panel === key ? null : key);
@@ -90,11 +127,11 @@ export function ReaderBar({
       aria-pressed={panel === key}
       disabled={!ready && !always}
       onClick={() => toggle(key)}
-      title={showLabels ? undefined : label}
+      title={labelled ? undefined : label}
       className={`${barButton} ${panelSize}`}
     >
       <Icon path={icon} />
-      {tiny || !showLabels ? <span className="sr-only">{label}</span> : (dense && narrow) || stacked ? (
+      {iconsOnly || !showLabels ? <span className="sr-only">{label}</span> : (dense && narrow) || stacked ? (
         short !== label ? (
           <>
             <span aria-hidden="true">{short}</span>
@@ -116,6 +153,12 @@ export function ReaderBar({
   const leftTools = (
     <>
       {start && <div className="mr-2 flex shrink-0 items-center">{start}</div>}
+      {home && (
+        <Link href={home} title={labelled ? undefined : "Home"} className={`${barButton} ${panelSize}`}>
+          <Icon path={HOME_ICON} />
+          <span className={iconsOnly || !showLabels ? "sr-only" : undefined}>Home</span>
+        </Link>
+      )}
       {panelButton("contents", "M4 6h16M4 12h16M4 18h10", "Contents", "Contents")}
       {panelButton("goto", "M6 3h9l4 4v14H6zM14 3v5h5", "Go to page", "Page")}
       {hasQuestions && panelButton("results", "M5 13l4 4L19 7", "Results", "Results")}
@@ -123,9 +166,8 @@ export function ReaderBar({
   );
   const rightTools = (
     <>
-      {/* Phones keep text size in Settings only; there's no room for A−/A+ as well. */}
       {panelButton("settings", SETTINGS_ICON, "Settings", "Settings", true)}
-      {onTextSizeChange && !compact && (
+      {onTextSizeChange && textSizeInBar && (
         <>
           <button
             type="button"
@@ -164,6 +206,17 @@ export function ReaderBar({
     </>
   );
   // Dense bar: three columns, so the page status stays exactly in the middle whatever the buttons show.
+  if (status && !centreStatus) {
+    return (
+      <div ref={barRef} role="toolbar" aria-label="Reader tools" className="flex items-center gap-2 border-b border-slate-300 bg-white px-3 py-2">
+        {leftTools}
+        <span aria-hidden="true" className="min-w-0 flex-1 truncate px-2 text-center text-base font-medium text-ink">
+          {status}
+        </span>
+        {rightTools}
+      </div>
+    );
+  }
   if (status) {
     return (
       <div
@@ -181,9 +234,10 @@ export function ReaderBar({
   }
   return (
     <div
+      ref={barRef}
       role="toolbar"
       aria-label="Reader tools"
-      className={`flex items-center border-b border-slate-300 bg-white py-2 ${tiny ? "gap-1.5 px-2" : compact ? "gap-2 px-3" : "gap-2 px-6"}`}
+      className={`flex items-center border-b border-slate-300 bg-white py-2 ${iconsOnly ? "gap-1.5 px-2" : compact ? (home ? "gap-1.5 px-3" : "gap-2 px-3") : "gap-2 px-6"}`}
     >
       {leftTools}
       <span className="flex-1" />
@@ -192,6 +246,7 @@ export function ReaderBar({
   );
 }
 
+const HOME_ICON = "M3 11l9-7 9 7M5 10v10h5v-6h4v6h5V10";
 const SETTINGS_ICON = "M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1M15 4v4M9 10v4M17 16v4";
 
 function Icon({ path }: { path: string }) {
@@ -484,6 +539,7 @@ export function SettingsPanel({
   pageTurn,
   onTogglePageTurn,
   reducedMotion,
+  links,
   onClose,
 }: {
   textSize: TextSize;
@@ -493,6 +549,8 @@ export function SettingsPanel({
   pageTurn: boolean;
   onTogglePageTurn: () => void;
   reducedMotion: boolean;
+  // Phones: Back to home, Help and Log out, which the hidden header holds elsewhere.
+  links?: ReactNode;
   onClose: () => void;
 }) {
   const index = TEXT_SIZES.indexOf(textSize);
@@ -551,6 +609,7 @@ export function SettingsPanel({
           onChange={onTogglePageTurn}
         />
         <p className="text-base text-slate-700">Button labels and page turn are remembered on this device.</p>
+        {links && <div className="grid gap-3 border-t-2 border-slate-200 pt-4 min-[400px]:grid-cols-3">{links}</div>}
       </div>
     </Panel>
   );

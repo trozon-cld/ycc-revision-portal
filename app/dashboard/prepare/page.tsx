@@ -28,7 +28,7 @@ export default async function PreparePage() {
   }
 
   return (
-    <div className="flex h-[calc(100dvh-var(--candidate-header))] min-h-[480px] flex-col lg:h-dvh">
+    <div className="flex h-[calc(100dvh-var(--candidate-header))] min-h-[480px] flex-col lg:h-dvh phone-upright:h-dvh phone-sideways:h-dvh phone-sideways:min-h-0">
       <h1 className="sr-only">Prepare: Handbook for {book.categoryName}</h1>
       <PrepareReader
         pages={book.pages}

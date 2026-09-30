@@ -8,6 +8,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type CSSProperties,
   type KeyboardEvent,
   type PointerEvent,
@@ -16,6 +17,7 @@ import {
 import Link from "next/link";
 import { buildSheets, type BookPageData, type ResolvedMedia, type Sheet, type TextSize } from "@/lib/content/book";
 import type { BookCovers } from "@/lib/content/covers";
+import { PHONE_SIDEWAYS_QUERY } from "@/lib/layout";
 import { BackCoverFace, FrontCoverFace } from "./book-covers";
 import { getQuestionTypeDef } from "@/lib/questions/registry";
 import { BlockList } from "./blocks";
@@ -28,6 +30,7 @@ import {
   ReaderBar,
   ReaderLabelsContext,
   ResultsPanel,
+  PANEL_LINK,
   SettingsPanel,
   type ReaderPanel,
   type ResultEntry,
@@ -129,8 +132,9 @@ type Geometry = {
 };
 
 // With a mouse or trackpad (`touch` false) this is exactly the laptop and desktop layout.
-function computeGeometry(width: number, height: number, textSize: TextSize, touch: boolean): Geometry | null {
-  const wide = width >= SPREAD_MIN_WIDTH;
+// `sideways` (a phone on its side) borrows the wide layout: one page with Previous/Next beside it.
+function computeGeometry(width: number, height: number, textSize: TextSize, touch: boolean, sideways = false): Geometry | null {
+  const wide = width >= SPREAD_MIN_WIDTH || sideways;
   const padding = wide ? SPREAD_PADDING : STAGE_PADDING;
   const availableWidth = width - padding * 2;
   const availableHeight = height - padding * 2;
@@ -138,7 +142,7 @@ function computeGeometry(width: number, height: number, textSize: TextSize, touc
 
   const sheetHeight = Math.floor(availableHeight);
   const pairWidth = (availableWidth - SIDE_NAV * 2) / 2;
-  const spread = wide && (!touch || (width > height && pairWidth >= textSize * TOUCH_SPREAD_MIN_EMS));
+  const spread = width >= SPREAD_MIN_WIDTH && (!touch || (width > height && pairWidth >= textSize * TOUCH_SPREAD_MIN_EMS));
   const sheetWidth = Math.floor(
     spread
       ? Math.min(pairWidth, sheetHeight * SHEET_RATIO, textSize * SHEET_MAX_EMS)
@@ -183,6 +187,8 @@ export function BookReader({
   barStart,
   barEnd,
   covers,
+  homeHref,
+  accountLinks,
 }: {
   pages: BookPageData[];
   media: ResolvedMedia;
@@ -204,6 +210,10 @@ export function BookReader({
   barEnd?: ReactNode;
   // A category's whole book: unnumbered front and back covers. A new reader opens on the front cover.
   covers?: BookCovers;
+  // Candidate page on phones: the header is hidden, so the bar gets a Home button and Settings gets
+  // Back to home plus these links (Help, Log out).
+  homeHref?: string;
+  accountLinks?: ReactNode;
 }) {
   const sectionRef = useRef<HTMLElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -304,9 +314,14 @@ export function BookReader({
     };
   }, []);
 
+  const sideways = useSyncExternalStore(
+    subscribeSideways,
+    () => Boolean(homeHref) && window.matchMedia(PHONE_SIDEWAYS_QUERY).matches,
+    () => false
+  );
   const geometry = useMemo(
-    () => (stageSize ? computeGeometry(stageSize.width, stageSize.height, textSize, touch) : null),
-    [stageSize, textSize, touch]
+    () => (stageSize ? computeGeometry(stageSize.width, stageSize.height, textSize, touch, sideways) : null),
+    [stageSize, textSize, touch, sideways]
   );
 
   // A new identity whenever everything must be measured again.
@@ -611,6 +626,9 @@ export function BookReader({
   // Sized from the reader's own width (not the screen), so previews match real devices.
   const compact = (stageSize?.width ?? COMPACT_BELOW) < COMPACT_BELOW;
   const wide = (stageSize?.width ?? 0) >= SPREAD_MIN_WIDTH;
+  // Previous/Next beside the page and the page status in the bar (laptops, desktops, sideways phones).
+  const sideNav = wide || sideways;
+  const phone = Boolean(homeHref) && (compact || sideways);
 
   const sheetStyle = geometry
     ? ({
@@ -750,6 +768,8 @@ export function BookReader({
       aria-label={label}
       tabIndex={-1}
       onKeyDown={onKeyDown}
+      // Tells the page's CSS to hide the candidate header on phones (see app/globals.css).
+      data-reader-owns-header={homeHref ? "" : undefined}
       className="flex h-full min-h-0 flex-col bg-slate-100 text-ink outline-none"
     >
       {tools && (
@@ -762,12 +782,15 @@ export function BookReader({
           textSize={textSize}
           onTextSizeChange={onTextSizeChange}
           hasQuestions={results.length > 0}
-          dense={wide}
+          dense={sideNav}
           narrow={(stageSize?.width ?? 0) < ROOMY_BAR}
-          stacked={!wide && !compact && (stageSize?.width ?? 0) < STACKED_BAR_BELOW}
-          status={wide ? status : undefined}
+          stacked={!sideNav && !compact && (stageSize?.width ?? 0) < STACKED_BAR_BELOW}
+          status={sideNav ? status : undefined}
+          centreStatus={!sideways}
           start={wide ? barStart : undefined}
           end={wide ? barEnd : undefined}
+          home={phone ? homeHref : undefined}
+          textSizeInBar={!compact && !sideways}
         />
       )}
       <div
@@ -830,6 +853,16 @@ export function BookReader({
             pageTurn={pageTurn}
             onTogglePageTurn={togglePageTurn}
             reducedMotion={reducedMotion}
+            links={
+              phone && homeHref ? (
+                <>
+                  <Link href={homeHref} className={PANEL_LINK}>
+                    Back to home
+                  </Link>
+                  {accountLinks}
+                </>
+              ) : undefined
+            }
             onClose={() => setPanel(null)}
           />
         )}
@@ -941,7 +974,7 @@ export function BookReader({
         )}
       </div>
 
-      {wide ? (
+      {sideNav ? (
         // Laptops and desktops: Previous/Next sit beside the pages and the page status is in the bar.
         <p className="sr-only" aria-live="polite">
           {status}
@@ -964,6 +997,12 @@ export function BookReader({
     </section>
     </ReaderLabelsContext.Provider>
   );
+}
+
+function subscribeSideways(onChange: () => void) {
+  const query = window.matchMedia(PHONE_SIDEWAYS_QUERY);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
 }
 
 // Laptops and desktops: a tall Previous/Next button beside the spread.

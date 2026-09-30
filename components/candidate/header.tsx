@@ -47,7 +47,7 @@ export function CandidateHeader() {
   const pathname = usePathname();
   const ownBar = OWN_BAR_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
   return (
-    <header className={`h-(--candidate-header) shrink-0 border-b border-ink/15 bg-white ${ownBar ? "lg:hidden" : ""}`}>
+    <header className={`candidate-header h-(--candidate-header) shrink-0 border-b border-ink/15 bg-white ${ownBar ? "lg:hidden" : ""}`}>
       <div className="mx-auto flex h-full w-full max-w-5xl items-center justify-between gap-3 px-4">
         <HomeLogo />
         <nav aria-label="Account" className="flex items-center gap-2">

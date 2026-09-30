@@ -7,6 +7,10 @@
   --candidate-header: 4.5rem;
 }
 
+/* Phones, for the Handbook reader page. Keep in step with lib/layout.ts. */
+@custom-variant phone-upright (@media (max-width: 599.98px));
+@custom-variant phone-sideways (@media (max-height: 499.98px) and (orientation: landscape) and (max-width: 1023.98px));
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -132,5 +136,13 @@ body {
   }
   50% {
     opacity: 1;
+  }
+}
+
+/* Handbook on phones: the reader bar takes the header's place (Home in the bar; Help and Log out in
+   Settings). Only while the reader is on the page, so an empty Handbook message keeps the header. */
+@media (max-width: 599.98px), (max-height: 499.98px) and (orientation: landscape) and (max-width: 1023.98px) {
+  body:has([data-reader-owns-header]) .candidate-header {
+    display: none;
   }
 }

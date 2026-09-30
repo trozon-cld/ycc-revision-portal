@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { BookPageData, ResolvedMedia, TextSize } from "@/lib/content/book";
 import type { BookCovers } from "@/lib/content/covers";
 import { BookReader } from "@/components/learning/book-reader";
-import { BAR_BUTTON_DENSE, barButton } from "@/components/learning/reader-tools";
+import { BAR_BUTTON_DENSE, PANEL_LINK, barButton } from "@/components/learning/reader-tools";
 import { AccountLinks, HomeLogo } from "@/components/candidate/header";
 import { saveReadingPosition, saveTextSize } from "./actions";
 
@@ -68,6 +68,8 @@ export function PrepareReader({
       resultsNote="These results are for this visit only."
       barStart={<HomeLogo showName={false} />}
       barEnd={<AccountLinks buttonClass={`${barButton} ${BAR_BUTTON_DENSE}`} />}
+      homeHref="/dashboard"
+      accountLinks={<AccountLinks buttonClass={PANEL_LINK} />}
     />
   );
 }
