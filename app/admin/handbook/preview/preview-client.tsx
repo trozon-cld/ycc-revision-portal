@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import type { BookPageData, ResolvedMedia } from "@/lib/content/book";
+import type { BookCovers } from "@/lib/content/covers";
 import type { PreviewOptions } from "@/lib/content/preview";
 import { BookPreview } from "@/components/admin/book-preview";
 import { Segmented } from "@/components/admin/editor-fields";
@@ -75,6 +76,8 @@ export function PreviewControls({
   );
 }
 
-export function PreviewReader({ pages, media }: { pages: BookPageData[]; media: ResolvedMedia }) {
-  return <BookPreview pages={pages} media={media} label="Book preview" initialDevice="full" readerTools allowFullWindow />;
+export function PreviewReader({ pages, media, covers }: { pages: BookPageData[]; media: ResolvedMedia; covers?: BookCovers }) {
+  return (
+    <BookPreview pages={pages} media={media} label="Book preview" initialDevice="full" readerTools allowFullWindow covers={covers} />
+  );
 }

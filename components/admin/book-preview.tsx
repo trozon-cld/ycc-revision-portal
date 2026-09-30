@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { DEFAULT_TEXT_SIZE, TEXT_SIZES, type BookPageData, type ResolvedMedia, type TextSize } from "@/lib/content/book";
 import { BookReader, type LayoutInfo } from "@/components/learning/book-reader";
+import type { BookCovers } from "@/lib/content/covers";
 import { buttonClass } from "./styles";
 
 export const DEVICES = {
@@ -36,7 +37,7 @@ export function FitReadout({ info, noun, hint }: { info: ReadoutInfo; noun: "pag
     return (
       <p className="font-medium text-amber-900">
         {noun === "question"
-          ? `Too long for one ${screen} page once the answer is checked: the explanation continues on the next page. `
+          ? `Too long for one ${screen} page once the answer is checked: candidates scroll within the page to see all of it. `
           : `Too long for one ${screen} page at the standard text size (${pages} pages). `}
         {hint}
       </p>
@@ -63,6 +64,7 @@ export function BookPreview({
   onTextSizeChange,
   readerTools = false,
   allowFullWindow = false,
+  covers,
 }: {
   pages: BookPageData[];
   media: ResolvedMedia;
@@ -77,6 +79,8 @@ export function BookPreview({
   onTextSizeChange?: (size: TextSize) => void;
   // The reader shows its own bar (Contents, Go to page, A−/A+), so the admin text size buttons go.
   readerTools?: boolean;
+  // The whole book for one category: its front and back covers too.
+  covers?: BookCovers;
   // Adds "Full window": the reader fills the space below the toolbar.
   allowFullWindow?: boolean;
 }) {
@@ -191,6 +195,7 @@ export function BookPreview({
               tools={readerTools}
               onTextSizeChange={readerTools ? setTextSize : undefined}
               resultsNote={readerTools ? "Preview only: these results aren't saved." : undefined}
+              covers={covers}
             />
           </div>
         </div>

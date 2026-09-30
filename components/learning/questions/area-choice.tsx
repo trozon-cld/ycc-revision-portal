@@ -30,7 +30,7 @@ export function AreaChoiceAnswer({ content, media, answer, response, onResponse,
         Choose an area on the picture.
       </p>
 
-      <div data-flow-unit data-question-picture className="mx-auto [break-inside:avoid]" style={pictureWidth(ratio)}>
+      <div data-flow-unit data-question-picture data-no-swipe className="mx-auto [break-inside:avoid]" style={pictureWidth(ratio)}>
         <div
           role="radiogroup"
           aria-label={`${picture?.alt || "Picture"}. Choose one of ${data.areas.length} areas.`}

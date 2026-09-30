@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/auth/guard";
 import { pool } from "@/lib/db/pool";
+import { loadCategoryGroups, loadChapterCategoryIds } from "@/lib/handbook/categories";
 import { chapterNumber, sectionLetter } from "@/lib/handbook/structure";
 import { Badge } from "@/components/admin/badge";
 import { PageHeader } from "@/components/admin/page-header";
@@ -31,7 +32,7 @@ interface ChapterRow {
 export default async function HandbookPage() {
   await requireRole(["superadmin"]);
 
-  const [{ rows: sections }, { rows: chapters }] = await Promise.all([
+  const [{ rows: sections }, { rows: chapters }, categoryGroups, chapterCategories] = await Promise.all([
     pool.query<SectionRow>(`select id, position, title from sections order by position`),
     pool.query<ChapterRow>(
       `select c.id, c.section_id, c.position, c.title, c.status,
@@ -47,7 +48,10 @@ export default async function HandbookPage() {
        join sections s on s.id = c.section_id
        order by s.position, c.position`
     ),
+    loadCategoryGroups(),
+    loadChapterCategoryIds(),
   ]);
+  const categoryTotal = categoryGroups.reduce((sum, group) => sum + group.categories.length, 0);
 
   const sectionOptions: SectionOption[] = sections.map((section) => ({
     id: section.id,
@@ -65,7 +69,7 @@ export default async function HandbookPage() {
               Preview book
             </Link>
             <NewSectionButton />
-            <NewChapterButton sections={sectionOptions} />
+            <NewChapterButton sections={sectionOptions} categoryGroups={categoryGroups} />
           </>
         }
       />
@@ -81,6 +85,7 @@ export default async function HandbookPage() {
           const sectionChapters = chapters.filter((chapter) => chapter.section_id === section.id);
           const headingId = `section-${section.id}`;
           const label = sectionOptions[sectionIndex].label;
+          const uncategorised = sectionChapters.filter((chapter) => !chapterCategories.get(chapter.id)?.length).length;
 
           return (
             <section key={section.id} aria-labelledby={headingId}>
@@ -93,6 +98,12 @@ export default async function HandbookPage() {
                     {count(sectionChapters.length, "chapter")}
                     {/* A section is in the book once one of its chapters is published. */}
                     {!sectionChapters.some((chapter) => chapter.status === "published") && " · Not in the book yet"}
+                    {uncategorised > 0 && (
+                      <span className="font-medium text-amber-900">
+                        {" · "}
+                        {uncategorised === 1 ? "1 chapter isn't" : `${uncategorised} chapters aren't`} in any category
+                      </span>
+                    )}
                   </p>
                 </div>
                 <SectionRowActions
@@ -106,7 +117,7 @@ export default async function HandbookPage() {
               </div>
 
               <Table
-                columns={["Chapter", "Pages", "Questions", "Status", ""]}
+                columns={["Chapter", "Pages", "Questions", "Categories", "Status", ""]}
                 isEmpty={sectionChapters.length === 0}
                 emptyMessage="No chapters in this section yet."
               >
@@ -123,6 +134,9 @@ export default async function HandbookPage() {
                     </Cell>
                     <Cell label="Pages">{chapter.page_count}</Cell>
                     <Cell label="Questions">{chapter.question_count}</Cell>
+                    <Cell label="Categories">
+                      <CategoryCount linked={chapterCategories.get(chapter.id)?.length ?? 0} total={categoryTotal} />
+                    </Cell>
                     <Cell label="Status">
                       <span className="inline-flex flex-wrap items-center justify-end gap-x-2 gap-y-1 md:justify-start">
                         <Badge tone={chapter.status === "published" ? "success" : "neutral"}>
@@ -142,6 +156,8 @@ export default async function HandbookPage() {
                         pageCount={chapter.page_count}
                         questionCount={chapter.question_count}
                         status={chapter.status}
+                        categoryGroups={categoryGroups}
+                        categoryIds={chapterCategories.get(chapter.id) ?? []}
                       />
                     </Cell>
                   </Row>
@@ -157,6 +173,11 @@ export default async function HandbookPage() {
 
 function count(n: number, noun: string) {
   return `${n} ${noun}${n === 1 ? "" : "s"}`;
+}
+
+function CategoryCount({ linked, total }: { linked: number; total: number }) {
+  if (linked === 0) return <Badge tone="warning">None</Badge>;
+  return <>{linked === total ? `All ${total}` : `${linked} of ${total}`}</>;
 }
 
 // Whether a draft chapter can be published, or what a published one is missing.

@@ -4,6 +4,7 @@ import { ActionForm } from "@/components/admin/action-form";
 import { Field } from "@/components/admin/field";
 import { PanelButton } from "@/components/admin/row-actions";
 import { inputClass } from "@/components/admin/styles";
+import { NAME_MAX_LENGTH } from "@/lib/users/name";
 import { createCandidate } from "./actions";
 import { AccessLengthField } from "./access-length-field";
 import { CategoryOptions, type CategoryChoice } from "./category-options";
@@ -33,6 +34,9 @@ export function NewCandidateButton({
               No categories are available yet. A category is needed before a candidate can be created.
             </p>
           )}
+          <Field id="new-candidate-name" label="Name">
+            <input id="new-candidate-name" name="name" type="text" required maxLength={NAME_MAX_LENGTH} autoComplete="off" className={inputClass} />
+          </Field>
           <Field id="new-candidate-email" label="Email">
             <input id="new-candidate-email" name="email" type="email" required autoComplete="off" className={inputClass} />
           </Field>

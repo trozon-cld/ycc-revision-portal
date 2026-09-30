@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/guard";
 import { getErrorCode, withTransaction } from "@/lib/db/transaction";
 import { logActivity } from "@/lib/audit/log";
+import { listNames } from "@/lib/handbook/categories";
 import { questionRef } from "@/lib/questions/labels";
 import {
   lockHandbookStructure,
@@ -17,6 +18,8 @@ const DUPLICATE_TITLE = "A chapter with this title already exists.";
 const NOT_FOUND = "This chapter no longer exists.";
 const SECTION_NOT_FOUND = "The chosen section no longer exists.";
 const PAGE_PATH = "/admin/handbook";
+const CATEGORIES_CHANGED = "The list of categories has changed. Close this panel and open it again.";
+const MAX_CATEGORIES = 500;
 
 export async function createChapter(
   _prevState: StructureActionState,
@@ -26,9 +29,11 @@ export async function createChapter(
 
   const sectionId = String(formData.get("sectionId") ?? "");
   const title = normaliseTitle(formData.get("title"));
+  const categoryIds = categoryIdsFrom(formData);
   const invalid = validateTitle(title, "Chapter");
   if (invalid) return { error: invalid };
   if (!sectionId) return { error: "Choose a section." };
+  if (categoryIds.length > MAX_CATEGORIES) return { error: "Too many categories selected." };
 
   let result: StructureActionState;
   try {
@@ -37,6 +42,8 @@ export async function createChapter(
       const sectionTitle = await sectionTitleOf(client, sectionId);
       if (!sectionTitle) return { error: SECTION_NOT_FOUND };
       if (await titleTaken(client, title, null)) return { error: DUPLICATE_TITLE };
+      const categories = await lockCategories(client, categoryIds);
+      if (!categories) return { error: CATEGORIES_CHANGED };
 
       const { rows: created } = await client.query<{ id: string }>(
         `insert into chapters (section_id, position, title)
@@ -44,12 +51,19 @@ export async function createChapter(
          returning id`,
         [sectionId, title]
       );
+      await client.query(
+        `insert into category_chapters (category_id, chapter_id) select unnest($1::uuid[]), $2::uuid`,
+        [categoryIds, created[0].id]
+      );
       await logActivity(
         client,
         session,
         "chapter.created",
         { type: "chapter", id: created[0].id, label: title },
-        { section: sectionTitle }
+        {
+          section: sectionTitle,
+          ...(categoryIds.length > 0 ? { categories: listNames(categoryIds.map((id) => categories.get(id) ?? "")) } : {}),
+        }
       );
       return { success: true };
     });
@@ -61,6 +75,68 @@ export async function createChapter(
   }
 
   revalidatePath(PAGE_PATH);
+  revalidatePath("/admin/categories");
+  return result;
+}
+
+// Replaces the whole list of categories that include this chapter (the Categories page edits the same links).
+export async function saveChapterCategories(
+  _prevState: StructureActionState,
+  formData: FormData
+): Promise<StructureActionState> {
+  const session = await requireRole(["superadmin"]);
+
+  const chapterId = String(formData.get("chapterId") ?? "");
+  const categoryIds = categoryIdsFrom(formData);
+  if (categoryIds.length > MAX_CATEGORIES) return { error: "Too many categories selected." };
+
+  let result: StructureActionState;
+  try {
+    result = await withTransaction<StructureActionState>(async (client) => {
+      // Categories first, then the chapter: the same order as a save from the Categories page.
+      const categories = await lockCategories(client, categoryIds);
+      if (!categories) return { error: CATEGORIES_CHANGED };
+      const { rows } = await client.query<{ title: string }>(`select title from chapters where id = $1 for update`, [chapterId]);
+      if (!rows[0]) return { error: NOT_FOUND };
+
+      const { rows: removed } = await client.query<{ category_id: string; name: string }>(
+        `delete from category_chapters cc using categories c
+         where cc.chapter_id = $1 and c.id = cc.category_id
+         returning cc.category_id, c.name`,
+        [chapterId]
+      );
+      await client.query(
+        `insert into category_chapters (category_id, chapter_id) select unnest($1::uuid[]), $2::uuid`,
+        [categoryIds, chapterId]
+      );
+
+      const before = new Set(removed.map((row) => row.category_id));
+      const added = categoryIds.filter((id) => !before.has(id)).map((id) => categories.get(id) ?? "");
+      const dropped = removed.filter((row) => !categoryIds.includes(row.category_id)).map((row) => row.name);
+      if (added.length > 0 || dropped.length > 0) {
+        await logActivity(
+          client,
+          session,
+          "chapter.categories_changed",
+          { type: "chapter", id: chapterId, label: rows[0].title },
+          {
+            ...(added.length > 0 ? { addedCategories: listNames(added.sort()) } : {}),
+            ...(dropped.length > 0 ? { removedCategories: listNames(dropped.sort()) } : {}),
+            categoryTotal: String(categoryIds.length),
+          }
+        );
+      }
+      return { success: true };
+    });
+  } catch (error) {
+    const code = getErrorCode(error);
+    if (code === "22P02") return { error: NOT_FOUND };
+    if (code === "23503") return { error: CATEGORIES_CHANGED };
+    throw error;
+  }
+
+  revalidatePath(PAGE_PATH, "layout");
+  revalidatePath("/admin/categories");
   return result;
 }
 
@@ -315,8 +391,27 @@ export async function setChapterStatus(id: string, status: "draft" | "published"
   return result;
 }
 
+export async function publishChapterForm(_prev: StructureActionState, formData: FormData): Promise<StructureActionState> {
+  return setChapterStatus(String(formData.get("chapterId") ?? ""), "published");
+}
+
 export async function unpublishChapterForm(_prev: StructureActionState, formData: FormData): Promise<StructureActionState> {
   return setChapterStatus(String(formData.get("chapterId") ?? ""), "draft");
+}
+
+function categoryIdsFrom(formData: FormData): string[] {
+  return [...new Set(formData.getAll("categoryId").map(String))];
+}
+
+// Keeps the chosen categories from being deleted until the save commits; null if any is gone.
+async function lockCategories(client: PoolClient, ids: string[]): Promise<Map<string, string> | null> {
+  if (ids.length === 0) return new Map();
+  if (!ids.every((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))) return null;
+  const { rows } = await client.query<{ id: string; name: string }>(
+    `select id, name from categories where id = any($1::uuid[]) order by id for share`,
+    [ids]
+  );
+  return rows.length === ids.length ? new Map(rows.map((row) => [row.id, row.name])) : null;
 }
 
 async function closeGap(client: PoolClient, sectionId: string, removedPosition: number) {

@@ -22,9 +22,8 @@ export type QuestionViewState = {
 
 export const FRESH_QUESTION_STATE: QuestionViewState = { response: null, phase: "answering", result: null, notice: null };
 
-// The shared frame for every question type, in learn, practice and exam modes. Candidate style:
-// sizes in em so A−/A+ scales it; buttons never under 56px. In the book, the question stays on one
-// page when it fits; if it can't, it continues on the next page rather than being cut off.
+// The shared frame for every question type, in learn, practice and exam modes. Sizes in em so A−/A+
+// scales it; buttons never under 56px (48px in laptop spreads). Too long for a page: it continues.
 export function QuestionView({
   question,
   label,
@@ -108,7 +107,7 @@ export function QuestionView({
   return (
     <section aria-labelledby={stemId} className="question-view">
       <fieldset className="m-0 min-w-0 border-0 p-0">
-        <legend id={stemId} data-flow-unit className="mb-[0.8em] w-full p-0 [break-after:avoid] [break-inside:avoid]">
+        <legend id={stemId} data-flow-unit className="mb-[calc(0.8em*var(--q-space,1))] w-full p-0 [break-after:avoid] [break-inside:avoid]">
           <span className="mb-[0.3em] block text-[0.8em] font-bold uppercase tracking-wide text-primary">{label}</span>
           <span className="block whitespace-pre-line text-[1.1em] font-medium leading-snug text-ink">
             <InlineText text={question.stemText} />
@@ -151,35 +150,38 @@ export function QuestionView({
         </div>
       </fieldset>
 
-      {canCheck && AnswerArea && (
-        <div data-flow-unit className="mt-[0.9em] flex flex-wrap gap-[0.6em] [break-inside:avoid]">
-          {phase === "answering" ? (
-            <>
-              <FrameButton key="check" primary onClick={check} disabled={checking}>
-                {checking ? "Checking…" : "Check answer"}
-              </FrameButton>
-              {mode === "learn" && <FrameButton key="reveal" onClick={() => setState({ phase: "revealed", notice: null })}>Reveal answer</FrameButton>}
-            </>
-          ) : (
-            <FrameButton key="again" onClick={reset}>
-              Try again
-            </FrameButton>
-          )}
+      {canCheck && AnswerArea && phase === "answering" && (
+        <div data-flow-unit className="mt-[calc(0.9em*var(--q-space,1))] flex flex-wrap gap-[0.6em] [break-inside:avoid]">
+          <FrameButton key="check" primary onClick={check} disabled={checking}>
+            {checking ? "Checking…" : "Check answer"}
+          </FrameButton>
+          {mode === "learn" && <FrameButton key="reveal" onClick={() => setState({ phase: "revealed", notice: null })}>Reveal answer</FrameButton>}
         </div>
       )}
 
-      <div data-flow-unit role="status" aria-live="polite" className="[break-inside:avoid]">
-        {notice && <p className="mt-[0.9em] font-semibold text-ink">{notice}</p>}
-        {phase === "checked" && result && <Feedback correct={result.correct} showsAnswer={mode === "learn"} />}
-        {phase === "revealed" && (
-          <p className="mt-[0.9em] rounded-lg border-l-[0.3em] border-primary bg-primary/[0.07] px-[0.9em] py-[0.6em] font-semibold text-ink">
-            The correct answer is highlighted.
-          </p>
+      {/* After Check or Reveal, the message and "Try again" share one row, so the question stays compact. */}
+      <div
+        data-flow-unit
+        className={phase === "answering" ? "[break-inside:avoid]" : "mt-[calc(0.9em*var(--q-space,1))] flex flex-wrap items-center gap-[0.6em] [break-inside:avoid]"}
+      >
+        <div role="status" aria-live="polite" className="min-w-0 flex-1 basis-[12em]">
+          {notice && <p className="mt-[calc(0.9em*var(--q-space,1))] font-semibold text-ink">{notice}</p>}
+          {phase === "checked" && result && <Feedback correct={result.correct} showsAnswer={mode === "learn"} />}
+          {phase === "revealed" && (
+            <p className="rounded-lg border-l-[0.3em] border-primary bg-primary/[0.07] px-[0.9em] py-[0.6em] font-semibold text-ink">
+              The correct answer is highlighted.
+            </p>
+          )}
+        </div>
+        {canCheck && AnswerArea && phase !== "answering" && (
+          <FrameButton key="again" onClick={reset}>
+            Try again
+          </FrameButton>
         )}
       </div>
 
       {showExplanation && (
-        <div data-flow-unit data-question-explanation className="mt-[0.9em]">
+        <div data-flow-unit data-question-explanation className="mt-[calc(0.9em*var(--q-space,1))]">
           <p className="mb-[0.2em] text-[0.8em] font-bold uppercase tracking-wide text-primary [break-after:avoid]">Explanation</p>
           <p className="whitespace-pre-line [orphans:2] [widows:2]">
             <InlineText text={question.explanation ?? ""} />
@@ -193,7 +195,7 @@ export function QuestionView({
 function Feedback({ correct, showsAnswer }: { correct: boolean; showsAnswer: boolean }) {
   return (
     <p
-      className={`mt-[0.9em] flex items-start gap-[0.5em] rounded-lg border-l-[0.3em] px-[0.9em] py-[0.6em] font-semibold ${
+      className={`flex items-start gap-[0.5em] rounded-lg border-l-[0.3em] px-[0.9em] py-[0.6em] font-semibold ${
         correct ? "border-green-700 bg-green-50 text-green-900" : "border-amber-600 bg-amber-50 text-amber-950"
       }`}
     >
@@ -224,7 +226,7 @@ function FrameButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`inline-flex min-h-[max(56px,3.5em)] items-center justify-center rounded-lg px-[1em] font-semibold transition-colors focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60 ${
+      className={`inline-flex min-h-[max(var(--answer-min-h,56px),var(--answer-min-em,3.5em))] items-center justify-center rounded-lg px-[1em] font-semibold transition-colors focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60 ${
         primary ? "bg-primary text-white hover:bg-primary/90" : "border-2 border-primary bg-white text-primary hover:bg-primary/[0.06]"
       }`}
     >

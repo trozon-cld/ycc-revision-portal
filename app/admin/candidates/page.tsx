@@ -4,6 +4,7 @@ import { customDateBounds, formatUkDate } from "@/lib/candidates/access";
 import { Badge } from "@/components/admin/badge";
 import { FilterBar, FilterSearch, FilterSelect } from "@/components/admin/filter-bar";
 import { Breakable } from "@/components/admin/breakable";
+import { PersonLabel } from "@/components/admin/person-label";
 import { PageHeader } from "@/components/admin/page-header";
 import { Cell, Row, Table } from "@/components/admin/table";
 import { NewCandidateButton } from "./create-candidate-form";
@@ -13,11 +14,13 @@ import { CategoryOptions, type CategoryChoice } from "./category-options";
 interface CandidateRow {
   id: string;
   email: string;
+  full_name: string | null;
   category_id: string;
   category_name: string;
   current_category_name: string;
   admin_id: string;
   admin_email: string;
+  admin_name: string | null;
   access_expires_at: string | null;
   is_blocked: boolean;
 }
@@ -47,15 +50,15 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
 
   const [{ rows: candidates }, { rows: categories }, { rows: admins }] = await Promise.all([
     pool.query<CandidateRow>(
-      `select u.id, u.email, u.category_id, c.name as category_name, cc.name as current_category_name,
-              u.admin_id, a.email as admin_email, u.access_expires_at, u.is_blocked
+      `select u.id, u.email, u.full_name, u.category_id, c.name as category_name, cc.name as current_category_name,
+              u.admin_id, a.email as admin_email, a.full_name as admin_name, u.access_expires_at, u.is_blocked
        from users u
        join categories c on c.id = u.category_id
        join categories cc on cc.id = u.current_category_id
        join users a on a.id = u.admin_id
        where u.role = 'candidate'
          and ($1::uuid is null or u.admin_id = $1::uuid)
-         and ($2::text is null or u.email ilike '%' || $2::text || '%')
+         and ($2::text is null or u.email ilike '%' || $2::text || '%' or u.full_name ilike '%' || $2::text || '%')
          and ($3::uuid is null or u.category_id = $3::uuid or u.current_category_id = $3::uuid)
          and ($4::text is null
               or ($4::text = 'blocked' and u.is_blocked)
@@ -71,14 +74,17 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
        order by g.position, c.name`
     ),
     isSuperadmin
-      ? pool.query<Option>(`select id, email as label from users where role = 'admin' order by email`)
+      ? pool.query<Option & { email: string }>(
+          `select id, email, coalesce(full_name || ' (' || email || ')', email) as label
+           from users where role = 'admin' order by lower(coalesce(full_name, email))`
+        )
       : Promise.resolve({ rows: [] as Option[] }),
   ]);
 
   const now = Date.now();
   const columns = isSuperadmin
-    ? ["Email", "Category", "Admin", "Status", "Access until", ""]
-    : ["Email", "Category", "Status", "Access until", ""];
+    ? ["Candidate", "Category", "Admin", "Status", "Access until", ""]
+    : ["Candidate", "Category", "Status", "Access until", ""];
   const countLabel = `${candidates.length} candidate${candidates.length === 1 ? "" : "s"}`;
 
   return (
@@ -98,7 +104,7 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
       />
 
       <FilterBar action="/admin/candidates" clearHref="/admin/candidates" isFiltered={isFiltered}>
-        <FilterSearch name="q" label="Search by email" defaultValue={search} />
+        <FilterSearch name="q" label="Search by name or email" defaultValue={search} />
         <FilterSelect name="category" label="Category" defaultValue={categoryFilter ?? ""}>
           <option value="">All categories</option>
           <CategoryOptions categories={categories} />
@@ -133,6 +139,7 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
           const rowCandidate = {
             id: candidate.id,
             email: candidate.email,
+            name: candidate.full_name,
             categoryId: candidate.category_id,
             adminId: candidate.admin_id,
             isBlocked: candidate.is_blocked,
@@ -142,7 +149,7 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
           return (
             <Row key={candidate.id}>
               <Cell kind="primary">
-                <Breakable text={candidate.email} />
+                <PersonLabel name={candidate.full_name} email={candidate.email} />
               </Cell>
               <Cell label="Category">
                 {candidate.current_category_name}
@@ -152,7 +159,7 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
               </Cell>
               {isSuperadmin && (
                 <Cell label="Admin" breakAnywhere>
-                  <Breakable text={candidate.admin_email} />
+                  <Breakable text={candidate.admin_name ?? candidate.admin_email} />
                 </Cell>
               )}
               <Cell label="Status">

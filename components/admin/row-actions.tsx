@@ -79,11 +79,14 @@ export function PanelButton({
   label,
   title,
   variant = "primary",
+  icon = true,
   children,
 }: {
   label: string;
   title: string;
   variant?: ButtonVariant;
+  // The "+" icon, for buttons that add something.
+  icon?: boolean;
   children: (close: () => void) => ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -103,9 +106,11 @@ export function PanelButton({
         onClick={() => setOpen(true)}
         className={buttonClass(variant)}
       >
-        <svg viewBox="0 0 20 20" aria-hidden="true" className="size-4">
-          <path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-        </svg>
+        {icon && (
+          <svg viewBox="0 0 20 20" aria-hidden="true" className="size-4">
+            <path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        )}
         {label}
       </button>
       {open && (

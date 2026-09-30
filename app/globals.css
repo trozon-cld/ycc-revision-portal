@@ -3,7 +3,13 @@
 :root {
   --background: #ffffff;
   --foreground: #1e293b; /* Navy Ink */
+  /* Candidate header height; the book reader fills the rest of the screen. */
+  --candidate-header: 4.5rem;
 }
+
+/* Phones, for the Handbook reader page. Keep in step with lib/layout.ts. */
+@custom-variant phone-upright (@media (max-width: 599.98px));
+@custom-variant phone-sideways (@media (max-height: 499.98px) and (orientation: landscape) and (max-width: 1023.98px));
 
 @theme inline {
   --color-background: var(--background);
@@ -59,5 +65,84 @@ body {
   from {
     opacity: 0;
     transform: translateY(4px);
+  }
+}
+
+/* Handbook page turn. The reader only adds these classes when the candidate has it on and the
+   device doesn't ask for reduced motion; the media query is a second guard. */
+@media (prefers-reduced-motion: no-preference) {
+  .book-leaf {
+    animation-duration: var(--book-turn-ms, 480ms);
+    animation-timing-function: cubic-bezier(0.35, 0.1, 0.3, 1);
+    animation-fill-mode: forwards;
+  }
+  .book-leaf-forward {
+    animation-name: book-turn-forward;
+  }
+  .book-leaf-back {
+    animation-name: book-turn-back;
+  }
+  .book-leaf-away {
+    animation-name: book-leaf-away;
+  }
+  .book-leaf-return {
+    animation-name: book-leaf-return;
+  }
+  .book-shade {
+    animation: book-shade var(--book-turn-ms, 480ms) ease-in-out forwards;
+  }
+}
+
+@keyframes book-turn-forward {
+  from {
+    transform: rotateY(0deg);
+  }
+  to {
+    transform: rotateY(-180deg);
+  }
+}
+
+@keyframes book-turn-back {
+  from {
+    transform: rotateY(0deg);
+  }
+  to {
+    transform: rotateY(180deg);
+  }
+}
+
+@keyframes book-leaf-away {
+  from {
+    transform: rotateY(0deg);
+  }
+  to {
+    transform: rotateY(-100deg);
+  }
+}
+
+@keyframes book-leaf-return {
+  from {
+    transform: rotateY(-100deg);
+  }
+  to {
+    transform: rotateY(0deg);
+  }
+}
+
+@keyframes book-shade {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Handbook on phones: the reader bar takes the header's place (Home in the bar; Help and Log out in
+   Settings). Only while the reader is on the page, so an empty Handbook message keeps the header. */
+@media (max-width: 599.98px), (max-height: 499.98px) and (orientation: landscape) and (max-width: 1023.98px) {
+  body:has([data-reader-owns-header]) .candidate-header {
+    display: none;
   }
 }

@@ -9,13 +9,19 @@ import {
   deleteChapter,
   moveChapter,
   moveChapterToSection,
+  publishChapterForm,
   renameChapter,
+  saveChapterCategories,
   setChapterStatus,
   unpublishChapterForm,
 } from "./chapter-actions";
+import type { CategoryGroupOption } from "@/lib/handbook/categories";
+import { CategoryPicker } from "./category-picker";
 import type { SectionOption } from "./section-row-actions";
 
-export function NewChapterButton({ sections }: { sections: SectionOption[] }) {
+const CATEGORY_HINT = "Candidates studying these categories see this chapter in Prepare, Practice and the Mock test once it's published.";
+
+export function NewChapterButton({ sections, categoryGroups }: { sections: SectionOption[]; categoryGroups: CategoryGroupOption[] }) {
   return (
     <PanelButton label="New chapter" title="New chapter">
       {(close) =>
@@ -43,6 +49,7 @@ export function NewChapterButton({ sections }: { sections: SectionOption[] }) {
             <Field id="new-chapter-section" label="Section" hint="It's added at the end of this section.">
               <SectionSelect id="new-chapter-section" options={sections} />
             </Field>
+            <CategoryPicker groups={categoryGroups} legend="Categories (optional)" hint={CATEGORY_HINT} />
           </ActionForm>
         )
       }
@@ -60,6 +67,8 @@ export function ChapterRowActions({
   pageCount,
   questionCount,
   status,
+  categoryGroups,
+  categoryIds,
 }: {
   id: string;
   title: string;
@@ -70,6 +79,8 @@ export function ChapterRowActions({
   pageCount: number;
   questionCount: number;
   status: "draft" | "published";
+  categoryGroups: CategoryGroupOption[];
+  categoryIds: string[];
 }) {
   const hidden = { chapterId: id };
   const description = `Chapter ${number} · ${title}`;
@@ -104,6 +115,13 @@ export function ChapterRowActions({
     },
   ];
 
+  actions.push({
+    label: "Categories",
+    title: "Categories",
+    description,
+    render: (close) => <ChapterCategoriesForm chapterId={id} groups={categoryGroups} initialSelected={categoryIds} onClose={close} />,
+  });
+
   if (!isFirst) {
     actions.push({ label: "Move up", run: () => moveChapter(id, "up"), successMessage: "Chapter moved up." });
   }
@@ -136,7 +154,32 @@ export function ChapterRowActions({
 
   actions.push(
     status === "draft"
-      ? { label: "Publish", run: () => setChapterStatus(id, "published"), successMessage: "Chapter published." }
+      ? categoryIds.length > 0
+        ? { label: "Publish", run: () => setChapterStatus(id, "published"), successMessage: "Chapter published." }
+        : {
+            label: "Publish",
+            title: "Publish chapter?",
+            variant: "confirm",
+            render: (close) => (
+              <ActionForm
+                action={publishChapterForm}
+                hidden={hidden}
+                submitLabel="Publish anyway"
+                pendingLabel="Publishing…"
+                successMessage="Chapter published."
+                onSuccess={close}
+                onCancel={close}
+              >
+                <p className="text-sm [overflow-wrap:anywhere]">
+                  <strong className="font-medium">
+                    {number} {title}
+                  </strong>{" "}
+                  isn&apos;t in any category yet, so no candidate will see it. Add it to categories with the
+                  Categories action.
+                </p>
+              </ActionForm>
+            ),
+          }
       : {
           label: "Unpublish",
           title: "Unpublish chapter?",
@@ -206,6 +249,40 @@ export function ChapterRowActions({
   });
 
   return <RowActions label={`Actions for ${title}`} actions={actions} />;
+}
+
+// Also used on the chapter's own page.
+export function ChapterCategoriesForm({
+  chapterId,
+  groups,
+  initialSelected,
+  onClose,
+}: {
+  chapterId: string;
+  groups: CategoryGroupOption[];
+  initialSelected: string[];
+  onClose: () => void;
+}) {
+  return (
+    <ActionForm
+      action={saveChapterCategories}
+      hidden={{ chapterId }}
+      submitLabel="Save categories"
+      successMessage="Categories saved."
+      onSuccess={onClose}
+      onCancel={onClose}
+    >
+      <CategoryPicker groups={groups} initialSelected={initialSelected} hint={CATEGORY_HINT} />
+    </ActionForm>
+  );
+}
+
+export function ChapterCategoriesButton(props: { chapterId: string; groups: CategoryGroupOption[]; initialSelected: string[] }) {
+  return (
+    <PanelButton label="Categories" title="Categories" variant="secondary" icon={false}>
+      {(close) => <ChapterCategoriesForm {...props} onClose={close} />}
+    </PanelButton>
+  );
 }
 
 function blockedBy(pages: number, questions: number): string {

@@ -1,15 +1,26 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import Link from "next/link";
 import { TEXT_SIZES, type BookPageData, type Sheet, type TextSize } from "@/lib/content/book";
 
 // The reader bar and its panels. Candidate style: big targets, words next to icons,
 // high contrast. Panels cover the pages (no pop-up windows) and close with Escape.
 
-const barButton =
+export const barButton =
   "inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border-2 border-ink/25 bg-white font-semibold text-ink hover:bg-slate-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-45 aria-pressed:border-primary aria-pressed:bg-primary/[0.08]";
 
-export type ReaderPanel = "contents" | "goto" | "results";
+export type ReaderPanel = "contents" | "goto" | "results" | "settings";
+
+// Whether the reader's buttons show their words (Contents, Close, Next…) or icons only. The reader
+// provides it; each button keeps its name for screen readers and as a tooltip either way.
+export const ReaderLabelsContext = createContext(true);
+
+// Bar buttons on laptops and desktops (48px high), also used for the page's own items in the bar.
+export const BAR_BUTTON_DENSE = "h-12 min-w-12 px-3 text-base";
+
+// Large full-width buttons in panels (e.g. Back to home, Help and Log out in Settings on phones).
+export const PANEL_LINK = `${barButton} h-14 w-full px-4 text-lg`;
 
 export function ReaderBar({
   compact,
@@ -20,6 +31,15 @@ export function ReaderBar({
   textSize,
   onTextSizeChange,
   hasQuestions,
+  dense = false,
+  narrow = false,
+  stacked = false,
+  home,
+  textSizeInBar = true,
+  centreStatus = true,
+  start,
+  end,
+  status,
 }: {
   compact: boolean;
   tiny: boolean;
@@ -29,26 +49,98 @@ export function ReaderBar({
   textSize: TextSize;
   onTextSizeChange?: (size: TextSize) => void;
   hasQuestions: boolean;
+  // Laptops and desktops: one slimmer bar that also holds the page's own items at each end.
+  dense?: boolean;
+  // Under 1280px wide: no Listen yet (a placeholder); in the dense bar also short labels.
+  narrow?: boolean;
+  // Tablets held upright: with labels on, each word sits under its icon so the bar fits.
+  stacked?: boolean;
+  // Phones (the header is hidden there): a Home button at the start of the bar.
+  home?: string;
+  // Phones keep text size in Settings only; there's no room for A−/A+ as well.
+  textSizeInBar?: boolean;
+  // Laptops keep the status exactly in the middle; sideways phones let it take the room left over.
+  centreStatus?: boolean;
+  start?: ReactNode;
+  end?: ReactNode;
+  // Dense bar only: "Pages 5–6 of 11", shown between the tools (read out by the reader itself).
+  status?: string;
 }) {
+  const showLabels = useContext(ReaderLabelsContext);
   const index = TEXT_SIZES.indexOf(textSize);
-  const refs = { contents: useRef<HTMLButtonElement>(null), goto: useRef<HTMLButtonElement>(null), results: useRef<HTMLButtonElement>(null) };
+  const refs = {
+    contents: useRef<HTMLButtonElement>(null),
+    goto: useRef<HTMLButtonElement>(null),
+    results: useRef<HTMLButtonElement>(null),
+    settings: useRef<HTMLButtonElement>(null),
+  };
   const previous = useRef(panel);
   // When a panel closes, focus goes back to the button that opened it.
   useEffect(() => {
     if (previous.current && !panel) refs[previous.current].current?.focus();
     previous.current = panel;
   });
-  // Phones: the word sits under the icon so six controls fit; the smallest phones show icons only.
-  const size = tiny
+  // Phones: the word sits under the icon (text size lives in Settings there); the smallest phones show icons only.
+  // Phone bars with Home: if the words ever don't fit (a wider font, a narrow phone), show icons only
+  // rather than overflow. Names stay for screen readers and as tooltips.
+  const barRef = useRef<HTMLDivElement>(null);
+  const [crowdedAt, setCrowdedAt] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const bar = barRef.current;
+    if (!bar || !home) return;
+    const check = () => {
+      if (crowdedAt === null && bar.scrollWidth > bar.clientWidth + 1) setCrowdedAt(bar.clientWidth);
+      else if (crowdedAt !== null && bar.clientWidth > crowdedAt) setCrowdedAt(null);
+    };
+    check();
+    const observer = new ResizeObserver(check);
+    observer.observe(bar);
+    let live = true;
+    document.fonts?.ready.then(() => live && check());
+    return () => {
+      live = false;
+      observer.disconnect();
+    };
+  });
+  const iconsOnly = tiny || crowdedAt !== null;
+  const labelled = showLabels && crowdedAt === null;
+  const size = iconsOnly
     ? "h-12 min-w-11 px-2 text-base"
-    : compact
-      ? "h-14 min-w-12 flex-col gap-0 px-2 text-sm leading-tight"
+    : dense
+      ? BAR_BUTTON_DENSE
+      : compact
+      ? // Phones with the Home button: a little less padding, so five buttons fit from 380px.
+        `h-14 min-w-12 flex-col gap-0 ${home ? "px-1.5" : "px-2"} text-sm leading-tight`
       : "h-14 min-w-14 px-4 text-lg";
+  // Smaller laptops with labels on: the word sits under the icon, so the page status keeps the middle.
+  const panelSize =
+    dense && narrow && labelled
+      ? "h-12 min-w-14 flex-col gap-0 px-2 text-sm leading-tight [&_svg]:size-5"
+      : stacked && labelled
+        ? "h-14 min-w-14 flex-col gap-0 px-2.5 text-sm leading-tight"
+        : size;
   const toggle = (key: ReaderPanel) => onPanel(panel === key ? null : key);
-  const panelButton = (key: ReaderPanel, icon: string, label: string, short: string) => (
-    <button ref={refs[key]} type="button" aria-pressed={panel === key} disabled={!ready} onClick={() => toggle(key)} className={`${barButton} ${size}`}>
+  const panelButton = (key: ReaderPanel, icon: string, label: string, short: string, always = false) => (
+    <button
+      ref={refs[key]}
+      type="button"
+      aria-pressed={panel === key}
+      disabled={!ready && !always}
+      onClick={() => toggle(key)}
+      title={labelled ? undefined : label}
+      className={`${barButton} ${panelSize}`}
+    >
       <Icon path={icon} />
-      {tiny ? <span className="sr-only">{label}</span> : compact && short !== label ? (
+      {iconsOnly || !showLabels ? <span className="sr-only">{label}</span> : (dense && narrow) || stacked ? (
+        short !== label ? (
+          <>
+            <span aria-hidden="true">{short}</span>
+            <span className="sr-only">{label}</span>
+          </>
+        ) : (
+          <span>{label}</span>
+        )
+      ) : compact && short !== label ? (
         <>
           <span aria-hidden="true">{short}</span>
           <span className="sr-only">{label}</span>
@@ -58,17 +150,24 @@ export function ReaderBar({
       )}
     </button>
   );
-  return (
-    <div
-      role="toolbar"
-      aria-label="Reader tools"
-      className={`flex items-center border-b border-slate-300 bg-white py-2 ${tiny ? "gap-1.5 px-2" : compact ? "gap-2 px-3" : "gap-2 px-6"}`}
-    >
+  const leftTools = (
+    <>
+      {start && <div className="mr-2 flex shrink-0 items-center">{start}</div>}
+      {home && (
+        <Link href={home} title={labelled ? undefined : "Home"} className={`${barButton} ${panelSize}`}>
+          <Icon path={HOME_ICON} />
+          <span className={iconsOnly || !showLabels ? "sr-only" : undefined}>Home</span>
+        </Link>
+      )}
       {panelButton("contents", "M4 6h16M4 12h16M4 18h10", "Contents", "Contents")}
       {panelButton("goto", "M6 3h9l4 4v14H6zM14 3v5h5", "Go to page", "Page")}
       {hasQuestions && panelButton("results", "M5 13l4 4L19 7", "Results", "Results")}
-      <span className="flex-1" />
-      {onTextSizeChange && (
+    </>
+  );
+  const rightTools = (
+    <>
+      {panelButton("settings", SETTINGS_ICON, "Settings", "Settings", true)}
+      {onTextSizeChange && textSizeInBar && (
         <>
           <button
             type="button"
@@ -96,16 +195,59 @@ export function ReaderBar({
         </>
       )}
       {/* Reserved for reading aloud (phase 2); left out on phones, where there's no room for a button that does nothing yet. */}
-      {!compact && (
+      {!compact && !narrow && (
         <button type="button" disabled title="Listen is coming later" className={`${barButton} ${size}`}>
           <Icon path="M5 10v4h3l4 4V6L8 10zM15.5 9a4 4 0 0 1 0 6M18 6.5a8 8 0 0 1 0 11" />
-          <span>Listen</span>
+          <span className={showLabels ? undefined : "sr-only"}>Listen</span>
           <span className="sr-only"> (coming later)</span>
         </button>
       )}
+      {end && <div className="ml-2 flex shrink-0 items-center gap-2 border-l border-slate-200 pl-4">{end}</div>}
+    </>
+  );
+  // Dense bar: three columns, so the page status stays exactly in the middle whatever the buttons show.
+  if (status && !centreStatus) {
+    return (
+      <div ref={barRef} role="toolbar" aria-label="Reader tools" className="flex items-center gap-2 border-b border-slate-300 bg-white px-3 py-2">
+        {leftTools}
+        <span aria-hidden="true" className="min-w-0 flex-1 truncate px-2 text-center text-base font-medium text-ink">
+          {status}
+        </span>
+        {rightTools}
+      </div>
+    );
+  }
+  if (status) {
+    return (
+      <div
+        role="toolbar"
+        aria-label="Reader tools"
+        className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-slate-300 bg-white px-6 py-2"
+      >
+        <div className="flex min-w-0 items-center gap-2">{leftTools}</div>
+        <span aria-hidden="true" className="whitespace-nowrap px-2 text-center text-base font-medium text-ink">
+          {status}
+        </span>
+        <div className="flex min-w-0 items-center justify-end gap-2">{rightTools}</div>
+      </div>
+    );
+  }
+  return (
+    <div
+      ref={barRef}
+      role="toolbar"
+      aria-label="Reader tools"
+      className={`flex items-center border-b border-slate-300 bg-white py-2 ${iconsOnly ? "gap-1.5 px-2" : compact ? (home ? "gap-1.5 px-3" : "gap-2 px-3") : "gap-2 px-6"}`}
+    >
+      {leftTools}
+      <span className="flex-1" />
+      {rightTools}
     </div>
   );
 }
+
+const HOME_ICON = "M3 11l9-7 9 7M5 10v10h5v-6h4v6h5V10";
+const SETTINGS_ICON = "M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1M15 4v4M9 10v4M17 16v4";
 
 function Icon({ path }: { path: string }) {
   return (
@@ -117,32 +259,35 @@ function Icon({ path }: { path: string }) {
 
 // Covers the pages; focus moves in on open and Escape closes it.
 function Panel({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+  const showLabels = useContext(ReaderLabelsContext);
   const ref = useRef<HTMLDivElement>(null);
   const headingId = useId();
   useEffect(() => {
     const first = ref.current?.querySelector<HTMLElement>("[data-autofocus]") ?? ref.current?.querySelector<HTMLElement>("button");
     first?.focus();
   }, []);
+  // On the whole page, so Escape still works when focus was lost (e.g. A+ turned disabled at 24px).
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+  useEffect(() => {
+    const onKey = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "Escape" && !event.defaultPrevented) {
+        event.preventDefault();
+        closeRef.current();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
   return (
-    <div
-      ref={ref}
-      role="region"
-      aria-labelledby={headingId}
-      onKeyDown={(event) => {
-        if (event.key === "Escape") {
-          event.stopPropagation();
-          onClose();
-        }
-      }}
-      className="absolute inset-0 z-20 flex flex-col bg-white"
-    >
+    <div ref={ref} role="region" aria-labelledby={headingId} className="absolute inset-0 z-20 flex flex-col bg-white">
       <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
         <h2 id={headingId} className="text-xl font-bold text-ink">
           {title}
         </h2>
-        <button type="button" onClick={onClose} className={`${barButton} h-12 px-4 text-base`}>
+        <button type="button" onClick={onClose} title={showLabels ? undefined : "Close"} className={`${barButton} h-12 min-w-12 px-3 text-base`}>
           <Icon path="M6 6l12 12M18 6L6 18" />
-          Close
+          <span className={showLabels ? "pr-1" : "sr-only"}>Close</span>
         </button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">{children}</div>
@@ -187,6 +332,7 @@ export function ContentsPanel({
     chapters.push({ chapterId: page.chapterId, chapterLabel: page.chapterLabel, sectionLabel: page.sectionLabel, sheetIndex, number: sheet.number, pageIndex, exact });
   });
   const currentChapter = pages[currentPageIndex]?.chapterId;
+  const frontCover = sheets.findIndex((sheet) => sheet.kind === "cover" && sheet.side === "front");
   const sections: { label: string; chapters: ChapterEntry[] }[] = [];
   for (const chapter of chapters) {
     const last = sections.at(-1);
@@ -197,6 +343,22 @@ export function ContentsPanel({
   return (
     <Panel title="Contents" onClose={onClose}>
       <div className="mx-auto max-w-2xl space-y-6">
+        {frontCover >= 0 && (
+          <button
+            type="button"
+            aria-current={currentPageIndex < 0 ? "true" : undefined}
+            data-autofocus={currentPageIndex < 0 ? "" : undefined}
+            onClick={() => onGo(frontCover)}
+            className={`flex min-h-14 w-full items-center gap-4 rounded-lg border-2 px-4 py-2 text-left text-lg text-ink hover:border-primary focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+              currentPageIndex < 0 ? "border-primary bg-primary/[0.06]" : "border-slate-300 bg-white"
+            }`}
+          >
+            <span>
+              <span className="font-semibold">Front cover</span>
+              {currentPageIndex < 0 && <span className="block text-base font-normal text-primary">You are here</span>}
+            </span>
+          </button>
+        )}
         {sections.map((section, index) => (
           <section key={`${section.label}-${index}`} aria-label={section.label}>
             <h3 className="mb-2 text-base font-bold uppercase tracking-wide text-primary">{section.label}</h3>
@@ -241,7 +403,7 @@ export function GoToPanel({ total, onGo, onClose }: { total: number; onGo: (numb
   return (
     <Panel title="Go to page" onClose={onClose}>
       <form
-        className="mx-auto max-w-md space-y-4"
+        className="mx-auto flex w-fit max-w-full flex-col items-center space-y-4 pt-4 text-center"
         onSubmit={(event) => {
           event.preventDefault();
           const number = Number(value);
@@ -270,7 +432,7 @@ export function GoToPanel({ total, onGo, onClose }: { total: number; onGo: (numb
               setValue(event.target.value.replace(/[^0-9]/g, "").slice(0, 5));
               setError(null);
             }}
-            className="h-14 w-32 rounded-lg border-2 border-ink/40 px-4 text-2xl text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="h-14 w-32 rounded-lg border-2 border-ink/40 px-4 text-center text-2xl text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary"
           />
           <button type="submit" className="inline-flex h-14 min-w-24 items-center justify-center rounded-lg bg-primary px-6 text-lg font-semibold text-white hover:bg-primary/90 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary">
             Go
@@ -364,5 +526,136 @@ export function ResultsPanel({
         )}
       </div>
     </Panel>
+  );
+}
+
+// Reader settings: text size, button labels and the page-turn animation. Labels and page turn are
+// remembered in this browser only.
+export function SettingsPanel({
+  textSize,
+  onTextSizeChange,
+  showLabels,
+  onToggleLabels,
+  pageTurn,
+  onTogglePageTurn,
+  reducedMotion,
+  links,
+  onClose,
+}: {
+  textSize: TextSize;
+  onTextSizeChange?: (size: TextSize) => void;
+  showLabels: boolean;
+  onToggleLabels: () => void;
+  pageTurn: boolean;
+  onTogglePageTurn: () => void;
+  reducedMotion: boolean;
+  // Phones: Back to home, Help and Log out, which the hidden header holds elsewhere.
+  links?: ReactNode;
+  onClose: () => void;
+}) {
+  const index = TEXT_SIZES.indexOf(textSize);
+  const sizeButton = `${barButton} h-14 min-w-16 px-4 text-xl`;
+  return (
+    <Panel title="Settings" onClose={onClose}>
+      <div className="mx-auto max-w-xl space-y-4">
+        {onTextSizeChange && (
+          <div role="group" aria-labelledby="reader-text-size" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border-2 border-slate-300 px-4 py-3">
+            <span id="reader-text-size" className="text-lg font-semibold text-ink">
+              Text size
+            </span>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                aria-label="Smaller text"
+                disabled={index <= 0}
+                onClick={() => onTextSizeChange(TEXT_SIZES[Math.max(0, index - 1)])}
+                className={sizeButton}
+              >
+                <span aria-hidden="true">A−</span>
+              </button>
+              <span className="min-w-[4.5ch] text-center text-lg font-semibold tabular-nums text-ink" aria-live="polite">
+                {textSize}
+                <span className="sr-only"> pixels</span>
+              </span>
+              <button
+                type="button"
+                aria-label="Larger text"
+                disabled={index >= TEXT_SIZES.length - 1}
+                onClick={() => onTextSizeChange(TEXT_SIZES[Math.min(TEXT_SIZES.length - 1, index + 1)])}
+                className={sizeButton}
+              >
+                <span aria-hidden="true" className="text-[1.15em]">
+                  A+
+                </span>
+              </button>
+            </div>
+          </div>
+        )}
+        <SettingSwitch
+          label="Button labels"
+          description="Show words next to the icons on the buttons."
+          checked={showLabels}
+          onChange={onToggleLabels}
+        />
+        <SettingSwitch
+          label="Page turn animation"
+          description={
+            reducedMotion
+              ? "Your device is set to reduce motion, so pages change without animation."
+              : "Pages turn over like a paper book."
+          }
+          checked={pageTurn && !reducedMotion}
+          disabled={reducedMotion}
+          onChange={onTogglePageTurn}
+        />
+        <p className="text-base text-slate-700">Button labels and page turn are remembered on this device.</p>
+        {links && <div className="grid gap-3 border-t-2 border-slate-200 pt-4 min-[400px]:grid-cols-3">{links}</div>}
+      </div>
+    </Panel>
+  );
+}
+
+function SettingSwitch({
+  label,
+  description,
+  checked,
+  disabled = false,
+  onChange,
+}: {
+  label: string;
+  description: string;
+  checked: boolean;
+  disabled?: boolean;
+  onChange: () => void;
+}) {
+  const descriptionId = useId();
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-describedby={descriptionId}
+      disabled={disabled}
+      onClick={onChange}
+      className="flex min-h-16 w-full items-center justify-between gap-4 rounded-lg border-2 border-slate-300 bg-white px-4 py-3 text-left hover:border-primary focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:hover:border-slate-300"
+    >
+      <span className="min-w-0">
+        <span className="block text-lg font-semibold text-ink">{label}</span>
+        <span id={descriptionId} className="block text-base text-slate-700">
+          {description}
+        </span>
+      </span>
+      <span className="flex shrink-0 items-center gap-2">
+        <span aria-hidden="true" className="w-8 text-right text-base font-semibold text-ink">
+          {checked ? "On" : "Off"}
+        </span>
+        <span
+          aria-hidden="true"
+          className={`relative h-8 w-14 rounded-full transition-colors motion-reduce:transition-none ${checked ? "bg-primary" : "bg-slate-500"} ${disabled ? "opacity-50" : ""}`}
+        >
+          <span className={`absolute top-1 size-6 rounded-full bg-white shadow transition-[left] motion-reduce:transition-none ${checked ? "left-7" : "left-1"}`} />
+        </span>
+      </span>
+    </button>
   );
 }

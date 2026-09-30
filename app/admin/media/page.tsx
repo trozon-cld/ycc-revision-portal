@@ -19,6 +19,7 @@ interface MediaRow {
   alt_text: string;
   used_in: number;
   used_in_questions: number;
+  used_in_covers: number;
 }
 
 const PAGE_LIMIT = 300;
@@ -34,7 +35,9 @@ export default async function MediaPage({ searchParams }: PageProps<"/admin/medi
   const { rows: media } = await pool.query<MediaRow>(
     `select id, thumb_path, original_name, mime_type, width, height, byte_size, alt_text,
             (select count(*) from content_page_media u where u.media_id = media.id)::int as used_in,
-            (select count(*) from question_media u where u.media_id = media.id)::int as used_in_questions
+            (select count(*) from question_media u where u.media_id = media.id)::int as used_in_questions,
+            (select count(*) from categories u where u.front_cover_media_id = media.id or u.back_cover_media_id = media.id)::int
+              as used_in_covers
      from media
      where $1 = '' or alt_text ilike '%' || $1 || '%' escape '\\' or original_name ilike '%' || $1 || '%' escape '\\'
      order by created_at desc
@@ -116,7 +119,9 @@ export default async function MediaPage({ searchParams }: PageProps<"/admin/medi
                       {item.width} × {item.height} · {formatBytes(item.byte_size)} · {formatType(item.mime_type)}
                     </p>
                     <p className="mt-0.5 text-xs text-slate-600">
-                      {item.used_in === 0 && item.used_in_questions === 0 ? "Not used yet" : usedLabel(item.used_in, item.used_in_questions)}
+                      {item.used_in === 0 && item.used_in_questions === 0 && item.used_in_covers === 0
+                        ? "Not used yet"
+                        : usedLabel(item.used_in, item.used_in_questions, item.used_in_covers)}
                     </p>
                   </div>
                   <MediaRowActions
@@ -126,6 +131,7 @@ export default async function MediaPage({ searchParams }: PageProps<"/admin/medi
                     thumbUrl={thumbUrl}
                     usedIn={item.used_in}
                     usedInQuestions={item.used_in_questions}
+                    usedInCovers={item.used_in_covers}
                   />
                 </div>
               </li>
@@ -158,10 +164,11 @@ function formatType(mime: string) {
   return mime === "image/webp" ? "WebP" : mime === "image/png" ? "PNG" : "JPEG";
 }
 
-// Keeps the Day 3 wording ("Used in 2 pages") and adds questions when there are any.
-function usedLabel(pages: number, questions: number): string {
+// Keeps the Day 3 wording ("Used in 2 pages") and adds questions and covers when there are any.
+function usedLabel(pages: number, questions: number, covers: number): string {
   const parts: string[] = [];
   if (pages > 0) parts.push(`${pages} page${pages === 1 ? "" : "s"}`);
   if (questions > 0) parts.push(`${questions} question${questions === 1 ? "" : "s"}`);
+  if (covers > 0) parts.push(`${covers} cover${covers === 1 ? "" : "s"}`);
   return `Used in ${parts.join(" · ")}`;
 }

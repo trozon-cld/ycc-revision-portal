@@ -22,7 +22,7 @@ export function SinglePictureAnswer({ mode, seed, content, media, answer, respon
   );
 
   return (
-    <ul className="m-0 grid list-none grid-cols-2 gap-[0.6em] p-0">
+    <ul className="m-0 grid list-none grid-cols-2 gap-[calc(0.6em*var(--q-space,1))] p-0">
       {options.map((option, index) => {
         const selected = response === option.id;
         const isCorrect = correctId === option.id;
@@ -56,7 +56,7 @@ export function SinglePictureAnswer({ mode, seed, content, media, answer, respon
               />
               {/* Screen readers hear: "A: picture description, label, result". */}
               <span className="sr-only">{optionLetter(index)}: </span>
-              <span className="relative block aspect-[4/3] w-full overflow-hidden rounded-md bg-slate-100">
+              <span className="relative block aspect-[4/3] max-h-(--book-option-picture-max) w-full overflow-hidden rounded-md bg-slate-100">
                 {picture ? (
                   // eslint-disable-next-line @next/next/no-img-element -- short-lived signed link; files are pre-shrunk WebP
                   <img src={picture.src} alt={picture.alt} loading="lazy" decoding="async" className="absolute inset-0 size-full object-contain" />

@@ -123,7 +123,7 @@ export function MatchPicturesAnswer({
   const dragged = drag?.moved && drag.itemId ? itemById(drag.itemId) : undefined;
 
   return (
-    <div className="@container">
+    <div className="@container" data-no-swipe>
       <p data-flow-unit className="mb-[0.6em] font-semibold text-ink [break-after:avoid] [break-inside:avoid]">
         Put each picture in the box it belongs to.
         <span className="block font-normal text-slate-700">Drag it, or tap a picture and then a box.</span>
