@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode, type RefObject } from "react";
 import Link from "next/link";
 import { TEXT_SIZES, type TextSize } from "@/lib/content/book";
 import { AccountLinks, HomeLogo } from "@/components/candidate/header";
@@ -25,6 +25,15 @@ const WIDE_QUERY = "(min-width: 1024px)";
 // Phones and tablets: the word sits under the icon; laptops: one slimmer bar with the word beside it.
 const BAR_SIZE = "h-14 min-w-14 flex-col gap-0 px-2 text-sm leading-tight lg:h-12 lg:min-w-12 lg:flex-row lg:gap-2 lg:px-3 lg:text-base";
 const ICON_ONLY = "h-14 min-w-14 px-2 lg:h-12 lg:min-w-12";
+
+// Same shares of the screen height as a Handbook page (below the bar), so a question with answer
+// pictures fits on a laptop screen without scrolling.
+const PAGE_HEIGHT = "(100dvh - 4.5rem)";
+const PICTURE_LIMITS = {
+  "--book-picture-max": `max(120px, calc(${PAGE_HEIGHT} * 0.6))`,
+  "--book-picture-share": `max(120px, calc(${PAGE_HEIGHT} * 0.6))`,
+  "--book-option-picture-max": `max(140px, calc(${PAGE_HEIGHT} * 0.22))`,
+} as CSSProperties;
 
 function subscribeWide(onChange: () => void) {
   const query = window.matchMedia(WIDE_QUERY);
@@ -92,15 +101,22 @@ export function PracticeShell({
   return (
     <ReaderLabelsContext.Provider value={showLabels}>
       <div data-practice-owns-header="" className="flex h-dvh min-h-0 flex-col">
-        <div role="toolbar" aria-label="Practice tools" className="relative flex items-center gap-2 border-b border-slate-300 bg-white px-3 py-2 lg:px-6">
-          <div className="hidden shrink-0 lg:flex">
-            <HomeLogo showName={false} />
+        {/* Three columns with equal sides, so the status stays in the middle of the screen, like the Handbook. */}
+        <div
+          role="toolbar"
+          aria-label="Practice tools"
+          className="relative grid grid-cols-[1fr_minmax(0,auto)_1fr] items-center gap-2 border-b border-slate-300 bg-white px-3 py-2 lg:px-6"
+        >
+          <div className="flex min-w-0 items-center">
+            <div className="hidden shrink-0 lg:flex">
+              <HomeLogo showName={false} />
+            </div>
+            <Link href="/dashboard" title={showLabels ? undefined : "Home"} className={`${barButton} ${size} lg:hidden`}>
+              <Icon path={HOME_ICON} />
+              {word("Home")}
+            </Link>
           </div>
-          <Link href="/dashboard" title={showLabels ? undefined : "Home"} className={`${barButton} ${size} lg:hidden`}>
-            <Icon path={HOME_ICON} />
-            {word("Home")}
-          </Link>
-          <span className="min-w-0 flex-1 truncate px-1 text-center text-base font-semibold text-ink lg:text-lg">
+          <span className="min-w-0 truncate px-1 text-center text-base font-semibold text-ink lg:text-lg">
             {shortStatus ? (
               <>
                 <span className="phone-upright:hidden">{status}</span>
@@ -112,43 +128,45 @@ export function PracticeShell({
               status
             )}
           </span>
-          {onTextSizeChange && textSize && (
-            <div className="flex shrink-0 gap-2 phone-upright:hidden">
-              <button
-                type="button"
-                aria-label="Smaller text"
-                disabled={index <= 0}
-                onClick={() => onTextSizeChange(TEXT_SIZES[Math.max(0, index - 1)])}
-                className={`${barButton} ${ICON_ONLY} text-lg`}
-              >
-                <span aria-hidden="true">A−</span>
-              </button>
-              <button
-                type="button"
-                aria-label="Larger text"
-                disabled={index >= TEXT_SIZES.length - 1}
-                onClick={() => onTextSizeChange(TEXT_SIZES[Math.min(TEXT_SIZES.length - 1, index + 1)])}
-                className={`${barButton} ${ICON_ONLY} text-lg`}
-              >
-                <span aria-hidden="true" className="text-[1.15em]">
-                  A+
-                </span>
-              </button>
+          <div className="flex min-w-0 items-center justify-end gap-2">
+            {onTextSizeChange && textSize && (
+              <div className="flex shrink-0 gap-2 phone-upright:hidden">
+                <button
+                  type="button"
+                  aria-label="Smaller text"
+                  disabled={index <= 0}
+                  onClick={() => onTextSizeChange(TEXT_SIZES[Math.max(0, index - 1)])}
+                  className={`${barButton} ${ICON_ONLY} text-lg`}
+                >
+                  <span aria-hidden="true">A−</span>
+                </button>
+                <button
+                  type="button"
+                  aria-label="Larger text"
+                  disabled={index >= TEXT_SIZES.length - 1}
+                  onClick={() => onTextSizeChange(TEXT_SIZES[Math.min(TEXT_SIZES.length - 1, index + 1)])}
+                  className={`${barButton} ${ICON_ONLY} text-lg`}
+                >
+                  <span aria-hidden="true" className="text-[1.15em]">
+                    A+
+                  </span>
+                </button>
+              </div>
+            )}
+            <button
+              ref={settingsButton}
+              type="button"
+              aria-pressed={settings}
+              onClick={() => setSettings((open) => !open)}
+              title={showLabels ? undefined : "Settings"}
+              className={`${barButton} ${size}`}
+            >
+              <Icon path={SETTINGS_ICON} />
+              {word("Settings")}
+            </button>
+            <div className="ml-2 hidden shrink-0 items-center gap-2 border-l border-slate-200 pl-4 lg:flex">
+              <AccountLinks buttonClass={`${barButton} ${BAR_BUTTON_DENSE}`} />
             </div>
-          )}
-          <button
-            ref={settingsButton}
-            type="button"
-            aria-pressed={settings}
-            onClick={() => setSettings((open) => !open)}
-            title={showLabels ? undefined : "Settings"}
-            className={`${barButton} ${size}`}
-          >
-            <Icon path={SETTINGS_ICON} />
-            {word("Settings")}
-          </button>
-          <div className="ml-2 hidden shrink-0 items-center gap-2 border-l border-slate-200 pl-4 lg:flex">
-            <AccountLinks buttonClass={`${barButton} ${BAR_BUTTON_DENSE}`} />
           </div>
           {progress && progress.total > 0 && (
             <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-1 bg-ink/10">
@@ -157,7 +175,7 @@ export function PracticeShell({
           )}
         </div>
         <div className="relative min-h-0 flex-1">
-          <div ref={scrollRef} className="absolute inset-0 overflow-y-auto">
+          <div ref={scrollRef} className="absolute inset-0 overflow-y-auto" style={PICTURE_LIMITS}>
             {children}
           </div>
           {settings && (
