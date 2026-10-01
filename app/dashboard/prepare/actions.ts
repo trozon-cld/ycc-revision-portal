@@ -1,9 +1,10 @@
 "use server";
 
 import { requireRole } from "@/lib/auth/guard";
-import { TEXT_SIZES } from "@/lib/content/book";
+import { TEXT_SIZES, type HandbookOutcome } from "@/lib/content/book";
 import { isUuid } from "@/lib/content/pages";
 import { pool } from "@/lib/db/pool";
+import { DONE_BATCH_LIMIT, markPagesDone, recordHandbookQuestion } from "@/lib/progress/handbook";
 
 // Candidate progress and settings, not activity-log actions (agreed 28 Sep).
 
@@ -30,4 +31,20 @@ export async function saveTextSize(size: number): Promise<void> {
   const session = await requireRole(["candidate"]);
   if (!TEXT_SIZES.some((value) => value === size)) return;
   await pool.query(`update users set reader_text_size = $2 where id = $1 and role = 'candidate'`, [session.sub, size]);
+}
+
+// Content pages seen to the end (sent in small batches).
+export async function saveHandbookPagesDone(itemIds: string[]): Promise<void> {
+  const session = await requireRole(["candidate"]);
+  if (!Array.isArray(itemIds) || itemIds.length > DONE_BATCH_LIMIT) return;
+  const ids = [...new Set(itemIds.filter((id): id is string => typeof id === "string" && isUuid(id)))];
+  await markPagesDone(session.sub, ids);
+}
+
+// Check answer or Reveal answer on a Handbook question.
+export async function saveHandbookAnswer(itemId: string, outcome: HandbookOutcome): Promise<void> {
+  const session = await requireRole(["candidate"]);
+  if (typeof itemId !== "string" || !isUuid(itemId) || typeof outcome !== "object" || outcome === null) return;
+  if (outcome.kind === "reveal") await recordHandbookQuestion(session.sub, itemId, { kind: "reveal" });
+  else if (outcome.kind === "check") await recordHandbookQuestion(session.sub, itemId, { kind: "check", response: outcome.response });
 }

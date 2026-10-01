@@ -56,6 +56,7 @@ Status: in active development.
 - `components/learning/` — candidate-facing renderers: blocks and the fixed-page book reader (large-target style)
 - `lib/storage/` — the only code that talks to the storage provider (upload, delete, signed links)
 - `lib/media/` — image checks (real type and size from the file) and in-browser WebP conversion
+- `lib/progress/` — candidates' progress per category (Handbook pages done, question results); not activity-log data
 - `lib/audit/` — activity and login logs (every loggable action is listed in `lib/audit/actions.ts`)
 - `proxy.ts` — route protection by role, block and expiry
 - `supabase/` — schema, migrations and seed

@@ -15,7 +15,7 @@ import {
   type ReactNode,
 } from "react";
 import Link from "next/link";
-import { buildSheets, type BookPageData, type ResolvedMedia, type Sheet, type TextSize } from "@/lib/content/book";
+import { buildSheets, type BookPageData, type HandbookOutcome, type ResolvedMedia, type Sheet, type TextSize } from "@/lib/content/book";
 import type { BookCovers } from "@/lib/content/covers";
 import { PHONE_SIDEWAYS_QUERY } from "@/lib/layout";
 import { BackCoverFace, FrontCoverFace } from "./book-covers";
@@ -191,6 +191,8 @@ export function BookReader({
   covers,
   homeHref,
   accountLinks,
+  onPagesDone,
+  onQuestionDone,
 }: {
   pages: BookPageData[];
   media: ResolvedMedia;
@@ -216,6 +218,9 @@ export function BookReader({
   // Back to home plus these links (Help, Log out).
   homeHref?: string;
   accountLinks?: ReactNode;
+  // Candidate progress: content pages shown to their last part, and questions checked or revealed.
+  onPagesDone?: (pageIds: string[]) => void;
+  onQuestionDone?: (pageId: string, outcome: HandbookOutcome) => void;
 }) {
   const sectionRef = useRef<HTMLElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -287,9 +292,24 @@ export function BookReader({
       return !current;
     });
   }, []);
+  const questionDone = useRef(onQuestionDone);
+  questionDone.current = onQuestionDone;
+  const questionPages = useMemo(
+    () => new Map(pages.flatMap((page): [string, string][] => (page.question ? [[questionKey(page), page.id]] : []))),
+    [pages]
+  );
   const questions = useMemo<QuestionBinding>(
-    () => ({ states: questionStates, setState: (key, state) => setQuestionStates((current) => ({ ...current, [key]: state })) }),
-    [questionStates]
+    () => ({
+      states: questionStates,
+      setState: (key, state) => {
+        const pageId = questionPages.get(key);
+        if (pageId && state.phase !== "answering" && (questionStates[key]?.phase ?? "answering") === "answering") {
+          questionDone.current?.(pageId, state.phase === "checked" ? { kind: "check", response: state.response } : { kind: "reveal" });
+        }
+        setQuestionStates((current) => ({ ...current, [key]: state }));
+      },
+    }),
+    [questionStates, questionPages]
   );
 
   useEffect(() => {
@@ -604,6 +624,23 @@ export function BookReader({
       }
     }
   }, [sheets, viewStart, perView, pages, media, covers]);
+
+  // A content page counts as done once its last part is on screen, measured and fitted (not an estimate).
+  const pagesDone = useRef(onPagesDone);
+  pagesDone.current = onPagesDone;
+  const reportedDone = useRef(new Set<string>());
+  useEffect(() => {
+    if (!pagesDone.current || !current) return;
+    const done = sheets.slice(viewStart, viewStart + perView).flatMap((sheet) => {
+      if (sheet.kind !== "page" || sheet.part !== sheet.parts - 1) return [];
+      const page = pages[sheet.pageIndex];
+      const settled = current.fresh[sheet.pageIndex] && fitList?.[sheet.pageIndex]?.final;
+      return page && !page.question && settled && !reportedDone.current.has(page.id) ? [page.id] : [];
+    });
+    if (done.length === 0) return;
+    for (const id of done) reportedDone.current.add(id);
+    pagesDone.current(done);
+  }, [sheets, viewStart, perView, pages, current, fitList]);
 
   const currentPageId = pages[position.pageIndex]?.id;
   const reportedPageId = useRef(currentPageId);
