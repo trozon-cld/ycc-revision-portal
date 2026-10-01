@@ -11,10 +11,24 @@ import { toClientQuestion, type ClientQuestion } from "@/lib/questions/public";
 import { availableQuestionTypes } from "@/lib/questions/registry";
 import { isQuestionType, type QuestionType } from "@/lib/questions/types";
 import { parseQuestion, type ParsedQuestion } from "@/lib/questions/validate";
-import { smartPick, shuffle, spreadOrder, spreadPick, type PoolQuestion, type PracticeHistory } from "./pick";
+import {
+  isFlagged,
+  isUnseen,
+  isWrong,
+  smartPick,
+  shuffle,
+  spreadOrder,
+  spreadPick,
+  weakChapters,
+  weakPick,
+  type PoolQuestion,
+  type PracticeHistory,
+} from "./pick";
 import {
   PRACTICE_SIZES,
   PRACTICE_TYPE_NAMES,
+  WEAK_BELOW,
+  WEAK_MIN_ANSWERED,
   type PracticeCheckReply,
   type PracticeChecked,
   type PracticeMode,
@@ -72,6 +86,20 @@ async function loadPool(db: Db, categoryId: string): Promise<PoolQuestion[]> {
   return rows.filter((row) => built.has(row.type) && isQuestionType(row.type)).map((row) => ({ id: row.id, chapterId: row.chapter_id, type: row.type as QuestionType }));
 }
 
+// Practice results and flags in this category, by question.
+async function loadHistory(db: Db, userId: string, categoryId: string): Promise<Map<string, PracticeHistory>> {
+  const { rows } = await db.query<{ question_id: string; tries: number; right: number; last_right: boolean | null; flagged: boolean }>(
+    `select coalesce(r.question_id, f.question_id) as question_id, coalesce(r.practice_tries, 0)::int as tries,
+            coalesce(r.practice_right, 0)::int as right, r.practice_last_right as last_right, f.question_id is not null as flagged
+     from (select * from question_results where user_id = $1 and category_id = $2 and practice_tries > 0) r
+     full join (select * from question_flags where user_id = $1 and category_id = $2) f on f.question_id = r.question_id`,
+    [userId, categoryId]
+  );
+  return new Map(rows.map((row) => [row.question_id, { tries: row.tries, right: row.right, lastRight: row.last_right, flagged: row.flagged }]));
+}
+
+const findWeak = (questions: PoolQuestion[], history: Map<string, PracticeHistory>) => weakChapters(questions, history, WEAK_MIN_ANSWERED, WEAK_BELOW);
+
 // --- Setup page
 
 export async function loadPracticeOptions(userId: string): Promise<PracticeOptions | null> {
@@ -84,10 +112,14 @@ export async function loadPracticeOptions(userId: string): Promise<PracticeOptio
     perChapter.set(q.chapterId, (perChapter.get(q.chapterId) ?? 0) + 1);
     perType.set(q.type, (perType.get(q.type) ?? 0) + 1);
   }
+  const history = await loadHistory(pool, userId, category.id);
+  const weak = findWeak(questions, history);
+  const weakSet = new Set(weak.map((item) => item.chapterId));
   const { rows } = await pool.query<{ id: string; title: string; number: number; section_position: number; section_title: string }>(
     `with ${NUMBERED} select id, title, number, section_position, section_title from numbered where id = any($1::uuid[]) order by number`,
     [[...perChapter.keys()]]
   );
+  const labels = new Map(rows.map((row) => [row.id, chapterLabel(row)]));
   const sections: PracticeOptions["sections"] = [];
   for (const row of rows) {
     const label = `${sectionLetter(row.section_position)} · ${row.section_title}`;
@@ -105,6 +137,13 @@ export async function loadPracticeOptions(userId: string): Promise<PracticeOptio
     types: availableQuestionTypes()
       .filter((type) => perType.has(type))
       .map((type) => ({ type, name: PRACTICE_TYPE_NAMES[type], count: perType.get(type) ?? 0 })),
+    focus: {
+      wrong: questions.filter((q) => isWrong(history, q.id)).length,
+      flagged: questions.filter((q) => isFlagged(history, q.id)).length,
+      unseen: questions.filter((q) => isUnseen(history, q.id)).length,
+      weak: questions.filter((q) => weakSet.has(q.chapterId)).length,
+    },
+    weakChapters: weak.map((item) => ({ id: item.chapterId, label: labels.get(item.chapterId) ?? "", percent: Math.round(item.share * 100) })),
   };
 }
 
@@ -130,6 +169,13 @@ export async function loadOpenPractice(userId: string): Promise<OpenPractice | n
 
 // --- Starting
 
+// The focused ways that simply narrow the pool.
+const FOCUS = {
+  wrong: { keep: isWrong, none: "There are no questions you got wrong in Practice. Well done." },
+  flagged: { keep: isFlagged, none: "You haven’t flagged any questions yet." },
+  unseen: { keep: isUnseen, none: "You’ve practised every question at least once." },
+} as const;
+
 export type StartRequest = { way: PracticeWay; choices: string[]; size: number | "all" };
 export type StartReply = { ok: true; id: string } | { ok: false; error: string };
 
@@ -150,20 +196,25 @@ export async function startPractice(userId: string, request: StartRequest): Prom
       if (choices.length === 0) return { ok: false, error: "Choose at least one type of question." };
       questions = questions.filter((q) => choices.includes(q.type));
     }
+    const history = await loadHistory(client, userId, category.id);
+    const weak = new Set(findWeak(questions, history).map((item) => item.chapterId));
+    const focus = FOCUS[request.way as keyof typeof FOCUS];
+    if (focus) {
+      questions = questions.filter((q) => focus.keep(history, q.id));
+      if (questions.length === 0) return { ok: false, error: focus.none };
+    }
+    if (request.way === "weak") {
+      choices = [...weak];
+      if (choices.length === 0) return { ok: false, error: "You don’t have any weak areas yet. Practise a little more to find them." };
+    }
     if (questions.length === 0) return { ok: false, error: "There are no practice questions for this choice yet." };
 
     const count = Math.min(request.size === "all" ? questions.length : request.size, questions.length, MAX_QUESTIONS);
     let picked: PoolQuestion[];
-    if (request.way === "smart") {
-      const { rows } = await client.query<{ question_id: string; practice_tries: number; practice_last_right: boolean | null }>(
-        `select question_id, practice_tries, practice_last_right from question_results where user_id = $1 and category_id = $2`,
-        [userId, category.id]
-      );
-      const history = new Map<string, PracticeHistory>(rows.map((row) => [row.question_id, { tries: row.practice_tries, lastRight: row.practice_last_right }]));
-      picked = smartPick(questions, history, count, random);
-    } else {
-      picked = spreadOrder(spreadPick(questions, count, random), random);
-    }
+    if (request.way === "smart") picked = smartPick(questions, history, count, random, weak);
+    else if (request.way === "weak") picked = weakPick(questions, history, weak, Math.min(count, questions.filter((q) => weak.has(q.chapterId)).length), random);
+    else picked = spreadOrder(spreadPick(questions, count, random), random);
+    if (picked.length === 0) return { ok: false, error: "There are no practice questions for this choice yet." };
     return { ok: true, id: await createSession(client, userId, category.id, request.way, choices, picked) };
   });
 }
@@ -354,7 +405,10 @@ function parseRow(row: QuestionRow): (ParsedQuestion & { chapterLabel: string })
 async function buildStep(session: SessionRow, question: ParsedQuestion & { chapterLabel: string }): Promise<PracticeStep> {
   const id = (session.question_ids ?? [])[session.position];
   const mark = session.results?.[session.position];
-  const media: ResolvedMedia = await resolveMedia(question.mediaIds);
+  const [media, flags] = await Promise.all([
+    resolveMedia(question.mediaIds),
+    pool.query(`select 1 from question_flags where user_id = $1 and category_id = $2 and question_id = $3`, [session.user_id, session.category_id, id]),
+  ]);
   const client: ClientQuestion = toClientQuestion({ ...question, id }, "practice");
   return {
     sessionId: session.id,
@@ -366,6 +420,7 @@ async function buildStep(session: SessionRow, question: ParsedQuestion & { chapt
     question: client,
     media,
     checked: mark === "R" || mark === "W" ? { answered: true, correct: mark === "R", answer: question.answer, explanation: question.explanation } : null,
+    flagged: (flags.rowCount ?? 0) > 0,
   };
 }
 
@@ -499,7 +554,7 @@ export type PracticeReport = {
   finishedAt: string;
   chapters: { label: string; right: number; answered: number }[];
   // Only for the latest run (older ones keep totals only).
-  wrong: { question: ClientQuestion; checked: PracticeChecked; chapterLabel: string }[] | null;
+  wrong: { question: ClientQuestion; checked: PracticeChecked; chapterLabel: string; flagged: boolean }[] | null;
   media: ResolvedMedia;
   canRetry: boolean;
 };
@@ -523,7 +578,7 @@ export async function loadPracticeReport(userId: string, sessionId: string): Pro
 
   let choiceNames: string[] = [];
   if (session.mode === "types") choiceNames = session.choices.filter(isQuestionType).map((type) => PRACTICE_TYPE_NAMES[type]);
-  if (session.mode === "chapters") {
+  if (session.mode === "chapters" || session.mode === "weak") {
     const { rows: chosen } = await pool.query<{ title: string; number: number }>(
       `with ${NUMBERED} select title, number from numbered where id::text = any($1::text[]) order by number`,
       [session.choices]
@@ -538,7 +593,13 @@ export async function loadPracticeReport(userId: string, sessionId: string): Pro
     const found = await Promise.all(wrongIds.map((id) => loadAnyQuestion(pool, id).then((question) => (question ? { id, question } : null))));
     const list = found.filter((item): item is NonNullable<typeof item> => item !== null);
     media = await resolveMedia(list.flatMap((item) => item.question.mediaIds));
+    const { rows: flagRows } = await pool.query<{ question_id: string }>(
+      `select question_id from question_flags where user_id = $1 and category_id = $2 and question_id = any($3::uuid[])`,
+      [userId, session.category_id, wrongIds]
+    );
+    const flagged = new Set(flagRows.map((row) => row.question_id));
     wrong = list.map(({ id, question }) => ({
+      flagged: flagged.has(id),
       question: toClientQuestion({ ...question, id }, "practice"),
       checked: { answered: true, correct: false, answer: question.answer, explanation: question.explanation },
       chapterLabel: question.chapterLabel,
@@ -571,4 +632,23 @@ export async function loadPracticeInProgress(userId: string): Promise<{ position
     [userId]
   );
   return rows[0] ?? null;
+}
+
+// Flag for review, on or off, for a question in the current category's practice pool.
+export async function setFlag(userId: string, questionId: string, flagged: boolean): Promise<boolean | null> {
+  const category = await currentCategory(pool, userId);
+  if (!category) return null;
+  if (!flagged) {
+    await pool.query(`delete from question_flags where user_id = $1 and category_id = $2 and question_id = $3`, [userId, category.id, questionId]);
+    return false;
+  }
+  const { rowCount } = await pool.query(
+    `insert into question_flags (user_id, category_id, question_id)
+     select $1, $2, q.id from questions q where q.id = $3 and ${inPool("$2")}
+     on conflict do nothing`,
+    [userId, category.id, questionId]
+  );
+  if (rowCount) return true;
+  const { rows } = await pool.query(`select 1 from question_flags where user_id = $1 and category_id = $2 and question_id = $3`, [userId, category.id, questionId]);
+  return rows.length > 0 ? true : null;
 }

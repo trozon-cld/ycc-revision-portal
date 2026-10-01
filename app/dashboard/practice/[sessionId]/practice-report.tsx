@@ -5,6 +5,7 @@ import { PageBody } from "@/components/candidate/page-body";
 import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { InlineText } from "@/components/learning/inline-text";
 import { practiseAgain } from "../actions";
+import { FlagButton } from "../flag-button";
 import { ReviewQuestion } from "./review-question";
 
 const MODE_NAMES: Record<PracticeReport["mode"], string> = {
@@ -13,6 +14,10 @@ const MODE_NAMES: Record<PracticeReport["mode"], string> = {
   types: "By question type",
   all: "All questions",
   retry: "The questions you missed",
+  wrong: "Questions I got wrong",
+  flagged: "Flagged questions",
+  unseen: "Not practised yet",
+  weak: "Weak areas",
 };
 
 // Encouraging, never pass/fail wording.
@@ -136,6 +141,7 @@ export function PracticeReportView({ report, againUnavailable }: { report: Pract
                       </summary>
                       <div className="border-t border-ink/15 px-4 py-5 text-[18px] text-ink">
                         <ReviewQuestion question={item.question} checked={item.checked} media={report.media} />
+                        {report.canRetry && <FlagButton questionId={item.question.id} initialFlagged={item.flagged} className="mt-5" />}
                       </div>
                     </details>
                   </li>

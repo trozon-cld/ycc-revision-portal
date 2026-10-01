@@ -8,6 +8,7 @@ import { QuestionView, type QuestionViewState } from "@/components/learning/ques
 import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { saveTextSize } from "@/app/dashboard/prepare/actions";
 import { checkPracticeAnswer, endPracticeRun, nextPracticeQuestion } from "../actions";
+import { FlagButton } from "../flag-button";
 
 const SIZE_BUTTON =
   "inline-flex min-h-12 min-w-12 items-center justify-center rounded-lg border-2 border-ink/25 bg-white px-3 text-lg font-bold text-ink hover:border-primary hover:text-primary focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50";
@@ -137,11 +138,14 @@ export function PracticeRunner({ initialStep, initialTextSize }: { initialStep: 
 
       <div aria-live="polite">{message && <p className="mt-4 text-lg font-semibold text-ink">{message}</p>}</div>
 
-      {checked && !confirmEnd && (
-        <button type="button" onClick={goNext} disabled={busy} className={`${PRIMARY_BUTTON} mt-5 w-full sm:w-auto`}>
-          {busy ? "Loading…" : isLast ? "See my results" : "Next question"}
-        </button>
-      )}
+      <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-start">
+        {checked && !confirmEnd && (
+          <button type="button" onClick={goNext} disabled={busy} className={`${PRIMARY_BUTTON} w-full sm:w-auto`}>
+            {busy ? "Loading…" : isLast ? "See my results" : "Next question"}
+          </button>
+        )}
+        <FlagButton key={`${step.sessionId}:${step.position}`} questionId={step.question.id} initialFlagged={step.flagged} />
+      </div>
 
       <div className="mt-10 border-t border-ink/15 pt-6">
         {confirmEnd ? (

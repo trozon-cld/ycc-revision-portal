@@ -6,10 +6,17 @@ import { CHOICE_INPUT, CHOICE_ROW, PRIMARY_BUTTON } from "@/components/candidate
 import { startPracticeForm, type StartState } from "./actions";
 
 const WAYS: { way: PracticeWay; title: string; description: string }[] = [
-  { way: "smart", title: "Smart practice", description: "A mix chosen for you: questions you haven’t practised yet first, then ones you got wrong." },
+  { way: "smart", title: "Smart practice", description: "A mix chosen for you: questions you haven’t practised yet first, then ones you got wrong or flagged, and your weak areas." },
   { way: "chapters", title: "By chapter", description: "Choose one or more chapters." },
   { way: "types", title: "By question type", description: "Choose one or more kinds of question." },
   { way: "all", title: "All questions", description: "Questions from every chapter, in a random order." },
+];
+
+const FOCUS: { way: PracticeWay; title: string; description: string; none: string }[] = [
+  { way: "wrong", title: "Questions I got wrong", description: "Ones you got wrong the last time you practised them.", none: "None yet: you haven’t got any wrong in Practice." },
+  { way: "flagged", title: "Flagged questions", description: "Ones you flagged for review.", none: "None yet: use “Flag for review” on a question to add it here." },
+  { way: "unseen", title: "Not practised yet", description: "Ones you haven’t answered in Practice.", none: "None left: you’ve practised every question." },
+  { way: "weak", title: "Weak areas", description: "Chapters where you get less than 70% right.", none: "Practise a little more to find your weak areas." },
 ];
 
 const plural = (count: number) => `${count} question${count === 1 ? "" : "s"}`;
@@ -28,7 +35,9 @@ export function PracticeSetup({ options, hasOpen }: { options: PracticeOptions; 
       ? chapters.reduce((sum, id) => sum + (chapterCounts.get(id) ?? 0), 0)
       : way === "types"
         ? types.reduce((sum, type) => sum + (typeCounts.get(type) ?? 0), 0)
-        : options.total;
+        : way in options.focus
+          ? options.focus[way as keyof PracticeOptions["focus"]]
+          : options.total;
   // A size bigger than what's available becomes "All".
   const chosenSize = size !== "all" && Number(size) > available ? "all" : size;
   const toggle = (list: string[], value: string) => (list.includes(value) ? list.filter((item) => item !== value) : [...list, value]);
@@ -50,6 +59,41 @@ export function PracticeSetup({ options, hasOpen }: { options: PracticeOptions; 
               </span>
             </label>
           ))}
+        </div>
+        <p className="mt-6 mb-3 text-lg font-bold text-ink">Or focus on…</p>
+        <div className="flex flex-col gap-3">
+          {FOCUS.map((item) => {
+            const count = options.focus[item.way as keyof PracticeOptions["focus"]];
+            const weak = item.way === "weak" && count > 0;
+            return (
+              <label key={item.way} className={CHOICE_ROW}>
+                <input
+                  type="radio"
+                  name="way"
+                  value={item.way}
+                  checked={way === item.way}
+                  disabled={count === 0}
+                  onChange={() => setWay(item.way)}
+                  className={CHOICE_INPUT}
+                />
+                <span className="flex min-w-0 flex-col">
+                  <span className="text-lg font-semibold">{item.title}</span>
+                  <span className="text-base text-ink/80 [overflow-wrap:anywhere]">
+                    {count === 0 ? item.none : weak ? `${item.description} ${plural(count)} from:` : `${item.description} ${plural(count)}.`}
+                  </span>
+                  {weak && (
+                    <span className="mt-1 flex flex-col text-base text-ink">
+                      {options.weakChapters.map((chapter) => (
+                        <span key={chapter.id} className="[overflow-wrap:anywhere]">
+                          {chapter.label} ({chapter.percent}% right)
+                        </span>
+                      ))}
+                    </span>
+                  )}
+                </span>
+              </label>
+            );
+          })}
         </div>
       </fieldset>
 

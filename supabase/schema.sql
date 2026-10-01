@@ -353,8 +353,8 @@ create table practice_sessions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references users (id) on delete cascade,
   category_id uuid not null references categories (id) on delete cascade,
-  mode varchar(10) not null check (mode in ('smart', 'chapters', 'types', 'all', 'retry')),
-  -- Chapter ids or question types chosen; empty for the other ways.
+  mode varchar(10) not null check (mode in ('smart', 'chapters', 'types', 'all', 'retry', 'wrong', 'flagged', 'unseen', 'weak')),
+  -- Chapter ids or question types chosen (weak: the weak chapters at the start); empty otherwise.
   choices text[] not null default '{}' check (cardinality(choices) <= 200),
   question_ids uuid[] check (cardinality(question_ids) between 1 and 2000),
   results text check (results ~ '^[.RWS]*$'),
@@ -380,3 +380,15 @@ create table practice_sessions (
 create unique index practice_sessions_open_key on practice_sessions (user_id) where finished_at is null;
 create index practice_sessions_user_idx on practice_sessions (user_id, finished_at desc);
 create index practice_sessions_category_idx on practice_sessions (category_id);
+
+-- A candidate's own bookmark on a question, set in Practice or its report. Not activity-log data.
+create table question_flags (
+  user_id uuid not null references users (id) on delete cascade,
+  category_id uuid not null references categories (id) on delete cascade,
+  question_id uuid not null references questions (id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (user_id, category_id, question_id)
+);
+
+create index question_flags_category_idx on question_flags (category_id);
+create index question_flags_question_idx on question_flags (question_id);

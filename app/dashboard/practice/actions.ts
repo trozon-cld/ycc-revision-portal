@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
 import { isUuid } from "@/lib/content/pages";
-import { checkPractice, endPractice, nextPractice, startPractice, startRetry } from "@/lib/practice/sessions";
+import { checkPractice, endPractice, nextPractice, setFlag, startPractice, startRetry } from "@/lib/practice/sessions";
 import { isPracticeWay, type PracticeCheckReply, type PracticeNextReply } from "@/lib/practice/types";
 
 // Candidate practice runs. Not activity-log actions (agreed 1 Oct): they only touch the candidate's own rows.
@@ -53,4 +53,11 @@ export async function endPracticeRun(sessionId: string): Promise<"finished" | "r
   const session = await requireRole(["candidate"]);
   if (typeof sessionId !== "string" || !isUuid(sessionId)) return "missing";
   return endPractice(session.sub, sessionId);
+}
+
+// Flag for review on or off. Returns the saved state, or null if the question can't be flagged now.
+export async function setQuestionFlag(questionId: string, flagged: boolean): Promise<boolean | null> {
+  const session = await requireRole(["candidate"]);
+  if (typeof questionId !== "string" || !isUuid(questionId) || typeof flagged !== "boolean") return null;
+  return setFlag(session.sub, questionId, flagged);
 }

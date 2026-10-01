@@ -3,8 +3,8 @@ import type { QuestionType } from "@/lib/questions/types";
 // Choosing and ordering practice questions. Pure functions (randomness passed in), so they can be tested.
 
 export type PoolQuestion = { id: string; chapterId: string; type: QuestionType };
-// This category's Practice history for one question.
-export type PracticeHistory = { tries: number; lastRight: boolean | null };
+// This category's Practice history for one question (Handbook answers don't count), and its flag.
+export type PracticeHistory = { tries: number; right: number; lastRight: boolean | null; flagged: boolean };
 export type Random = () => number;
 
 export function shuffle<T>(items: readonly T[], random: Random): T[] {
@@ -49,20 +49,88 @@ export function spreadOrder(items: readonly PoolQuestion[], random: Random): Poo
   return ordered;
 }
 
-// Smart practice: not practised yet in this category first, then wrong last time, then the rest.
+const tried = (history: ReadonlyMap<string, PracticeHistory>, id: string) => (history.get(id)?.tries ?? 0) > 0;
+export const isUnseen = (history: ReadonlyMap<string, PracticeHistory>, id: string) => !tried(history, id);
+export const isWrong = (history: ReadonlyMap<string, PracticeHistory>, id: string) => tried(history, id) && history.get(id)?.lastRight === false;
+export const isFlagged = (history: ReadonlyMap<string, PracticeHistory>, id: string) => history.get(id)?.flagged === true;
+
+// Chapters answered enough in Practice and below the line, weakest first.
+export function weakChapters(
+  pool: readonly PoolQuestion[],
+  history: ReadonlyMap<string, PracticeHistory>,
+  minAnswered: number,
+  below: number
+): { chapterId: string; share: number }[] {
+  const totals = new Map<string, { answered: number; tries: number; right: number }>();
+  for (const item of pool) {
+    const h = history.get(item.id);
+    if (!h || h.tries === 0) continue;
+    const t = totals.get(item.chapterId) ?? { answered: 0, tries: 0, right: 0 };
+    t.answered += 1;
+    t.tries += h.tries;
+    t.right += h.right;
+    totals.set(item.chapterId, t);
+  }
+  return [...totals]
+    .filter(([, t]) => t.answered >= minAnswered && t.right / t.tries < below)
+    .map(([chapterId, t]) => ({ chapterId, share: t.right / t.tries }))
+    .sort((a, b) => a.share - b.share);
+}
+
+// Fills `count` from each group in turn (each spread across chapters), then mixes the order.
+function pickInTiers(tiers: PoolQuestion[][], count: number, random: Random): PoolQuestion[] {
+  const picked: PoolQuestion[] = [];
+  const used = new Set<string>();
+  for (const tier of tiers) {
+    if (picked.length >= count) break;
+    const fresh = tier.filter((item) => !used.has(item.id));
+    for (const item of spreadPick(fresh, count - picked.length, random)) {
+      picked.push(item);
+      used.add(item.id);
+    }
+  }
+  return spreadOrder(picked, random);
+}
+
+// Smart practice: not practised yet in this category, then wrong last time, then flagged, then weak
+// chapters, then the rest.
 export function smartPick(
   pool: readonly PoolQuestion[],
   history: ReadonlyMap<string, PracticeHistory>,
   count: number,
+  random: Random,
+  weak: ReadonlySet<string> = new Set()
+): PoolQuestion[] {
+  return pickInTiers(
+    [
+      pool.filter((item) => isUnseen(history, item.id)),
+      pool.filter((item) => isWrong(history, item.id)),
+      pool.filter((item) => isFlagged(history, item.id)),
+      pool.filter((item) => weak.has(item.chapterId)),
+      [...pool],
+    ],
+    count,
+    random
+  );
+}
+
+// Weak areas: questions from the weak chapters, wrong ones first, then unseen, then flagged.
+export function weakPick(
+  pool: readonly PoolQuestion[],
+  history: ReadonlyMap<string, PracticeHistory>,
+  weak: ReadonlySet<string>,
+  count: number,
   random: Random
 ): PoolQuestion[] {
-  const unseen = pool.filter((item) => !history.get(item.id)?.tries);
-  const wrong = pool.filter((item) => history.get(item.id)?.tries && history.get(item.id)?.lastRight === false);
-  const rest = pool.filter((item) => history.get(item.id)?.tries && history.get(item.id)?.lastRight !== false);
-  const picked: PoolQuestion[] = [];
-  for (const tier of [unseen, wrong, rest]) {
-    if (picked.length >= count) break;
-    picked.push(...spreadPick(tier, count - picked.length, random));
-  }
-  return spreadOrder(picked, random);
+  const inWeak = pool.filter((item) => weak.has(item.chapterId));
+  return pickInTiers(
+    [
+      inWeak.filter((item) => isWrong(history, item.id)),
+      inWeak.filter((item) => isUnseen(history, item.id)),
+      inWeak.filter((item) => isFlagged(history, item.id)),
+      inWeak,
+    ],
+    count,
+    random
+  );
 }
