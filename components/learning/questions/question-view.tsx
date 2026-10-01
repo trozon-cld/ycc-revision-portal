@@ -18,7 +18,12 @@ export type QuestionViewState = {
   // A choice in progress that isn't an answer yet (e.g. the picture picked up in "Match pictures").
   // Kept here so every copy of the question in the book shares it.
   selection?: string | null;
+  // Practice: the answer and explanation the server sends back after Check.
+  shown?: { answer: unknown; explanation: string | null };
 };
+
+// Practice marking may also send the correct answer and the explanation to show.
+export type CheckReply = CheckResult & { answer?: unknown; explanation?: string | null };
 
 export const FRESH_QUESTION_STATE: QuestionViewState = { response: null, phase: "answering", result: null, notice: null };
 
@@ -29,31 +34,37 @@ export function QuestionView({
   label,
   media,
   initialResponse = null,
+  initialState,
   seed,
   onCheck,
   onResponseChange,
   state: controlledState,
   onStateChange,
+  retry = true,
 }: {
   question: ClientQuestion;
   // e.g. "Question 3" in the book, "3 of 36" in a mock test.
   label: string;
   media: ResolvedMedia;
   initialResponse?: unknown;
+  // Starts in this state instead (e.g. Practice reopened on a question already checked).
+  initialState?: QuestionViewState;
   // Shuffle seed for Practice and Mock; defaults to the question id.
   seed?: string;
   // Practice: marks on the server. Learn marks in the browser with the answer it already has.
-  onCheck?: (response: unknown) => Promise<CheckResult | null>;
+  onCheck?: (response: unknown) => Promise<CheckReply | null>;
   // Exam: reports every change; nothing is marked here.
   onResponseChange?: (response: unknown) => void;
   // Optional: the host keeps the state, so several copies of one question stay in step (the book).
   state?: QuestionViewState;
   onStateChange?: (state: QuestionViewState) => void;
+  // "Try again" after Check; Practice turns it off (every question counts once).
+  retry?: boolean;
 }) {
-  const [ownState, setOwnState] = useState<QuestionViewState>({ ...FRESH_QUESTION_STATE, response: initialResponse });
+  const [ownState, setOwnState] = useState<QuestionViewState>(initialState ?? { ...FRESH_QUESTION_STATE, response: initialResponse });
   const [checking, setChecking] = useState(false);
   const current = controlledState ?? ownState;
-  const { response, phase, result, notice } = current;
+  const { response, phase, result, notice, shown } = current;
   const setState = (patch: Partial<QuestionViewState>) => {
     const next = { ...current, ...patch };
     if (onStateChange) onStateChange(next);
@@ -84,7 +95,7 @@ export function QuestionView({
     }
     setChecking(true);
     try {
-      const marked =
+      const marked: CheckReply | null | undefined =
         mode === "learn"
           ? checkAnswer({ type: question.type, content: question.content, answer: question.answer }, response)
           : await onCheck?.(response);
@@ -92,7 +103,8 @@ export function QuestionView({
         setState({ notice: "This answer couldn't be checked. Please try again." });
         return;
       }
-      setState({ result: marked, phase: "checked", notice: null });
+      const reveal = mode === "practice" && marked.answer !== undefined ? { answer: marked.answer, explanation: marked.explanation ?? null } : undefined;
+      setState({ result: { answered: marked.answered, correct: marked.correct }, phase: "checked", notice: null, shown: reveal });
     } finally {
       setChecking(false);
     }
@@ -102,7 +114,9 @@ export function QuestionView({
     setState(FRESH_QUESTION_STATE);
   }
 
-  const showExplanation = mode === "learn" && phase !== "answering" && Boolean(question.explanation);
+  const showsAnswer = (mode === "learn" && phase !== "answering") || Boolean(shown);
+  const explanation = mode === "learn" ? question.explanation : shown?.explanation;
+  const showExplanation = showsAnswer && Boolean(explanation);
 
   return (
     <section aria-labelledby={stemId} className="question-view">
@@ -133,7 +147,7 @@ export function QuestionView({
               seed={seed ?? question.id}
               content={question.content}
               media={media}
-              answer={mode === "learn" ? question.answer : undefined}
+              answer={mode === "learn" ? question.answer : shown?.answer}
               response={response}
               onResponse={changeResponse}
               onNotice={(message) => setState({ notice: message })}
@@ -141,7 +155,7 @@ export function QuestionView({
               onSelection={(selection) => setState({ selection, notice: null })}
               onSubmit={canCheck && phase === "answering" && !checking ? check : undefined}
               locked={phase !== "answering"}
-              showCorrect={mode === "learn" && phase !== "answering"}
+              showCorrect={showsAnswer}
               result={result}
             />
           ) : (
@@ -166,14 +180,14 @@ export function QuestionView({
       >
         <div role="status" aria-live="polite" className="min-w-0 flex-1 basis-[12em]">
           {notice && <p className="mt-[calc(0.9em*var(--q-space,1))] font-semibold text-ink">{notice}</p>}
-          {phase === "checked" && result && <Feedback correct={result.correct} showsAnswer={mode === "learn"} />}
+          {phase === "checked" && result && <Feedback correct={result.correct} showsAnswer={showsAnswer} />}
           {phase === "revealed" && (
             <p className="rounded-lg border-l-[0.3em] border-primary bg-primary/[0.07] px-[0.9em] py-[0.6em] font-semibold text-ink">
               The correct answer is highlighted.
             </p>
           )}
         </div>
-        {canCheck && AnswerArea && phase !== "answering" && (
+        {canCheck && retry && AnswerArea && phase !== "answering" && (
           <FrameButton key="again" onClick={reset}>
             Try again
           </FrameButton>
@@ -184,7 +198,7 @@ export function QuestionView({
         <div data-flow-unit data-question-explanation className="mt-[calc(0.9em*var(--q-space,1))]">
           <p className="mb-[0.2em] text-[0.8em] font-bold uppercase tracking-wide text-primary [break-after:avoid]">Explanation</p>
           <p className="whitespace-pre-line [orphans:2] [widows:2]">
-            <InlineText text={question.explanation ?? ""} />
+            <InlineText text={explanation ?? ""} />
           </p>
         </div>
       )}

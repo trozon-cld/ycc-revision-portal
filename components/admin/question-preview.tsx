@@ -60,7 +60,7 @@ export function QuestionPreview({
       </div>
       <p className="text-sm text-slate-600">
         {mode === "learn" && "As a Handbook page: options in your order, with Check answer, Reveal and the explanation."}
-        {mode === "practice" && `As in Practice: ${shuffles ? "options shuffled, " : ""}feedback after Check answer, no explanation.`}
+        {mode === "practice" && `As in Practice: ${shuffles ? "options shuffled, " : ""}after Check answer, feedback, the correct answer and the explanation.`}
         {mode === "exam" && `As in a Mock test: ${shuffles ? "options shuffled, " : ""}no feedback.`}
       </p>
 
@@ -191,7 +191,10 @@ function PlainScreen({
                 label={mode === "exam" ? "1 of 36" : "Question"}
                 media={media}
                 seed={seed}
-                onCheck={async (response) => checkAnswer(question, response)}
+                onCheck={async (response) => {
+                  const result = checkAnswer(question, response);
+                  return result && mode === "practice" ? { ...result, answer: question.answer, explanation: question.explanation } : result;
+                }}
               />
             </div>
           </div>

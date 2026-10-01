@@ -4,6 +4,7 @@ import { requireRole } from "@/lib/auth/guard";
 import { SESSION_ENDED_LOGIN } from "@/lib/auth/constants";
 import { ACCESS_TIME_ZONE, daysLeftUk } from "@/lib/candidates/access";
 import { loadCandidateHome } from "@/lib/candidates/home";
+import { loadPracticeInProgress } from "@/lib/practice/sessions";
 import { PageBody } from "@/components/candidate/page-body";
 import { SectionCard, SectionIcons } from "@/components/candidate/section-card";
 
@@ -12,7 +13,7 @@ const ACCESS_WARNING_DAYS = 7;
 
 export default async function CandidateHomePage({ searchParams }: PageProps<"/dashboard">) {
   const session = await requireRole(["candidate"]);
-  const home = await loadCandidateHome(session.sub);
+  const [home, practice] = await Promise.all([loadCandidateHome(session.sub), loadPracticeInProgress(session.sub)]);
   if (!home) redirect(SESSION_ENDED_LOGIN);
   const justSwitched = (await searchParams).switched === "1";
 
@@ -94,8 +95,13 @@ export default async function CandidateHomePage({ searchParams }: PageProps<"/da
             <li>
               <SectionCard
                 title="Practice"
-                description="Answer questions at your own pace and see the right answer each time."
+                description={
+                  practice
+                    ? `Continue your practice: question ${Math.min(practice.position + 1, practice.total)} of ${practice.total}.`
+                    : "Answer questions at your own pace and see the right answer each time."
+                }
                 icon={SectionIcons.practice}
+                href="/dashboard/practice"
               />
             </li>
             <li>

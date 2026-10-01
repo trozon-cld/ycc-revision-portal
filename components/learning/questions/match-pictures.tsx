@@ -208,7 +208,7 @@ export function MatchPicturesAnswer({
                   </button>
                   <span className="min-w-0 flex-1 font-semibold leading-snug text-ink [overflow-wrap:anywhere]">{target.label}</span>
                   {/* Room for the right picture is kept in the Handbook, so nothing moves after Check. */}
-                  {mode === "learn" ? (
+                  {mode === "learn" || showCorrect ? (
                     <span className="grid size-[max(40px,2.6em)] shrink-0 place-items-center">
                       {right && right !== inside?.id && (
                         <span className="relative block size-full rounded-md border-2 border-green-700 bg-white p-[0.1em]" title="Right picture">
