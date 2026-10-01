@@ -139,6 +139,11 @@ body {
   }
 }
 
+/* Practice: its own bar takes the header's place on every screen (Home, Help and Log out live there). */
+body:has([data-practice-owns-header]) .candidate-header {
+  display: none;
+}
+
 /* Handbook on phones: the reader bar takes the header's place (Home in the bar; Help and Log out in
    Settings). Only while the reader is on the page, so an empty Handbook message keeps the header. */
 @media (max-width: 599.98px), (max-height: 499.98px) and (orientation: landscape) and (max-width: 1023.98px) {

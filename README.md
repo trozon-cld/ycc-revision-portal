@@ -46,7 +46,7 @@ Status: in active development.
 
 ## Project structure
 
-- `app/` — routes: `/login`, `/admin/*` (Admin/Superadmin, including `/admin/activity` logs and `/admin/handbook` sections and chapters, `/admin/handbook/chapters/[id]` page lists, `/admin/handbook/pages/[id]` page editor, `/admin/media` image library), `/dashboard` (Candidate home, `/dashboard/category` to switch category within the group, `/dashboard/prepare` the Handbook for the current category, `/dashboard/help`), `/access-expired`
+- `app/` — routes: `/login`, `/admin/*` (Admin/Superadmin, including `/admin/activity` logs and `/admin/handbook` sections and chapters, `/admin/handbook/chapters/[id]` page lists, `/admin/handbook/pages/[id]` page editor, `/admin/media` image library), `/dashboard` (Candidate home, `/dashboard/category` to switch category within the group, `/dashboard/prepare` the Handbook for the current category, `/dashboard/practice` Practice setup and `/dashboard/practice/[id]` a practice run or its report, `/dashboard/help`), `/access-expired`
 - `lib/auth/` — JWT signing/verification, session cookie, role guard
 - `components/admin/` — compact admin console UI (sidebar shell, tables, row menus, slide-in panels); admin pages must build from these. Candidate pages keep the large, simple style.
 - `lib/db/` — shared Postgres pool and transaction helper
@@ -56,6 +56,8 @@ Status: in active development.
 - `components/learning/` — candidate-facing renderers: blocks and the fixed-page book reader (large-target style)
 - `lib/storage/` — the only code that talks to the storage provider (upload, delete, signed links)
 - `lib/media/` — image checks (real type and size from the file) and in-browser WebP conversion
+- `lib/practice/` — Practice: question pool, Smart practice picking, runs and reports (server-marked)
+- `lib/progress/` — candidates' progress per category (Handbook pages done, question results); not activity-log data
 - `lib/audit/` — activity and login logs (every loggable action is listed in `lib/audit/actions.ts`)
 - `proxy.ts` — route protection by role, block and expiry
 - `supabase/` — schema, migrations and seed

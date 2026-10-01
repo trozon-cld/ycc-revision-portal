@@ -246,10 +246,10 @@ export function ReaderBar({
   );
 }
 
-const HOME_ICON = "M3 11l9-7 9 7M5 10v10h5v-6h4v6h5V10";
-const SETTINGS_ICON = "M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1M15 4v4M9 10v4M17 16v4";
+export const HOME_ICON = "M3 11l9-7 9 7M5 10v10h5v-6h4v6h5V10";
+export const SETTINGS_ICON = "M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1M15 4v4M9 10v4M17 16v4";
 
-function Icon({ path }: { path: string }) {
+export function Icon({ path }: { path: string }) {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className="size-6 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
       <path d={path} />
@@ -258,7 +258,7 @@ function Icon({ path }: { path: string }) {
 }
 
 // Covers the pages; focus moves in on open and Escape closes it.
-function Panel({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+export function Panel({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
   const showLabels = useContext(ReaderLabelsContext);
   const ref = useRef<HTMLDivElement>(null);
   const headingId = useId();
@@ -538,7 +538,8 @@ export function SettingsPanel({
   onToggleLabels,
   pageTurn,
   onTogglePageTurn,
-  reducedMotion,
+  reducedMotion = false,
+  actions,
   links,
   onClose,
 }: {
@@ -546,9 +547,12 @@ export function SettingsPanel({
   onTextSizeChange?: (size: TextSize) => void;
   showLabels: boolean;
   onToggleLabels: () => void;
-  pageTurn: boolean;
-  onTogglePageTurn: () => void;
-  reducedMotion: boolean;
+  // Book only: Practice has no pages to turn.
+  pageTurn?: boolean;
+  onTogglePageTurn?: () => void;
+  reducedMotion?: boolean;
+  // Practice: End practice, shown before the links.
+  actions?: ReactNode;
   // Phones: Back to home, Help and Log out, which the hidden header holds elsewhere.
   links?: ReactNode;
   onClose: () => void;
@@ -597,18 +601,23 @@ export function SettingsPanel({
           checked={showLabels}
           onChange={onToggleLabels}
         />
-        <SettingSwitch
-          label="Page turn animation"
-          description={
-            reducedMotion
-              ? "Your device is set to reduce motion, so pages change without animation."
-              : "Pages turn over like a paper book."
-          }
-          checked={pageTurn && !reducedMotion}
-          disabled={reducedMotion}
-          onChange={onTogglePageTurn}
-        />
-        <p className="text-base text-slate-700">Button labels and page turn are remembered on this device.</p>
+        {onTogglePageTurn && (
+          <SettingSwitch
+            label="Page turn animation"
+            description={
+              reducedMotion
+                ? "Your device is set to reduce motion, so pages change without animation."
+                : "Pages turn over like a paper book."
+            }
+            checked={Boolean(pageTurn) && !reducedMotion}
+            disabled={reducedMotion}
+            onChange={onTogglePageTurn}
+          />
+        )}
+        <p className="text-base text-slate-700">
+          {onTogglePageTurn ? "Button labels and page turn are remembered on this device." : "Button labels are remembered on this device."}
+        </p>
+        {actions}
         {links && <div className="grid gap-3 border-t-2 border-slate-200 pt-4 min-[400px]:grid-cols-3">{links}</div>}
       </div>
     </Panel>

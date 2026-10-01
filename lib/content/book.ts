@@ -18,6 +18,9 @@ export type BookPageData = {
 // `thumb` (the small copy) only where asked for, e.g. covers, to show while the full picture loads.
 export type ResolvedMedia = Record<string, { src: string; width: number; height: number; alt: string; thumb?: string }>;
 
+// What the reader reports when a Handbook question is answered; the server marks the response itself.
+export type HandbookOutcome = { kind: "check"; response: unknown } | { kind: "reveal" };
+
 export const TEXT_SIZES = [14, 16, 18, 20, 22, 24] as const;
 export type TextSize = (typeof TEXT_SIZES)[number];
 export const DEFAULT_TEXT_SIZE: TextSize = 16;

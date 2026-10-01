@@ -304,3 +304,91 @@ create table handbook_progress (
 
 create index handbook_progress_category_idx on handbook_progress (category_id);
 create index handbook_progress_item_idx on handbook_progress (item_id);
+
+-- Handbook items done, one row per chapter: a content page once its last part was on screen, a
+-- question once Check or Reveal was used. Ids of deleted items drop out on the chapter's next save.
+create table handbook_chapter_progress (
+  user_id uuid not null references users (id) on delete cascade,
+  category_id uuid not null references categories (id) on delete cascade,
+  chapter_id uuid not null references chapters (id) on delete cascade,
+  done_items uuid[] not null default '{}' check (cardinality(done_items) <= 2000),
+  updated_at timestamptz not null default now(),
+  primary key (user_id, category_id, chapter_id)
+);
+
+create index handbook_chapter_progress_category_idx on handbook_chapter_progress (category_id);
+create index handbook_chapter_progress_chapter_idx on handbook_chapter_progress (chapter_id);
+
+-- One row per candidate, category and question; counters stop at the smallint limit.
+-- A Reveal before any try counts as not right first time. Practice columns are filled from E4a-2.
+create table question_results (
+  user_id uuid not null references users (id) on delete cascade,
+  category_id uuid not null references categories (id) on delete cascade,
+  question_id uuid not null references questions (id) on delete cascade,
+  handbook_tries smallint not null default 0,
+  handbook_right smallint not null default 0,
+  handbook_reveals smallint not null default 0,
+  handbook_first_right boolean,
+  handbook_last_right boolean,
+  handbook_at timestamptz,
+  practice_tries smallint not null default 0,
+  practice_right smallint not null default 0,
+  practice_first_right boolean,
+  practice_last_right boolean,
+  practice_at timestamptz,
+  primary key (user_id, category_id, question_id),
+  constraint question_results_counts_check check (
+    handbook_tries >= 0 and handbook_reveals >= 0 and practice_tries >= 0
+    and handbook_right between 0 and handbook_tries
+    and practice_right between 0 and practice_tries
+  )
+);
+
+create index question_results_category_idx on question_results (category_id);
+create index question_results_question_idx on question_results (question_id);
+
+-- results: one letter per question in order: '.' not answered yet, R right, W wrong, S skipped
+-- (removed since the start). The latest finished run keeps question_ids/results; older ones only totals.
+create table practice_sessions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references users (id) on delete cascade,
+  category_id uuid not null references categories (id) on delete cascade,
+  mode varchar(10) not null check (mode in ('smart', 'chapters', 'types', 'all', 'retry', 'wrong', 'flagged', 'unseen', 'weak')),
+  -- Chapter ids or question types chosen (weak: the weak chapters at the start); empty otherwise.
+  choices text[] not null default '{}' check (cardinality(choices) <= 200),
+  question_ids uuid[] check (cardinality(question_ids) between 1 and 2000),
+  results text check (results ~ '^[.RWS]*$'),
+  position smallint not null default 0 check (position >= 0),
+  total smallint not null check (total > 0),
+  answered smallint not null default 0 check (answered >= 0),
+  right_count smallint not null default 0 check (right_count between 0 and answered),
+  -- Right and answered per chapter, kept when the question list is trimmed: {"chapterId": [right, answered]}.
+  chapter_summary jsonb,
+  -- Time spent answering, not counting breaks longer than 5 minutes.
+  seconds_spent integer not null default 0 check (seconds_spent >= 0),
+  started_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  finished_at timestamptz,
+  constraint practice_sessions_list_check check (
+    (question_ids is null) = (results is null)
+    and (question_ids is null or length(results) = cardinality(question_ids))
+    and (finished_at is not null or question_ids is not null)
+  )
+);
+
+-- One practice in progress per candidate.
+create unique index practice_sessions_open_key on practice_sessions (user_id) where finished_at is null;
+create index practice_sessions_user_idx on practice_sessions (user_id, finished_at desc);
+create index practice_sessions_category_idx on practice_sessions (category_id);
+
+-- A candidate's own bookmark on a question, set in Practice or its report. Not activity-log data.
+create table question_flags (
+  user_id uuid not null references users (id) on delete cascade,
+  category_id uuid not null references categories (id) on delete cascade,
+  question_id uuid not null references questions (id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (user_id, category_id, question_id)
+);
+
+create index question_flags_category_idx on question_flags (category_id);
+create index question_flags_question_idx on question_flags (question_id);
