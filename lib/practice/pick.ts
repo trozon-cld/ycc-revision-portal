@@ -1,9 +1,8 @@
+import type { PoolQuestion } from "@/lib/questions/pool";
 import { shuffle } from "@/lib/questions/shuffle";
-import type { QuestionType } from "@/lib/questions/types";
 
 // Choosing and ordering practice questions. Pure functions (randomness passed in), so they can be tested.
 
-export type PoolQuestion = { id: string; chapterId: string; type: QuestionType };
 // This category's Practice history for one question (Handbook answers don't count), and its flag.
 export type PracticeHistory = { tries: number; right: number; lastRight: boolean | null; flagged: boolean };
 export type Random = () => number;

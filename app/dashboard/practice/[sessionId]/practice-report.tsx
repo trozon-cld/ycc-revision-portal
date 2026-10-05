@@ -4,11 +4,11 @@ import type { PracticeReport } from "@/lib/practice/sessions";
 import { PageBody } from "@/components/candidate/page-body";
 import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { InlineText } from "@/components/learning/inline-text";
+import { FocusedShell } from "@/components/learning/focused-shell";
 import { practiseAgain } from "../actions";
 import { FlagButton } from "../flag-button";
 import { RetryButton } from "./retry-button";
 import { ReviewQuestion } from "./review-question";
-import { PracticeShell } from "../practice-shell";
 
 const MODE_NAMES: Record<PracticeReport["mode"], string> = {
   smart: "Smart practice",
@@ -43,7 +43,7 @@ export function PracticeReportView({ report, againUnavailable }: { report: Pract
   const endedEarly = report.answered + report.skipped < report.total;
 
   return (
-    <PracticeShell status="Your results">
+    <FocusedShell label="Practice tools" status="Your results">
       <PageBody>
         <div className="max-w-3xl">
           <h1 className="text-3xl font-bold text-ink">Your practice results</h1>
@@ -153,6 +153,6 @@ export function PracticeReportView({ report, againUnavailable }: { report: Pract
           )}
         </div>
       </PageBody>
-    </PracticeShell>
+    </FocusedShell>
   );
 }

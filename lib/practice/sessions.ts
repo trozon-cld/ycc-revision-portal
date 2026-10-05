@@ -1,17 +1,16 @@
-import { randomInt } from "node:crypto";
 import type { PoolClient } from "pg";
 import type { ResolvedMedia } from "@/lib/content/book";
 import { resolveMedia } from "@/lib/content/pages";
 import { pool } from "@/lib/db/pool";
 import { withTransaction } from "@/lib/db/transaction";
-import { chapterNumber, sectionLetter } from "@/lib/handbook/structure";
+import { sectionLetter } from "@/lib/handbook/structure";
 import { recordQuestionResult } from "@/lib/progress/question-results";
 import { checkAnswer, isOversizedResponse } from "@/lib/questions/check";
 import { shuffle } from "@/lib/questions/shuffle";
+import { NUMBERED, chapterLabel, currentCategory, drawRandom as random, inPool, loadPool, loadQuestions, type LoadedQuestion, type PoolQuestion } from "@/lib/questions/pool";
 import { toClientQuestion, type ClientQuestion } from "@/lib/questions/public";
 import { availableQuestionTypes } from "@/lib/questions/registry";
 import { isQuestionType, type QuestionType } from "@/lib/questions/types";
-import { parseQuestion, type ParsedQuestion } from "@/lib/questions/validate";
 import {
   isFlagged,
   isUnseen,
@@ -21,7 +20,6 @@ import {
   spreadPick,
   weakChapters,
   weakPick,
-  type PoolQuestion,
   type PracticeHistory,
 } from "./pick";
 import {
@@ -48,42 +46,7 @@ const KEEP_FINISHED = 20;
 const MAX_GAP_SECONDS = 300;
 const LOOK_AHEAD = 10;
 
-const random = () => randomInt(0, 2 ** 32) / 2 ** 32;
-
 type Db = Pick<PoolClient, "query">;
-
-// Chapters numbered across the whole Handbook ("01", "02"…), as the book shows them.
-const NUMBERED = `numbered as (
-  select c.id, c.title, c.status, s.position as section_position, s.title as section_title,
-         (row_number() over (order by s.position, c.position))::int as number
-  from chapters c join sections s on s.id = c.section_id
-)`;
-
-// Practice pool rule, shared by every query: published question, In practice on, in a published
-// chapter of the category.
-const IN_POOL = `q.status = 'published' and q.in_practice
-  and exists (select 1 from chapters ch join category_chapters cc on cc.chapter_id = ch.id
-              where ch.id = q.chapter_id and ch.status = 'published' and cc.category_id = $CATEGORY)`;
-const inPool = (categoryParam: string) => IN_POOL.replace("$CATEGORY", categoryParam);
-
-const chapterLabel = (row: { number: number; title: string }) => `${chapterNumber(row.number)} ${row.title}`;
-
-async function currentCategory(db: Db, userId: string): Promise<{ id: string; name: string } | null> {
-  const { rows } = await db.query<{ id: string; name: string }>(
-    `select c.id, c.name from users u join categories c on c.id = u.current_category_id where u.id = $1 and u.role = 'candidate'`,
-    [userId]
-  );
-  return rows[0] ?? null;
-}
-
-async function loadPool(db: Db, categoryId: string): Promise<PoolQuestion[]> {
-  const { rows } = await db.query<{ id: string; chapter_id: string; type: string }>(
-    `select q.id, q.chapter_id, q.type from questions q where ${inPool("$1")}`,
-    [categoryId]
-  );
-  const built = new Set<string>(availableQuestionTypes());
-  return rows.filter((row) => built.has(row.type) && isQuestionType(row.type)).map((row) => ({ id: row.id, chapterId: row.chapter_id, type: row.type as QuestionType }));
-}
 
 // Practice results and flags in this category, by question.
 async function loadHistory(db: Db, userId: string, categoryId: string): Promise<Map<string, PracticeHistory>> {
@@ -104,7 +67,7 @@ const findWeak = (questions: PoolQuestion[], history: Map<string, PracticeHistor
 export async function loadPracticeOptions(userId: string): Promise<PracticeOptions | null> {
   const category = await currentCategory(pool, userId);
   if (!category) return null;
-  const questions = await loadPool(pool, category.id);
+  const questions = await loadPool(pool, "practice", category.id);
   const perChapter = new Map<string, number>();
   const perType = new Map<QuestionType, number>();
   for (const q of questions) {
@@ -184,7 +147,7 @@ export async function startPractice(userId: string, request: StartRequest): Prom
     await client.query(`select 1 from users where id = $1 for update`, [userId]);
     const category = await currentCategory(client, userId);
     if (!category) return { ok: false, error: "Your account isn’t available." };
-    let questions = await loadPool(client, category.id);
+    let questions = await loadPool(client, "practice", category.id);
     let choices: string[] = [];
     if (request.way === "chapters") {
       choices = [...new Set(request.choices)].filter((id) => questions.some((q) => q.chapterId === id));
@@ -231,7 +194,7 @@ export async function startRetry(userId: string, sessionId: string): Promise<Sta
     const source = rows[0];
     if (!source || source.category_id !== category.id) return { ok: false, error: "These questions can’t be practised again from here." };
     const wrong = (source.question_ids ?? []).filter((_, index) => source.results?.[index] === "W");
-    const questions = (await loadPool(client, category.id)).filter((q) => wrong.includes(q.id));
+    const questions = (await loadPool(client, "practice", category.id)).filter((q) => wrong.includes(q.id));
     if (questions.length === 0) return { ok: false, error: "These questions are no longer available for practice." };
     return { ok: true, id: await createSession(client, userId, category.id, "retry", [], shuffle(questions, random)) };
   });
@@ -269,40 +232,6 @@ type SessionRow = {
   finished_at: Date | null;
 };
 
-type QuestionRow = {
-  id: string;
-  chapter_id: string;
-  chapter_title: string;
-  chapter_number: number;
-  type: string;
-  stem_text: string;
-  stem_media_id: string | null;
-  stem_media_size: string | null;
-  stem_media_align: string | null;
-  content: unknown;
-  answer: unknown;
-  explanation: string | null;
-};
-
-// Questions still in the category's pool, parsed. Ids no longer eligible are simply missing.
-async function loadQuestions(db: Db, categoryId: string, ids: string[]): Promise<Map<string, ParsedQuestion & { chapterLabel: string }>> {
-  if (ids.length === 0) return new Map();
-  const { rows } = await db.query<QuestionRow>(
-    `with ${NUMBERED}
-     select q.id, q.chapter_id, n.title as chapter_title, n.number as chapter_number, q.type, q.stem_text, q.stem_media_id,
-            q.stem_media_size, q.stem_media_align, q.content, q.answer, q.explanation
-     from questions q join numbered n on n.id = q.chapter_id
-     where q.id = any($2::uuid[]) and ${inPool("$1")}`,
-    [categoryId, ids]
-  );
-  const map = new Map<string, ParsedQuestion & { chapterLabel: string }>();
-  for (const row of rows) {
-    const parsed = parseRow(row);
-    if (parsed) map.set(row.id, parsed);
-  }
-  return map;
-}
-
 const setChar = (text: string, index: number, char: string) => text.slice(0, index) + char + text.slice(index + 1);
 
 export type PracticeView = { kind: "step"; step: PracticeStep } | { kind: "report" } | { kind: "closed" } | { kind: "missing" };
@@ -329,7 +258,7 @@ export async function loadPracticeView(userId: string, sessionId: string): Promi
 }
 
 type Settled =
-  | { kind: "settled"; session: SessionRow; question: ParsedQuestion & { chapterLabel: string } }
+  | { kind: "settled"; session: SessionRow; question: LoadedQuestion }
   | { kind: "report" }
   | { kind: "closed" };
 
@@ -339,12 +268,12 @@ async function settle(client: Db, session: SessionRow): Promise<Settled> {
   let results = session.results ?? "";
   let position = session.position;
   // Read a few questions ahead at a time; usually the first one is the one shown.
-  const questions = new Map<string, ParsedQuestion & { chapterLabel: string }>();
+  const questions = new Map<string, LoadedQuestion>();
   let loadedTo = position;
-  let current: (ParsedQuestion & { chapterLabel: string }) | undefined;
+  let current: (LoadedQuestion) | undefined;
   while (position < ids.length) {
     if (position >= loadedTo) {
-      for (const [id, question] of await loadQuestions(client, session.category_id, ids.slice(position, position + LOOK_AHEAD))) questions.set(id, question);
+      for (const [id, question] of await loadQuestions(client, ids.slice(position, position + LOOK_AHEAD), { use: "practice", categoryId: session.category_id })) questions.set(id, question);
       loadedTo = position + LOOK_AHEAD;
     }
     const mark = results[position];
@@ -376,40 +305,9 @@ async function settle(client: Db, session: SessionRow): Promise<Settled> {
 }
 
 // Answered questions, whether or not still in the pool (shown once more with their answer, or on the report).
-async function loadAnyQuestions(db: Db, ids: string[]): Promise<Map<string, ParsedQuestion & { chapterLabel: string }>> {
-  if (ids.length === 0) return new Map();
-  const { rows } = await db.query<QuestionRow>(
-    `with ${NUMBERED}
-     select q.id, q.chapter_id, n.title as chapter_title, n.number as chapter_number, q.type, q.stem_text, q.stem_media_id,
-            q.stem_media_size, q.stem_media_align, q.content, q.answer, q.explanation
-     from questions q join numbered n on n.id = q.chapter_id where q.id = any($1::uuid[])`,
-    [ids]
-  );
-  const map = new Map<string, ParsedQuestion & { chapterLabel: string }>();
-  for (const row of rows) {
-    const parsed = parseRow(row);
-    if (parsed) map.set(row.id, parsed);
-  }
-  return map;
-}
+const loadAnyQuestion = async (db: Db, id: string) => (await loadQuestions(db, [id])).get(id);
 
-const loadAnyQuestion = async (db: Db, id: string) => (await loadAnyQuestions(db, [id])).get(id);
-
-function parseRow(row: QuestionRow): (ParsedQuestion & { chapterLabel: string }) | undefined {
-  const parsed = parseQuestion({
-    type: row.type,
-    stemText: row.stem_text,
-    stemMediaId: row.stem_media_id,
-    stemMediaSize: row.stem_media_size,
-    stemMediaAlign: row.stem_media_align,
-    content: row.content,
-    answer: row.answer,
-    explanation: row.explanation,
-  });
-  return parsed.ok ? { ...parsed.question, chapterLabel: chapterLabel({ number: row.chapter_number, title: row.chapter_title }) } : undefined;
-}
-
-async function buildStep(session: SessionRow, question: ParsedQuestion & { chapterLabel: string }): Promise<PracticeStep> {
+async function buildStep(session: SessionRow, question: LoadedQuestion): Promise<PracticeStep> {
   const id = (session.question_ids ?? [])[session.position];
   const mark = session.results?.[session.position];
   const [media, flags] = await Promise.all([
@@ -449,7 +347,7 @@ export async function checkPractice(userId: string, sessionId: string, position:
     if (position !== session.position || position >= ids.length) return { ok: false, reason: "invalid" };
     const questionId = ids[position];
     const mark = session.results?.[position];
-    const question = (await loadQuestions(client, session.category_id, [questionId])).get(questionId);
+    const question = (await loadQuestions(client, [questionId], { use: "practice", categoryId: session.category_id })).get(questionId);
     // Already marked (e.g. a second tap): the same result again, counted once.
     if (mark === "R" || mark === "W") {
       const shown = question ?? (await loadAnyQuestion(client, questionId));
@@ -597,7 +495,7 @@ export async function loadPracticeReport(userId: string, sessionId: string): Pro
   let media: ResolvedMedia = {};
   if (session.question_ids && session.results) {
     const wrongIds = session.question_ids.filter((_, index) => session.results?.[index] === "W");
-    const questions = await loadAnyQuestions(pool, wrongIds);
+    const questions = await loadQuestions(pool, wrongIds);
     const list = wrongIds.flatMap((id) => {
       const question = questions.get(id);
       return question ? [{ id, question }] : [];
@@ -654,7 +552,7 @@ export async function setFlag(userId: string, questionId: string, flagged: boole
   }
   const { rowCount } = await pool.query(
     `insert into question_flags (user_id, category_id, question_id)
-     select $1, $2, q.id from questions q where q.id = $3 and ${inPool("$2")}
+     select $1, $2, q.id from questions q where q.id = $3 and ${inPool("practice", "$2")}
      on conflict do nothing`,
     [userId, category.id, questionId]
   );

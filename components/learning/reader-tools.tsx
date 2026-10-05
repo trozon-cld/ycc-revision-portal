@@ -16,7 +16,7 @@ export type ReaderPanel = "contents" | "goto" | "results" | "settings";
 // provides it; each button keeps its name for screen readers and as a tooltip either way.
 export const ReaderLabelsContext = createContext(true);
 
-// Button labels on or off: one choice for the Handbook and Practice, remembered on this device.
+// Button labels on or off: one choice for the Handbook, Practice and the Mock test, remembered on this device.
 const LABELS_KEY = "ycc-reader-labels";
 
 export function useReaderLabels(): [showLabels: boolean, toggleLabels: () => void] {

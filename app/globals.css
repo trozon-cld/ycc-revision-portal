@@ -139,8 +139,9 @@ body {
   }
 }
 
-/* Practice: its own bar takes the header's place on every screen (Home, Help and Log out live there). */
-body:has([data-practice-owns-header]) .candidate-header {
+/* Practice and the Mock test: their own bar takes the header's place on every screen (Home, Help and
+   Log out live there). */
+body:has([data-focused-owns-header]) .candidate-header {
   display: none;
 }
 

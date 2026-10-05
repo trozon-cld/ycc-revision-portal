@@ -1,6 +1,6 @@
 // Shown the moment Prepare is tapped (app/dashboard/prepare/loading.tsx) and while the reader lays out
 // the first pages, so the screen is never blank.
-export function OpeningMessage({ text = "Opening your Handbook…", icon = "book" }: { text?: string; icon?: "book" | "practice" }) {
+export function OpeningMessage({ text = "Opening your Handbook…", icon = "book" }: { text?: string; icon?: "book" | "practice" | "timer" }) {
   return (
     <div role="status" className="flex h-full min-h-0 flex-1 flex-col items-center justify-center gap-5 bg-slate-100 p-6 text-center">
       <svg
@@ -18,10 +18,15 @@ export function OpeningMessage({ text = "Opening your Handbook…", icon = "book
             <path d="M24 12c-4-3-10-4-16-3v27c6-1 12 0 16 3 4-3 10-4 16-3V9c-6-1-12 0-16 3z" />
             <path d="M24 12v27" />
           </>
-        ) : (
+        ) : icon === "practice" ? (
           <>
             <rect x="10" y="6" width="28" height="36" rx="3" />
             <path d="M17 18l4 4 8-8M17 32h14" />
+          </>
+        ) : (
+          <>
+            <circle cx="24" cy="26" r="16" />
+            <path d="M24 18v8l5 5M19 4h10" />
           </>
         )}
       </svg>

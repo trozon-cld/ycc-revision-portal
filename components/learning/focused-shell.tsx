@@ -17,8 +17,8 @@ import {
   barButton,
 } from "@/components/learning/reader-tools";
 
-// Practice's focused frame, like the Handbook reader: its own bar instead of the site header (on every
-// screen), the page scrolling below it, and the Settings panel covering the page.
+// The focused frame of Practice and the Mock test, like the Handbook reader: its own bar instead of the
+// site header (on every screen), the page scrolling below it, and the Settings panel covering the page.
 
 const WIDE_QUERY = "(min-width: 1024px)";
 
@@ -41,7 +41,8 @@ function subscribeWide(onChange: () => void) {
   return () => query.removeEventListener("change", onChange);
 }
 
-export function PracticeShell({
+export function FocusedShell({
+  label,
   status,
   shortStatus,
   progress,
@@ -51,6 +52,8 @@ export function PracticeShell({
   scrollRef,
   children,
 }: {
+  // The bar's name for screen readers, e.g. "Practice tools".
+  label: string;
   // In the middle of the bar, e.g. "Question 3 of 20".
   status: string;
   // Phones held upright, where the bar is narrow, e.g. "3 of 20".
@@ -82,11 +85,11 @@ export function PracticeShell({
 
   return (
     <ReaderLabelsContext.Provider value={showLabels}>
-      <div data-practice-owns-header="" className="flex h-dvh min-h-0 flex-col">
+      <div data-focused-owns-header="" className="flex h-dvh min-h-0 flex-col">
         {/* Three columns with equal sides, so the status stays in the middle of the screen, like the Handbook. */}
         <div
           role="toolbar"
-          aria-label="Practice tools"
+          aria-label={label}
           className="relative grid grid-cols-[1fr_minmax(0,auto)_1fr] items-center gap-2 border-b border-slate-300 bg-white px-3 py-2 lg:px-6"
         >
           <div className="flex min-w-0 items-center">
