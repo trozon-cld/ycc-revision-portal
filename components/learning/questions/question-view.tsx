@@ -52,7 +52,8 @@ export function QuestionView({
   // Shuffle seed for Practice and Mock; defaults to the question id.
   seed?: string;
   // Practice: marks on the server. Learn marks in the browser with the answer it already has.
-  onCheck?: (response: unknown) => Promise<CheckReply | null>;
+  // null: couldn't be checked (a notice asks to try again); false: the caller has already dealt with it.
+  onCheck?: (response: unknown) => Promise<CheckReply | null | false>;
   // Exam: reports every change; nothing is marked here.
   onResponseChange?: (response: unknown) => void;
   // Optional: the host keeps the state, so several copies of one question stay in step (the book).
@@ -95,10 +96,11 @@ export function QuestionView({
     }
     setChecking(true);
     try {
-      const marked: CheckReply | null | undefined =
+      const marked: CheckReply | null | false | undefined =
         mode === "learn"
           ? checkAnswer({ type: question.type, content: question.content, answer: question.answer }, response)
           : await onCheck?.(response);
+      if (marked === false) return;
       if (!marked) {
         setState({ notice: "This answer couldn't be checked. Please try again." });
         return;

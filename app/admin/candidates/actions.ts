@@ -9,6 +9,7 @@ import { getErrorCode, withTransaction } from "@/lib/db/transaction";
 import { logActivity } from "@/lib/audit/log";
 import { NO_NAME, normaliseName, validateName } from "@/lib/users/name";
 import { accessEndSql, formatUkDate, resolveAccessEndDate } from "@/lib/candidates/access";
+import { isUuid } from "@/lib/questions/text";
 
 export type CandidateActionState = { error?: string; success?: boolean };
 export type CreateCandidateState = CandidateActionState;
@@ -184,6 +185,7 @@ export async function updateCandidateCategory(
   if (!categoryId) {
     return { error: "Choose a category." };
   }
+  if (!isUuid(categoryId)) return { error: INVALID_CATEGORY };
 
   // A new assigned category also becomes the current one, so the candidate starts there.
   const result = await changeOwnCandidate(session, formData, async (client, id, candidate) => {
@@ -305,7 +307,7 @@ export async function changeCandidateAdmin(
         [candidateId]
       );
       const { rows: admins } = await client.query<{ email: string }>(
-        `select email from users where id = $1 and role = 'admin'`,
+        `select email from users where id = $1 and role = 'admin' for key share`,
         [adminId]
       );
       const candidate = candidates[0];
@@ -326,7 +328,9 @@ export async function changeCandidateAdmin(
       return { success: true };
     });
   } catch (error) {
-    if (getErrorCode(error) === "22P02") {
+    // 23503: the admin was deleted at the same moment.
+    const code = getErrorCode(error);
+    if (code === "22P02" || code === "23503") {
       return { error: "Candidate or admin not found." };
     }
     throw error;

@@ -376,17 +376,25 @@ async function settle(client: Db, session: SessionRow): Promise<Settled> {
   return { kind: "settled", session: updated, question: current };
 }
 
-// For an answered question that has since left the pool: shown once more with its answer.
-async function loadAnyQuestion(db: Db, id: string) {
+// Answered questions, whether or not still in the pool (shown once more with their answer, or on the report).
+async function loadAnyQuestions(db: Db, ids: string[]): Promise<Map<string, ParsedQuestion & { chapterLabel: string }>> {
+  if (ids.length === 0) return new Map();
   const { rows } = await db.query<QuestionRow>(
     `with ${NUMBERED}
      select q.id, q.chapter_id, n.title as chapter_title, n.number as chapter_number, q.type, q.stem_text, q.stem_media_id,
             q.stem_media_size, q.stem_media_align, q.content, q.answer, q.explanation
-     from questions q join numbered n on n.id = q.chapter_id where q.id = $1`,
-    [id]
+     from questions q join numbered n on n.id = q.chapter_id where q.id = any($1::uuid[])`,
+    [ids]
   );
-  return rows[0] ? parseRow(rows[0]) : undefined;
+  const map = new Map<string, ParsedQuestion & { chapterLabel: string }>();
+  for (const row of rows) {
+    const parsed = parseRow(row);
+    if (parsed) map.set(row.id, parsed);
+  }
+  return map;
 }
+
+const loadAnyQuestion = async (db: Db, id: string) => (await loadAnyQuestions(db, [id])).get(id);
 
 function parseRow(row: QuestionRow): (ParsedQuestion & { chapterLabel: string }) | undefined {
   const parsed = parseQuestion({
@@ -590,8 +598,11 @@ export async function loadPracticeReport(userId: string, sessionId: string): Pro
   let media: ResolvedMedia = {};
   if (session.question_ids && session.results) {
     const wrongIds = session.question_ids.filter((_, index) => session.results?.[index] === "W");
-    const found = await Promise.all(wrongIds.map((id) => loadAnyQuestion(pool, id).then((question) => (question ? { id, question } : null))));
-    const list = found.filter((item): item is NonNullable<typeof item> => item !== null);
+    const questions = await loadAnyQuestions(pool, wrongIds);
+    const list = wrongIds.flatMap((id) => {
+      const question = questions.get(id);
+      return question ? [{ id, question }] : [];
+    });
     media = await resolveMedia(list.flatMap((item) => item.question.mediaIds));
     const { rows: flagRows } = await pool.query<{ question_id: string }>(
       `select question_id from question_flags where user_id = $1 and category_id = $2 and question_id = any($3::uuid[])`,

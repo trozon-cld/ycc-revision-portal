@@ -66,7 +66,7 @@ export const ACTIVITY_ACTIONS = {
 export type ActivityAction = keyof typeof ACTIVITY_ACTIONS;
 
 export const ADMIN_ACTIONS = (Object.keys(ACTIVITY_ACTIONS) as ActivityAction[]).filter(
-  (action) => action.startsWith("candidate.") && action !== "candidate.admin_changed"
+  (action) => (action.startsWith("candidate.") && action !== "candidate.admin_changed") || action.startsWith("account.")
 );
 
 // Groups actions by area for the "Type of action" filter; matched by the part before the dot.
