@@ -1,4 +1,4 @@
-import { randomInt } from "crypto";
+import { randomInt } from "node:crypto";
 import type { PoolClient } from "pg";
 import type { ResolvedMedia } from "@/lib/content/book";
 import { resolveMedia } from "@/lib/content/pages";
@@ -6,7 +6,8 @@ import { pool } from "@/lib/db/pool";
 import { withTransaction } from "@/lib/db/transaction";
 import { chapterNumber, sectionLetter } from "@/lib/handbook/structure";
 import { recordQuestionResult } from "@/lib/progress/question-results";
-import { checkAnswer } from "@/lib/questions/check";
+import { checkAnswer, isOversizedResponse } from "@/lib/questions/check";
+import { shuffle } from "@/lib/questions/shuffle";
 import { toClientQuestion, type ClientQuestion } from "@/lib/questions/public";
 import { availableQuestionTypes } from "@/lib/questions/registry";
 import { isQuestionType, type QuestionType } from "@/lib/questions/types";
@@ -16,7 +17,6 @@ import {
   isUnseen,
   isWrong,
   smartPick,
-  shuffle,
   spreadOrder,
   spreadPick,
   weakChapters,
@@ -25,6 +25,7 @@ import {
   type PracticeHistory,
 } from "./pick";
 import {
+  MAX_QUESTIONS,
   PRACTICE_SIZES,
   PRACTICE_TYPE_NAMES,
   WEAK_BELOW,
@@ -45,8 +46,6 @@ import {
 const KEEP_FINISHED = 20;
 // Breaks longer than this don't count as time spent.
 const MAX_GAP_SECONDS = 300;
-const RESPONSE_LIMIT = 4000;
-const MAX_QUESTIONS = 2000;
 const LOOK_AHEAD = 10;
 
 const random = () => randomInt(0, 2 ** 32) / 2 ** 32;
@@ -184,7 +183,7 @@ export async function startPractice(userId: string, request: StartRequest): Prom
   return withTransaction(async (client) => {
     await client.query(`select 1 from users where id = $1 for update`, [userId]);
     const category = await currentCategory(client, userId);
-    if (!category) return { ok: false, error: "Your account isn't available." };
+    if (!category) return { ok: false, error: "Your account isn’t available." };
     let questions = await loadPool(client, category.id);
     let choices: string[] = [];
     if (request.way === "chapters") {
@@ -224,13 +223,13 @@ export async function startRetry(userId: string, sessionId: string): Promise<Sta
   return withTransaction(async (client) => {
     await client.query(`select 1 from users where id = $1 for update`, [userId]);
     const category = await currentCategory(client, userId);
-    if (!category) return { ok: false, error: "Your account isn't available." };
+    if (!category) return { ok: false, error: "Your account isn’t available." };
     const { rows } = await client.query<SessionRow>(
       `select * from practice_sessions where id = $1 and user_id = $2 and finished_at is not null and question_ids is not null`,
       [sessionId, userId]
     );
     const source = rows[0];
-    if (!source || source.category_id !== category.id) return { ok: false, error: "These questions can't be practised again from here." };
+    if (!source || source.category_id !== category.id) return { ok: false, error: "These questions can’t be practised again from here." };
     const wrong = (source.question_ids ?? []).filter((_, index) => source.results?.[index] === "W");
     const questions = (await loadPool(client, category.id)).filter((q) => wrong.includes(q.id));
     if (questions.length === 0) return { ok: false, error: "These questions are no longer available for practice." };
@@ -376,17 +375,25 @@ async function settle(client: Db, session: SessionRow): Promise<Settled> {
   return { kind: "settled", session: updated, question: current };
 }
 
-// For an answered question that has since left the pool: shown once more with its answer.
-async function loadAnyQuestion(db: Db, id: string) {
+// Answered questions, whether or not still in the pool (shown once more with their answer, or on the report).
+async function loadAnyQuestions(db: Db, ids: string[]): Promise<Map<string, ParsedQuestion & { chapterLabel: string }>> {
+  if (ids.length === 0) return new Map();
   const { rows } = await db.query<QuestionRow>(
     `with ${NUMBERED}
      select q.id, q.chapter_id, n.title as chapter_title, n.number as chapter_number, q.type, q.stem_text, q.stem_media_id,
             q.stem_media_size, q.stem_media_align, q.content, q.answer, q.explanation
-     from questions q join numbered n on n.id = q.chapter_id where q.id = $1`,
-    [id]
+     from questions q join numbered n on n.id = q.chapter_id where q.id = any($1::uuid[])`,
+    [ids]
   );
-  return rows[0] ? parseRow(rows[0]) : undefined;
+  const map = new Map<string, ParsedQuestion & { chapterLabel: string }>();
+  for (const row of rows) {
+    const parsed = parseRow(row);
+    if (parsed) map.set(row.id, parsed);
+  }
+  return map;
 }
+
+const loadAnyQuestion = async (db: Db, id: string) => (await loadAnyQuestions(db, [id])).get(id);
 
 function parseRow(row: QuestionRow): (ParsedQuestion & { chapterLabel: string }) | undefined {
   const parsed = parseQuestion({
@@ -434,7 +441,7 @@ async function lockOpen(client: Db, userId: string, sessionId: string) {
 }
 
 export async function checkPractice(userId: string, sessionId: string, position: number, response: unknown): Promise<PracticeCheckReply> {
-  if ((JSON.stringify(response ?? null)?.length ?? 0) > RESPONSE_LIMIT) return { ok: false, reason: "invalid" };
+  if (isOversizedResponse(response)) return { ok: false, reason: "invalid" };
   return withTransaction(async (client): Promise<PracticeCheckReply> => {
     const session = await lockOpen(client, userId, sessionId);
     if (!session || session.category_id !== session.current_category_id) return { ok: false, reason: "moved" };
@@ -590,8 +597,11 @@ export async function loadPracticeReport(userId: string, sessionId: string): Pro
   let media: ResolvedMedia = {};
   if (session.question_ids && session.results) {
     const wrongIds = session.question_ids.filter((_, index) => session.results?.[index] === "W");
-    const found = await Promise.all(wrongIds.map((id) => loadAnyQuestion(pool, id).then((question) => (question ? { id, question } : null))));
-    const list = found.filter((item): item is NonNullable<typeof item> => item !== null);
+    const questions = await loadAnyQuestions(pool, wrongIds);
+    const list = wrongIds.flatMap((id) => {
+      const question = questions.get(id);
+      return question ? [{ id, question }] : [];
+    });
     media = await resolveMedia(list.flatMap((item) => item.question.mediaIds));
     const { rows: flagRows } = await pool.query<{ question_id: string }>(
       `select question_id from question_flags where user_id = $1 and category_id = $2 and question_id = any($3::uuid[])`,

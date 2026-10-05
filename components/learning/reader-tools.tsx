@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { TEXT_SIZES, type BookPageData, type Sheet, type TextSize } from "@/lib/content/book";
 
@@ -15,6 +15,31 @@ export type ReaderPanel = "contents" | "goto" | "results" | "settings";
 // Whether the reader's buttons show their words (Contents, Close, Next…) or icons only. The reader
 // provides it; each button keeps its name for screen readers and as a tooltip either way.
 export const ReaderLabelsContext = createContext(true);
+
+// Button labels on or off: one choice for the Handbook and Practice, remembered on this device.
+const LABELS_KEY = "ycc-reader-labels";
+
+export function useReaderLabels(): [showLabels: boolean, toggleLabels: () => void] {
+  const [showLabels, setShowLabels] = useState(true);
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem(LABELS_KEY) === "off") setShowLabels(false);
+    } catch {
+      // Storage can be blocked (private windows); labels simply stay on.
+    }
+  }, []);
+  const toggleLabels = useCallback(() => {
+    setShowLabels((current) => {
+      try {
+        window.localStorage.setItem(LABELS_KEY, current ? "off" : "on");
+      } catch {
+        // Not remembered, but still switched for this visit.
+      }
+      return !current;
+    });
+  }, []);
+  return [showLabels, toggleLabels];
+}
 
 // Bar buttons on laptops and desktops (48px high), also used for the page's own items in the bar.
 export const BAR_BUTTON_DENSE = "h-12 min-w-12 px-3 text-base";
@@ -67,7 +92,6 @@ export function ReaderBar({
   status?: string;
 }) {
   const showLabels = useContext(ReaderLabelsContext);
-  const index = TEXT_SIZES.indexOf(textSize);
   const refs = {
     contents: useRef<HTMLButtonElement>(null),
     goto: useRef<HTMLButtonElement>(null),
@@ -80,9 +104,8 @@ export function ReaderBar({
     if (previous.current && !panel) refs[previous.current].current?.focus();
     previous.current = panel;
   });
-  // Phones: the word sits under the icon (text size lives in Settings there); the smallest phones show icons only.
-  // Phone bars with Home: if the words ever don't fit (a wider font, a narrow phone), show icons only
-  // rather than overflow. Names stay for screen readers and as tooltips.
+  // Phones: words under the icons (text size in Settings); the smallest phones, or any bar where the words
+  // don't fit, show icons only. Names stay for screen readers and as tooltips.
   const barRef = useRef<HTMLDivElement>(null);
   const [crowdedAt, setCrowdedAt] = useState<number | null>(null);
   useLayoutEffect(() => {
@@ -169,26 +192,8 @@ export function ReaderBar({
       {panelButton("settings", SETTINGS_ICON, "Settings", "Settings", true)}
       {onTextSizeChange && textSizeInBar && (
         <>
-          <button
-            type="button"
-            aria-label="Smaller text"
-            disabled={index <= 0}
-            onClick={() => onTextSizeChange(TEXT_SIZES[Math.max(0, index - 1)])}
-            className={`${barButton} ${size}`}
-          >
-            <span aria-hidden="true">A−</span>
-          </button>
-          <button
-            type="button"
-            aria-label="Larger text"
-            disabled={index >= TEXT_SIZES.length - 1}
-            onClick={() => onTextSizeChange(TEXT_SIZES[Math.min(TEXT_SIZES.length - 1, index + 1)])}
-            className={`${barButton} ${size}`}
-          >
-            <span aria-hidden="true" className="text-[1.15em]">
-              A+
-            </span>
-          </button>
+          <TextSizeStep step={-1} textSize={textSize} onChange={onTextSizeChange} className={`${barButton} ${size}`} />
+          <TextSizeStep step={1} textSize={textSize} onChange={onTextSizeChange} className={`${barButton} ${size}`} />
           <span className="sr-only" aria-live="polite">
             Text size {textSize}
           </span>
@@ -243,6 +248,38 @@ export function ReaderBar({
       <span className="flex-1" />
       {rightTools}
     </div>
+  );
+}
+
+// A− or A+: one step through the text sizes, disabled at either end.
+export function TextSizeStep({
+  step,
+  textSize,
+  onChange,
+  className,
+}: {
+  step: -1 | 1;
+  textSize: TextSize;
+  onChange: (size: TextSize) => void;
+  className: string;
+}) {
+  const next = TEXT_SIZES[TEXT_SIZES.indexOf(textSize) + step];
+  return (
+    <button
+      type="button"
+      aria-label={step < 0 ? "Smaller text" : "Larger text"}
+      disabled={next === undefined}
+      onClick={() => next !== undefined && onChange(next)}
+      className={className}
+    >
+      {step < 0 ? (
+        <span aria-hidden="true">A−</span>
+      ) : (
+        <span aria-hidden="true" className="text-[1.15em]">
+          A+
+        </span>
+      )}
+    </button>
   );
 }
 
@@ -557,7 +594,6 @@ export function SettingsPanel({
   links?: ReactNode;
   onClose: () => void;
 }) {
-  const index = TEXT_SIZES.indexOf(textSize);
   const sizeButton = `${barButton} h-14 min-w-16 px-4 text-xl`;
   return (
     <Panel title="Settings" onClose={onClose}>
@@ -568,30 +604,12 @@ export function SettingsPanel({
               Text size
             </span>
             <div className="flex items-center gap-3">
-              <button
-                type="button"
-                aria-label="Smaller text"
-                disabled={index <= 0}
-                onClick={() => onTextSizeChange(TEXT_SIZES[Math.max(0, index - 1)])}
-                className={sizeButton}
-              >
-                <span aria-hidden="true">A−</span>
-              </button>
+              <TextSizeStep step={-1} textSize={textSize} onChange={onTextSizeChange} className={sizeButton} />
               <span className="min-w-[4.5ch] text-center text-lg font-semibold tabular-nums text-ink" aria-live="polite">
                 {textSize}
                 <span className="sr-only"> pixels</span>
               </span>
-              <button
-                type="button"
-                aria-label="Larger text"
-                disabled={index >= TEXT_SIZES.length - 1}
-                onClick={() => onTextSizeChange(TEXT_SIZES[Math.min(TEXT_SIZES.length - 1, index + 1)])}
-                className={sizeButton}
-              >
-                <span aria-hidden="true" className="text-[1.15em]">
-                  A+
-                </span>
-              </button>
+              <TextSizeStep step={1} textSize={textSize} onChange={onTextSizeChange} className={sizeButton} />
             </div>
           </div>
         )}

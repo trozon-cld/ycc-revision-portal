@@ -13,7 +13,8 @@ type TargetType =
   | "page"
   | "question"
   | "media"
-  | "account";
+  | "account"
+  | "log_archive";
 type Details = Record<string, string>;
 
 export function ipFromHeaders(requestHeaders: Headers): string | null {

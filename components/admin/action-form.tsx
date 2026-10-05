@@ -1,10 +1,10 @@
 "use client";
 
 import { useActionState, type ReactNode } from "react";
+import type { FormState } from "@/lib/forms";
 import { buttonClass, type ButtonVariant } from "./styles";
 import { useToast } from "./toast";
 
-export type FormState = { error?: string; success?: boolean };
 export type FormAction = (prev: FormState, formData: FormData) => Promise<FormState>;
 
 const initialState: FormState = {};

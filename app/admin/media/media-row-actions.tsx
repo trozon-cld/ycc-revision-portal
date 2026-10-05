@@ -5,6 +5,7 @@ import { Field } from "@/components/admin/field";
 import { RowActions, type RowAction } from "@/components/admin/row-actions";
 import { buttonClass, textareaClass } from "@/components/admin/styles";
 import { describeMediaUse } from "@/lib/media/usage";
+import { ALT_TEXT_MAX_LENGTH } from "@/lib/limits";
 import { deleteMedia, updateAltText } from "./actions";
 
 export function MediaRowActions({
@@ -50,7 +51,7 @@ export function MediaRowActions({
               id={`alt-${id}`}
               name="altText"
               required
-              maxLength={300}
+              maxLength={ALT_TEXT_MAX_LENGTH}
               rows={4}
               defaultValue={altText}
               className={textareaClass}

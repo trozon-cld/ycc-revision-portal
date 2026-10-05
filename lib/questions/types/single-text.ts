@@ -1,6 +1,7 @@
 import { plainText } from "@/lib/content/inline";
+import { cleanLine, isRecord } from "@/lib/text";
+import { isUuid } from "@/lib/ids";
 import { defineQuestionType } from "../define";
-import { cleanLine, isRecord, isUuid } from "../text";
 
 // Single answer, text options: the candidate picks one option; exactly one is correct.
 

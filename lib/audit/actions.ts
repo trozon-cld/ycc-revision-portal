@@ -61,12 +61,13 @@ export const ACTIVITY_ACTIONS = {
   "account.email_changed": "Changed own email",
   "account.name_changed": "Changed own name",
   "account.password_changed": "Changed own password",
+  "log.login_records_archived": "Archived old login records",
 } as const;
 
 export type ActivityAction = keyof typeof ACTIVITY_ACTIONS;
 
 export const ADMIN_ACTIONS = (Object.keys(ACTIVITY_ACTIONS) as ActivityAction[]).filter(
-  (action) => action.startsWith("candidate.") && action !== "candidate.admin_changed"
+  (action) => (action.startsWith("candidate.") && action !== "candidate.admin_changed") || action.startsWith("account.")
 );
 
 // Groups actions by area for the "Type of action" filter; matched by the part before the dot.
@@ -78,6 +79,7 @@ export const ACTION_AREAS: { label: string; prefixes: string[] }[] = [
   { label: "Question bank", prefixes: ["question"] },
   { label: "Media", prefixes: ["media"] },
   { label: "Own account", prefixes: ["account"] },
+  { label: "Log archives", prefixes: ["log"] },
 ];
 
 export const AUTH_EVENTS = {

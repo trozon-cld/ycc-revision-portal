@@ -2,9 +2,9 @@
 
 import { requireRole } from "@/lib/auth/guard";
 import { TEXT_SIZES, type HandbookOutcome } from "@/lib/content/book";
-import { isUuid } from "@/lib/content/pages";
 import { pool } from "@/lib/db/pool";
 import { DONE_BATCH_LIMIT, markPagesDone, recordHandbookQuestion } from "@/lib/progress/handbook";
+import { isUuid } from "@/lib/ids";
 
 // Candidate progress and settings, not activity-log actions (agreed 28 Sep).
 

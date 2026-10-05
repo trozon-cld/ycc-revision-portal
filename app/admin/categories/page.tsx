@@ -5,6 +5,7 @@ import { chapterNumber, sectionLetter } from "@/lib/handbook/structure";
 import { Badge } from "@/components/admin/badge";
 import { PageHeader } from "@/components/admin/page-header";
 import { Cell, Row, Table } from "@/components/admin/table";
+import { countOf } from "@/lib/format";
 import type { ChapterOutline } from "./category-chapters-form";
 import type { CoverChoice } from "./category-covers-form";
 import { CategoryRowActions, NewCategoryButton, type GroupOption } from "./category-row-actions";
@@ -110,7 +111,7 @@ export default async function CategoriesPage() {
     <>
       <PageHeader
         title="Categories"
-        description={`${count(groups.length, "group", "groups")} · ${count(categories.length, "category", "categories")}`}
+        description={`${countOf(groups.length, "group", "groups")} · ${countOf(categories.length, "category", "categories")}`}
         actions={
           <>
             <NewGroupButton />
@@ -134,7 +135,7 @@ export default async function CategoriesPage() {
                   <h2 id={headingId} className="text-base font-semibold text-ink [overflow-wrap:anywhere]">
                     {group.name}
                   </h2>
-                  <p className="text-sm text-slate-600">{count(groupCategories.length, "category", "categories")}</p>
+                  <p className="text-sm text-slate-600">{countOf(groupCategories.length, "category", "categories")}</p>
                 </div>
                 <GroupRowActions
                   id={group.id}
@@ -189,10 +190,6 @@ export default async function CategoriesPage() {
       </div>
     </>
   );
-}
-
-function count(n: number, singular: string, plural: string) {
-  return `${n} ${n === 1 ? singular : plural}`;
 }
 
 function describeCovers(front: boolean, back: boolean) {

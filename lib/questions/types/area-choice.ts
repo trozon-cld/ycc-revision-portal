@@ -1,10 +1,10 @@
+import { cleanLine, isRecord } from "@/lib/text";
+import { isUuid } from "@/lib/ids";
 import { defineQuestionType } from "../define";
-import { cleanLine, isRecord, isUuid } from "../text";
 import { HOTSPOT_LIMITS, HOTSPOT_SHAPES, roundTenth, type HotspotArea, type HotspotShape } from "./hotspot";
 
-// Choose the area: 2–6 marked areas on a picture; the candidate picks one, and exactly one is right.
-// Unlike "Tap the area", the areas themselves are visible to the candidate, so they live in the
-// content; only which one is correct is in the answer.
+// Choose the area: 2–6 visible areas on a picture, exactly one right. Unlike "Tap the area", the areas
+// are in the content; only which one is correct is in the answer.
 
 export const AREA_CHOICE_LIMITS = {
   minAreas: 2,

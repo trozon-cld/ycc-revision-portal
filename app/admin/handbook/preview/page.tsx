@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/auth/guard";
-import { isUuid } from "@/lib/content/pages";
 import { loadBookCovers, loadPreviewBook, loadPreviewOptions } from "@/lib/content/preview";
+import { isUuid } from "@/lib/ids";
+import { firstParam } from "@/lib/params";
 import { PageHeader } from "@/components/admin/page-header";
+import { countOf } from "@/lib/format";
 import { PreviewControls, PreviewReader } from "./preview-client";
 
 export default async function BookPreviewPage({ searchParams }: PageProps<"/admin/handbook/preview">) {
@@ -11,7 +13,7 @@ export default async function BookPreviewPage({ searchParams }: PageProps<"/admi
   const options = await loadPreviewOptions();
   const chapterId = pick(params.chapter, options.chapters.map((chapter) => chapter.id));
   const categoryId = pick(params.category, options.categories.map((category) => category.id));
-  const includeDrafts = one(params.content) !== "published";
+  const includeDrafts = firstParam(params.content) !== "published";
   // Covers belong to a category's whole book, not to a single chapter.
   const [book, covers] = await Promise.all([
     loadPreviewBook({ chapterId, categoryId, includeDrafts }),
@@ -19,10 +21,9 @@ export default async function BookPreviewPage({ searchParams }: PageProps<"/admi
   ]);
 
   const chapter = options.chapters.find((item) => item.id === chapterId);
-  const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? "" : "s"}`;
   const summary = [
-    chapter ? chapter.label : plural(book.chapterCount, "chapter"),
-    plural(book.pages.length, "item"),
+    chapter ? chapter.label : countOf(book.chapterCount, "chapter"),
+    countOf(book.pages.length, "item"),
     ...(includeDrafts && book.drafts > 0 ? [`${book.drafts} marked Draft`] : []),
   ].join(" · ");
 
@@ -89,12 +90,9 @@ function emptyMessage(oneChapter: boolean, byCategory: boolean, includeDrafts: b
   return oneChapter ? "This chapter has no pages or questions yet." : "The Handbook has no pages or questions yet.";
 }
 
-function one(value: string | string[] | undefined): string | undefined {
-  return Array.isArray(value) ? value[0] : value;
-}
 
 // Only ids that exist; anything else shows the whole book.
 function pick(value: string | string[] | undefined, known: string[]): string | null {
-  const id = one(value)?.toLowerCase();
+  const id = firstParam(value)?.toLowerCase();
   return id && isUuid(id) && known.includes(id) ? id : null;
 }

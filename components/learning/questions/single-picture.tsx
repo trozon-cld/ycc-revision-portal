@@ -5,12 +5,12 @@ import { seededShuffle } from "@/lib/questions/shuffle";
 import type { SinglePictureAnswer as Answer, SinglePictureContent } from "@/lib/questions/types/single-picture";
 import { optionLetter } from "@/lib/questions/types/single-text";
 import { InlineText } from "../inline-text";
+import { MarkIcon, type Mark } from "./answer-parts";
 import type { AnswerAreaProps } from "./renderers";
 import { MeasuringContext } from "../measuring";
 
-// Candidate answer area for "Single answer, picture options": a 2-per-row grid of picture cards.
-// Each card is one large tap target over a real radio button. Pictures sit in same-shape tiles,
-// shown whole, so cards line up and the book measures them before the pictures load.
+// "Single answer, picture options": two cards a row, each one large target over a real radio button.
+// Pictures sit whole in same-shape tiles, so cards line up and the book can measure before they load.
 export function SinglePictureAnswer({ mode, seed, content, media, answer, response, onResponse, locked, showCorrect }: AnswerAreaProps) {
   const measuring = useContext(MeasuringContext);
   const name = useId();
@@ -72,7 +72,7 @@ export function SinglePictureAnswer({ mode, seed, content, media, answer, respon
                 {isWrongChoice && <Status tone="bg-amber-800" icon="cross" label="Your answer" />}
                 {selected && !correctId && (
                   <span aria-hidden="true" className="absolute right-[0.3em] top-[0.3em] grid size-[1.6em] place-items-center rounded-full bg-primary text-white">
-                    <Icon name="tick" />
+                    <MarkIcon name="tick" className="size-[1.1em] shrink-0" />
                   </span>
                 )}
               </span>
@@ -99,22 +99,14 @@ export function SinglePictureAnswer({ mode, seed, content, media, answer, respon
   );
 }
 
-function Status({ tone, icon, label }: { tone: string; icon: "tick" | "cross"; label: string }) {
+function Status({ tone, icon, label }: { tone: string; icon: Mark; label: string }) {
   return (
     <span
       aria-hidden="true"
       className={`absolute inset-x-[0.3em] bottom-[0.3em] flex items-center gap-[0.3em] rounded-md px-[0.4em] py-[0.2em] text-[max(14px,0.8em)] font-semibold leading-tight text-white ${tone}`}
     >
-      <Icon name={icon} />
+      <MarkIcon name={icon} className="size-[1.1em] shrink-0" />
       {label}
     </span>
-  );
-}
-
-function Icon({ name }: { name: "tick" | "cross" }) {
-  return (
-    <svg viewBox="0 0 20 20" aria-hidden="true" className="size-[1.1em] shrink-0" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
-      {name === "tick" ? <path d="M4 10.5l4 4 8-9" /> : <path d="M5 5l10 10M15 5L5 15" />}
-    </svg>
   );
 }

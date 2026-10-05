@@ -1,8 +1,7 @@
+import { cleanText, isRecord } from "@/lib/text";
+import { isUuid } from "@/lib/ids";
 import { getQuestionTypeDef } from "./registry";
-import { cleanText, isRecord, isUuid } from "./text";
 import { isQuestionType, type QuestionData } from "./types";
-
-export { cleanText, isUuid };
 
 export const QUESTION_LIMITS = {
   stemLength: 1000,

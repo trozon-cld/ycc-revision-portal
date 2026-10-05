@@ -9,15 +9,13 @@ import { getErrorCode, withTransaction } from "@/lib/db/transaction";
 import { logActivity } from "@/lib/audit/log";
 import { NO_NAME, normaliseName, validateName } from "@/lib/users/name";
 import { accessEndSql, formatUkDate, resolveAccessEndDate } from "@/lib/candidates/access";
+import { isUuid } from "@/lib/ids";
+import { DUPLICATE_EMAIL, EMAIL_PATTERN, MIN_PASSWORD_LENGTH } from "@/lib/users/credentials";
+import type { FormState } from "@/lib/forms";
 
-export type CandidateActionState = { error?: string; success?: boolean };
-export type CreateCandidateState = CandidateActionState;
-export type ChangeAdminState = CandidateActionState;
+export type CandidateActionState = FormState;
 
-const MIN_PASSWORD_LENGTH = 8;
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const NOT_FOUND = "Candidate not found. The page has been refreshed.";
-const DUPLICATE_EMAIL = "An account with this email already exists.";
 const INVALID_CATEGORY = "Selected category is invalid.";
 
 interface OwnedCandidate {
@@ -53,7 +51,7 @@ export async function createCandidate(
     return { error: "Enter a valid email address." };
   }
   if (password.length < MIN_PASSWORD_LENGTH) {
-    return { error: "Password must be at least 8 characters." };
+    return { error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` };
   }
   const access = resolveAccessEndDate(formData);
   if ("error" in access) {
@@ -153,7 +151,7 @@ export async function updateCandidatePassword(
   const confirmPassword = String(formData.get("confirmPassword") ?? "");
 
   if (password.length < MIN_PASSWORD_LENGTH) {
-    return { error: "Password must be at least 8 characters." };
+    return { error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` };
   }
   if (password !== confirmPassword) {
     return { error: "The two passwords don't match." };
@@ -184,6 +182,7 @@ export async function updateCandidateCategory(
   if (!categoryId) {
     return { error: "Choose a category." };
   }
+  if (!isUuid(categoryId)) return { error: INVALID_CATEGORY };
 
   // A new assigned category also becomes the current one, so the candidate starts there.
   const result = await changeOwnCandidate(session, formData, async (client, id, candidate) => {
@@ -305,7 +304,7 @@ export async function changeCandidateAdmin(
         [candidateId]
       );
       const { rows: admins } = await client.query<{ email: string }>(
-        `select email from users where id = $1 and role = 'admin'`,
+        `select email from users where id = $1 and role = 'admin' for key share`,
         [adminId]
       );
       const candidate = candidates[0];
@@ -326,7 +325,9 @@ export async function changeCandidateAdmin(
       return { success: true };
     });
   } catch (error) {
-    if (getErrorCode(error) === "22P02") {
+    // 23503: the admin was deleted at the same moment.
+    const code = getErrorCode(error);
+    if (code === "22P02" || code === "23503") {
       return { error: "Candidate or admin not found." };
     }
     throw error;

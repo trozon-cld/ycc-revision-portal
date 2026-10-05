@@ -4,6 +4,7 @@ import { ActionForm } from "@/components/admin/action-form";
 import { Field } from "@/components/admin/field";
 import { inputClass } from "@/components/admin/styles";
 import { NAME_MAX_LENGTH } from "@/lib/users/name";
+import { MIN_PASSWORD_LENGTH } from "@/lib/users/credentials";
 import { updateOwnEmail, updateOwnName, updateOwnPassword } from "./actions";
 
 export function ChangeNameForm({ currentName }: { currentName: string | null }) {
@@ -76,13 +77,13 @@ export function ChangePasswordForm() {
           className={inputClass}
         />
       </Field>
-      <Field id="account-new-password" label="New password" hint="At least 8 characters.">
+      <Field id="account-new-password" label="New password" hint={`At least ${MIN_PASSWORD_LENGTH} characters.`}>
         <input
           id="account-new-password"
           name="password"
           type="password"
           required
-          minLength={8}
+          minLength={MIN_PASSWORD_LENGTH}
           autoComplete="new-password"
           className={inputClass}
         />
@@ -93,7 +94,7 @@ export function ChangePasswordForm() {
           name="confirmPassword"
           type="password"
           required
-          minLength={8}
+          minLength={MIN_PASSWORD_LENGTH}
           autoComplete="new-password"
           className={inputClass}
         />

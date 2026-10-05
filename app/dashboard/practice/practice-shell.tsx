@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode, type RefObject } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode, type RefObject } from "react";
 import Link from "next/link";
-import { TEXT_SIZES, type TextSize } from "@/lib/content/book";
+import { DEFAULT_TEXT_SIZE, type TextSize } from "@/lib/content/book";
 import { AccountLinks, HomeLogo } from "@/components/candidate/header";
 import {
   BAR_BUTTON_DENSE,
@@ -10,16 +10,16 @@ import {
   Icon,
   PANEL_LINK,
   ReaderLabelsContext,
+  useReaderLabels,
   SETTINGS_ICON,
   SettingsPanel,
+  TextSizeStep,
   barButton,
 } from "@/components/learning/reader-tools";
 
 // Practice's focused frame, like the Handbook reader: its own bar instead of the site header (on every
 // screen), the page scrolling below it, and the Settings panel covering the page.
 
-// Shared with the Handbook, so one choice applies to both (remembered on this device).
-const LABELS_KEY = "ycc-reader-labels";
 const WIDE_QUERY = "(min-width: 1024px)";
 
 // Phones and tablets: the word sits under the icon; laptops: one slimmer bar with the word beside it.
@@ -64,39 +64,21 @@ export function PracticeShell({
   scrollRef?: RefObject<HTMLDivElement | null>;
   children: ReactNode;
 }) {
-  const [showLabels, setShowLabels] = useState(true);
+  const [showLabels, toggleLabels] = useReaderLabels();
   const [settings, setSettings] = useState(false);
   const settingsButton = useRef<HTMLButtonElement>(null);
   const wasOpen = useRef(false);
   const wide = useSyncExternalStore(subscribeWide, () => window.matchMedia(WIDE_QUERY).matches, () => false);
 
-  useEffect(() => {
-    try {
-      if (window.localStorage.getItem(LABELS_KEY) === "off") setShowLabels(false);
-    } catch {
-      // Storage can be blocked (private windows); labels simply stay on.
-    }
-  }, []);
   // Closing Settings puts focus back on its button.
   useEffect(() => {
     if (wasOpen.current && !settings) settingsButton.current?.focus();
     wasOpen.current = settings;
   }, [settings]);
 
-  const toggleLabels = useCallback(() => {
-    setShowLabels((current) => {
-      try {
-        window.localStorage.setItem(LABELS_KEY, current ? "off" : "on");
-      } catch {
-        // Not remembered, but still switched for this visit.
-      }
-      return !current;
-    });
-  }, []);
 
   const size = showLabels ? BAR_SIZE : ICON_ONLY;
   const word = (text: string) => <span className={showLabels ? undefined : "sr-only"}>{text}</span>;
-  const index = textSize ? TEXT_SIZES.indexOf(textSize) : -1;
 
   return (
     <ReaderLabelsContext.Provider value={showLabels}>
@@ -131,26 +113,8 @@ export function PracticeShell({
           <div className="flex min-w-0 items-center justify-end gap-2">
             {onTextSizeChange && textSize && (
               <div className="flex shrink-0 gap-2 phone-upright:hidden">
-                <button
-                  type="button"
-                  aria-label="Smaller text"
-                  disabled={index <= 0}
-                  onClick={() => onTextSizeChange(TEXT_SIZES[Math.max(0, index - 1)])}
-                  className={`${barButton} ${ICON_ONLY} text-lg`}
-                >
-                  <span aria-hidden="true">A−</span>
-                </button>
-                <button
-                  type="button"
-                  aria-label="Larger text"
-                  disabled={index >= TEXT_SIZES.length - 1}
-                  onClick={() => onTextSizeChange(TEXT_SIZES[Math.min(TEXT_SIZES.length - 1, index + 1)])}
-                  className={`${barButton} ${ICON_ONLY} text-lg`}
-                >
-                  <span aria-hidden="true" className="text-[1.15em]">
-                    A+
-                  </span>
-                </button>
+                <TextSizeStep step={-1} textSize={textSize} onChange={onTextSizeChange} className={`${barButton} ${ICON_ONLY} text-lg`} />
+                <TextSizeStep step={1} textSize={textSize} onChange={onTextSizeChange} className={`${barButton} ${ICON_ONLY} text-lg`} />
               </div>
             )}
             <button
@@ -180,7 +144,7 @@ export function PracticeShell({
           </div>
           {settings && (
             <SettingsPanel
-              textSize={textSize ?? 16}
+              textSize={textSize ?? DEFAULT_TEXT_SIZE}
               onTextSizeChange={onTextSizeChange}
               showLabels={showLabels}
               onToggleLabels={toggleLabels}

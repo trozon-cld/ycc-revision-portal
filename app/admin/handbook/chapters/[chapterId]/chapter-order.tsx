@@ -158,6 +158,8 @@ export function ChapterOrder({ items }: { items: OrderItem[] }) {
                 {item.kind === "page" ? (
                   <PageRowActions
                     id={item.pageId}
+                    itemId={item.id}
+                    position={item.position}
                     title={item.title}
                     status={item.status}
                     isFirst={index === 0}

@@ -1,5 +1,5 @@
 import { pool } from "@/lib/db/pool";
-import { DEFAULT_TEXT_SIZE, TEXT_SIZES, type BookPageData, type ResolvedMedia, type TextSize } from "./book";
+import { toTextSize, type BookPageData, type ResolvedMedia, type TextSize } from "./book";
 import type { BookCovers } from "./covers";
 import { loadPreviewBook } from "./preview";
 
@@ -12,9 +12,8 @@ export type CandidateBook = {
   covers: BookCovers;
 };
 
-// The candidate's current category, as candidates see it: published items in published chapters only.
-// One query for the candidate, their place and the covers; the book's and the covers' pictures are then
-// signed together.
+// The candidate's current category as they see it (published items in published chapters): one query for
+// the candidate, their place and the covers, then all pictures signed together.
 export async function loadCandidateBook(userId: string): Promise<CandidateBook | null> {
   const { rows } = await pool.query<{
     category_id: string;
@@ -40,13 +39,12 @@ export async function loadCandidateBook(userId: string): Promise<CandidateBook |
     { chapterId: null, categoryId: row.category_id, includeDrafts: false },
     { ids: coverIds, thumbIds: coverIds }
   );
-  const size = TEXT_SIZES.find((value) => value === row.reader_text_size) ?? DEFAULT_TEXT_SIZE;
   return {
     categoryName: row.category_name,
     pages: book.pages,
     media: book.media,
     startPageId: row.item_id && book.pages.some((page) => page.id === row.item_id) ? row.item_id : null,
-    textSize: size,
+    textSize: toTextSize(row.reader_text_size),
     covers: {
       categoryName: row.category_name,
       front: row.front_id ? (book.media[row.front_id] ?? null) : null,
@@ -56,9 +54,8 @@ export async function loadCandidateBook(userId: string): Promise<CandidateBook |
   };
 }
 
-// Pictures worth fetching before the reader starts: the front cover, only when the book opens on it
-// (a returning candidate opens at their page). The small copy first; the full one at low priority, so it
-// doesn't hold up the reader itself.
+// The front cover, fetched early only when the book opens on it (returning candidates open at their page):
+// the small copy first, the full one at low priority so it doesn't hold up the reader.
 export function coverPreloads(book: CandidateBook): { href: string; priority: "high" | "low" }[] {
   const front = book.covers.front;
   if (book.startPageId || !front) return [];
@@ -68,4 +65,10 @@ export function coverPreloads(book: CandidateBook): { href: string; priority: "h
         { href: front.src, priority: "low" },
       ]
     : [{ href: front.src, priority: "high" }];
+}
+
+// The candidate's A−/A+ choice, shared by the Handbook and Practice.
+export async function loadReaderTextSize(userId: string): Promise<TextSize> {
+  const { rows } = await pool.query<{ reader_text_size: number | null }>(`select reader_text_size from users where id = $1`, [userId]);
+  return toTextSize(rows[0]?.reader_text_size);
 }

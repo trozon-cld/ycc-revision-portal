@@ -4,6 +4,7 @@ import { ActionForm } from "@/components/admin/action-form";
 import { Field } from "@/components/admin/field";
 import { PanelButton, RowActions, type RowAction } from "@/components/admin/row-actions";
 import { buttonClass, inputClass } from "@/components/admin/styles";
+import { CATEGORY_NAME_MAX_LENGTH } from "@/lib/limits";
 import { createGroup, deleteGroup, moveGroup, renameGroup } from "./group-actions";
 
 export function NewGroupButton() {
@@ -19,7 +20,7 @@ export function NewGroupButton() {
           onCancel={close}
         >
           <Field id="new-group-name" label="Group name" hint="It's added at the end. You can move it afterwards.">
-            <input id="new-group-name" name="name" type="text" required maxLength={100} className={inputClass} />
+            <input id="new-group-name" name="name" type="text" required maxLength={CATEGORY_NAME_MAX_LENGTH} className={inputClass} />
           </Field>
         </ActionForm>
       )}
@@ -62,7 +63,7 @@ export function GroupRowActions({
               name="name"
               type="text"
               required
-              maxLength={100}
+              maxLength={CATEGORY_NAME_MAX_LENGTH}
               defaultValue={name}
               className={inputClass}
             />

@@ -3,8 +3,8 @@
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
 import { logActivity } from "@/lib/audit/log";
-import { isUuid } from "@/lib/content/pages";
 import { getErrorCode, withTransaction } from "@/lib/db/transaction";
+import { isUuid } from "@/lib/ids";
 
 type Outcome = "switched" | "unchanged" | "unavailable";
 

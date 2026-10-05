@@ -2,16 +2,16 @@
 
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
-import { isUuid } from "@/lib/content/pages";
 import { checkPractice, endPractice, nextPractice, setFlag, startPractice, startRetry } from "@/lib/practice/sessions";
-import { isPracticeWay, type PracticeCheckReply, type PracticeNextReply } from "@/lib/practice/types";
+import { MAX_QUESTIONS, isPracticeWay, type PracticeCheckReply, type PracticeNextReply } from "@/lib/practice/types";
+import { isUuid } from "@/lib/ids";
 
 // Candidate practice runs. Not activity-log actions (agreed 1 Oct): they only touch the candidate's own rows.
 
 export type StartState = { error: string | null };
 
 const MAX_CHOICES = 200;
-const validPosition = (value: unknown): value is number => Number.isInteger(value) && (value as number) >= 0 && (value as number) < 2000;
+const validPosition = (value: unknown): value is number => Number.isInteger(value) && (value as number) >= 0 && (value as number) < MAX_QUESTIONS;
 
 export async function startPracticeForm(_prev: StartState, formData: FormData): Promise<StartState> {
   const session = await requireRole(["candidate"]);

@@ -8,11 +8,11 @@ import { logActivity } from "@/lib/audit/log";
 import { requireRole } from "@/lib/auth/guard";
 import { setSessionCookie } from "@/lib/auth/cookies";
 import { NO_NAME, normaliseName, validateName } from "@/lib/users/name";
+import { DUPLICATE_EMAIL, EMAIL_PATTERN, MIN_PASSWORD_LENGTH } from "@/lib/users/credentials";
+import type { FormState } from "@/lib/forms";
 
-export type AccountActionState = { error?: string; success?: boolean };
+export type AccountActionState = FormState;
 
-const MIN_PASSWORD_LENGTH = 8;
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const WRONG_PASSWORD = "Your current password is incorrect.";
 
 // Superadmin and Admins; no password needed for a display name.
@@ -83,7 +83,7 @@ export async function updateOwnEmail(
     });
   } catch (error) {
     if (getErrorCode(error) === "23505") {
-      return { error: "An account with this email already exists." };
+      return { error: DUPLICATE_EMAIL };
     }
     throw error;
   }
@@ -105,7 +105,7 @@ export async function updateOwnPassword(
   const confirmPassword = String(formData.get("confirmPassword") ?? "");
 
   if (password.length < MIN_PASSWORD_LENGTH) {
-    return { error: "New password must be at least 8 characters." };
+    return { error: `New password must be at least ${MIN_PASSWORD_LENGTH} characters.` };
   }
   if (password !== confirmPassword) {
     return { error: "The two new passwords don't match." };

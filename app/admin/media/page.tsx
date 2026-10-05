@@ -2,10 +2,13 @@ import Image from "next/image";
 import { requireRole } from "@/lib/auth/guard";
 import { pool } from "@/lib/db/pool";
 import { getSignedUrls, isStorageConfigured } from "@/lib/storage/storage";
+import { firstParam } from "@/lib/params";
+import { escapeLike } from "@/lib/db/like";
 import { FilterBar, FilterSearch } from "@/components/admin/filter-bar";
 import { PageHeader } from "@/components/admin/page-header";
 import { Pagination, pageFromParam } from "@/components/admin/pagination";
 import { cardClass } from "@/components/admin/styles";
+import { formatBytes } from "@/lib/format";
 import { MediaRowActions } from "./media-row-actions";
 import { UploadMediaButton } from "./upload-media-form";
 
@@ -30,7 +33,7 @@ const LINK_LIFETIME_SECONDS = 60 * 60;
 export default async function MediaPage({ searchParams }: PageProps<"/admin/media">) {
   await requireRole(["superadmin"]);
   const params = await searchParams;
-  const search = (one(params.q) ?? "").trim().slice(0, 100);
+  const search = (firstParam(params.q) ?? "").trim().slice(0, 100);
   const configured = isStorageConfigured();
 
   const matches = `$1 = '' or alt_text ilike '%' || $1 || '%' escape '\\' or original_name ilike '%' || $1 || '%' escape '\\'`;
@@ -39,7 +42,7 @@ export default async function MediaPage({ searchParams }: PageProps<"/admin/medi
     [escapeLike(search)]
   );
   const total = counted[0].total;
-  const page = pageFromParam(one(params.page), total, PAGE_SIZE);
+  const page = pageFromParam(firstParam(params.page), total, PAGE_SIZE);
 
   const { rows: media } = await pool.query<MediaRow>(
     `select id, thumb_path, original_name, mime_type, width, height, byte_size, alt_text,
@@ -159,22 +162,13 @@ export default async function MediaPage({ searchParams }: PageProps<"/admin/medi
   );
 }
 
-function one(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] : value;
-}
 
-function escapeLike(value: string) {
-  return value.replace(/[\\%_]/g, (match) => `\\${match}`);
-}
 
 function fitWithin(width: number, height: number, edge: number) {
   const scale = Math.min(1, edge / Math.max(width, height));
   return { width: Math.max(1, Math.round(width * scale)), height: Math.max(1, Math.round(height * scale)) };
 }
 
-function formatBytes(bytes: number) {
-  return bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
-}
 
 function formatType(mime: string) {
   return mime === "image/webp" ? "WebP" : mime === "image/png" ? "PNG" : "JPEG";

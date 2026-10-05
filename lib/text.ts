@@ -1,10 +1,4 @@
-// Small shared helpers with no imports, so any question module can use them without cycles.
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-export function isUuid(value: unknown): value is string {
-  return typeof value === "string" && UUID.test(value);
-}
+// Small text helpers with no imports, safe anywhere (server, browser, question types, page blocks).
 
 // Trims, collapses spaces, keeps single line breaks (at most one blank line).
 export function cleanText(value: unknown): string {

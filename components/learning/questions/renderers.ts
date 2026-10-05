@@ -17,7 +17,7 @@ export type AnswerAreaProps = {
   content: unknown;
   // Pictures the answer area may show (e.g. picture options), keyed by media id.
   media: ResolvedMedia;
-  // Only present in learn mode.
+  // Learn mode from the start; Practice only once the answer is checked.
   answer: unknown;
   response: unknown;
   onResponse: (response: unknown) => void;
@@ -30,7 +30,7 @@ export type AnswerAreaProps = {
   onSubmit?: () => void;
   // True once the question is checked or revealed: answers can no longer be changed.
   locked: boolean;
-  // True when the correct answer should be shown (learn mode, after Check or Reveal).
+  // True when the correct answer should be shown (after Check or Reveal in the Handbook, after Check in Practice).
   showCorrect: boolean;
   result: CheckResult | null;
 };

@@ -7,6 +7,7 @@ import { getQuestionTypeDef } from "@/lib/questions/registry";
 import type { ClientQuestion } from "@/lib/questions/public";
 import type { CheckResult } from "@/lib/questions/types";
 import { InlineText } from "../inline-text";
+import { MarkIcon } from "./answer-parts";
 import { BookPicture } from "../picture";
 import { QUESTION_RENDERERS } from "./renderers";
 
@@ -52,7 +53,8 @@ export function QuestionView({
   // Shuffle seed for Practice and Mock; defaults to the question id.
   seed?: string;
   // Practice: marks on the server. Learn marks in the browser with the answer it already has.
-  onCheck?: (response: unknown) => Promise<CheckReply | null>;
+  // null: couldn't be checked (a notice asks to try again); false: the caller has already dealt with it.
+  onCheck?: (response: unknown) => Promise<CheckReply | null | false>;
   // Exam: reports every change; nothing is marked here.
   onResponseChange?: (response: unknown) => void;
   // Optional: the host keeps the state, so several copies of one question stay in step (the book).
@@ -95,12 +97,13 @@ export function QuestionView({
     }
     setChecking(true);
     try {
-      const marked: CheckReply | null | undefined =
+      const marked: CheckReply | null | false | undefined =
         mode === "learn"
           ? checkAnswer({ type: question.type, content: question.content, answer: question.answer }, response)
           : await onCheck?.(response);
+      if (marked === false) return;
       if (!marked) {
-        setState({ notice: "This answer couldn't be checked. Please try again." });
+        setState({ notice: "This answer couldn’t be checked. Please try again." });
         return;
       }
       const reveal = mode === "practice" && marked.answer !== undefined ? { answer: marked.answer, explanation: marked.explanation ?? null } : undefined;
@@ -159,7 +162,7 @@ export function QuestionView({
               result={result}
             />
           ) : (
-            <p className="rounded-lg bg-slate-100 px-[0.9em] py-[0.7em] text-slate-700">This question can&apos;t be shown yet.</p>
+            <p className="rounded-lg bg-slate-100 px-[0.9em] py-[0.7em] text-slate-700">This question can’t be shown yet.</p>
           )}
         </div>
       </fieldset>
@@ -213,9 +216,7 @@ function Feedback({ correct, showsAnswer }: { correct: boolean; showsAnswer: boo
         correct ? "border-green-700 bg-green-50 text-green-900" : "border-amber-600 bg-amber-50 text-amber-950"
       }`}
     >
-      <svg viewBox="0 0 20 20" aria-hidden="true" className="mt-[0.15em] size-[1.1em] shrink-0" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
-        {correct ? <path d="M4 10.5l4 4 8-9" /> : <path d="M5 5l10 10M15 5L5 15" />}
-      </svg>
+      <MarkIcon name={correct ? "tick" : "cross"} className="mt-[0.15em] size-[1.1em] shrink-0" />
       <span>
         {correct ? "Correct." : "Not quite."}
         {!correct && showsAnswer && <span className="font-normal"> The correct answer is highlighted.</span>}

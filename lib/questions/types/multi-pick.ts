@@ -1,6 +1,7 @@
 import { plainText } from "@/lib/content/inline";
+import { cleanLine, isRecord } from "@/lib/text";
+import { isUuid } from "@/lib/ids";
 import { defineQuestionType } from "../define";
-import { cleanLine, isRecord, isUuid } from "../text";
 import { optionLetter } from "./single-text";
 
 // Multiple answers ("pick N"): the candidate chooses exactly N options. All or nothing: correct only

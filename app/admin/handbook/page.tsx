@@ -7,6 +7,7 @@ import { Badge } from "@/components/admin/badge";
 import { PageHeader } from "@/components/admin/page-header";
 import { buttonClass } from "@/components/admin/styles";
 import { Cell, Row, Table } from "@/components/admin/table";
+import { countOf } from "@/lib/format";
 import { ChapterRowActions, NewChapterButton } from "./chapter-row-actions";
 import { NewSectionButton, SectionRowActions, type SectionOption } from "./section-row-actions";
 
@@ -62,7 +63,7 @@ export default async function HandbookPage() {
     <>
       <PageHeader
         title="Handbook"
-        description={`${count(sections.length, "section")} · ${count(chapters.length, "chapter")}`}
+        description={`${countOf(sections.length, "section")} · ${countOf(chapters.length, "chapter")}`}
         actions={
           <>
             <Link href="/admin/handbook/preview" className={buttonClass("secondary")}>
@@ -95,7 +96,7 @@ export default async function HandbookPage() {
                     {label}
                   </h2>
                   <p className="text-sm text-slate-600">
-                    {count(sectionChapters.length, "chapter")}
+                    {countOf(sectionChapters.length, "chapter")}
                     {/* A section is in the book once one of its chapters is published. */}
                     {!sectionChapters.some((chapter) => chapter.status === "published") && " · Not in the book yet"}
                     {uncategorised > 0 && (
@@ -169,10 +170,6 @@ export default async function HandbookPage() {
       </div>
     </>
   );
-}
-
-function count(n: number, noun: string) {
-  return `${n} ${noun}${n === 1 ? "" : "s"}`;
 }
 
 function CategoryCount({ linked, total }: { linked: number; total: number }) {

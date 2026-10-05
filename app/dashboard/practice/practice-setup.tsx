@@ -1,8 +1,9 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { PRACTICE_SIZES, type PracticeOptions, type PracticeWay } from "@/lib/practice/types";
+import { PRACTICE_SIZES, WEAK_BELOW, type PracticeOptions, type PracticeWay } from "@/lib/practice/types";
 import { CHOICE_INPUT, CHOICE_ROW, PRIMARY_BUTTON } from "@/components/candidate/buttons";
+import { countOf } from "@/lib/format";
 import { startPracticeForm, type StartState } from "./actions";
 
 const WAYS: { way: PracticeWay; title: string; description: string }[] = [
@@ -16,10 +17,8 @@ const FOCUS: { way: PracticeWay; title: string; description: string; none: strin
   { way: "wrong", title: "Questions I got wrong", description: "Ones you got wrong the last time you practised them.", none: "None yet: you haven’t got any wrong in Practice." },
   { way: "flagged", title: "Flagged questions", description: "Ones you flagged for review.", none: "None yet: use “Flag for review” on a question to add it here." },
   { way: "unseen", title: "Not practised yet", description: "Ones you haven’t answered in Practice.", none: "None left: you’ve practised every question." },
-  { way: "weak", title: "Weak areas", description: "Chapters where you get less than 70% right.", none: "Practise a little more to find your weak areas." },
+  { way: "weak", title: "Weak areas", description: `Chapters where you get less than ${Math.round(WEAK_BELOW * 100)}% right.`, none: "Practise a little more to find your weak areas." },
 ];
-
-const plural = (count: number) => `${count} question${count === 1 ? "" : "s"}`;
 
 export function PracticeSetup({ options, hasOpen }: { options: PracticeOptions; hasOpen: boolean }) {
   const [state, action, pending] = useActionState<StartState, FormData>(startPracticeForm, { error: null });
@@ -54,7 +53,7 @@ export function PracticeSetup({ options, hasOpen }: { options: PracticeOptions; 
                 <span className="text-lg font-semibold text-ink">{item.title}</span>
                 <span className="text-base text-ink/80">
                   {item.description}
-                  {item.way === "all" && ` ${plural(options.total)}.`}
+                  {item.way === "all" && ` ${countOf(options.total, "question")}.`}
                 </span>
               </span>
             </label>
@@ -79,7 +78,7 @@ export function PracticeSetup({ options, hasOpen }: { options: PracticeOptions; 
                 <span className="flex min-w-0 flex-col">
                   <span className="text-lg font-semibold">{item.title}</span>
                   <span className="text-base text-ink/80 [overflow-wrap:anywhere]">
-                    {count === 0 ? item.none : weak ? `${item.description} ${plural(count)} from:` : `${item.description} ${plural(count)}.`}
+                    {count === 0 ? item.none : weak ? `${item.description} ${countOf(count, "question")} from:` : `${item.description} ${countOf(count, "question")}.`}
                   </span>
                   {weak && (
                     <span className="mt-1 flex flex-col text-base text-ink">
@@ -117,7 +116,7 @@ export function PracticeSetup({ options, hasOpen }: { options: PracticeOptions; 
                       />
                       <span className="flex min-w-0 flex-col">
                         <span className="text-lg font-semibold text-ink [overflow-wrap:anywhere]">{chapter.label}</span>
-                        <span className="text-base text-ink/80">{plural(chapter.count)}</span>
+                        <span className="text-base text-ink/80">{countOf(chapter.count, "question")}</span>
                       </span>
                     </label>
                   ))}
@@ -144,7 +143,7 @@ export function PracticeSetup({ options, hasOpen }: { options: PracticeOptions; 
                 />
                 <span className="flex min-w-0 flex-col">
                   <span className="text-lg font-semibold text-ink">{item.name}</span>
-                  <span className="text-base text-ink/80">{plural(item.count)}</span>
+                  <span className="text-base text-ink/80">{countOf(item.count, "question")}</span>
                 </span>
               </label>
             ))}

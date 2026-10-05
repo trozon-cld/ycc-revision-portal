@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { ACCESS_TIME_ZONE } from "@/lib/candidates/access";
+import { formatUkDate } from "@/lib/candidates/access";
 import type { PracticeReport } from "@/lib/practice/sessions";
 import { PageBody } from "@/components/candidate/page-body";
 import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { InlineText } from "@/components/learning/inline-text";
 import { practiseAgain } from "../actions";
 import { FlagButton } from "../flag-button";
+import { RetryButton } from "./retry-button";
 import { ReviewQuestion } from "./review-question";
 import { PracticeShell } from "../practice-shell";
 
@@ -37,7 +38,7 @@ function timeText(seconds: number): string {
 
 export function PracticeReportView({ report, againUnavailable }: { report: PracticeReport; againUnavailable: boolean }) {
   const percent = report.answered ? Math.round((report.rightCount / report.answered) * 100) : 0;
-  const date = new Date(report.finishedAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: ACCESS_TIME_ZONE });
+  const date = formatUkDate(report.finishedAt, "long");
   const what = report.choiceNames.length ? `${MODE_NAMES[report.mode]}: ${report.choiceNames.join(", ")}` : MODE_NAMES[report.mode];
   const endedEarly = report.answered + report.skipped < report.total;
 
@@ -81,9 +82,7 @@ export function PracticeReportView({ report, againUnavailable }: { report: Pract
             {report.canRetry && report.wrong && (
               <form action={practiseAgain}>
                 <input type="hidden" name="sessionId" value={report.id} />
-                <button type="submit" className={`${PRIMARY_BUTTON} w-full`}>
-                  Practise these {report.wrong.length} again
-                </button>
+                <RetryButton count={report.wrong.length} />
               </form>
             )}
             <Link href="/dashboard/practice" className={report.canRetry ? SECONDARY_BUTTON : PRIMARY_BUTTON}>
@@ -142,7 +141,7 @@ export function PracticeReportView({ report, againUnavailable }: { report: Pract
                           </span>
                         </summary>
                         <div className="border-t border-ink/15 px-4 py-5 text-[18px] text-ink">
-                          <ReviewQuestion question={item.question} checked={item.checked} media={report.media} />
+                          <ReviewQuestion sessionId={report.id} question={item.question} checked={item.checked} media={report.media} />
                           {report.canRetry && <FlagButton questionId={item.question.id} initialFlagged={item.flagged} className="mt-5" />}
                         </div>
                       </details>

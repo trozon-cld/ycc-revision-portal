@@ -5,9 +5,8 @@ import { LOGO } from "@/lib/brand";
 
 type CoverImage = { src: string; alt: string; thumb?: string };
 
-// The whole picture always shows; any room around it is filled with a blurred copy, so no picture
-// shape leaves empty bars. With a small copy (`thumb`) that shows at once, blurred, and the full
-// picture fades in over it when it has arrived. `blur` is in px, smaller for the admin's previews.
+// The whole picture shows, with a blurred copy filling any room around it; a small copy (`thumb`) shows
+// at once and the full picture fades in over it. `blur` is in px, smaller in the admin previews.
 export function CoverPicture({
   picture,
   blur = 28,
@@ -116,7 +115,7 @@ export function BackCoverFace({
       <div aria-hidden="true" className="h-[0.35em] shrink-0 bg-accent" />
       {/* Capped so large reader text doesn't squeeze the picture on short screens. */}
       <div className="shrink-0 px-[1.2em] py-[1em] text-center text-[min(1em,20px)] text-ink">
-        <p className="text-[1.05em] font-semibold">You&apos;ve reached the end of the Handbook.</p>
+        <p className="text-[1.05em] font-semibold">You’ve reached the end of the Handbook.</p>
         <div className="mt-[0.8em] flex flex-wrap justify-center gap-[0.6em]">{actions}</div>
       </div>
     </div>

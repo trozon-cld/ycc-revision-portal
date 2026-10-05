@@ -135,10 +135,14 @@ export function PracticeRunner({ initialStep, initialTextSize }: { initialStep: 
                 setStep((current) => (current.position === step.position && !current.checked ? { ...current, answered: current.answered + 1 } : current));
                 return reply.checked;
               }
-              if (reply.reason === "moved") leave();
+              if (reply.reason === "moved") {
+                leave();
+                return false;
+              }
               if (reply.reason === "gone") {
                 setMessage("That question is no longer available, so we’ve moved on.");
                 goNext();
+                return false;
               }
               return null;
             }}

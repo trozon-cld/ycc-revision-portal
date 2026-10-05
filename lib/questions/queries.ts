@@ -1,6 +1,7 @@
 import type { PoolClient } from "pg";
 import { pool } from "@/lib/db/pool";
 import { chapterNumber, sectionLetter } from "@/lib/handbook/structure";
+import { escapeLike } from "@/lib/db/like";
 import { parseQuestionRef } from "./labels";
 import type { QuestionStatus, QuestionType, StoredQuestion } from "./types";
 
@@ -180,9 +181,4 @@ export async function readQuestionForUpdate(client: PoolClient, id: string): Pro
     inMock: row.in_mock,
     version: row.content_version,
   };
-}
-
-// Treat the user's % and _ literally; Postgres LIKE uses backslash as its escape.
-function escapeLike(value: string): string {
-  return value.replace(/[\\%_]/g, "\\$&");
 }

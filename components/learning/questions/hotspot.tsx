@@ -2,6 +2,8 @@
 
 import { type KeyboardEvent, type MouseEvent, useContext } from "react";
 import { roundTenth, type HotspotAnswer, type HotspotArea, type HotspotContent, type HotspotPoint } from "@/lib/questions/types/hotspot";
+import type { ResolvedMedia } from "@/lib/content/book";
+import { MarkIcon, type Mark } from "./answer-parts";
 import type { AnswerAreaProps } from "./renderers";
 import { MeasuringContext } from "../measuring";
 
@@ -19,9 +21,8 @@ function readPoint(value: unknown): HotspotPoint | null {
 
 const clamp = (value: number) => Math.min(100, Math.max(0, roundTenth(value)));
 
-// Candidate answer area for "Tap the area": one marker on the picture. Tap to place or move it;
-// keyboard users move it with the arrow keys and check with Enter. Results are drawn over the
-// picture, so nothing changes height after Check and nothing moves page in the book.
+// "Tap the area": one marker, placed by tapping or moved with arrow keys (Enter checks). Results are drawn
+// over the picture, so nothing changes height after Check or moves page in the book.
 export function HotspotAnswer({ content, media, answer, response, onResponse, onSubmit, locked, showCorrect, result }: AnswerAreaProps) {
   const measuring = useContext(MeasuringContext);
   const data = content as HotspotContent;
@@ -79,24 +80,7 @@ export function HotspotAnswer({ content, media, answer, response, onResponse, on
           }`}
         >
           {/* An in-flow picture can't be split across book pages; the markers sit on top of it. */}
-          {picture ? (
-            // eslint-disable-next-line @next/next/no-img-element -- short-lived signed link; files are pre-shrunk WebP
-            <img
-              src={measuring ? undefined : picture.src}
-              alt=""
-              width={picture.width}
-              height={picture.height}
-              draggable={false}
-              loading="lazy"
-              decoding="async"
-              className="pointer-events-none block h-auto w-full rounded-md"
-              style={{ aspectRatio: String(ratio) }}
-            />
-          ) : (
-            <span className="grid w-full place-items-center text-[0.85em] text-slate-700" style={{ aspectRatio: String(ratio) }}>
-              Picture unavailable
-            </span>
-          )}
+          <TapPicture picture={picture} ratio={ratio} measuring={measuring} />
           {areas.map((area) => (
             <AreaOutline key={area.id} area={area} label={solution?.label} />
           ))}
@@ -158,10 +142,29 @@ function Marker({ point, marked }: { point: HotspotPoint; marked: "right" | "wro
   );
 }
 
-export function Icon({ name }: { name: "tick" | "cross" }) {
-  return (
-    <svg viewBox="0 0 20 20" aria-hidden="true" className="size-[1.1em] shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      {name === "tick" ? <path d="M4 10.5l4 4 8-9" /> : <path d="M5 5l10 10M15 5L5 15" />}
-    </svg>
+// The picture under the tap targets (hotspot and area questions), or a placeholder of the same shape.
+export function TapPicture({ picture, ratio, measuring }: { picture: ResolvedMedia[string] | undefined; ratio: number; measuring: boolean }) {
+  return picture ? (
+    // eslint-disable-next-line @next/next/no-img-element -- short-lived signed link; files are pre-shrunk WebP
+    <img
+      src={measuring ? undefined : picture.src}
+      alt=""
+      width={picture.width}
+      height={picture.height}
+      draggable={false}
+      loading="lazy"
+      decoding="async"
+      className="pointer-events-none block h-auto w-full rounded-md"
+      style={{ aspectRatio: String(ratio) }}
+    />
+  ) : (
+    <span className="grid w-full place-items-center text-[0.85em] text-slate-700" style={{ aspectRatio: String(ratio) }}>
+      Picture unavailable
+    </span>
   );
+}
+
+// The bolder mark used on pictures (hotspot, area and match questions).
+export function Icon({ name }: { name: Mark }) {
+  return <MarkIcon name={name} className="size-[1.1em] shrink-0" strokeWidth="2.5" />;
 }

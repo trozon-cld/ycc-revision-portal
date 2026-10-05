@@ -1,6 +1,9 @@
 // A content page is an ordered list of typed blocks, stored as JSON. Every block keeps a stable
 // id so later features (Listen, translations) can refer to it. New types can be added freely.
 
+import { cleanText, isRecord } from "@/lib/text";
+import { isUuid } from "@/lib/ids";
+
 export type HeadingBlock = { id: string; type: "heading"; level: 1 | 2; text: string };
 export type ParagraphBlock = { id: string; type: "paragraph"; text: string };
 export type ListBlock = { id: string; type: "list"; style: "bullet" | "numbered"; items: string[] };
@@ -32,8 +35,6 @@ export const BLOCK_LIMITS = {
   captionLength: 300,
 } as const;
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 export type ParseResult = { ok: true; blocks: Block[] } | { ok: false; error: string };
 
 // Checks untrusted JSON (from the editor or the database) and returns clean, typed blocks.
@@ -59,17 +60,17 @@ export function parseBlocks(value: unknown): ParseResult {
 function parseBlock(raw: unknown): Block | string {
   if (!isRecord(raw)) return "not a block.";
   const id = raw.id;
-  if (typeof id !== "string" || !UUID.test(id)) return "missing or invalid id.";
+  if (!isUuid(id)) return "missing or invalid id.";
 
   switch (raw.type) {
     case "heading": {
-      const text = cleanText(raw.text, BLOCK_LIMITS.headingLength, "heading");
+      const text = cleanBlockText(raw.text, BLOCK_LIMITS.headingLength, "heading");
       if (typeof text !== "string" || !text) return typeof text === "string" ? "heading is empty." : text.error;
       if (raw.level !== 1 && raw.level !== 2) return "heading level must be 1 or 2.";
       return { id, type: "heading", level: raw.level, text };
     }
     case "paragraph": {
-      const text = cleanText(raw.text, BLOCK_LIMITS.textLength, "paragraph");
+      const text = cleanBlockText(raw.text, BLOCK_LIMITS.textLength, "paragraph");
       if (typeof text !== "string" || !text) return typeof text === "string" ? "paragraph is empty." : text.error;
       return { id, type: "paragraph", text };
     }
@@ -79,17 +80,17 @@ function parseBlock(raw: unknown): Block | string {
       if (raw.items.length > BLOCK_LIMITS.listItems) return `a list can have up to ${BLOCK_LIMITS.listItems} items.`;
       const items: string[] = [];
       for (const item of raw.items) {
-        const text = cleanText(item, BLOCK_LIMITS.listItemLength, "list item");
+        const text = cleanBlockText(item, BLOCK_LIMITS.listItemLength, "list item");
         if (typeof text !== "string" || !text) return typeof text === "string" ? "list item is empty." : text.error;
         items.push(text);
       }
       return { id, type: "list", style: raw.style, items };
     }
     case "picture": {
-      if (typeof raw.mediaId !== "string" || !UUID.test(raw.mediaId)) return "choose a picture.";
+      if (!isUuid(raw.mediaId)) return "choose a picture.";
       const picture: PictureBlock = { id, type: "picture", mediaId: raw.mediaId };
       if (raw.caption !== undefined && raw.caption !== "") {
-        const caption = cleanText(raw.caption, BLOCK_LIMITS.captionLength, "caption");
+        const caption = cleanBlockText(raw.caption, BLOCK_LIMITS.captionLength, "caption");
         if (typeof caption !== "string") return caption.error;
         if (caption) picture.caption = caption;
       }
@@ -106,7 +107,7 @@ function parseBlock(raw: unknown): Block | string {
     }
     case "callout": {
       if (raw.tone !== "key-point" && raw.tone !== "remember") return "box style must be key point or remember.";
-      const text = cleanText(raw.text, BLOCK_LIMITS.textLength, "box");
+      const text = cleanBlockText(raw.text, BLOCK_LIMITS.textLength, "box");
       if (typeof text !== "string" || !text) return typeof text === "string" ? "box is empty." : text.error;
       return { id, type: "callout", tone: raw.tone, text };
     }
@@ -116,21 +117,11 @@ function parseBlock(raw: unknown): Block | string {
 }
 
 // Trims ends and each line; keeps single line breaks inside text (shown as new lines).
-function cleanText(value: unknown, max: number, label: string): string | { error: string } {
+function cleanBlockText(value: unknown, max: number, label: string): string | { error: string } {
   if (typeof value !== "string") return { error: `${label} text is missing.` };
-  const text = value
-    .replace(/\r\n?/g, "\n")
-    .split("\n")
-    .map((line) => line.replace(/[ \t]+/g, " ").trim())
-    .join("\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+  const text = cleanText(value);
   if (text.length > max) return { error: `${label} must be ${max} characters or fewer.` };
   return text;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 export function collectMediaIds(blocks: Block[]): string[] {

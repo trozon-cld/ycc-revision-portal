@@ -9,8 +9,9 @@ import { questionRef } from "@/lib/questions/labels";
 import { listChapterOptions } from "@/lib/questions/queries";
 import type { QuestionStatus, QuestionType } from "@/lib/questions/types";
 import { editableDraft } from "@/lib/questions/drafts";
-import { isUuid, parseQuestion } from "@/lib/questions/validate";
+import { parseQuestion } from "@/lib/questions/validate";
 import { isStorageConfigured } from "@/lib/storage/storage";
+import { isUuid } from "@/lib/ids";
 import { QuestionEditor } from "../question-editor";
 
 export default async function EditQuestionPage({ params }: PageProps<"/admin/questions/[questionId]">) {

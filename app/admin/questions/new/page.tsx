@@ -5,18 +5,19 @@ import { listChapterOptions } from "@/lib/questions/queries";
 import { getQuestionTypeDef } from "@/lib/questions/registry";
 import { isQuestionType } from "@/lib/questions/types";
 import { emptyDraft } from "@/lib/questions/drafts";
-import { isUuid } from "@/lib/questions/validate";
 import { isStorageConfigured } from "@/lib/storage/storage";
+import { isUuid } from "@/lib/ids";
+import { firstParam } from "@/lib/params";
 import { QuestionEditor } from "../question-editor";
 
 export default async function NewQuestionPage({ searchParams }: PageProps<"/admin/questions/new">) {
   await requireRole(["superadmin"]);
   const params = await searchParams;
-  const type = one(params.type);
+  const type = firstParam(params.type);
   if (!isQuestionType(type) || !getQuestionTypeDef(type)) notFound();
 
   const chapters = await listChapterOptions();
-  const chapterParam = one(params.chapter);
+  const chapterParam = firstParam(params.chapter);
   const known = chapters.some((section) => section.chapters.some((chapter) => chapter.id === chapterParam));
   // Ids are made here, not in the browser, so the server and browser render the same options.
   const empty = emptyDraft(type, randomUUID);
@@ -48,8 +49,4 @@ export default async function NewQuestionPage({ searchParams }: PageProps<"/admi
       loadProblem={null}
     />
   );
-}
-
-function one(value: string | string[] | undefined): string | undefined {
-  return Array.isArray(value) ? value[0] : value;
 }

@@ -8,9 +8,11 @@ import { logActivity } from "@/lib/audit/log";
 import { questionLogLabel } from "@/lib/questions/labels";
 import { readQuestionForUpdate } from "@/lib/questions/queries";
 import { questionTypeLabel } from "@/lib/questions/registry";
-import { isUuid, parseQuestion, type ParsedQuestion } from "@/lib/questions/validate";
+import { parseQuestion, type ParsedQuestion } from "@/lib/questions/validate";
+import { isUuid } from "@/lib/ids";
+import type { FormState } from "@/lib/forms";
 
-export type QuestionActionState = { error?: string; success?: boolean };
+export type QuestionActionState = FormState;
 export type QuestionSaveInput = {
   // null for a question that hasn't been saved yet.
   questionId: string | null;

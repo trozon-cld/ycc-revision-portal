@@ -1,5 +1,6 @@
+import { cleanLine, isRecord } from "@/lib/text";
+import { isUuid } from "@/lib/ids";
 import { defineQuestionType } from "../define";
-import { cleanLine, isRecord, isUuid } from "../text";
 import { optionLetter } from "./single-text";
 
 // Single answer, picture options: the candidate picks one picture; exactly one is correct.

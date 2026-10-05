@@ -2,7 +2,7 @@ import type { PoolClient } from "pg";
 import type { HandbookOutcome } from "@/lib/content/book";
 import { pool } from "@/lib/db/pool";
 import { withTransaction } from "@/lib/db/transaction";
-import { checkAnswer } from "@/lib/questions/check";
+import { checkAnswer, isOversizedResponse } from "@/lib/questions/check";
 import type { QuestionType } from "@/lib/questions/types";
 import { recordQuestionResult } from "./question-results";
 
@@ -11,7 +11,6 @@ import { recordQuestionResult } from "./question-results";
 // Most items a browser may report in one save; one view shows at most two pages.
 export const DONE_BATCH_LIMIT = 100;
 // A response is a few ids or a point; anything bigger isn't a real answer.
-const RESPONSE_LIMIT = 4000;
 
 // Adds items to the chapter rows, keeping only ids still in that chapter. Unchanged rows aren't rewritten.
 async function addDone(
@@ -62,10 +61,7 @@ export async function markPagesDone(userId: string, itemIds: string[]): Promise<
 
 // A Handbook question checked or revealed. The answer is marked here, never trusted from the browser.
 export async function recordHandbookQuestion(userId: string, itemId: string, outcome: HandbookOutcome): Promise<void> {
-  if (outcome.kind === "check") {
-    const size = JSON.stringify(outcome.response ?? null)?.length ?? 0;
-    if (size > RESPONSE_LIMIT) return;
-  }
+  if (outcome.kind === "check" && isOversizedResponse(outcome.response)) return;
   const { rows } = await pool.query<{
     category_id: string;
     chapter_id: string;

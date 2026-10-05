@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/auth/guard";
 import { pool } from "@/lib/db/pool";
-import { ACCESS_TIME_ZONE } from "@/lib/candidates/access";
+import { ACCESS_TIME_ZONE, formatUkDate } from "@/lib/candidates/access";
 import {
   ACTION_AREAS,
   ACTIVITY_ACTIONS,
@@ -17,10 +17,17 @@ import { FilterBar, FilterSearch, FilterSelect } from "@/components/admin/filter
 import { Breakable } from "@/components/admin/breakable";
 import { PageHeader } from "@/components/admin/page-header";
 import { buttonClass } from "@/components/admin/styles";
+import { Pagination } from "@/components/admin/pagination";
 import { Cell, Row, Table } from "@/components/admin/table";
+import { ActionForm } from "@/components/admin/action-form";
+import { ARCHIVE_AFTER_DAYS, archiveMonthText, listArchives, loadArchiveStatus } from "@/lib/audit/archive";
+import { formatBytes } from "@/lib/format";
+import { isUuid } from "@/lib/ids";
+import { firstParam } from "@/lib/params";
+import { escapeLike } from "@/lib/db/like";
+import { archiveOldLoginRecords } from "./actions";
 
 const PAGE_SIZE = 50;
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ROLE_LABELS = { superadmin: "Superadmin", admin: "Admin", candidate: "Candidate" } as const;
 type RoleKey = keyof typeof ROLE_LABELS;
 
@@ -55,12 +62,13 @@ export default async function ActivityPage({ searchParams }: PageProps<"/admin/a
   const isSuperadmin = session.role === "superadmin";
   const params = await searchParams;
 
-  const tab = one(params.tab) === "logins" ? "logins" : "activity";
-  const page = Math.max(1, Number.parseInt(one(params.page) ?? "1", 10) || 1);
-  const actionParam = one(params.action) ?? "";
-  const eventParam = one(params.event) ?? "";
-  const actorParam = one(params.actor) ?? "";
-  const emailSearch = isSuperadmin ? (one(params.q) ?? "").trim().slice(0, 100) : "";
+  const tabParam = firstParam(params.tab);
+  const tab = tabParam === "logins" ? "logins" : tabParam === "archives" && isSuperadmin ? "archives" : "activity";
+  const page = Math.max(1, Number.parseInt(firstParam(params.page) ?? "1", 10) || 1);
+  const actionParam = firstParam(params.action) ?? "";
+  const eventParam = firstParam(params.event) ?? "";
+  const actorParam = firstParam(params.actor) ?? "";
+  const emailSearch = isSuperadmin ? (firstParam(params.q) ?? "").trim().slice(0, 100) : "";
 
   const allowedActions = isSuperadmin
     ? (Object.keys(ACTIVITY_ACTIONS) as ActivityAction[])
@@ -68,7 +76,7 @@ export default async function ActivityPage({ searchParams }: PageProps<"/admin/a
   const action = isActivityAction(actionParam) && allowedActions.includes(actionParam) ? actionParam : null;
   const event = isAuthEvent(eventParam) ? eventParam : null;
   // Admins are always pinned to their own entries, whatever the URL says.
-  const actorId = isSuperadmin ? (UUID_PATTERN.test(actorParam) ? actorParam : null) : session.sub;
+  const actorId = isSuperadmin ? (isUuid(actorParam) ? actorParam : null) : session.sub;
   const offset = (page - 1) * PAGE_SIZE;
 
   const filters: Record<string, string> =
@@ -90,6 +98,7 @@ export default async function ActivityPage({ searchParams }: PageProps<"/admin/a
       <nav aria-label="Log type" className="mb-4 inline-flex rounded-md border border-slate-300 bg-white p-0.5">
         <TabLink href="/admin/activity" isCurrent={tab === "activity"} label="Actions" />
         <TabLink href="/admin/activity?tab=logins" isCurrent={tab === "logins"} label="Logins" />
+        {isSuperadmin && <TabLink href="/admin/activity?tab=archives" isCurrent={tab === "archives"} label="Archives" />}
       </nav>
 
       {tab === "activity" ? (
@@ -103,6 +112,8 @@ export default async function ActivityPage({ searchParams }: PageProps<"/admin/a
           page={page}
           filters={filters}
         />
+      ) : tab === "archives" ? (
+        <ArchivesTab page={page} />
       ) : (
         <LoginsTab
           isSuperadmin={isSuperadmin}
@@ -232,7 +243,7 @@ async function ActivityTab({
         ))}
       </Table>
 
-      <Pagination page={page} hasMore={hasMore} filters={filters} />
+      <Pagination basePath="/admin/activity" page={page} hasMore={hasMore} query={filters} />
     </>
   );
 }
@@ -318,7 +329,81 @@ async function LoginsTab({
         ))}
       </Table>
 
-      <Pagination page={page} hasMore={hasMore} filters={filters} />
+      <Pagination basePath="/admin/activity" page={page} hasMore={hasMore} query={filters} />
+    </>
+  );
+}
+
+const ARCHIVE_PAGE_SIZE = 12;
+
+async function ArchivesTab({ page }: { page: number }) {
+  const [status, archives] = await Promise.all([
+    loadArchiveStatus(),
+    listArchives((page - 1) * ARCHIVE_PAGE_SIZE, ARCHIVE_PAGE_SIZE + 1),
+  ]);
+  const hasMore = archives.length > ARCHIVE_PAGE_SIZE;
+  const waitingRecords = status.waiting.reduce((sum, month) => sum + month.count, 0);
+
+  return (
+    <>
+      <section aria-labelledby="archive-heading" className="mb-6 rounded-lg border border-slate-200 bg-white p-4">
+        <h2 id="archive-heading" className="text-base font-semibold text-ink">
+          Old login records
+        </h2>
+        <p className="mt-1 text-sm text-slate-600">
+          Whole months older than {ARCHIVE_AFTER_DAYS} days (UK time) are saved to a file below, then removed from the
+          Logins list. Each month is archived once. The Actions log is kept in full.
+        </p>
+        {status.waiting.length > 0 ? (
+          <div className="mt-3">
+            <p className="mb-3 text-sm text-ink">
+              Ready to archive: {status.waiting.map((month) => archiveMonthText(month.month)).join(", ")} (
+              {waitingRecords.toLocaleString("en-GB")} record{waitingRecords === 1 ? "" : "s"}).
+            </p>
+            <ActionForm
+              action={archiveOldLoginRecords}
+              layout="inline"
+              submitLabel="Archive old login records"
+              pendingLabel="Archiving…"
+              successMessage="Old login records archived."
+            />
+          </div>
+        ) : (
+          <p className="mt-3 text-sm text-ink">
+            Nothing to archive yet.
+            {status.next &&
+              ` The next month (${archiveMonthText(status.next.month)}) can be archived from ${formatUkDate(status.next.from)}.`}
+          </p>
+        )}
+      </section>
+
+      <Table
+        columns={["Month", "Records", "File", "Archived", ""]}
+        isEmpty={archives.length === 0}
+        emptyMessage="No months archived yet."
+      >
+        {archives.slice(0, ARCHIVE_PAGE_SIZE).map((archive) => (
+          <Row key={archive.id}>
+            <Cell kind="primary">{archiveMonthText(archive.month)}</Cell>
+            <Cell label="Records">{archive.recordCount.toLocaleString("en-GB")}</Cell>
+            <Cell label="File">{formatBytes(archive.byteSize)}</Cell>
+            <Cell label="Archived" breakAnywhere>
+              {formatUkDateTime(archive.createdAt)} by <Breakable text={archive.archivedByEmail} />
+            </Cell>
+            <Cell label="Download">
+              {archive.downloadUrl ? (
+                <a href={archive.downloadUrl} className={buttonClass("secondary", "sm")}>
+                  Download
+                </a>
+              ) : (
+                <span className="text-slate-600">Unavailable</span>
+              )}
+            </Cell>
+          </Row>
+        ))}
+      </Table>
+
+      <Pagination basePath="/admin/activity" page={page} hasMore={hasMore} query={{ tab: "archives" }} />
     </>
   );
 }
@@ -334,45 +419,6 @@ function TabLink({ href, isCurrent, label }: { href: string; isCurrent: boolean;
     >
       {label}
     </Link>
-  );
-}
-
-function Pagination({
-  page,
-  hasMore,
-  filters,
-}: {
-  page: number;
-  hasMore: boolean;
-  filters: Record<string, string>;
-}) {
-  if (page === 1 && !hasMore) return null;
-
-  const hrefFor = (target: number) => {
-    const query = new URLSearchParams(
-      Object.entries({ ...filters, page: String(target) }).filter(([, value]) => value !== "")
-    );
-    return `/admin/activity?${query.toString()}`;
-  };
-
-  return (
-    <div className="mt-4 flex items-center justify-between gap-2">
-      {page > 1 ? (
-        <Link href={hrefFor(page - 1)} className={buttonClass("secondary", "sm")}>
-          ← Newer
-        </Link>
-      ) : (
-        <span />
-      )}
-      <span className="text-sm text-slate-600">Page {page}</span>
-      {hasMore ? (
-        <Link href={hrefFor(page + 1)} className={buttonClass("secondary", "sm")}>
-          Older →
-        </Link>
-      ) : (
-        <span />
-      )}
-    </div>
   );
 }
 
@@ -398,6 +444,7 @@ function describeDetails(details: Record<string, string>): string | null {
   if (details.frontCover) parts.push(`Front cover: ${details.frontCover}`);
   if (details.backCover) parts.push(`Back cover: ${details.backCover}`);
   if (details.accessUntil) parts.push(`Access until ${details.accessUntil}`);
+  if (details.records) parts.push(`${details.records} record${details.records === "1" ? "" : "s"}`);
   return parts.length > 0 ? parts.join(" · ") : null;
 }
 
@@ -410,13 +457,4 @@ function formatUkDateTime(value: string): string {
     minute: "2-digit",
     timeZone: ACCESS_TIME_ZONE,
   });
-}
-
-function one(value: string | string[] | undefined): string | undefined {
-  return Array.isArray(value) ? value[0] : value;
-}
-
-// Treat the user's % and _ literally; Postgres LIKE uses backslash as its escape.
-function escapeLike(value: string): string {
-  return value.replace(/[\\%_]/g, "\\$&");
 }

@@ -9,6 +9,7 @@ import { questionTypeLabel } from "@/lib/questions/registry";
 import type { QuestionType } from "@/lib/questions/types";
 import { PageHeader } from "@/components/admin/page-header";
 import { buttonClass } from "@/components/admin/styles";
+import { countOf } from "@/lib/format";
 import { AddQuestionsButton, ChapterOrder, type AddableQuestion, type OrderItem } from "./chapter-order";
 import { NewPageButton } from "./page-row-actions";
 import { ChapterCategoriesButton } from "../../chapter-row-actions";
@@ -107,8 +108,6 @@ export default async function ChapterPagesPage({ params }: PageProps<"/admin/han
   const questionCount = items.length - pageCount;
   const published = items.filter((item) => item.status === "published").length;
   const drafts = items.length - published;
-  const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? "" : "s"}`;
-
   return (
     <>
       <nav aria-label="Breadcrumb" className="mb-2 text-sm">
@@ -120,7 +119,7 @@ export default async function ChapterPagesPage({ params }: PageProps<"/admin/han
       </nav>
       <PageHeader
         title={chapter.chapterLabel}
-        description={`${plural(items.length, "item")} · ${plural(pageCount, "page")} · ${plural(questionCount, "question")} · ${published} published`}
+        description={`${countOf(items.length, "item")} · ${countOf(pageCount, "page")} · ${countOf(questionCount, "question")} · ${published} published`}
         actions={
           <div className="flex flex-wrap gap-2">
             <Link href={`/admin/handbook/preview?chapter=${chapter.id}`} className={buttonClass("secondary")}>

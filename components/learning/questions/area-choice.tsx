@@ -2,14 +2,12 @@
 
 import { useId, type KeyboardEvent, useContext } from "react";
 import type { AreaChoiceAnswer, AreaChoiceContent, ChoiceArea } from "@/lib/questions/types/area-choice";
-import { Icon, pictureWidth } from "./hotspot";
+import { Icon, TapPicture, pictureWidth } from "./hotspot";
 import type { AnswerAreaProps } from "./renderers";
 import { MeasuringContext } from "../measuring";
 
-// Candidate answer area for "Choose the area": marked areas on a picture, one of them right.
-// With a mouse, an area gets a soft yellow tint as the pointer moves over it; on touch screens every
-// area is faintly outlined from the start, since there's nothing to hover with. Real radio buttons
-// underneath: Tab to the picture, arrow keys move between areas, Enter checks.
+// "Choose the area": areas tint on hover with a mouse and are faintly outlined on touch screens.
+// Real radio buttons underneath: Tab to the picture, arrow keys move between areas, Enter checks.
 export function AreaChoiceAnswer({ content, media, answer, response, onResponse, onSubmit, locked, showCorrect }: AnswerAreaProps) {
   const measuring = useContext(MeasuringContext);
   const name = useId();
@@ -40,24 +38,7 @@ export function AreaChoiceAnswer({ content, media, answer, response, onResponse,
           data-area-choice
           className="relative w-full select-none rounded-md bg-slate-100 [-webkit-touch-callout:none]"
         >
-          {picture ? (
-            // eslint-disable-next-line @next/next/no-img-element -- short-lived signed link; files are pre-shrunk WebP
-            <img
-              src={measuring ? undefined : picture.src}
-              alt=""
-              width={picture.width}
-              height={picture.height}
-              draggable={false}
-              loading="lazy"
-              decoding="async"
-              className="pointer-events-none block h-auto w-full rounded-md"
-              style={{ aspectRatio: String(ratio) }}
-            />
-          ) : (
-            <span className="grid w-full place-items-center text-[0.85em] text-slate-700" style={{ aspectRatio: String(ratio) }}>
-              Picture unavailable
-            </span>
-          )}
+          <TapPicture picture={picture} ratio={ratio} measuring={measuring} />
           {data.areas.map((area, index) => (
             <Choice
               key={area.id}

@@ -15,6 +15,7 @@ import {
   updateCandidatePassword,
 } from "./actions";
 import { NAME_MAX_LENGTH } from "@/lib/users/name";
+import { MIN_PASSWORD_LENGTH } from "@/lib/users/credentials";
 import { AccessLengthField } from "./access-length-field";
 import { CategoryOptions, type CategoryChoice } from "./category-options";
 
@@ -243,7 +244,8 @@ export function SuperadminCandidateActions({
   admins,
 }: {
   candidate: RowCandidate;
-  admins: { id: string; email: string }[];
+  // label: "Name (email)", or the email when there is no name.
+  admins: { id: string; label: string }[];
 }) {
   const otherAdmins = admins.filter((admin) => admin.id !== candidate.adminId);
 
@@ -271,7 +273,7 @@ export function SuperadminCandidateActions({
                 </option>
                 {otherAdmins.map((admin) => (
                   <option key={admin.id} value={admin.id}>
-                    {admin.email}
+                    {admin.label}
                   </option>
                 ))}
               </select>
@@ -287,13 +289,13 @@ export function SuperadminCandidateActions({
 function PasswordFields({ id }: { id: string }) {
   return (
     <>
-      <Field id={`password-${id}`} label="New password" hint="At least 8 characters. Share it with them securely.">
+      <Field id={`password-${id}`} label="New password" hint={`At least ${MIN_PASSWORD_LENGTH} characters. Share it with them securely.`}>
         <input
           id={`password-${id}`}
           name="password"
           type="password"
           required
-          minLength={8}
+          minLength={MIN_PASSWORD_LENGTH}
           autoComplete="new-password"
           className={inputClass}
         />
@@ -304,7 +306,7 @@ function PasswordFields({ id }: { id: string }) {
           name="confirmPassword"
           type="password"
           required
-          minLength={8}
+          minLength={MIN_PASSWORD_LENGTH}
           autoComplete="new-password"
           className={inputClass}
         />

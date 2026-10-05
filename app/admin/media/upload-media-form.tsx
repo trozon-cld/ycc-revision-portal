@@ -6,6 +6,8 @@ import { Field } from "@/components/admin/field";
 import { PanelButton } from "@/components/admin/row-actions";
 import { buttonClass, fileInputClass, textareaClass } from "@/components/admin/styles";
 import { prepareImage, type PreparedImage } from "@/lib/media/prepare-image";
+import { formatBytes } from "@/lib/format";
+import { ALT_TEXT_MAX_LENGTH } from "@/lib/limits";
 import { uploadMedia, type MediaActionState } from "./actions";
 
 export function UploadMediaButton({ configured }: { configured: boolean }) {
@@ -109,12 +111,9 @@ function UploadMediaForm({ onClose }: { onClose: () => void }) {
         label="Description"
         hint="Say what the picture shows, in plain words. It's read aloud to people who can't see it."
       >
-        <textarea id="media-alt" name="altText" required maxLength={300} rows={3} className={textareaClass} />
+        <textarea id="media-alt" name="altText" required maxLength={ALT_TEXT_MAX_LENGTH} rows={3} className={textareaClass} />
       </Field>
     </ActionForm>
   );
 }
 
-function formatBytes(bytes: number) {
-  return bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
-}
