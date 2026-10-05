@@ -19,11 +19,12 @@ create unique index category_groups_name_key on category_groups (lower(name));
 -- A Candidate's assignment (e.g. Operative).
 create table categories (
   id uuid primary key default gen_random_uuid(),
-  name varchar not null unique,
+  name varchar not null,
   group_id uuid not null references category_groups (id) on delete restrict,
   created_at timestamptz not null default now()
 );
 
+create unique index categories_name_key on categories (lower(name));
 create index categories_group_idx on categories (group_id);
 
 create table users (
@@ -57,6 +58,7 @@ create table users (
 );
 
 create index users_admin_id_idx on users (admin_id);
+create index users_category_idx on users (category_id);
 create index users_current_category_idx on users (current_category_id);
 
 create function check_candidate_category_group() returns trigger
@@ -142,9 +144,43 @@ create trigger activity_logs_read_only
   before update or delete on activity_logs
   for each row execute function prevent_log_changes();
 
+-- One row per archived month (UK time) and log. Kept forever, like the logs themselves.
+create table log_archives (
+  id uuid primary key default gen_random_uuid(),
+  log varchar not null check (log in ('login_records')),
+  month date not null check (extract(day from month) = 1),
+  record_count integer not null check (record_count >= 0),
+  -- Path inside the private storage bucket.
+  file_path varchar not null unique,
+  byte_size integer not null check (byte_size > 0),
+  archived_by uuid references users (id) on delete set null,
+  archived_by_email varchar not null,
+  created_at timestamptz not null default now(),
+  constraint log_archives_log_month_key unique (log, month)
+);
+
+create trigger log_archives_read_only
+  before update or delete on log_archives
+  for each row execute function prevent_log_changes();
+
+-- Login records stay read-only, except deleting ones whose month has already been archived.
+create function guard_auth_events() returns trigger
+language plpgsql as $$
+begin
+  if tg_op = 'DELETE' and exists (
+    select 1 from log_archives
+    where log = 'login_records'
+      and month = date_trunc('month', old.created_at at time zone 'Europe/London')::date
+  ) then
+    return old;
+  end if;
+  raise exception 'Log entries are read-only';
+end;
+$$;
+
 create trigger auth_events_read_only
   before update or delete on auth_events
-  for each row execute function prevent_log_changes();
+  for each row execute function guard_auth_events();
 
 -- Shared by chapters, content pages and questions.
 create type content_status as enum ('draft', 'published');
@@ -204,6 +240,7 @@ create table media (
 );
 
 create index media_created_at_idx on media (created_at desc);
+create index media_uploaded_by_idx on media (uploaded_by);
 
 -- Optional Handbook cover pictures per category (declared here because media comes after categories).
 alter table categories

@@ -29,12 +29,18 @@ export function isStorageConfigured() {
   return Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
-// Paths are unique per upload, so objects never change and can be cached for a year.
-export async function storeObject(path: string, body: Blob, contentType: string): Promise<void> {
+// Media paths are unique per upload, so objects never change and can be cached for a year.
+// `replace`: for fixed paths written again on a retry (log archives); those aren't cached.
+export async function storeObject(path: string, body: Blob, contentType: string, { replace = false } = {}): Promise<void> {
   const { base, key, bucket } = config();
   const response = await fetch(`${base}/object/${encodeURIComponent(bucket)}/${encodePath(path)}`, {
     method: "POST",
-    headers: { ...authHeaders(key), "Content-Type": contentType, "cache-control": IMMUTABLE_MAX_AGE, "x-upsert": "false" },
+    headers: {
+      ...authHeaders(key),
+      "Content-Type": contentType,
+      "cache-control": replace ? "no-cache" : IMMUTABLE_MAX_AGE,
+      "x-upsert": replace ? "true" : "false",
+    },
     body,
   });
   if (!response.ok) throw new Error(`Storage upload failed (${response.status}): ${await safeText(response)}`);

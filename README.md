@@ -31,6 +31,7 @@ Status: in active development.
 4. For the image library (Admin → Media), in Supabase:
    - **Storage → New bucket**, name `handbook-media`, **Public bucket off** (pictures are served through short-lived signed links).
    - Add `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (Project Settings → API; the secret or legacy service_role key) to `.env.local`. They are server-only; never prefix them with `NEXT_PUBLIC_`.
+   - The same bucket holds archived login records (Activity → Archives) in an `archives/` folder. If you limited the bucket's allowed file types, add `application/gzip`.
 
 5. Generate the Superadmin password hash, paste it and the email into `supabase/seed.sql`, then run that file:
 
