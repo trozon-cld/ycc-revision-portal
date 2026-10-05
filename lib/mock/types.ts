@@ -50,5 +50,15 @@ export type MockRun = {
   media: ResolvedMedia;
 };
 
+// A test that has ended, for the screen shown after it (the full results come in E5b).
+export type MockSummary = {
+  how: MockEnd;
+  rightCount: number;
+  outOf: number;
+  answered: number;
+  total: number;
+  secondsTaken: number;
+};
+
 export type MockChange = { position: number; response?: unknown; flagged?: boolean };
 export type MockSaveReply = { ok: true; secondsLeft: number } | { ok: false; reason: "ended" | "invalid" };

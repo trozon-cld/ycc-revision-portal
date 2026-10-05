@@ -11,6 +11,7 @@ import { FocusedShell } from "@/components/learning/focused-shell";
 import { saveTextSize } from "@/app/dashboard/prepare/actions";
 import { submitMockTest } from "../actions";
 import { MockClock } from "./mock-clock";
+import { MockReview } from "./mock-review";
 import { useMockSaver } from "./use-mock-saver";
 
 // Read out to screen readers once, as the time passes these marks (seconds left).
@@ -19,8 +20,10 @@ const ANNOUNCE = [
   { at: 300, text: "5 minutes left." },
   { at: 60, text: "1 minute left." },
 ];
-// When time is up, unsaved answers get this long to reach the server before the test is ended.
+// When the test ends, unsaved answers get this long to reach the server first.
 const LAST_SAVE_MS = 8000;
+// The reminder from the brief, shown in the page (not a popup) at 5 minutes.
+const REMINDER_AT = 300;
 
 // An empty choice (e.g. every pick taken back) counts as no answer.
 const isBlank = (response: unknown) =>
@@ -30,6 +33,7 @@ const isBlank = (response: unknown) =>
   (typeof response === "object" && !Array.isArray(response) && Object.keys(response as object).length === 0);
 
 // The mock test: one question at a time, no marking, answers saved as they change; the clock is the server's.
+// A review screen lists every question before Submit; at 0 the test submits itself.
 export function MockRunner({ run, initialTextSize }: { run: MockRun; initialTextSize: TextSize }) {
   const router = useRouter();
   const [position, setPosition] = useState(run.position);
@@ -39,6 +43,11 @@ export function MockRunner({ run, initialTextSize }: { run: MockRun; initialText
   const [secondsLeft, setSecondsLeft] = useState(run.secondsLeft);
   const [announcement, setAnnouncement] = useState("");
   const [timeUp, setTimeUp] = useState(run.secondsLeft <= 0);
+  const [view, setView] = useState<"question" | "review">("question");
+  const [confirming, setConfirming] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+  const [reminder, setReminder] = useState(run.secondsLeft > 0 && run.secondsLeft <= REMINDER_AT);
   const deadline = useRef<number | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -61,6 +70,7 @@ export function MockRunner({ run, initialTextSize }: { run: MockRun; initialText
       if (left === last) return;
       const passed = ANNOUNCE.find((mark) => last > mark.at && left <= mark.at);
       if (passed) setAnnouncement(passed.text);
+      if (last > REMINDER_AT && left <= REMINDER_AT) setReminder(true);
       last = left;
       setSecondsLeft(left);
       if (left === 0) setTimeUp(true);
@@ -68,34 +78,51 @@ export function MockRunner({ run, initialTextSize }: { run: MockRun; initialText
     return () => clearInterval(tick);
   }, [run.secondsLeft]);
 
-  // Time is up: answers can't change; what's waiting is sent, then the test ends.
+  // Sends what's waiting, then ends the test; the page then shows the result.
+  async function finish() {
+    await Promise.race([saver.flushAll(), new Promise((resolve) => setTimeout(resolve, LAST_SAVE_MS))]);
+    await submitMockTest(run.attemptId);
+    router.refresh();
+  }
+
+  // Time is up: answers can't change, and the test submits itself.
   useEffect(() => {
     if (!timeUp) return;
-    let stopped = false;
-    const lastSave = Promise.race([saver.flushAll(), new Promise((resolve) => setTimeout(resolve, LAST_SAVE_MS))]);
-    lastSave
-      .then(() => submitMockTest(run.attemptId))
-      .catch(() => {})
-      .finally(() => {
-        if (!stopped) router.refresh();
-      });
-    return () => {
-      stopped = true;
-    };
+    finish().catch(() => router.refresh());
     // Runs once, when time runs out.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeUp]);
+
+  async function submit() {
+    setSubmitting(true);
+    setProblem(null);
+    try {
+      await finish();
+    } catch {
+      setSubmitting(false);
+      setProblem("Your test couldn’t be submitted. Please check your connection and try again.");
+    }
+  }
 
   useEffect(() => {
     if (!moved.current) return;
     headingRef.current?.focus();
     scrollRef.current?.scrollTo({ top: 0 });
-  }, [position]);
+  }, [position, view]);
 
   function goTo(next: number) {
     moved.current = true;
+    setView("question");
     setPosition(next);
     saver.moveTo(next);
+  }
+
+  function openReview() {
+    moved.current = true;
+    setConfirming(false);
+    setProblem(null);
+    setReminder(false);
+    setView("review");
   }
 
   function answer(response: unknown) {
@@ -120,12 +147,13 @@ export function MockRunner({ run, initialTextSize }: { run: MockRun; initialText
   const answered = responses.filter((response) => !isBlank(response)).length;
   const isFirst = position === 0;
   const isLast = position + 1 >= run.total;
+  const reviewing = view === "review";
 
   return (
     <FocusedShell
       label="Mock test tools"
-      status={`Question ${position + 1} of ${run.total}`}
-      shortStatus={`${position + 1} of ${run.total}`}
+      status={reviewing ? "Review" : `Question ${position + 1} of ${run.total}`}
+      shortStatus={reviewing ? "Review" : `${position + 1} of ${run.total}`}
       progress={{ done: answered, total: run.total }}
       textSize={textSize}
       onTextSizeChange={changeSize}
@@ -134,19 +162,46 @@ export function MockRunner({ run, initialTextSize }: { run: MockRun; initialText
       scrollRef={scrollRef}
     >
       <div className="mx-auto w-full max-w-3xl px-4 pt-5 pb-12 sm:pt-8">
-        <h1 ref={headingRef} tabIndex={-1} className="sr-only">
-          Question {position + 1} of {run.total}
-        </h1>
         <p aria-live="polite" className="sr-only">
           {announcement}
         </p>
+        {reminder && !timeUp && (
+          <div role="status" className="mb-5 flex flex-col gap-3 rounded-xl border-2 border-red-700 bg-red-50 p-4 sm:flex-row sm:items-center">
+            <p className="flex-1 text-lg font-semibold text-red-800">5 minutes remaining. Please review unanswered questions.</p>
+            {!reviewing && (
+              <button type="button" onClick={openReview} className={`${PRIMARY_BUTTON} w-full sm:w-auto`}>
+                Review answers
+              </button>
+            )}
+            <button type="button" onClick={() => setReminder(false)} className={`${SECONDARY_BUTTON} w-full sm:w-auto`}>
+              Close
+            </button>
+          </div>
+        )}
 
         {timeUp ? (
           <p role="status" className="rounded-xl border-2 border-red-700 bg-red-50 p-5 text-lg font-semibold text-red-800">
             Time is up. Your test is being submitted.
           </p>
+        ) : reviewing ? (
+          <MockReview
+            answered={responses.map((response) => !isBlank(response))}
+            flags={flags}
+            headingRef={headingRef}
+            confirming={confirming}
+            submitting={submitting}
+            problem={problem}
+            onOpen={goTo}
+            onBack={() => goTo(position)}
+            onSubmit={() => setConfirming(true)}
+            onConfirm={submit}
+            onCancel={() => setConfirming(false)}
+          />
         ) : (
           <>
+            <h1 ref={headingRef} tabIndex={-1} className="sr-only">
+              Question {position + 1} of {run.total}
+            </h1>
             <div className="rounded-xl border-2 border-ink/15 bg-white px-4 py-5 text-ink sm:px-6" style={{ fontSize: textSize }}>
               {question ? (
                 <QuestionView
@@ -164,8 +219,8 @@ export function MockRunner({ run, initialTextSize }: { run: MockRun; initialText
             </div>
 
             <div className="mt-5 grid gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-start">
-              <button type="button" onClick={() => goTo(position + 1)} disabled={isLast} className={`${PRIMARY_BUTTON} w-full sm:order-3 sm:w-auto sm:justify-self-end`}>
-                {isLast ? "Last question" : "Next"}
+              <button type="button" onClick={() => (isLast ? openReview() : goTo(position + 1))} className={`${PRIMARY_BUTTON} w-full sm:order-3 sm:w-auto sm:justify-self-end`}>
+                {isLast ? "Review answers" : "Next"}
                 {!isLast && (
                   <svg viewBox="0 0 24 24" aria-hidden="true" className="size-6" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M9 6l6 6-6 6" />
@@ -183,6 +238,11 @@ export function MockRunner({ run, initialTextSize }: { run: MockRun; initialText
               </button>
             </div>
 
+            {!isLast && (
+              <button type="button" onClick={openReview} className={`${SECONDARY_BUTTON} mt-3 w-full sm:w-auto`}>
+                Review all answers
+              </button>
+            )}
             <p className={`mt-4 text-base ${saver.status === "retrying" ? "font-semibold text-amber-950" : "text-ink/80"}`}>
               {saver.status === "saved" ? "Your answers are saved." : saver.status === "saving" ? "Saving…" : "Not saved yet. Trying again…"}
             </p>

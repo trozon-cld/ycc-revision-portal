@@ -15,6 +15,7 @@ import {
   type MockHome,
   type MockRun,
   type MockSaveReply,
+  type MockSummary,
   type OpenMock,
 } from "./types";
 
@@ -155,6 +156,17 @@ export async function loadMockRun(userId: string, attemptId: string): Promise<Mo
       media: await resolveMedia([...questions.values()].flatMap((question) => question.mediaIds)),
     },
   };
+}
+
+// The candidate's own ended test.
+export async function loadMockSummary(userId: string, attemptId: string): Promise<MockSummary | null> {
+  const { rows } = await pool.query<{ ended_how: MockEnd; right_count: number; out_of: number; answered: number; total: number; seconds_taken: number }>(
+    `select ended_how, right_count, out_of, answered, total, seconds_taken from mock_attempts where id = $1 and user_id = $2 and ended_at is not null`,
+    [attemptId, userId]
+  );
+  const row = rows[0];
+  if (!row) return null;
+  return { how: row.ended_how, rightCount: row.right_count, outOf: row.out_of, answered: row.answered, total: row.total, secondsTaken: row.seconds_taken };
 }
 
 const validPosition = (value: unknown): value is number => Number.isInteger(value) && (value as number) >= 0 && (value as number) < MOCK_QUESTIONS;
