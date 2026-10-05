@@ -1,5 +1,6 @@
+import { cleanLine, isRecord } from "@/lib/text";
+import { isUuid } from "@/lib/ids";
 import { defineQuestionType } from "../define";
-import { cleanLine, isRecord, isUuid } from "../text";
 
 // Tap the area on a picture: the candidate places one point; it is correct inside any correct area
 // (or within a small margin of one). Positions are percentages of the picture, so any screen size works.

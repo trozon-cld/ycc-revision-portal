@@ -25,9 +25,13 @@ export const TEXT_SIZES = [14, 16, 18, 20, 22, 24] as const;
 export type TextSize = (typeof TEXT_SIZES)[number];
 export const DEFAULT_TEXT_SIZE: TextSize = 16;
 
-// A sheet is one book page on screen: part k of an authored page, a blank filler, a cover, or (spreads
-// only) the empty space beside a closed book's cover. Page numbers belong to page sheets, so they change
-// with screen and text size (e-reader style).
+// A saved setting back to a valid size; empty or out-of-date values give the default.
+export function toTextSize(value: number | null | undefined): TextSize {
+  return TEXT_SIZES.find((size) => size === value) ?? DEFAULT_TEXT_SIZE;
+}
+
+// One book page on screen: part of an authored page, a blank filler, a cover, or (spreads) the space beside
+// a closed cover. Page numbers change with screen and text size, as in an e-reader.
 export type Sheet =
   | { kind: "page"; pageIndex: number; part: number; parts: number; number: number }
   | { kind: "blank" }

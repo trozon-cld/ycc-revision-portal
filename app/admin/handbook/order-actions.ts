@@ -1,17 +1,18 @@
 "use server";
 
-import type { PoolClient } from "pg";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/guard";
 import { withTransaction } from "@/lib/db/transaction";
 import { logActivity } from "@/lib/audit/log";
-import { isUuid } from "@/lib/content/pages";
 import { questionLogLabel, questionRef } from "@/lib/questions/labels";
+import { isUuid } from "@/lib/ids";
+import type { FormState } from "@/lib/forms";
+import { lockHandbookOrder } from "@/lib/handbook/structure";
 
 // A chapter's page order holds content pages and questions. Pages are created and deleted in
 // pages/actions.ts; this file adds and removes questions and moves any item.
 
-export type OrderActionState = { error?: string; success?: boolean };
+export type OrderActionState = FormState;
 
 const MAX_ADD = 50;
 const ORDER_CHANGED = "The page order changed while you were working. Check the latest order and try again.";
@@ -27,7 +28,7 @@ export async function addQuestionsToChapter(chapterId: string, questionIds: stri
   const ids = [...new Set(questionIds.map((id) => id.toLowerCase()))];
 
   const result = await withTransaction<OrderActionState>(async (client) => {
-    await lockOrder(client);
+    await lockHandbookOrder(client);
     const { rows: chapter } = await client.query<{ title: string }>(`select title from chapters where id = $1 for share`, [chapterId]);
     if (!chapter[0]) return { error: CHAPTER_GONE };
 
@@ -76,12 +77,12 @@ export async function addQuestionsToChapter(chapterId: string, questionIds: stri
 }
 
 // Takes a question out of the book. The question itself stays in the bank.
-export async function removeQuestionFromChapter(questionId: string): Promise<OrderActionState> {
+async function removeQuestionFromChapter(questionId: string): Promise<OrderActionState> {
   const session = await requireRole(["superadmin"]);
   if (!isUuid(questionId)) return { error: "This question is no longer in the chapter. Reload the page." };
 
   const result = await withTransaction<OrderActionState>(async (client) => {
-    await lockOrder(client);
+    await lockHandbookOrder(client);
     const { rows } = await client.query<{ chapter_id: string; position: number; ref_no: number; stem_text: string; chapter: string }>(
       `delete from handbook_items i using questions q, chapters c
        where i.question_id = $1 and q.id = i.question_id and c.id = i.chapter_id
@@ -119,7 +120,7 @@ export async function moveHandbookItem(itemId: string, from: number, to: number)
   if (!isUuid(itemId) || !Number.isInteger(from) || !Number.isInteger(to)) return { error: ORDER_CHANGED };
 
   const result = await withTransaction<OrderActionState>(async (client) => {
-    await lockOrder(client);
+    await lockHandbookOrder(client);
     const { rows } = await client.query<{
       chapter_id: string;
       position: number;
@@ -172,10 +173,6 @@ export async function moveHandbookItem(itemId: string, from: number, to: number)
 
   revalidateOrder();
   return result;
-}
-
-async function lockOrder(client: PoolClient) {
-  await client.query(`lock table handbook_items in share row exclusive mode`);
 }
 
 function revalidateOrder() {

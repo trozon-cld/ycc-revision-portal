@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef } from "react";
-import { cleanLine } from "@/lib/questions/text";
+import { cleanLine } from "@/lib/text";
 import { optionLetter, SINGLE_TEXT_LIMITS, type SingleTextContent } from "@/lib/questions/types/single-text";
 import { IconButton } from "@/components/admin/editor-fields";
 import { buttonClass, inputClass } from "@/components/admin/styles";

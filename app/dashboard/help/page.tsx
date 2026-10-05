@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/auth/guard";
 import { PageBody } from "@/components/candidate/page-body";
+import { PRIMARY_BUTTON } from "@/components/candidate/buttons";
 
 export default async function CandidateHelpPage() {
   await requireRole(["candidate"]);
@@ -14,7 +15,7 @@ export default async function CandidateHelpPage() {
         </p>
         <Link
           href="/dashboard"
-          className="mt-8 inline-flex min-h-14 items-center justify-center rounded-lg bg-primary px-6 text-lg font-semibold text-white hover:bg-primary/90 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className={`${PRIMARY_BUTTON} mt-8`}
         >
           Back to home
         </Link>

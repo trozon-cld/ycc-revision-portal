@@ -1,6 +1,5 @@
 "use server";
 
-import type { PoolClient } from "pg";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
@@ -10,14 +9,18 @@ import { getErrorCode, withTransaction } from "@/lib/db/transaction";
 import { logActivity } from "@/lib/audit/log";
 import { collectMediaIds, parseBlocks } from "@/lib/content/blocks";
 import type { ResolvedMedia } from "@/lib/content/book";
-import { isUuid, resolveMedia } from "@/lib/content/pages";
+import { resolveMedia } from "@/lib/content/pages";
 import { getSignedUrls, isStorageConfigured } from "@/lib/storage/storage";
+import { isUuid } from "@/lib/ids";
+import { escapeLike } from "@/lib/db/like";
+import { TITLE_MAX_LENGTH } from "@/lib/limits";
+import { lockHandbookOrder, normaliseTitle } from "@/lib/handbook/structure";
+import type { FormState } from "@/lib/forms";
 
-export type PageActionState = { error?: string; success?: boolean };
+export type PageActionState = FormState;
 export type SaveResult = { ok: true; version: number } | { ok: false; error: string; conflict?: boolean };
 export type PickerItem = { id: string; thumbUrl: string | null; alt: string; name: string; width: number; height: number };
 
-const MAX_TITLE_LENGTH = 120;
 const NOT_FOUND = "This page no longer exists.";
 
 export async function createPage(_prev: PageActionState, formData: FormData): Promise<PageActionState> {
@@ -30,7 +33,7 @@ export async function createPage(_prev: PageActionState, formData: FormData): Pr
   if (!isUuid(chapterId)) return { error: "This chapter no longer exists." };
 
   const pageId = await withTransaction(async (client) => {
-    await lockOrder(client);
+    await lockHandbookOrder(client);
     const { rows: chapter } = await client.query<{ title: string }>(
       `select title from chapters where id = $1 for share`,
       [chapterId]
@@ -92,49 +95,6 @@ export async function renamePage(_prev: PageActionState, formData: FormData): Pr
   return result;
 }
 
-export async function movePage(id: string, direction: "up" | "down"): Promise<PageActionState> {
-  const session = await requireRole(["superadmin"]);
-
-  const pageId = String(id ?? "");
-  if (!isUuid(pageId) || (direction !== "up" && direction !== "down")) return { error: NOT_FOUND };
-
-  const result = await withTransaction<PageActionState>(async (client) => {
-    await lockOrder(client);
-    const { rows } = await client.query<{ id: string; chapter_id: string; position: number; title: string }>(
-      `select i.id, i.chapter_id, i.position, p.title
-       from handbook_items i join content_pages p on p.id = i.content_page_id
-       where i.content_page_id = $1`,
-      [pageId]
-    );
-    const item = rows[0];
-    if (!item) return { error: NOT_FOUND };
-
-    const to = direction === "up" ? item.position - 1 : item.position + 1;
-    const { rows: neighbours } = await client.query<{ id: string }>(
-      `select id from handbook_items where chapter_id = $1 and position = $2`,
-      [item.chapter_id, to]
-    );
-    if (!neighbours[0]) {
-      return { error: direction === "up" ? "This page is already first." : "This page is already last." };
-    }
-    await client.query(
-      `update handbook_items set position = case when id = $1 then $3::int else $4::int end where id in ($1, $2)`,
-      [item.id, neighbours[0].id, to, item.position]
-    );
-    await logActivity(
-      client,
-      session,
-      "content_page.reordered",
-      { type: "page", id: pageId, label: item.title },
-      { from: `Position ${item.position}`, to: `Position ${to}` }
-    );
-    return { success: true };
-  });
-
-  revalidatePath("/admin/handbook", "layout");
-  return result;
-}
-
 export async function setPageStatus(id: string, status: "draft" | "published"): Promise<PageActionState> {
   const session = await requireRole(["superadmin"]);
 
@@ -178,7 +138,7 @@ export async function deletePage(_prev: PageActionState, formData: FormData): Pr
   if (!isUuid(pageId)) return { error: NOT_FOUND };
 
   const result = await withTransaction<PageActionState>(async (client) => {
-    await lockOrder(client);
+    await lockHandbookOrder(client);
     const { rows } = await client.query<{ chapter_id: string; position: number }>(
       `select chapter_id, position from handbook_items where content_page_id = $1`,
       [pageId]
@@ -304,7 +264,7 @@ export async function savePageContent(input: {
 export async function listPickerMedia(search: string): Promise<PickerItem[]> {
   await requireRole(["superadmin"]);
 
-  const term = String(search ?? "").trim().slice(0, 100).replace(/[\\%_]/g, (match) => `\\${match}`);
+  const term = escapeLike(String(search ?? "").trim().slice(0, 100));
   const { rows } = await pool.query<{ id: string; thumb_path: string; alt_text: string; original_name: string; width: number; height: number }>(
     `select id, thumb_path, alt_text, original_name, width, height
      from media
@@ -346,17 +306,8 @@ export async function getPreviewMedia(mediaIds: string[]): Promise<ResolvedMedia
   }
 }
 
-// Serialises changes to page order; reads are not blocked.
-async function lockOrder(client: PoolClient) {
-  await client.query(`lock table handbook_items in share row exclusive mode`);
-}
-
-function normaliseTitle(value: FormDataEntryValue | string | null | undefined): string {
-  return String(value ?? "").trim().replace(/\s+/g, " ");
-}
-
 function validateTitle(title: string): string | null {
   if (!title) return "Page title is required.";
-  if (title.length > MAX_TITLE_LENGTH) return `Page title must be ${MAX_TITLE_LENGTH} characters or fewer.`;
+  if (title.length > TITLE_MAX_LENGTH) return `Page title must be ${TITLE_MAX_LENGTH} characters or fewer.`;
   return null;
 }

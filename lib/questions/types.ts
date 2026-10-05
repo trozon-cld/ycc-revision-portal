@@ -40,7 +40,3 @@ export type CheckResult = { answered: boolean; correct: boolean };
 export function isQuestionType(value: unknown): value is QuestionType {
   return typeof value === "string" && (QUESTION_TYPE_KEYS as readonly string[]).includes(value);
 }
-
-export function isQuestionMode(value: unknown): value is QuestionMode {
-  return typeof value === "string" && (QUESTION_MODES as readonly string[]).includes(value);
-}

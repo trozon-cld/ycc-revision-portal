@@ -5,11 +5,13 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/guard";
 import { getErrorCode, withTransaction } from "@/lib/db/transaction";
 import { logActivity } from "@/lib/audit/log";
-import { isUuid } from "@/lib/content/pages";
+import { isUuid } from "@/lib/ids";
+import { CATEGORY_NAME_MAX_LENGTH } from "@/lib/limits";
+import { cleanLine } from "@/lib/text";
+import type { FormState } from "@/lib/forms";
 
-export type CategoryActionState = { error?: string; success?: boolean };
+export type CategoryActionState = FormState;
 
-const MAX_NAME_LENGTH = 100;
 const DUPLICATE_NAME = "A category with this name already exists.";
 const MAX_LINKED_CHAPTERS = 1000;
 const GROUP_GONE = "That group no longer exists. Close this and try again.";
@@ -22,7 +24,7 @@ export async function createCategory(
 ): Promise<CategoryActionState> {
   const session = await requireRole(["superadmin"]);
 
-  const name = normaliseName(formData.get("name"));
+  const name = cleanLine(formData.get("name"));
   const groupId = String(formData.get("groupId") ?? "");
   const invalid = validateName(name);
   if (invalid) return { error: invalid };
@@ -70,7 +72,7 @@ export async function renameCategory(
   const session = await requireRole(["superadmin"]);
 
   const categoryId = String(formData.get("categoryId") ?? "");
-  const name = normaliseName(formData.get("name"));
+  const name = cleanLine(formData.get("name"));
   const invalid = validateName(name);
   if (invalid) return { error: invalid };
 
@@ -357,14 +359,10 @@ async function nameTaken(client: PoolClient, name: string, exceptId: string | nu
   return rows.length > 0;
 }
 
-function normaliseName(value: FormDataEntryValue | null): string {
-  return String(value ?? "").trim().replace(/\s+/g, " ");
-}
-
 function validateName(name: string): string | null {
   if (!name) return "Category name is required.";
-  if (name.length > MAX_NAME_LENGTH) {
-    return `Category name must be ${MAX_NAME_LENGTH} characters or fewer.`;
+  if (name.length > CATEGORY_NAME_MAX_LENGTH) {
+    return `Category name must be ${CATEGORY_NAME_MAX_LENGTH} characters or fewer.`;
   }
   return null;
 }

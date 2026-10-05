@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/guard";
 import { archiveLoginRecords } from "@/lib/audit/archive";
-import type { FormState } from "@/components/admin/action-form";
+import type { FormState } from "@/lib/forms";
 import { StorageConfigError } from "@/lib/storage/storage";
 
 export async function archiveOldLoginRecords(_prev: FormState): Promise<FormState> {
@@ -14,7 +14,9 @@ export async function archiveOldLoginRecords(_prev: FormState): Promise<FormStat
   } catch (error) {
     console.error("Login record archive failed", error);
     revalidatePath("/admin/activity");
-    if (error instanceof StorageConfigError) return { error: "File storage isn’t set up, so nothing was archived." };
+    if (error instanceof StorageConfigError) {
+      return { error: "Archive storage isn’t set up: create the private log-archives bucket in Supabase Storage (see README). Nothing was archived." };
+    }
     return { error: "The archive couldn’t be completed. Any month already listed below was saved; nothing else was deleted. Please try again." };
   }
   revalidatePath("/admin/activity");

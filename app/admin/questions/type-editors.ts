@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
 import type { ResolvedMedia } from "@/lib/content/book";
-import { cleanLine } from "@/lib/questions/text";
+import { cleanLine } from "@/lib/text";
 import type { AreaChoiceDraft } from "@/lib/questions/types/area-choice";
 import type { MatchDraft } from "@/lib/questions/types/match-pictures";
 import type { HotspotContent, HotspotDraftAnswer } from "@/lib/questions/types/hotspot";

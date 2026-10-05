@@ -9,16 +9,13 @@ import { getErrorCode, withTransaction } from "@/lib/db/transaction";
 import { logActivity } from "@/lib/audit/log";
 import { NO_NAME, normaliseName, validateName } from "@/lib/users/name";
 import { accessEndSql, formatUkDate, resolveAccessEndDate } from "@/lib/candidates/access";
-import { isUuid } from "@/lib/questions/text";
+import { isUuid } from "@/lib/ids";
+import { DUPLICATE_EMAIL, EMAIL_PATTERN, MIN_PASSWORD_LENGTH } from "@/lib/users/credentials";
+import type { FormState } from "@/lib/forms";
 
-export type CandidateActionState = { error?: string; success?: boolean };
-export type CreateCandidateState = CandidateActionState;
-export type ChangeAdminState = CandidateActionState;
+export type CandidateActionState = FormState;
 
-const MIN_PASSWORD_LENGTH = 8;
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const NOT_FOUND = "Candidate not found. The page has been refreshed.";
-const DUPLICATE_EMAIL = "An account with this email already exists.";
 const INVALID_CATEGORY = "Selected category is invalid.";
 
 interface OwnedCandidate {
@@ -54,7 +51,7 @@ export async function createCandidate(
     return { error: "Enter a valid email address." };
   }
   if (password.length < MIN_PASSWORD_LENGTH) {
-    return { error: "Password must be at least 8 characters." };
+    return { error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` };
   }
   const access = resolveAccessEndDate(formData);
   if ("error" in access) {
@@ -154,7 +151,7 @@ export async function updateCandidatePassword(
   const confirmPassword = String(formData.get("confirmPassword") ?? "");
 
   if (password.length < MIN_PASSWORD_LENGTH) {
-    return { error: "Password must be at least 8 characters." };
+    return { error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` };
   }
   if (password !== confirmPassword) {
     return { error: "The two passwords don't match." };

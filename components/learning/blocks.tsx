@@ -3,8 +3,6 @@ import type { ResolvedMedia } from "@/lib/content/book";
 import { InlineText } from "./inline-text";
 import { BookPicture } from "./picture";
 
-export { InlineText };
-
 // Candidate-facing block renderers. Sizes are in em so the A−/A+ text size scales everything.
 // Pictures and boxes never split across sheets; headings stay with what follows.
 

@@ -1,6 +1,9 @@
 import { requireRole } from "@/lib/auth/guard";
 import { pool } from "@/lib/db/pool";
 import { customDateBounds, formatUkDate } from "@/lib/candidates/access";
+import { isUuid } from "@/lib/ids";
+import { firstParam } from "@/lib/params";
+import { escapeLike } from "@/lib/db/like";
 import { Badge } from "@/components/admin/badge";
 import { FilterBar, FilterSearch, FilterSelect } from "@/components/admin/filter-bar";
 import { Breakable } from "@/components/admin/breakable";
@@ -34,7 +37,6 @@ interface Option {
 const PAGE_SIZE = 50;
 const STATUSES = ["active", "expired", "blocked"] as const;
 type Status = (typeof STATUSES)[number];
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default async function CandidatesPage({ searchParams }: PageProps<"/admin/candidates">) {
   const session = await requireRole(["admin", "superadmin"]);
@@ -42,12 +44,12 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
   const params = await searchParams;
   const { min: minDate, max: maxDate } = customDateBounds();
 
-  const search = (one(params.q) ?? "").trim().slice(0, 100);
-  const categoryFilter = uuidOrNull(one(params.category));
-  const statusParam = one(params.status) ?? "";
+  const search = (firstParam(params.q) ?? "").trim().slice(0, 100);
+  const categoryFilter = uuidOrNull(firstParam(params.category));
+  const statusParam = firstParam(params.status) ?? "";
   const status = (STATUSES as readonly string[]).includes(statusParam) ? (statusParam as Status) : null;
   // Admins are always pinned to their own candidates, whatever the URL says.
-  const ownerFilter = isSuperadmin ? uuidOrNull(one(params.admin)) : session.sub;
+  const ownerFilter = isSuperadmin ? uuidOrNull(firstParam(params.admin)) : session.sub;
   const isFiltered = Boolean(search || categoryFilter || status || (isSuperadmin && ownerFilter));
 
   // Shared by the count and the page, so both always use the same filters.
@@ -66,7 +68,7 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
     filterValues
   );
   const total = counted[0].total;
-  const page = pageFromParam(one(params.page), total, PAGE_SIZE);
+  const page = pageFromParam(firstParam(params.page), total, PAGE_SIZE);
 
   const [{ rows: candidates }, { rows: categories }, { rows: admins }] = await Promise.all([
     pool.query<CandidateRow>(
@@ -87,8 +89,8 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
        order by g.position, c.name`
     ),
     isSuperadmin
-      ? pool.query<Option & { email: string }>(
-          `select id, email, coalesce(full_name || ' (' || email || ')', email) as label
+      ? pool.query<Option>(
+          `select id, coalesce(full_name || ' (' || email || ')', email) as label
            from users where role = 'admin' order by lower(coalesce(full_name, email))`
         )
       : Promise.resolve({ rows: [] as Option[] }),
@@ -197,7 +199,7 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
                 {isSuperadmin ? (
                   <SuperadminCandidateActions
                     candidate={rowCandidate}
-                    admins={admins.map(({ id, label }) => ({ id, email: label }))}
+                    admins={admins}
                   />
                 ) : (
                   <AdminCandidateActions
@@ -225,15 +227,7 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
   );
 }
 
-function one(value: string | string[] | undefined): string | undefined {
-  return Array.isArray(value) ? value[0] : value;
-}
 
 function uuidOrNull(value: string | undefined): string | null {
-  return value && UUID_PATTERN.test(value) ? value : null;
-}
-
-// Treat the user's % and _ literally; Postgres LIKE uses backslash as its escape.
-function escapeLike(value: string): string {
-  return value.replace(/[\\%_]/g, "\\$&");
+  return isUuid(value) ? value : null;
 }

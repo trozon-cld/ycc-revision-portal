@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
 import { SESSION_ENDED_LOGIN } from "@/lib/auth/constants";
-import { ACCESS_TIME_ZONE, daysLeftUk } from "@/lib/candidates/access";
+import { daysLeftUk, formatUkDate } from "@/lib/candidates/access";
 import { loadCandidateHome } from "@/lib/candidates/home";
 import { loadPracticeInProgress } from "@/lib/practice/sessions";
 import { PageBody } from "@/components/candidate/page-body";
@@ -19,12 +19,7 @@ export default async function CandidateHomePage({ searchParams }: PageProps<"/da
 
   const daysLeft = home.accessExpiresAt ? daysLeftUk(home.accessExpiresAt) : null;
   const expiryLabel = home.accessExpiresAt
-    ? new Date(home.accessExpiresAt).toLocaleDateString("en-GB", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-        timeZone: ACCESS_TIME_ZONE,
-      })
+    ? formatUkDate(home.accessExpiresAt, "long")
     : null;
   const warn = daysLeft !== null && daysLeft <= ACCESS_WARNING_DAYS;
 

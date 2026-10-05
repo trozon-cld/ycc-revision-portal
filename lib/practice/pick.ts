@@ -1,3 +1,4 @@
+import { shuffle } from "@/lib/questions/shuffle";
 import type { QuestionType } from "@/lib/questions/types";
 
 // Choosing and ordering practice questions. Pure functions (randomness passed in), so they can be tested.
@@ -7,14 +8,6 @@ export type PoolQuestion = { id: string; chapterId: string; type: QuestionType }
 export type PracticeHistory = { tries: number; right: number; lastRight: boolean | null; flagged: boolean };
 export type Random = () => number;
 
-export function shuffle<T>(items: readonly T[], random: Random): T[] {
-  const result = [...items];
-  for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(random() * (i + 1));
-    [result[i], result[j]] = [result[j], result[i]];
-  }
-  return result;
-}
 
 // Takes `count` questions, a chapter at a time in turn, so every chapter gets its share.
 export function spreadPick(items: readonly PoolQuestion[], count: number, random: Random): PoolQuestion[] {

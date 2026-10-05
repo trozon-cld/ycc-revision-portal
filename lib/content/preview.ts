@@ -4,14 +4,14 @@ import { questionRef } from "@/lib/questions/labels";
 import { toClientQuestion } from "@/lib/questions/public";
 import { parseQuestion } from "@/lib/questions/validate";
 import type { QuestionType, StemPictureAlign, StemPictureSize } from "@/lib/questions/types";
+import { isUuid } from "@/lib/ids";
 import { collectMediaIds, parseBlocks } from "./blocks";
 import type { BookPageData, ResolvedMedia } from "./book";
 import type { BookCovers } from "./covers";
-import { isUuid, resolveMedia } from "./pages";
+import { resolveMedia } from "./pages";
 
-// The book as the reader shows it, for the admin preview: every chapter (or one), in Handbook
-// order, optionally only a category's chapters and only what candidates see (published items in
-// published chapters).
+// The book as the reader shows it, for the admin preview: every chapter or one, in Handbook order;
+// optionally only a category's chapters, and only what candidates see.
 
 export type PreviewScope = { chapterId: string | null; categoryId: string | null; includeDrafts: boolean };
 export type PreviewBook = {

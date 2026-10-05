@@ -1,16 +1,12 @@
 import { pool } from "@/lib/db/pool";
 import { chapterNumber, sectionLetter } from "@/lib/handbook/structure";
 import { getSignedUrls, isStorageConfigured } from "@/lib/storage/storage";
+import { isUuid } from "@/lib/ids";
 import type { ResolvedMedia } from "./book";
 
-// Server-only reads for the Handbook admin pages.
+// Server-only reads for Handbook pages and their pictures (admin and candidate pages).
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const PREVIEW_LINK_SECONDS = 2 * 60 * 60;
-
-export function isUuid(value: string) {
-  return UUID.test(value);
-}
 
 export type ChapterContext = {
   id: string;

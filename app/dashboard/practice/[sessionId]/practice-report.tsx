@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ACCESS_TIME_ZONE } from "@/lib/candidates/access";
+import { formatUkDate } from "@/lib/candidates/access";
 import type { PracticeReport } from "@/lib/practice/sessions";
 import { PageBody } from "@/components/candidate/page-body";
 import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
@@ -38,7 +38,7 @@ function timeText(seconds: number): string {
 
 export function PracticeReportView({ report, againUnavailable }: { report: PracticeReport; againUnavailable: boolean }) {
   const percent = report.answered ? Math.round((report.rightCount / report.answered) * 100) : 0;
-  const date = new Date(report.finishedAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: ACCESS_TIME_ZONE });
+  const date = formatUkDate(report.finishedAt, "long");
   const what = report.choiceNames.length ? `${MODE_NAMES[report.mode]}: ${report.choiceNames.join(", ")}` : MODE_NAMES[report.mode];
   const endedEarly = report.answered + report.skipped < report.total;
 

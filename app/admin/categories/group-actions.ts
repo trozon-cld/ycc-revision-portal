@@ -5,10 +5,12 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/guard";
 import { getErrorCode, withTransaction } from "@/lib/db/transaction";
 import { logActivity } from "@/lib/audit/log";
+import { CATEGORY_NAME_MAX_LENGTH } from "@/lib/limits";
+import { cleanLine } from "@/lib/text";
+import type { FormState } from "@/lib/forms";
 
-export type GroupActionState = { error?: string; success?: boolean };
+export type GroupActionState = FormState;
 
-const MAX_NAME_LENGTH = 100;
 const MAX_GROUPS = 20;
 const DUPLICATE_NAME = "A group with this name already exists.";
 const NOT_FOUND = "This group no longer exists.";
@@ -16,7 +18,7 @@ const NOT_FOUND = "This group no longer exists.";
 export async function createGroup(_prevState: GroupActionState, formData: FormData): Promise<GroupActionState> {
   const session = await requireRole(["superadmin"]);
 
-  const name = normaliseName(formData.get("name"));
+  const name = cleanLine(formData.get("name"));
   const invalid = validateName(name);
   if (invalid) return { error: invalid };
 
@@ -57,7 +59,7 @@ export async function renameGroup(_prevState: GroupActionState, formData: FormDa
   const session = await requireRole(["superadmin"]);
 
   const groupId = String(formData.get("groupId") ?? "");
-  const name = normaliseName(formData.get("name"));
+  const name = cleanLine(formData.get("name"));
   const invalid = validateName(name);
   if (invalid) return { error: invalid };
 
@@ -202,13 +204,9 @@ async function nameTaken(client: PoolClient, name: string, exceptId: string | nu
   return rows.length > 0;
 }
 
-function normaliseName(value: FormDataEntryValue | null): string {
-  return String(value ?? "").trim().replace(/\s+/g, " ");
-}
-
 function validateName(name: string): string | null {
   if (!name) return "Group name is required.";
-  if (name.length > MAX_NAME_LENGTH) return `Group name must be ${MAX_NAME_LENGTH} characters or fewer.`;
+  if (name.length > CATEGORY_NAME_MAX_LENGTH) return `Group name must be ${CATEGORY_NAME_MAX_LENGTH} characters or fewer.`;
   return null;
 }
 

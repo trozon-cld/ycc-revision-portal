@@ -16,6 +16,7 @@ import {
   unpublishChapterForm,
 } from "./chapter-actions";
 import type { CategoryGroupOption } from "@/lib/handbook/categories";
+import { TITLE_MAX_LENGTH } from "@/lib/limits";
 import { CategoryPicker } from "./category-picker";
 import type { SectionOption } from "./section-row-actions";
 
@@ -44,7 +45,7 @@ export function NewChapterButton({ sections, categoryGroups }: { sections: Secti
             onCancel={close}
           >
             <Field id="new-chapter-title" label="Chapter title">
-              <input id="new-chapter-title" name="title" type="text" required maxLength={120} className={inputClass} />
+              <input id="new-chapter-title" name="title" type="text" required maxLength={TITLE_MAX_LENGTH} className={inputClass} />
             </Field>
             <Field id="new-chapter-section" label="Section" hint="It's added at the end of this section.">
               <SectionSelect id="new-chapter-section" options={sections} />
@@ -105,7 +106,7 @@ export function ChapterRowActions({
               name="title"
               type="text"
               required
-              maxLength={120}
+              maxLength={TITLE_MAX_LENGTH}
               defaultValue={title}
               className={inputClass}
             />
@@ -251,8 +252,7 @@ export function ChapterRowActions({
   return <RowActions label={`Actions for ${title}`} actions={actions} />;
 }
 
-// Also used on the chapter's own page.
-export function ChapterCategoriesForm({
+function ChapterCategoriesForm({
   chapterId,
   groups,
   initialSelected,

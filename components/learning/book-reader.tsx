@@ -18,19 +18,20 @@ import Link from "next/link";
 import { buildSheets, type BookPageData, type HandbookOutcome, type ResolvedMedia, type Sheet, type TextSize } from "@/lib/content/book";
 import type { BookCovers } from "@/lib/content/covers";
 import { PHONE_SIDEWAYS_QUERY } from "@/lib/layout";
+import { getQuestionTypeDef } from "@/lib/questions/registry";
+import { plainText } from "@/lib/content/inline";
+import { collectMediaIds } from "@/lib/content/blocks";
 import { BackCoverFace, FrontCoverFace } from "./book-covers";
 import { MeasuringContext } from "./measuring";
 import { OpeningMessage } from "./opening-message";
-import { getQuestionTypeDef } from "@/lib/questions/registry";
 import { BlockList } from "./blocks";
 import { FRESH_QUESTION_STATE, QuestionView, type QuestionViewState } from "./questions/question-view";
-import { plainText } from "@/lib/content/inline";
-import { collectMediaIds } from "@/lib/content/blocks";
 import {
   ContentsPanel,
   GoToPanel,
   ReaderBar,
   ReaderLabelsContext,
+  useReaderLabels,
   ResultsPanel,
   PANEL_LINK,
   SettingsPanel,
@@ -60,9 +61,8 @@ function questionKey(page: BookPageData): string {
   return page.question ? `${page.id}:${JSON.stringify(page.question)}` : page.id;
 }
 
-// Fixed-size book sheets. Each authored page is laid out in CSS columns one sheet wide; extra
-// columns become extra sheets. Spread (two sheets) when the reader is at least 1024px wide; on touch
-// screens (tablets) only in landscape and when each page has room for TOUCH_SPREAD_MIN_EMS.
+// Each authored page is laid out in CSS columns one sheet wide; extra columns become extra sheets. Two
+// sheets from 1024px wide; on touch screens only in landscape with room for TOUCH_SPREAD_MIN_EMS each.
 
 const SPREAD_MIN_WIDTH = 1024;
 const SHEET_RATIO = 0.95; // widest a sheet in a spread may be, as width / height
@@ -75,9 +75,8 @@ const QUESTION_PICTURE_MIN = 80;
 const COMPACT_BELOW = 600;
 // Pages measured per step; a book this size or smaller is measured in one go, before it's shown.
 const MEASURE_BATCH = 40;
-// A page that would spill onto the next page is fitted first: question pictures shrink (to half at
-// most), then its text steps down FIT_STEPS px (never below FIT_MIN_SIZE), then content pictures
-// shrink to CONTENT_PICTURE_FIT of the page height. Only a page that still doesn't fit continues.
+// A page that would spill over is fitted first: question pictures shrink (to half), text steps down
+// FIT_STEPS px (not below FIT_MIN_SIZE), then content pictures to CONTENT_PICTURE_FIT; else it continues.
 const FIT_MIN_SIZE = 14;
 const FIT_STEPS = 2;
 const CONTENT_PICTURE_FIT = 0.4;
@@ -90,7 +89,6 @@ const SWIPE_MAX_MS = 800;
 // Below this width (tablets held upright) the bar's words sit under the icons, so it fits.
 const STACKED_BAR_BELOW = 820;
 // This browser's choice of button labels on or off (a small display preference, not saved to the account).
-const LABELS_KEY = "ycc-reader-labels";
 const SPREAD_PADDING = 8;
 // Below this width the laptop bar uses short labels and leaves out Listen, so everything fits.
 const ROOMY_BAR = 1280;
@@ -241,7 +239,7 @@ export function BookReader({
   const [fontsReady, setFontsReady] = useState(0);
   const [questionStates, setQuestionStates] = useState<QuestionStates>({});
   const [panel, setPanel] = useState<ReaderPanel | null>(null);
-  const [showLabels, setShowLabels] = useState(true);
+  const [showLabels, toggleLabels] = useReaderLabels();
   const [pageTurn, setPageTurn] = useState(true);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [turn, setTurn] = useState<Turn | null>(null);
@@ -253,7 +251,6 @@ export function BookReader({
   const swipedAt = useRef(-Infinity);
   useEffect(() => {
     try {
-      if (window.localStorage.getItem(LABELS_KEY) === "off") setShowLabels(false);
       if (window.localStorage.getItem(PAGE_TURN_KEY) === "off") setPageTurn(false);
     } catch {
       // Storage can be blocked (private windows); the defaults simply stay.
@@ -276,16 +273,6 @@ export function BookReader({
     setPageTurn((current) => {
       try {
         window.localStorage.setItem(PAGE_TURN_KEY, current ? "off" : "on");
-      } catch {
-        // Not remembered, but still switched for this visit.
-      }
-      return !current;
-    });
-  }, []);
-  const toggleLabels = useCallback(() => {
-    setShowLabels((current) => {
-      try {
-        window.localStorage.setItem(LABELS_KEY, current ? "off" : "on");
       } catch {
         // Not remembered, but still switched for this visit.
       }
@@ -408,9 +395,8 @@ export function BookReader({
   useLayoutEffect(() => {
     const layer = measureRef.current;
     if (!layer || !geometry || batch.length === 0) return;
-    // Question pictures get the height the rest of the question leaves (80px up to the usual 60%) in its
-    // tallest state (wrong answer checked, explanation showing), down to half the usual size. A question
-    // that can't fit even then keeps the checked state without the explanation, else while answering.
+    // Question pictures get the room left in the tallest state (checked wrong, with explanation), down to half
+    // size; failing that, the checked state without the explanation, else the answering state.
     const caps = [...pictureCaps];
     for (const index of batch) {
       const page = pages[index];
@@ -678,9 +664,8 @@ export function BookReader({
         "--book-picture-max": `${Math.max(120, Math.round(geometry.contentHeight * PICTURE_SHARE))}px`,
         // The usual limit before any per-page fitting; tap pictures never shrink below it on small pages.
         "--book-picture-share": `${Math.max(120, Math.round(geometry.contentHeight * PICTURE_SHARE))}px`,
-        // Laptops and desktops (mouse or trackpad): answers and question buttons are 48px high, not 56.
-        // Touch screens keep the full-size answers and tap pictures in a spread too. Wide single pages
-        // (tablets in landscape) cap answer pictures like a spread; with a mouse, wide always means spread.
+        // With a mouse, answers and question buttons are 48px high (touch keeps 56 and full tap pictures).
+        // Wide single pages (tablets in landscape) cap answer pictures like a spread.
         ...(geometry.wide
           ? {
               "--book-option-picture-max": `${Math.round(geometry.contentHeight * OPTION_PICTURE_SHARE)}px`,

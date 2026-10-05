@@ -1,9 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
-import { DEFAULT_TEXT_SIZE, TEXT_SIZES } from "@/lib/content/book";
-import { isUuid } from "@/lib/content/pages";
-import { pool } from "@/lib/db/pool";
+import { loadReaderTextSize } from "@/lib/content/candidate-book";
 import { loadPracticeReport, loadPracticeView } from "@/lib/practice/sessions";
+import { isUuid } from "@/lib/ids";
 import { PracticeReportView } from "./practice-report";
 import { PracticeRunner } from "./practice-runner";
 
@@ -24,7 +23,6 @@ export default async function PracticeRunPage({ params, searchParams }: PageProp
     return <PracticeReportView report={report} againUnavailable={again === "unavailable"} />;
   }
 
-  const { rows } = await pool.query<{ reader_text_size: number | null }>(`select reader_text_size from users where id = $1`, [session.sub]);
-  const textSize = TEXT_SIZES.find((size) => size === rows[0]?.reader_text_size) ?? DEFAULT_TEXT_SIZE;
+  const textSize = await loadReaderTextSize(session.sub);
   return <PracticeRunner key={view.step.sessionId} initialStep={view.step} initialTextSize={textSize} />;
 }

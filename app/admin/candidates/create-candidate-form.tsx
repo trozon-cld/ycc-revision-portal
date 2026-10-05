@@ -5,6 +5,7 @@ import { Field } from "@/components/admin/field";
 import { PanelButton } from "@/components/admin/row-actions";
 import { inputClass } from "@/components/admin/styles";
 import { NAME_MAX_LENGTH } from "@/lib/users/name";
+import { MIN_PASSWORD_LENGTH } from "@/lib/users/credentials";
 import { createCandidate } from "./actions";
 import { AccessLengthField } from "./access-length-field";
 import { CategoryOptions, type CategoryChoice } from "./category-options";
@@ -40,13 +41,13 @@ export function NewCandidateButton({
           <Field id="new-candidate-email" label="Email">
             <input id="new-candidate-email" name="email" type="email" required autoComplete="off" className={inputClass} />
           </Field>
-          <Field id="new-candidate-password" label="Password" hint="At least 8 characters.">
+          <Field id="new-candidate-password" label="Password" hint={`At least ${MIN_PASSWORD_LENGTH} characters.`}>
             <input
               id="new-candidate-password"
               name="password"
               type="password"
               required
-              minLength={8}
+              minLength={MIN_PASSWORD_LENGTH}
               autoComplete="new-password"
               className={inputClass}
             />

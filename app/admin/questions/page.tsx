@@ -5,8 +5,9 @@ import { questionRef } from "@/lib/questions/labels";
 import { countQuestions, listBankQuestions, listChapterOptions, type BankFilters } from "@/lib/questions/queries";
 import { availableQuestionTypes, QUESTION_TYPES } from "@/lib/questions/registry";
 import { isQuestionType, QUESTION_TYPE_KEYS } from "@/lib/questions/types";
-import { isUuid } from "@/lib/questions/validate";
 import { loadCategoryGroups } from "@/lib/handbook/categories";
+import { isUuid } from "@/lib/ids";
+import { firstParam } from "@/lib/params";
 import { Badge } from "@/components/admin/badge";
 import { FilterBar, FilterSearch, FilterSelect } from "@/components/admin/filter-bar";
 import { PageHeader } from "@/components/admin/page-header";
@@ -18,16 +19,16 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
   await requireRole(["superadmin"]);
   const params = await searchParams;
 
-  const statusParam = one(params.status) ?? "";
-  const typeParam = one(params.type) ?? "";
+  const statusParam = firstParam(params.status) ?? "";
+  const typeParam = firstParam(params.type) ?? "";
   const filters: BankFilters = {
-    search: (one(params.q) ?? "").trim().slice(0, 100),
-    sectionId: uuidOrNull(one(params.section)),
-    chapterId: uuidOrNull(one(params.chapter)),
-    categoryId: uuidOrNull(one(params.category)),
+    search: (firstParam(params.q) ?? "").trim().slice(0, 100),
+    sectionId: uuidOrNull(firstParam(params.section)),
+    chapterId: uuidOrNull(firstParam(params.chapter)),
+    categoryId: uuidOrNull(firstParam(params.category)),
     type: isQuestionType(typeParam) ? typeParam : null,
     status: statusParam === "draft" || statusParam === "published" ? statusParam : null,
-    page: Math.max(1, Number.parseInt(one(params.page) ?? "1", 10) || 1),
+    page: Math.max(1, Number.parseInt(firstParam(params.page) ?? "1", 10) || 1),
   };
   const isFiltered = Boolean(
     filters.search || filters.sectionId || filters.chapterId || filters.categoryId || filters.type || filters.status
@@ -189,9 +190,6 @@ function PictureIcon() {
   );
 }
 
-function one(value: string | string[] | undefined): string | undefined {
-  return Array.isArray(value) ? value[0] : value;
-}
 
 function uuidOrNull(value: string | undefined): string | null {
   return value && isUuid(value) ? value : null;

@@ -14,9 +14,8 @@ const DRAG_START = 6;
 
 type Drag = { itemId: string | null; x: number; y: number; moved: boolean; startX: number; startY: number; onTap: () => void };
 
-// Candidate answer area for "Match pictures": put each picture in the box with its label.
-// Three ways, all equal: drag a picture onto a box (mouse or finger); tap a picture, then a box;
-// or Tab to a picture, Enter, Tab to a box, Enter. A filled box sends its picture back when tapped.
+// "Match pictures": drag a picture onto a box, tap a picture then a box, or Tab/Enter to each in turn.
+// Tapping a filled box sends its picture back.
 export function MatchPicturesAnswer({
   mode,
   seed,

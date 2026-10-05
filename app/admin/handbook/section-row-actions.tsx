@@ -4,6 +4,7 @@ import { ActionForm } from "@/components/admin/action-form";
 import { Field } from "@/components/admin/field";
 import { PanelButton, RowActions, type RowAction } from "@/components/admin/row-actions";
 import { buttonClass, inputClass } from "@/components/admin/styles";
+import { TITLE_MAX_LENGTH } from "@/lib/limits";
 import { createSection, deleteSection, moveSection, renameSection } from "./section-actions";
 
 export type SectionOption = { id: string; label: string };
@@ -21,7 +22,7 @@ export function NewSectionButton() {
           onCancel={close}
         >
           <Field id="new-section-title" label="Section title" hint="It's added at the end. You can move it afterwards.">
-            <input id="new-section-title" name="title" type="text" required maxLength={120} className={inputClass} />
+            <input id="new-section-title" name="title" type="text" required maxLength={TITLE_MAX_LENGTH} className={inputClass} />
           </Field>
         </ActionForm>
       )}
@@ -66,7 +67,7 @@ export function SectionRowActions({
               name="title"
               type="text"
               required
-              maxLength={120}
+              maxLength={TITLE_MAX_LENGTH}
               defaultValue={title}
               className={inputClass}
             />

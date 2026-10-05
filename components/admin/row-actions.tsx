@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition, type ReactNode } from "react";
+import type { FormState } from "@/lib/forms";
 import { Dialog } from "./dialog";
 import { RowMenu } from "./row-menu";
 import { buttonClass, type ButtonVariant } from "./styles";
@@ -19,7 +20,7 @@ export type PanelRowAction = {
 export type InstantRowAction = {
   label: string;
   danger?: boolean;
-  run: () => Promise<{ error?: string; success?: boolean }>;
+  run: () => Promise<FormState>;
   successMessage?: string;
 };
 

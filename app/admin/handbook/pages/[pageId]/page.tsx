@@ -3,8 +3,9 @@ import { requireRole } from "@/lib/auth/guard";
 import { pool } from "@/lib/db/pool";
 import { collectMediaIds, parseBlocks } from "@/lib/content/blocks";
 import type { ResolvedMedia } from "@/lib/content/book";
-import { getChapterContext, isUuid, resolveMedia } from "@/lib/content/pages";
+import { getChapterContext, resolveMedia } from "@/lib/content/pages";
 import { isStorageConfigured } from "@/lib/storage/storage";
+import { isUuid } from "@/lib/ids";
 import { PageEditor } from "./page-editor";
 
 export default async function EditPagePage({ params }: PageProps<"/admin/handbook/pages/[pageId]">) {

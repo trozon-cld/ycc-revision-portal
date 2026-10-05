@@ -5,7 +5,9 @@ import { ActionForm } from "@/components/admin/action-form";
 import { Field } from "@/components/admin/field";
 import { PanelButton, RowActions, type RowAction } from "@/components/admin/row-actions";
 import { inputClass } from "@/components/admin/styles";
-import { createPage, deletePage, movePage, renamePage, setPageStatus } from "../../pages/actions";
+import { TITLE_MAX_LENGTH } from "@/lib/limits";
+import { moveHandbookItem } from "../../order-actions";
+import { createPage, deletePage, renamePage, setPageStatus } from "../../pages/actions";
 
 export function NewPageButton({ chapterId }: { chapterId: string }) {
   return (
@@ -21,7 +23,7 @@ export function NewPageButton({ chapterId }: { chapterId: string }) {
           <p className="text-sm text-slate-700">The page is added at the end of this chapter. You can move it afterwards.</p>
           <p className="text-sm text-slate-700">Candidates never see this title. It&apos;s just a label for you.</p>
           <Field id="new-page-title" label="Page title" hint="For example: Gloves and hand protection">
-            <input id="new-page-title" name="title" type="text" required maxLength={120} className={inputClass} />
+            <input id="new-page-title" name="title" type="text" required maxLength={TITLE_MAX_LENGTH} className={inputClass} />
           </Field>
         </ActionForm>
       )}
@@ -31,12 +33,17 @@ export function NewPageButton({ chapterId }: { chapterId: string }) {
 
 export function PageRowActions({
   id,
+  itemId,
+  position,
   title,
   status,
   isFirst,
   isLast,
 }: {
   id: string;
+  // The page's place in the chapter, for moving it (the same move as questions).
+  itemId: string;
+  position: number;
   title: string;
   status: "draft" | "published";
   isFirst: boolean;
@@ -59,14 +66,14 @@ export function PageRowActions({
       render: (close) => (
         <ActionForm action={renamePage} hidden={hidden} submitLabel="Save title" successMessage="Page renamed." onSuccess={close} onCancel={close}>
           <Field id={`rename-page-${id}`} label="New title">
-            <input id={`rename-page-${id}`} name="title" type="text" required maxLength={120} defaultValue={title} className={inputClass} />
+            <input id={`rename-page-${id}`} name="title" type="text" required maxLength={TITLE_MAX_LENGTH} defaultValue={title} className={inputClass} />
           </Field>
         </ActionForm>
       ),
     },
   ];
-  if (!isFirst) actions.push({ label: "Move up", run: () => movePage(id, "up"), successMessage: "Page moved up." });
-  if (!isLast) actions.push({ label: "Move down", run: () => movePage(id, "down"), successMessage: "Page moved down." });
+  if (!isFirst) actions.push({ label: "Move up", run: () => moveHandbookItem(itemId, position, position - 1), successMessage: "Page moved up." });
+  if (!isLast) actions.push({ label: "Move down", run: () => moveHandbookItem(itemId, position, position + 1), successMessage: "Page moved down." });
   actions.push(
     status === "published"
       ? { label: "Unpublish", run: () => setPageStatus(id, "draft"), successMessage: "Page is a draft again." }

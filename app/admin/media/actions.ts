@@ -7,10 +7,12 @@ import { logActivity } from "@/lib/audit/log";
 import { EXTENSION_BY_MIME, readImageInfo, type ImageInfo } from "@/lib/media/image-info";
 import { MAX_THUMB_BYTES, MAX_UPLOAD_BYTES } from "@/lib/media/limits";
 import { StorageConfigError, deleteObjects, storeObject } from "@/lib/storage/storage";
+import { ALT_TEXT_MAX_LENGTH } from "@/lib/limits";
+import { cleanLine } from "@/lib/text";
+import type { FormState } from "@/lib/forms";
 
-export type MediaActionState = { error?: string; success?: boolean };
+export type MediaActionState = FormState;
 
-const MAX_ALT_LENGTH = 300;
 const MAX_NAME_LENGTH = 255;
 const PAGE_PATH = "/admin/media";
 const NOT_FOUND = "This picture no longer exists.";
@@ -19,11 +21,11 @@ const NOT_CONFIGURED = "Image storage isn't set up yet. Add the Supabase setting
 export async function uploadMedia(_prevState: MediaActionState, formData: FormData): Promise<MediaActionState> {
   const session = await requireRole(["superadmin"]);
 
-  const altText = normaliseText(formData.get("altText"));
+  const altText = cleanLine(formData.get("altText"));
   const altError = validateAltText(altText);
   if (altError) return { error: altError };
 
-  const originalName = normaliseText(formData.get("originalName")).slice(0, MAX_NAME_LENGTH) || "picture";
+  const originalName = cleanLine(formData.get("originalName")).slice(0, MAX_NAME_LENGTH) || "picture";
   const main = await readUpload(formData.get("file"), MAX_UPLOAD_BYTES);
   if ("error" in main) return { error: main.error };
   const thumb = await readUpload(formData.get("thumb"), MAX_THUMB_BYTES);
@@ -76,7 +78,7 @@ export async function updateAltText(_prevState: MediaActionState, formData: Form
   const session = await requireRole(["superadmin"]);
 
   const mediaId = String(formData.get("mediaId") ?? "");
-  const altText = normaliseText(formData.get("altText"));
+  const altText = cleanLine(formData.get("altText"));
   const altError = validateAltText(altText);
   if (altError) return { error: altError };
 
@@ -164,12 +166,8 @@ async function deleteQuietly(paths: string[]) {
   }
 }
 
-function normaliseText(value: FormDataEntryValue | null): string {
-  return String(value ?? "").trim().replace(/\s+/g, " ");
-}
-
 function validateAltText(altText: string): string | null {
   if (!altText) return "Describe what the picture shows.";
-  if (altText.length > MAX_ALT_LENGTH) return `The description must be ${MAX_ALT_LENGTH} characters or fewer.`;
+  if (altText.length > ALT_TEXT_MAX_LENGTH) return `The description must be ${ALT_TEXT_MAX_LENGTH} characters or fewer.`;
   return null;
 }

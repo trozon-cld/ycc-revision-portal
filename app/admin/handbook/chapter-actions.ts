@@ -7,7 +7,7 @@ import { getErrorCode, withTransaction } from "@/lib/db/transaction";
 import { logActivity } from "@/lib/audit/log";
 import { listNames } from "@/lib/handbook/categories";
 import { questionRef } from "@/lib/questions/labels";
-import { isUuid } from "@/lib/questions/text";
+import { isUuid } from "@/lib/ids";
 import {
   lockHandbookStructure,
   normaliseTitle,
@@ -408,7 +408,7 @@ function categoryIdsFrom(formData: FormData): string[] {
 // Keeps the chosen categories from being deleted until the save commits; null if any is gone.
 async function lockCategories(client: PoolClient, ids: string[]): Promise<Map<string, string> | null> {
   if (ids.length === 0) return new Map();
-  if (!ids.every((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))) return null;
+  if (!ids.every(isUuid)) return null;
   const { rows } = await client.query<{ id: string; name: string }>(
     `select id, name from categories where id = any($1::uuid[]) order by id for share`,
     [ids]

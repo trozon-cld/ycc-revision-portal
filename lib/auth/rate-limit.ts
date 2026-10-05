@@ -1,8 +1,7 @@
 import type { Pool, PoolClient } from "pg";
 
-// Login rate limiting, counted from recent failed logins in auth_events (Vercel keeps no memory
-// between requests). Too many failures pause logins for 15 minutes after the last one:
-// per email from one address (so others can't lock you out from elsewhere), and per address.
+// Login limits, counted from recent failures in auth_events (servers may keep no memory between requests):
+// a 15-minute pause per email from one address (so others can't lock you out) and per address.
 export const LOGIN_LIMITS = { perEmailAndAddress: 5, perAddress: 30, pauseMinutes: 15 };
 
 const PAUSE_MS = LOGIN_LIMITS.pauseMinutes * 60 * 1000;

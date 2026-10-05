@@ -4,6 +4,7 @@ import { requireRole } from "@/lib/auth/guard";
 import { SESSION_ENDED_LOGIN } from "@/lib/auth/constants";
 import { PageBody } from "@/components/candidate/page-body";
 import { loadSwitchableCategories } from "@/lib/candidates/categories";
+import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { switchCategory } from "./actions";
 
 const ERRORS: Record<string, string> = {
@@ -70,13 +71,13 @@ export default async function ChangeCategoryPage({ searchParams }: PageProps<"/d
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <button
               type="submit"
-              className="inline-flex min-h-14 items-center justify-center rounded-lg bg-primary px-6 text-lg font-semibold text-white hover:bg-primary/90 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              className={PRIMARY_BUTTON}
             >
               Save category
             </button>
             <Link
               href="/dashboard"
-              className="inline-flex min-h-14 items-center justify-center rounded-lg border-2 border-ink/25 bg-white px-6 text-lg font-semibold text-ink hover:border-primary hover:text-primary focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              className={SECONDARY_BUTTON}
             >
               Back to home
             </Link>

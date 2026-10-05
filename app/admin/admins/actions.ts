@@ -7,19 +7,17 @@ import { requireRole } from "@/lib/auth/guard";
 import { getErrorCode, withTransaction } from "@/lib/db/transaction";
 import { logActivity } from "@/lib/audit/log";
 import { NO_NAME, normaliseName, validateName } from "@/lib/users/name";
+import { DUPLICATE_EMAIL, EMAIL_PATTERN, MIN_PASSWORD_LENGTH } from "@/lib/users/credentials";
+import type { FormState } from "@/lib/forms";
 
-export type CreateAdminState = { error?: string; success?: boolean };
-export type AdminActionState = { error?: string; success?: boolean };
+export type AdminActionState = FormState;
 
-const MIN_PASSWORD_LENGTH = 8;
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const DUPLICATE_EMAIL = "An account with this email already exists.";
 const NOT_FOUND = "Admin not found.";
 
 export async function createAdmin(
-  _prevState: CreateAdminState,
+  _prevState: AdminActionState,
   formData: FormData
-): Promise<CreateAdminState> {
+): Promise<AdminActionState> {
   const session = await requireRole(["superadmin"]);
 
   const email = String(formData.get("email") ?? "")
@@ -37,7 +35,7 @@ export async function createAdmin(
     return { error: "Enter a valid email address." };
   }
   if (password.length < MIN_PASSWORD_LENGTH) {
-    return { error: "Password must be at least 8 characters." };
+    return { error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` };
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
@@ -158,7 +156,7 @@ export async function updateAdminPassword(
   const confirmPassword = String(formData.get("confirmPassword") ?? "");
 
   if (password.length < MIN_PASSWORD_LENGTH) {
-    return { error: "Password must be at least 8 characters." };
+    return { error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` };
   }
   if (password !== confirmPassword) {
     return { error: "The two passwords don't match." };

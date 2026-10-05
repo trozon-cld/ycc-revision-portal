@@ -13,6 +13,7 @@ import { Dialog } from "@/components/admin/dialog";
 import { buttonClass, inputClass, labelClass } from "@/components/admin/styles";
 import { useToast } from "@/components/admin/toast";
 import { PicturePicker } from "@/components/admin/picture-picker";
+import { TITLE_MAX_LENGTH } from "@/lib/limits";
 import { getPreviewMedia, listPickerMedia, savePageContent, type PickerItem } from "../actions";
 import { BlockEditor } from "./block-editor";
 
@@ -202,7 +203,7 @@ export function PageEditor({
             id="page-title"
             type="text"
             value={title}
-            maxLength={120}
+            maxLength={TITLE_MAX_LENGTH}
             onChange={(event) => setTitle(event.target.value)}
             className={`${inputClass} font-medium`}
           />

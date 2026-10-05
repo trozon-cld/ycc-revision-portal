@@ -4,6 +4,7 @@ import { ActionForm } from "@/components/admin/action-form";
 import { Field } from "@/components/admin/field";
 import { PanelButton, RowActions, type RowAction } from "@/components/admin/row-actions";
 import { buttonClass, inputClass } from "@/components/admin/styles";
+import { CATEGORY_NAME_MAX_LENGTH } from "@/lib/limits";
 import { createCategory, deleteCategory, moveCategoryToGroup, renameCategory } from "./actions";
 import { CategoryChaptersForm, type ChapterOutline } from "./category-chapters-form";
 import { CategoryCoversForm, type CoverChoice } from "./category-covers-form";
@@ -23,7 +24,7 @@ export function NewCategoryButton({ groups }: { groups: GroupOption[] }) {
           onCancel={close}
         >
           <Field id="new-category-name" label="Category name">
-            <input id="new-category-name" name="name" type="text" required maxLength={100} className={inputClass} />
+            <input id="new-category-name" name="name" type="text" required maxLength={CATEGORY_NAME_MAX_LENGTH} className={inputClass} />
           </Field>
           <Field id="new-category-group" label="Group">
             <select id="new-category-group" name="groupId" required className={inputClass}>
@@ -105,7 +106,7 @@ export function CategoryRowActions({
               name="name"
               type="text"
               required
-              maxLength={100}
+              maxLength={CATEGORY_NAME_MAX_LENGTH}
               defaultValue={name}
               className={inputClass}
             />

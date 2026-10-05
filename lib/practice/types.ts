@@ -29,6 +29,9 @@ export function isPracticeWay(value: unknown): value is PracticeWay {
 export const WEAK_MIN_ANSWERED = 3;
 export const WEAK_BELOW = 0.7;
 
+// Most questions one practice can hold.
+export const MAX_QUESTIONS = 2000;
+
 // What the setup page offers: question counts in the current category's practice pool.
 export type PracticeOptions = {
   categoryName: string;

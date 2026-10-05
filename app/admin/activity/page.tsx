@@ -17,14 +17,17 @@ import { FilterBar, FilterSearch, FilterSelect } from "@/components/admin/filter
 import { Breakable } from "@/components/admin/breakable";
 import { PageHeader } from "@/components/admin/page-header";
 import { buttonClass } from "@/components/admin/styles";
+import { Pagination } from "@/components/admin/pagination";
 import { Cell, Row, Table } from "@/components/admin/table";
 import { ActionForm } from "@/components/admin/action-form";
 import { ARCHIVE_AFTER_DAYS, archiveMonthText, listArchives, loadArchiveStatus } from "@/lib/audit/archive";
 import { formatBytes } from "@/lib/format";
+import { isUuid } from "@/lib/ids";
+import { firstParam } from "@/lib/params";
+import { escapeLike } from "@/lib/db/like";
 import { archiveOldLoginRecords } from "./actions";
 
 const PAGE_SIZE = 50;
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ROLE_LABELS = { superadmin: "Superadmin", admin: "Admin", candidate: "Candidate" } as const;
 type RoleKey = keyof typeof ROLE_LABELS;
 
@@ -59,13 +62,13 @@ export default async function ActivityPage({ searchParams }: PageProps<"/admin/a
   const isSuperadmin = session.role === "superadmin";
   const params = await searchParams;
 
-  const tabParam = one(params.tab);
+  const tabParam = firstParam(params.tab);
   const tab = tabParam === "logins" ? "logins" : tabParam === "archives" && isSuperadmin ? "archives" : "activity";
-  const page = Math.max(1, Number.parseInt(one(params.page) ?? "1", 10) || 1);
-  const actionParam = one(params.action) ?? "";
-  const eventParam = one(params.event) ?? "";
-  const actorParam = one(params.actor) ?? "";
-  const emailSearch = isSuperadmin ? (one(params.q) ?? "").trim().slice(0, 100) : "";
+  const page = Math.max(1, Number.parseInt(firstParam(params.page) ?? "1", 10) || 1);
+  const actionParam = firstParam(params.action) ?? "";
+  const eventParam = firstParam(params.event) ?? "";
+  const actorParam = firstParam(params.actor) ?? "";
+  const emailSearch = isSuperadmin ? (firstParam(params.q) ?? "").trim().slice(0, 100) : "";
 
   const allowedActions = isSuperadmin
     ? (Object.keys(ACTIVITY_ACTIONS) as ActivityAction[])
@@ -73,7 +76,7 @@ export default async function ActivityPage({ searchParams }: PageProps<"/admin/a
   const action = isActivityAction(actionParam) && allowedActions.includes(actionParam) ? actionParam : null;
   const event = isAuthEvent(eventParam) ? eventParam : null;
   // Admins are always pinned to their own entries, whatever the URL says.
-  const actorId = isSuperadmin ? (UUID_PATTERN.test(actorParam) ? actorParam : null) : session.sub;
+  const actorId = isSuperadmin ? (isUuid(actorParam) ? actorParam : null) : session.sub;
   const offset = (page - 1) * PAGE_SIZE;
 
   const filters: Record<string, string> =
@@ -240,7 +243,7 @@ async function ActivityTab({
         ))}
       </Table>
 
-      <Pagination page={page} hasMore={hasMore} filters={filters} />
+      <Pagination basePath="/admin/activity" page={page} hasMore={hasMore} query={filters} />
     </>
   );
 }
@@ -326,7 +329,7 @@ async function LoginsTab({
         ))}
       </Table>
 
-      <Pagination page={page} hasMore={hasMore} filters={filters} />
+      <Pagination basePath="/admin/activity" page={page} hasMore={hasMore} query={filters} />
     </>
   );
 }
@@ -400,7 +403,7 @@ async function ArchivesTab({ page }: { page: number }) {
         ))}
       </Table>
 
-      <Pagination page={page} hasMore={hasMore} filters={{ tab: "archives" }} />
+      <Pagination basePath="/admin/activity" page={page} hasMore={hasMore} query={{ tab: "archives" }} />
     </>
   );
 }
@@ -416,45 +419,6 @@ function TabLink({ href, isCurrent, label }: { href: string; isCurrent: boolean;
     >
       {label}
     </Link>
-  );
-}
-
-function Pagination({
-  page,
-  hasMore,
-  filters,
-}: {
-  page: number;
-  hasMore: boolean;
-  filters: Record<string, string>;
-}) {
-  if (page === 1 && !hasMore) return null;
-
-  const hrefFor = (target: number) => {
-    const query = new URLSearchParams(
-      Object.entries({ ...filters, page: String(target) }).filter(([, value]) => value !== "")
-    );
-    return `/admin/activity?${query.toString()}`;
-  };
-
-  return (
-    <div className="mt-4 flex items-center justify-between gap-2">
-      {page > 1 ? (
-        <Link href={hrefFor(page - 1)} className={buttonClass("secondary", "sm")}>
-          ← Newer
-        </Link>
-      ) : (
-        <span />
-      )}
-      <span className="text-sm text-slate-600">Page {page}</span>
-      {hasMore ? (
-        <Link href={hrefFor(page + 1)} className={buttonClass("secondary", "sm")}>
-          Older →
-        </Link>
-      ) : (
-        <span />
-      )}
-    </div>
   );
 }
 
@@ -493,13 +457,4 @@ function formatUkDateTime(value: string): string {
     minute: "2-digit",
     timeZone: ACCESS_TIME_ZONE,
   });
-}
-
-function one(value: string | string[] | undefined): string | undefined {
-  return Array.isArray(value) ? value[0] : value;
-}
-
-// Treat the user's % and _ literally; Postgres LIKE uses backslash as its escape.
-function escapeLike(value: string): string {
-  return value.replace(/[\\%_]/g, "\\$&");
 }

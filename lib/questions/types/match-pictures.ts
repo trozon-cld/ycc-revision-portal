@@ -1,10 +1,9 @@
+import { cleanLine, isRecord } from "@/lib/text";
+import { isUuid } from "@/lib/ids";
 import { defineQuestionType } from "../define";
-import { cleanLine, isRecord, isUuid } from "../text";
 
-// Match pictures: 3–5 pictures and as many labelled boxes; the candidate puts each picture in the
-// box it belongs to. All must be right to count as correct.
-// The content holds the pictures (sorted by id, so their order gives nothing away) and the boxes;
-// which picture goes where is only in the answer.
+// Match pictures: 3–5 pictures and labelled boxes; all must be placed right. The content holds pictures
+// (sorted by id, so their order gives nothing away) and boxes; which goes where is only in the answer.
 
 export const MATCH_LIMITS = { minPairs: 3, maxPairs: 5, defaultPairs: 4, labelLength: 60 } as const;
 

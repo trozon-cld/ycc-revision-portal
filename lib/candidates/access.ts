@@ -61,10 +61,11 @@ export function resolveAccessEndDate(
   return { date };
 }
 
-export function formatUkDate(value: string | Date): string {
+// "5 Oct 2026" (short, admin pages) or "5 October 2026" (long, candidate pages).
+export function formatUkDate(value: string | Date, month: "short" | "long" = "short"): string {
   return new Date(value).toLocaleDateString("en-GB", {
     day: "numeric",
-    month: "short",
+    month,
     year: "numeric",
     timeZone: ACCESS_TIME_ZONE,
   });

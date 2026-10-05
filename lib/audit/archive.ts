@@ -76,7 +76,7 @@ export async function listArchives(offset: number, limit: number): Promise<LogAr
      order by month desc limit $1 offset $2`,
     [limit, offset]
   );
-  const links = rows.length ? await getSignedUrls(rows.map((row) => row.file_path), DOWNLOAD_LINK_SECONDS).catch(() => new Map<string, string>()) : new Map<string, string>();
+  const links = rows.length ? await getSignedUrls(rows.map((row) => row.file_path), DOWNLOAD_LINK_SECONDS, "archives").catch(() => new Map<string, string>()) : new Map<string, string>();
   return rows.map((row) => {
     const link = links.get(row.file_path);
     return {
@@ -131,8 +131,8 @@ async function archiveMonth(client: PoolClient, actor: SessionPayload, month: st
       rows: rows.map((row) => [row.id, row.created_at.toISOString(), row.event, row.user_id, row.email, row.role, row.ip_address]),
     })
   );
-  const path = `archives/${fileName(month)}`;
-  await storeObject(path, new Blob([new Uint8Array(file)]), "application/gzip", { replace: true });
+  const path = fileName(month);
+  await storeObject(path, new Blob([new Uint8Array(file)]), "application/gzip", { replace: true, area: "archives" });
 
   const { rows: inserted } = await client.query<{ id: string }>(
     `insert into log_archives (log, month, record_count, file_path, byte_size, archived_by, archived_by_email)

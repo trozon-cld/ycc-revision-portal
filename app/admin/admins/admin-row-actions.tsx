@@ -5,6 +5,7 @@ import { Field } from "@/components/admin/field";
 import { PanelButton, RowActions, type RowAction } from "@/components/admin/row-actions";
 import { buttonClass, inputClass } from "@/components/admin/styles";
 import { NAME_MAX_LENGTH } from "@/lib/users/name";
+import { MIN_PASSWORD_LENGTH } from "@/lib/users/credentials";
 import { createAdmin, deleteAdmin, updateAdminEmail, updateAdminName, updateAdminPassword } from "./actions";
 
 export function NewAdminButton() {
@@ -25,13 +26,13 @@ export function NewAdminButton() {
           <Field id="new-admin-email" label="Email">
             <input id="new-admin-email" name="email" type="email" required autoComplete="off" className={inputClass} />
           </Field>
-          <Field id="new-admin-password" label="Password" hint="At least 8 characters.">
+          <Field id="new-admin-password" label="Password" hint={`At least ${MIN_PASSWORD_LENGTH} characters.`}>
             <input
               id="new-admin-password"
               name="password"
               type="password"
               required
-              minLength={8}
+              minLength={MIN_PASSWORD_LENGTH}
               autoComplete="new-password"
               className={inputClass}
             />
@@ -125,13 +126,13 @@ export function AdminRowActions({
           onSuccess={close}
           onCancel={close}
         >
-          <Field id={`password-${id}`} label="New password" hint="At least 8 characters. Share it with them securely.">
+          <Field id={`password-${id}`} label="New password" hint={`At least ${MIN_PASSWORD_LENGTH} characters. Share it with them securely.`}>
             <input
               id={`password-${id}`}
               name="password"
               type="password"
               required
-              minLength={8}
+              minLength={MIN_PASSWORD_LENGTH}
               autoComplete="new-password"
               className={inputClass}
             />
@@ -142,7 +143,7 @@ export function AdminRowActions({
               name="confirmPassword"
               type="password"
               required
-              minLength={8}
+              minLength={MIN_PASSWORD_LENGTH}
               autoComplete="new-password"
               className={inputClass}
             />

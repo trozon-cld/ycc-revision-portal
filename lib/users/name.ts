@@ -1,7 +1,8 @@
+import { cleanLine } from "@/lib/text";
 export const NAME_MAX_LENGTH = 100;
 
 export function normaliseName(value: FormDataEntryValue | null): string {
-  return String(value ?? "").trim().replace(/\s+/g, " ");
+  return cleanLine(value);
 }
 
 export function validateName(name: string): string | null {
