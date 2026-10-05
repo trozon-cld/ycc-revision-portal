@@ -161,7 +161,7 @@ const validPosition = (value: unknown): value is number => Number.isInteger(valu
 
 // Untrusted input from the test screen, checked before anything is read.
 export function parseChanges(changes: unknown): MockChange[] | null {
-  if (!Array.isArray(changes) || changes.length === 0 || changes.length > MOCK_QUESTIONS) return null;
+  if (!Array.isArray(changes) || changes.length > MOCK_QUESTIONS) return null;
   const parsed: MockChange[] = [];
   for (const raw of changes) {
     if (typeof raw !== "object" || raw === null) return null;

@@ -590,7 +590,7 @@ export function SettingsPanel({
   reducedMotion?: boolean;
   // Practice: End practice, shown before the links.
   actions?: ReactNode;
-  // Phones: Back to home, Help and Log out, which the hidden header holds elsewhere.
+  // Back to home, Help and Log out where the bar has no room for them (phones; the Mock test everywhere).
   links?: ReactNode;
   onClose: () => void;
 }) {

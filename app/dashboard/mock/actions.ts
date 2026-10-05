@@ -23,6 +23,8 @@ export async function saveMockProgress(attemptId: string, changes: unknown, posi
   const parsed = parseChanges(changes);
   const onScreen = position === null || (Number.isInteger(position) && (position as number) >= 0 && (position as number) < MOCK_QUESTIONS) ? (position as number | null) : undefined;
   if (typeof attemptId !== "string" || !isUuid(attemptId) || !parsed || onScreen === undefined) return { ok: false, reason: "invalid" };
+  // Moving to another question saves just the position.
+  if (parsed.length === 0 && onScreen === null) return { ok: false, reason: "invalid" };
   return saveMockAnswers(session.sub, attemptId, parsed, onScreen);
 }
 
