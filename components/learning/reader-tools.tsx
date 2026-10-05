@@ -16,7 +16,7 @@ export type ReaderPanel = "contents" | "goto" | "results" | "settings";
 // provides it; each button keeps its name for screen readers and as a tooltip either way.
 export const ReaderLabelsContext = createContext(true);
 
-// Button labels on or off: one choice for the Handbook and Practice, remembered on this device.
+// Button labels on or off: one choice for the Handbook, Practice and the Mock test, remembered on this device.
 const LABELS_KEY = "ycc-reader-labels";
 
 export function useReaderLabels(): [showLabels: boolean, toggleLabels: () => void] {
@@ -590,7 +590,7 @@ export function SettingsPanel({
   reducedMotion?: boolean;
   // Practice: End practice, shown before the links.
   actions?: ReactNode;
-  // Phones: Back to home, Help and Log out, which the hidden header holds elsewhere.
+  // Back to home, Help and Log out where the bar has no room for them (phones; the Mock test everywhere).
   links?: ReactNode;
   onClose: () => void;
 }) {

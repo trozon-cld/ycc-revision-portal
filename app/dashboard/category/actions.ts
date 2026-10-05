@@ -5,8 +5,9 @@ import { requireRole } from "@/lib/auth/guard";
 import { logActivity } from "@/lib/audit/log";
 import { getErrorCode, withTransaction } from "@/lib/db/transaction";
 import { isUuid } from "@/lib/ids";
+import { SAVE_GRACE_SECONDS } from "@/lib/mock/types";
 
-type Outcome = "switched" | "unchanged" | "unavailable";
+type Outcome = "switched" | "unchanged" | "unavailable" | "mock";
 
 export async function switchCategory(formData: FormData) {
   const session = await requireRole(["candidate"]);
@@ -33,6 +34,12 @@ export async function switchCategory(formData: FormData) {
       const user = users[0];
       if (!user) return "unavailable";
       if (user.current_category_id === categoryId) return "unchanged";
+      // A mock test in progress belongs to this category: it's finished first.
+      const { rowCount } = await client.query(
+        `select 1 from mock_attempts where user_id = $1 and ended_at is null and deadline_at > now() - make_interval(secs => $2)`,
+        [session.sub, SAVE_GRACE_SECONDS]
+      );
+      if (rowCount) return "mock";
 
       const { rows: targets } = await client.query<{ name: string; group_id: string }>(
         `select name, group_id from categories where id = $1 for share`,
@@ -57,6 +64,6 @@ export async function switchCategory(formData: FormData) {
     outcome = "unavailable";
   }
 
-  if (outcome === "unavailable") redirect("/dashboard/category?error=unavailable");
+  if (outcome === "unavailable" || outcome === "mock") redirect(`/dashboard/category?error=${outcome}`);
   redirect(outcome === "switched" ? "/dashboard?switched=1" : "/dashboard");
 }

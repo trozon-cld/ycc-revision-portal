@@ -21,7 +21,7 @@ from (values
   ('Site Manager'),
   ('Specialist Role')
 ) as seed (name)
-on conflict (name) do nothing;
+on conflict ((lower(name))) do nothing;
 
 -- Placeholder sections and chapters, all renameable. Each only seeds an empty table.
 insert into sections (position, title)

@@ -6,10 +6,10 @@ import type { TextSize } from "@/lib/content/book";
 import type { PracticeStep } from "@/lib/practice/types";
 import { QuestionView, type QuestionViewState } from "@/components/learning/questions/question-view";
 import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { FocusedShell } from "@/components/learning/focused-shell";
 import { saveTextSize } from "@/app/dashboard/prepare/actions";
 import { checkPracticeAnswer, endPracticeRun, nextPracticeQuestion } from "../actions";
 import { FlagButton } from "../flag-button";
-import { PracticeShell } from "../practice-shell";
 
 // One practice question at a time: Check answer (marked on the server), then Next question.
 export function PracticeRunner({ initialStep, initialTextSize }: { initialStep: PracticeStep; initialTextSize: TextSize }) {
@@ -106,7 +106,7 @@ export function PracticeRunner({ initialStep, initialTextSize }: { initialStep: 
   );
 
   return (
-    <PracticeShell
+    <FocusedShell label="Practice tools"
       status={`Question ${step.position + 1} of ${step.total}`}
       shortStatus={`${step.position + 1} of ${step.total}`}
       progress={{ done: step.answered, total: step.total }}
@@ -160,6 +160,6 @@ export function PracticeRunner({ initialStep, initialTextSize }: { initialStep: 
           <FlagButton key={`${step.sessionId}:${step.position}`} questionId={step.question.id} initialFlagged={step.flagged} />
         </div>
       </div>
-    </PracticeShell>
+    </FocusedShell>
   );
 }

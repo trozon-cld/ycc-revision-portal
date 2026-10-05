@@ -5,8 +5,8 @@ import { SESSION_ENDED_LOGIN } from "@/lib/auth/constants";
 import { loadOpenPractice, loadPracticeOptions } from "@/lib/practice/sessions";
 import { PageBody } from "@/components/candidate/page-body";
 import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { FocusedShell } from "@/components/learning/focused-shell";
 import { PracticeSetup } from "./practice-setup";
-import { PracticeShell } from "./practice-shell";
 
 export default async function PracticePage() {
   const session = await requireRole(["candidate"]);
@@ -16,7 +16,7 @@ export default async function PracticePage() {
   if (!options) redirect(SESSION_ENDED_LOGIN);
 
   return (
-    <PracticeShell status="Practice">
+    <FocusedShell label="Practice tools" status="Practice">
       <PageBody>
         <div className="max-w-2xl">
           <h1 className="text-3xl font-bold text-ink">Practice</h1>
@@ -57,6 +57,6 @@ export default async function PracticePage() {
           )}
         </div>
       </PageBody>
-    </PracticeShell>
+    </FocusedShell>
   );
 }

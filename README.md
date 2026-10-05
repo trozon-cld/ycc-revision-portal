@@ -50,10 +50,10 @@ Status: in active development.
 - `app/` — routes:
   - `/login`, `/access-expired`
   - `/admin/*` (Admin/Superadmin): `/admin/candidates`, `/admin/admins`, `/admin/categories`, `/admin/handbook` (sections and chapters; `chapters/[id]` a chapter's pages and questions; `pages/[id]` the page editor; `preview` the book as candidates see it), `/admin/questions` (bank; `new`, `[id]`), `/admin/media`, `/admin/activity` (actions, logins and login-record archives), `/admin/account`
-  - `/dashboard` (Candidate home): `category` to switch within the group, `prepare` the Handbook, `practice` Practice setup and `practice/[id]` a run or its report, `help`
+  - `/dashboard` (Candidate home): `category` to switch within the group, `prepare` the Handbook, `practice` Practice setup and `practice/[id]` a run or its report, `mock` the Mock test start page and `mock/[id]` a test, `help`
 - `components/admin/` — compact admin console UI (sidebar shell, tables, row menus, slide-in panels, `ActionForm`, `Pagination`); admin pages must build from these. Candidate pages keep the large, simple style.
 - `components/candidate/` — candidate page shell (header, `PageBody`), home-screen section cards and the shared large button styles
-- `components/learning/` — candidate-facing renderers: blocks, questions (`questions/`), the fixed-page book reader and the reader bar/Settings shared with Practice
+- `components/learning/` — candidate-facing renderers: blocks, questions (`questions/`), the fixed-page book reader, the reader bar/Settings, and the focused frame shared by Practice and the Mock test (`focused-shell.tsx`)
 - `lib/auth/` — JWT signing/verification, session cookie, role guard, login limits
 - `lib/audit/` — activity and login logs (every loggable action is listed in `lib/audit/actions.ts`) and login-record archiving
 - `lib/db/` — shared Postgres pool, transaction helper, LIKE escaping
@@ -61,8 +61,9 @@ Status: in active development.
 - `lib/candidates/` — access dates (UK time), category switching and the candidate home
 - `lib/handbook/` — Handbook structure (sections, chapters, locks) and chapter–category links
 - `lib/content/` — Handbook page blocks (types, validation, **bold** markup), book sheet rules and the book loaders
-- `lib/questions/` — question types (`types/`), validation, server-side marking, the safe client shape, shuffling and bank queries
-- `lib/practice/` — Practice: question pool, Smart practice picking, runs and reports (server-marked)
+- `lib/questions/` — question types (`types/`), validation, server-side marking, the safe client shape, shuffling, bank queries and the Practice/Mock question pool (`pool.ts`)
+- `lib/practice/` — Practice: Smart practice picking, runs and reports (server-marked)
+- `lib/mock/` — Mock test: the draw (50 questions spread across chapters), tests in progress, deadline and marking
 - `lib/progress/` — candidates' progress per category (Handbook pages done, question results); not activity-log data
 - `lib/storage/` — the only code that talks to the storage provider (upload, delete, signed links; pictures and archive buckets)
 - `lib/media/` — image checks (real type and size from the file) and in-browser WebP conversion

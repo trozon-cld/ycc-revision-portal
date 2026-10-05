@@ -4,6 +4,8 @@ import { requireRole } from "@/lib/auth/guard";
 import { SESSION_ENDED_LOGIN } from "@/lib/auth/constants";
 import { daysLeftUk, formatUkDate } from "@/lib/candidates/access";
 import { loadCandidateHome } from "@/lib/candidates/home";
+import { loadMockInProgress } from "@/lib/mock/attempts";
+import { timeLeftText } from "@/lib/mock/types";
 import { loadPracticeInProgress } from "@/lib/practice/sessions";
 import { PageBody } from "@/components/candidate/page-body";
 import { SectionCard, SectionIcons } from "@/components/candidate/section-card";
@@ -13,7 +15,11 @@ const ACCESS_WARNING_DAYS = 7;
 
 export default async function CandidateHomePage({ searchParams }: PageProps<"/dashboard">) {
   const session = await requireRole(["candidate"]);
-  const [home, practice] = await Promise.all([loadCandidateHome(session.sub), loadPracticeInProgress(session.sub)]);
+  const [home, practice, mock] = await Promise.all([
+    loadCandidateHome(session.sub),
+    loadPracticeInProgress(session.sub),
+    loadMockInProgress(session.sub),
+  ]);
   if (!home) redirect(SESSION_ENDED_LOGIN);
   const justSwitched = (await searchParams).switched === "1";
 
@@ -102,8 +108,13 @@ export default async function CandidateHomePage({ searchParams }: PageProps<"/da
             <li>
               <SectionCard
                 title="Mock test"
-                description="A timed test in exam-style conditions, with your results at the end."
+                description={
+                  mock
+                    ? `Continue your mock test: ${timeLeftText(mock.secondsLeft).toLowerCase()}.`
+                    : "A timed test in exam-style conditions, with your results at the end."
+                }
                 icon={SectionIcons.timer}
+                href="/dashboard/mock"
               />
             </li>
             <li className="sm:col-span-2">

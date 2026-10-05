@@ -17,8 +17,8 @@ import {
   barButton,
 } from "@/components/learning/reader-tools";
 
-// Practice's focused frame, like the Handbook reader: its own bar instead of the site header (on every
-// screen), the page scrolling below it, and the Settings panel covering the page.
+// The focused frame of Practice and the Mock test, like the Handbook reader: its own bar instead of the
+// site header (on every screen), the page scrolling below it, and the Settings panel covering the page.
 
 const WIDE_QUERY = "(min-width: 1024px)";
 
@@ -41,16 +41,21 @@ function subscribeWide(onChange: () => void) {
   return () => query.removeEventListener("change", onChange);
 }
 
-export function PracticeShell({
+export function FocusedShell({
+  label,
   status,
   shortStatus,
   progress,
   textSize,
   onTextSizeChange,
   actions,
+  timer,
+  accountInSettings = false,
   scrollRef,
   children,
 }: {
+  // The bar's name for screen readers, e.g. "Practice tools".
+  label: string;
   // In the middle of the bar, e.g. "Question 3 of 20".
   status: string;
   // Phones held upright, where the bar is narrow, e.g. "3 of 20".
@@ -61,6 +66,10 @@ export function PracticeShell({
   onTextSizeChange?: (size: TextSize) => void;
   // In Settings, e.g. End practice.
   actions?: ReactNode;
+  // Mock test: the clock, in the bar on laptops and in a strip under it on smaller screens.
+  timer?: (place: "bar" | "strip") => ReactNode;
+  // Help and Log out live in Settings on every screen (the Mock test keeps its bar for the clock).
+  accountInSettings?: boolean;
   scrollRef?: RefObject<HTMLDivElement | null>;
   children: ReactNode;
 }) {
@@ -82,11 +91,11 @@ export function PracticeShell({
 
   return (
     <ReaderLabelsContext.Provider value={showLabels}>
-      <div data-practice-owns-header="" className="flex h-dvh min-h-0 flex-col">
+      <div data-focused-owns-header="" className="flex h-dvh min-h-0 flex-col">
         {/* Three columns with equal sides, so the status stays in the middle of the screen, like the Handbook. */}
         <div
           role="toolbar"
-          aria-label="Practice tools"
+          aria-label={label}
           className="relative grid grid-cols-[1fr_minmax(0,auto)_1fr] items-center gap-2 border-b border-slate-300 bg-white px-3 py-2 lg:px-6"
         >
           <div className="flex min-w-0 items-center">
@@ -111,6 +120,7 @@ export function PracticeShell({
             )}
           </span>
           <div className="flex min-w-0 items-center justify-end gap-2">
+            {timer && <div className="hidden shrink-0 lg:flex">{timer("bar")}</div>}
             {onTextSizeChange && textSize && (
               <div className="flex shrink-0 gap-2 phone-upright:hidden">
                 <TextSizeStep step={-1} textSize={textSize} onChange={onTextSizeChange} className={`${barButton} ${ICON_ONLY} text-lg`} />
@@ -128,9 +138,11 @@ export function PracticeShell({
               <Icon path={SETTINGS_ICON} />
               {word("Settings")}
             </button>
-            <div className="ml-2 hidden shrink-0 items-center gap-2 border-l border-slate-200 pl-4 lg:flex">
-              <AccountLinks buttonClass={`${barButton} ${BAR_BUTTON_DENSE}`} />
-            </div>
+            {!accountInSettings && (
+              <div className="ml-2 hidden shrink-0 items-center gap-2 border-l border-slate-200 pl-4 lg:flex">
+                <AccountLinks buttonClass={`${barButton} ${BAR_BUTTON_DENSE}`} />
+              </div>
+            )}
           </div>
           {progress && progress.total > 0 && (
             <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-1 bg-ink/10">
@@ -138,6 +150,7 @@ export function PracticeShell({
             </div>
           )}
         </div>
+        {timer && <div className="flex justify-center border-b border-slate-300 bg-white px-3 py-1.5 lg:hidden">{timer("strip")}</div>}
         <div className="relative min-h-0 flex-1">
           <div ref={scrollRef} className="absolute inset-0 overflow-y-auto" style={PICTURE_LIMITS}>
             {children}
@@ -150,7 +163,7 @@ export function PracticeShell({
               onToggleLabels={toggleLabels}
               actions={actions}
               links={
-                wide ? undefined : (
+                wide && !accountInSettings ? undefined : (
                   <>
                     <Link href="/dashboard" className={PANEL_LINK}>
                       Back to home
