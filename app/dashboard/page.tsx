@@ -4,9 +4,10 @@ import { requireRole } from "@/lib/auth/guard";
 import { SESSION_ENDED_LOGIN } from "@/lib/auth/constants";
 import { daysLeftUk, formatUkDate } from "@/lib/candidates/access";
 import { loadCandidateHome } from "@/lib/candidates/home";
-import { loadMockHistory, loadMockInProgress } from "@/lib/mock/attempts";
+import { loadMockInProgress } from "@/lib/mock/attempts";
 import { scorePercent, timeLeftText } from "@/lib/mock/types";
 import { loadPracticeInProgress } from "@/lib/practice/sessions";
+import { loadProgress } from "@/lib/progress/overview";
 import { PageBody } from "@/components/candidate/page-body";
 import { SectionCard, SectionIcons } from "@/components/candidate/section-card";
 
@@ -15,13 +16,14 @@ const ACCESS_WARNING_DAYS = 7;
 
 export default async function CandidateHomePage({ searchParams }: PageProps<"/dashboard">) {
   const session = await requireRole(["candidate"]);
-  const [home, practice, mock, mockHistory] = await Promise.all([
+  const [home, practice, mock, progress] = await Promise.all([
     loadCandidateHome(session.sub),
     loadPracticeInProgress(session.sub),
     loadMockInProgress(session.sub),
-    loadMockHistory(session.sub, 1),
+    loadProgress(session.sub),
   ]);
-  const lastMock = mockHistory.items[0];
+  const lastMock = progress?.mock.items[0];
+  const readiness = progress?.readiness;
   if (!home) redirect(SESSION_ENDED_LOGIN);
   const justSwitched = (await searchParams).switched === "1";
 
@@ -124,7 +126,7 @@ export default async function CandidateHomePage({ searchParams }: PageProps<"/da
             <li className="sm:col-span-2">
               <SectionCard
                 title="My progress"
-                description="Your results from every section in one place."
+                description={readiness ? `Readiness: ${readiness.score}% · ${readiness.label}` : "Your results from every section in one place."}
                 icon={SectionIcons.progress}
                 href="/dashboard/progress"
               />

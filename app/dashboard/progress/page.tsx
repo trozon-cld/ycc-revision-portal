@@ -24,7 +24,7 @@ export default async function ProgressPage() {
   const session = await requireRole(["candidate"]);
   const progress = await loadProgress(session.sub);
   if (!progress) redirect(SESSION_ENDED_LOGIN);
-  const { handbook, practice, mock } = progress;
+  const { handbook, practice, mock, readiness } = progress;
   const weak = practice.chapters.filter((chapter) => chapter.area === "weak");
 
   return (
@@ -33,7 +33,35 @@ export default async function ProgressPage() {
         <h1 className="text-3xl font-bold text-ink">My progress</h1>
         <p className="mt-2 text-lg text-ink [overflow-wrap:anywhere]">Your Handbook, Practice and mock tests for {progress.categoryName}.</p>
 
-        <section aria-labelledby="handbook-heading" className="mt-8 rounded-xl border-2 border-ink/15 bg-white p-5">
+        <section aria-labelledby="readiness-heading" className="mt-8 rounded-xl border-2 border-primary/40 bg-white p-5">
+          <h2 id="readiness-heading" className="text-2xl font-bold text-ink">
+            Readiness
+          </h2>
+          {readiness ? (
+            <>
+              <p className="mt-2 text-lg text-ink">
+                <span className="text-3xl font-bold">{readiness.score}%</span> · <span className="font-bold">{readiness.label}</span>
+              </p>
+              <Bar share={readiness.score / 100} />
+              <h3 className="mt-5 text-xl font-bold text-ink">How it’s worked out</h3>
+              <ul className="mt-2 divide-y divide-ink/10">
+                {readiness.parts.map((part) => (
+                  <li key={part.key} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3 text-lg text-ink">
+                    <span>
+                      {part.name} <span className="text-base text-ink/80">(counts for {Math.round(part.weight * 100)}%)</span>
+                    </span>
+                    <span className="font-bold">{part.percent}%</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-3 text-base text-ink/80">This is a guide to help you prepare, not a prediction of your official result.</p>
+            </>
+          ) : (
+            <p className="mt-2 text-lg text-ink">Take a mock test to see your readiness score.</p>
+          )}
+        </section>
+
+        <section aria-labelledby="handbook-heading" className="mt-6 rounded-xl border-2 border-ink/15 bg-white p-5">
           <h2 id="handbook-heading" className="text-2xl font-bold text-ink">
             Handbook
           </h2>

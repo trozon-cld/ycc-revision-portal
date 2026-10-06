@@ -64,7 +64,7 @@ Status: in active development.
 - `lib/questions/` — question types (`types/`), validation, server-side marking, the safe client shape, shuffling, bank queries and the Practice/Mock question pool (`pool.ts`)
 - `lib/practice/` — Practice: Smart practice picking, runs and reports (server-marked)
 - `lib/mock/` — Mock test: the draw (50 questions spread across chapters), tests in progress, deadline and marking
-- `lib/progress/` — candidates' progress per category (Handbook pages done, question results) and the My progress overview; not activity-log data
+- `lib/progress/` — candidates' progress per category (Handbook pages done, question results), the My progress overview and the readiness score (`readiness.ts`, pure); not activity-log data
 - `lib/storage/` — the only code that talks to the storage provider (upload, delete, signed links; pictures and archive buckets)
 - `lib/media/` — image checks (real type and size from the file) and in-browser WebP conversion
 - `lib/ids.ts`, `lib/text.ts`, `lib/format.ts`, `lib/limits.ts`, `lib/forms.ts`, `lib/params.ts` — small shared helpers (id checks, text clean-up, display formats, length limits, form results, URL parameters)

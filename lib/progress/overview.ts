@@ -4,6 +4,7 @@ import { isWeakArea } from "@/lib/practice/pick";
 import { STRONG_FROM, WEAK_BELOW, WEAK_MIN_ANSWERED } from "@/lib/practice/types";
 import { NUMBERED, chapterLabel, currentCategory, loadPool } from "@/lib/questions/pool";
 import type { MockHistory } from "@/lib/mock/types";
+import { readinessScore, type Readiness } from "./readiness";
 
 // My progress: the candidate's current category across the Handbook, Practice and mock tests. Read only.
 
@@ -15,6 +16,8 @@ export type ProgressOverview = {
   handbook: { done: number; total: number; chapters: HandbookChapter[] };
   practice: { pool: number; practised: number; tries: number; right: number; flagged: number; chapters: PracticeChapter[] };
   mock: MockHistory;
+  // Null until the first mock test in this category.
+  readiness: Readiness | null;
 };
 
 const RECENT_MOCKS = 5;
@@ -80,9 +83,22 @@ export async function loadProgress(userId: string): Promise<ProgressOverview | n
     });
 
   const sum = <T,>(list: T[], pick: (item: T) => number) => list.reduce((total, item) => total + pick(item), 0);
+  const bookDone = sum(handbookChapters, (c) => c.done);
+  const bookTotal = sum(handbookChapters, (c) => c.total);
+  const latest = mock.items[0];
+  const practisedChapters = practiceChapters.filter((chapter) => chapter.answered > 0);
+  const readiness = latest
+    ? readinessScore({
+        latest: latest.outOf > 0 ? latest.rightCount / latest.outOf : 0,
+        average: (mock.averagePercent ?? 0) / 100,
+        handbook: bookTotal > 0 ? bookDone / bookTotal : null,
+        // Not started counts as 0; left out only where the category has no Practice questions.
+        areas: practiceChapters.length === 0 ? null : practisedChapters.length === 0 ? 0 : practisedChapters.filter((c) => c.area !== "weak").length / practisedChapters.length,
+      })
+    : null;
   return {
     categoryName: category.name,
-    handbook: { done: sum(handbookChapters, (c) => c.done), total: sum(handbookChapters, (c) => c.total), chapters: handbookChapters },
+    handbook: { done: bookDone, total: bookTotal, chapters: handbookChapters },
     practice: {
       pool: questions.length,
       practised: sum(practiceChapters, (c) => c.answered),
@@ -92,5 +108,6 @@ export async function loadProgress(userId: string): Promise<ProgressOverview | n
       chapters: practiceChapters,
     },
     mock,
+    readiness,
   };
 }
