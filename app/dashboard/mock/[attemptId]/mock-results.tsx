@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { countOf, formatDuration } from "@/lib/format";
-import { MOCK_KEEP_ANSWERS, READINESS_TARGET, type MockEnd, type MockResults } from "@/lib/mock/types";
+import { MOCK_KEEP_ANSWERS, READINESS_TARGET, scorePercent, type MockEnd, type MockResults } from "@/lib/mock/types";
 import { PageBody } from "@/components/candidate/page-body";
 import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { ChapterResults } from "@/components/candidate/chapter-results";
+import { practiseMockMisses } from "@/app/dashboard/practice/actions";
+import { RetryButton } from "@/app/dashboard/practice/[sessionId]/retry-button";
 
 const ENDINGS: Record<MockEnd, { title: string; text: string }> = {
   submitted: { title: "Test submitted", text: "Your mock test has been submitted." },
@@ -12,10 +14,8 @@ const ENDINGS: Record<MockEnd, { title: string; text: string }> = {
   moved: { title: "Test ended", text: "Your category was changed, so this test was ended with the answers you’d saved." },
 };
 
-const percentOf = (right: number, outOf: number) => (outOf > 0 ? Math.round((right / outOf) * 100) : 0);
-
 // A mock test's results: score, readiness, counts, time, the recommended next step and results by topic.
-export function MockResultsView({ attemptId, results }: { attemptId: string; results: MockResults }) {
+export function MockResultsView({ attemptId, results, practiceUnavailable }: { attemptId: string; results: MockResults; practiceUnavailable: boolean }) {
   const ending = ENDINGS[results.how];
   const share = results.outOf > 0 ? results.rightCount / results.outOf : 0;
   const target = Math.round(READINESS_TARGET * 100);
@@ -38,7 +38,7 @@ export function MockResultsView({ attemptId, results }: { attemptId: string; res
           </h2>
           <p className="mt-1 text-4xl font-bold text-ink">
             {results.rightCount} of {results.outOf}{" "}
-            <span className="ml-2 text-2xl font-semibold text-ink/80">{percentOf(results.rightCount, results.outOf)}%</span>
+            <span className="ml-2 text-2xl font-semibold text-ink/80">{scorePercent(results.rightCount, results.outOf)}%</span>
           </p>
           <p
             className={`mt-4 rounded-lg border-l-4 px-4 py-3 text-lg font-semibold ${
@@ -69,10 +69,27 @@ export function MockResultsView({ attemptId, results }: { attemptId: string; res
           )}
         </section>
 
+        {practiceUnavailable && (
+          <p role="alert" className="mt-4 rounded-xl border-2 border-red-700 bg-red-50 p-4 text-lg font-semibold text-red-800">
+            These questions can’t be practised right now. Try a new practice instead.
+          </p>
+        )}
         {results.answersKept ? (
-          <Link href={`/dashboard/mock/${attemptId}/review`} className={`${SECONDARY_BUTTON} mt-4 w-full sm:w-auto`}>
-            Review your answers
-          </Link>
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+            <Link href={`/dashboard/mock/${attemptId}/review`} className={`${SECONDARY_BUTTON} w-full sm:w-auto`}>
+              Review your answers
+            </Link>
+            {results.practiceCount > 0 && (
+              <form action={practiseMockMisses} className="sm:w-auto">
+                <input type="hidden" name="attemptId" value={attemptId} />
+                <RetryButton
+                  count={results.practiceCount}
+                  secondary
+                  label={`Practise the ${countOf(results.practiceCount, "question")} you missed`}
+                />
+              </form>
+            )}
+          </div>
         ) : (
           <p className="mt-4 text-base text-ink/80">Answers are kept for your {MOCK_KEEP_ANSWERS} newest mock tests, so this one can’t be reviewed question by question.</p>
         )}

@@ -2,12 +2,18 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
 import { SESSION_ENDED_LOGIN } from "@/lib/auth/constants";
-import { loadMockHome } from "@/lib/mock/attempts";
+import { loadMockHistory, loadMockHome } from "@/lib/mock/attempts";
+import { firstParam } from "@/lib/params";
 import { MOCK_QUESTIONS, timeLeftText } from "@/lib/mock/types";
 import { PageBody } from "@/components/candidate/page-body";
 import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { FocusedShell } from "@/components/learning/focused-shell";
+import { MockHistoryList } from "./mock-history";
 import { StartMock } from "./start-mock";
+
+// Past tests shown at first, and how many more each "Show more" adds (up to the cap).
+const HISTORY_STEP = 10;
+const HISTORY_MAX = 500;
 
 const HOW_IT_WORKS = [
   "One question at a time. You can go back and change your answers before you submit.",
@@ -17,10 +23,14 @@ const HOW_IT_WORKS = [
   "When time is up, your test is submitted automatically.",
 ];
 
-export default async function MockTestPage() {
+export default async function MockTestPage({ searchParams }: PageProps<"/dashboard/mock">) {
   const session = await requireRole(["candidate"]);
   const home = await loadMockHome(session.sub);
   if (!home) redirect(SESSION_ENDED_LOGIN);
+  const asked = Number(firstParam((await searchParams).shown));
+  const shown = Number.isInteger(asked) ? Math.min(HISTORY_MAX, Math.max(HISTORY_STEP, asked)) : HISTORY_STEP;
+  const history = await loadMockHistory(session.sub, shown);
+  const more = history.count > history.items.length && shown < HISTORY_MAX ? `/dashboard/mock?shown=${shown + HISTORY_STEP}#history-heading` : null;
 
   return (
     <FocusedShell label="Mock test tools" status="Mock test">
@@ -71,6 +81,8 @@ export default async function MockTestPage() {
           <Link href="/dashboard" className={`${!home.open && home.size === 0 ? PRIMARY_BUTTON : SECONDARY_BUTTON} mt-3 w-full sm:w-auto`}>
             Back to home
           </Link>
+
+          {history.count > 0 && <MockHistoryList history={history} moreHref={more} />}
         </div>
       </PageBody>
     </FocusedShell>

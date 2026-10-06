@@ -6,8 +6,8 @@ import type { CheckResult, QuestionType } from "@/lib/questions/types";
 
 export const PRACTICE_WAYS = ["smart", "chapters", "types", "all", "wrong", "flagged", "unseen", "weak"] as const;
 export type PracticeWay = (typeof PRACTICE_WAYS)[number];
-// "retry" is a practice made from the wrong answers of the last one.
-export type PracticeMode = PracticeWay | "retry";
+// "retry" is a practice made from the wrong answers of the last one; "mock" from a mock test's misses.
+export type PracticeMode = PracticeWay | "retry" | "mock";
 
 export const PRACTICE_SIZES = [10, 20, 30] as const;
 

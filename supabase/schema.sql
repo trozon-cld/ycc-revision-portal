@@ -390,8 +390,8 @@ create table practice_sessions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references users (id) on delete cascade,
   category_id uuid not null references categories (id) on delete cascade,
-  mode varchar(10) not null check (mode in ('smart', 'chapters', 'types', 'all', 'retry', 'wrong', 'flagged', 'unseen', 'weak')),
-  -- Chapter ids or question types chosen (weak: the weak chapters at the start); empty otherwise.
+  mode varchar(10) not null check (mode in ('smart', 'chapters', 'types', 'all', 'retry', 'wrong', 'flagged', 'unseen', 'weak', 'mock')),
+  -- Chapter ids or question types chosen (weak: the weak chapters at the start; mock: the mock test); empty otherwise.
   choices text[] not null default '{}' check (cardinality(choices) <= 200),
   question_ids uuid[] check (cardinality(question_ids) between 1 and 2000),
   results text check (results ~ '^[.RWS]*$'),

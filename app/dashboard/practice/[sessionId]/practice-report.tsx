@@ -17,6 +17,7 @@ const MODE_NAMES: Record<PracticeReport["mode"], string> = {
   types: "By question type",
   all: "All questions",
   retry: "The questions you missed",
+  mock: "Missed in a mock test",
   wrong: "Questions I got wrong",
   flagged: "Flagged questions",
   unseen: "Not practised yet",

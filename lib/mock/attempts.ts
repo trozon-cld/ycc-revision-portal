@@ -3,7 +3,7 @@ import { resolveMedia } from "@/lib/content/pages";
 import { pool } from "@/lib/db/pool";
 import { withTransaction } from "@/lib/db/transaction";
 import { checkAnswer, isOversizedResponse } from "@/lib/questions/check";
-import { NUMBERED, chapterLabel, currentCategory, drawRandom, loadPool, loadQuestions } from "@/lib/questions/pool";
+import { NUMBERED, chapterLabel, currentCategory, drawRandom, loadPool, loadQuestions, type PoolQuestion } from "@/lib/questions/pool";
 import { toClientQuestion } from "@/lib/questions/public";
 import { drawMock } from "./draw";
 import { nextStep, weakestTopics, type TopicResult } from "./results";
@@ -18,6 +18,8 @@ import {
   type MockHome,
   type MockRun,
   type MockSaveReply,
+  type MockHistory,
+  type MockHistoryEntry,
   type MockResults,
   type MockReview,
   type MockReviewItem,
@@ -173,9 +175,13 @@ export async function loadMockResults(userId: string, attemptId: string): Promis
     chapter_summary: Record<string, [number, number]> | null;
     same_category: boolean;
     kept: boolean;
+    category_id: string;
+    question_ids: string[] | null;
+    marks: string | null;
   }>(
     `select a.ended_how, a.right_count, a.out_of, a.answered, a.total, a.seconds_taken, a.chapter_summary,
-            a.category_id = u.current_category_id as same_category, a.question_ids is not null as kept
+            a.category_id = u.current_category_id as same_category, a.question_ids is not null as kept,
+            a.category_id, a.question_ids, a.marks
      from mock_attempts a join users u on u.id = a.user_id
      where a.id = $1 and a.user_id = $2 and a.ended_at is not null`,
     [attemptId, userId]
@@ -208,7 +214,53 @@ export async function loadMockResults(userId: string, attemptId: string): Promis
     weakest,
     next: nextStep(weakest, share, READINESS_TARGET, row.same_category),
     answersKept: row.kept,
+    practiceCount: row.same_category ? (await missedInPractice(pool, row.category_id, missedIds(row))).length : 0,
   };
+}
+
+const missedIds = (row: { question_ids: string[] | null; marks: string | null }) =>
+  (row.question_ids ?? []).filter((_, index) => row.marks?.[index] === "W" || row.marks?.[index] === "U");
+
+const missedInPractice = async (db: Db, categoryId: string, ids: string[]) =>
+  ids.length === 0 ? [] : (await loadPool(db, "practice", categoryId)).filter((question) => ids.includes(question.id));
+
+// For "Practise the questions you missed": the candidate's own ended test (answers kept) in their current
+// category, and its wrong or unanswered questions that are in Practice now.
+export async function mockMissesForPractice(db: Db, userId: string, attemptId: string): Promise<{ categoryId: string; questions: PoolQuestion[] } | null> {
+  const { rows } = await db.query<{ category_id: string; question_ids: string[]; marks: string }>(
+    `select a.category_id, a.question_ids, a.marks from mock_attempts a join users u on u.id = a.user_id
+     where a.id = $1 and a.user_id = $2 and a.ended_at is not null and a.question_ids is not null and a.category_id = u.current_category_id`,
+    [attemptId, userId]
+  );
+  const row = rows[0];
+  if (!row) return null;
+  return { categoryId: row.category_id, questions: await missedInPractice(db, row.category_id, missedIds(row)) };
+}
+
+type HistoryRow = { id: string; ended_at: Date; ended_how: MockEnd; right_count: number; out_of: number; seconds_taken: number };
+const toEntry = (row: HistoryRow): MockHistoryEntry => ({
+  id: row.id,
+  endedAt: row.ended_at.toISOString(),
+  how: row.ended_how,
+  rightCount: row.right_count,
+  outOf: row.out_of,
+  secondsTaken: row.seconds_taken,
+});
+
+// Ended tests in the current category, newest first (`limit` of them), with the count and the best score.
+export async function loadMockHistory(userId: string, limit: number): Promise<MockHistory> {
+  const scope = `from mock_attempts a join users u on u.id = a.user_id
+                 where a.user_id = $1 and a.ended_at is not null and a.category_id = u.current_category_id`;
+  const columns = `a.id, a.ended_at, a.ended_how, a.right_count, a.out_of, a.seconds_taken`;
+  const [items, best, count] = await Promise.all([
+    pool.query<HistoryRow>(`select ${columns} ${scope} order by a.ended_at desc, a.id limit $2`, [userId, limit]),
+    pool.query<HistoryRow>(
+      `select ${columns} ${scope} order by a.right_count::float8 / nullif(a.out_of, 0) desc nulls last, a.ended_at desc limit 1`,
+      [userId]
+    ),
+    pool.query<{ count: number }>(`select count(*)::int as count ${scope}`, [userId]),
+  ]);
+  return { count: count.rows[0].count, best: best.rows[0] ? toEntry(best.rows[0]) : null, items: items.rows.map(toEntry) };
 }
 
 // The candidate's own ended test, question by question with answers. Never for a test still running.

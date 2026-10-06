@@ -19,6 +19,11 @@ export function mockMinutes(total: number): number {
   return Math.max(1, Math.ceil((total * MOCK_MINUTES) / MOCK_QUESTIONS));
 }
 
+// A score as a whole percentage (0 when nothing counted).
+export function scorePercent(right: number, outOf: number): number {
+  return outOf > 0 ? Math.round((right / outOf) * 100) : 0;
+}
+
 // "32 minutes left", for pages that show the time without a running clock.
 export function timeLeftText(seconds: number): string {
   if (seconds < 60) return "Less than a minute left";
@@ -66,7 +71,13 @@ export type MockResults = {
   next: NextStep;
   // Only the newest tests keep their questions and answers for review.
   answersKept: boolean;
+  // Wrong or unanswered questions that can be practised now (in the current category's Practice).
+  practiceCount: number;
 };
+
+// An ended test in the candidate's history.
+export type MockHistoryEntry = { id: string; endedAt: string; how: MockEnd; rightCount: number; outOf: number; secondsTaken: number };
+export type MockHistory = { count: number; best: MockHistoryEntry | null; items: MockHistoryEntry[] };
 
 export type MockMark = "R" | "W" | "U";
 

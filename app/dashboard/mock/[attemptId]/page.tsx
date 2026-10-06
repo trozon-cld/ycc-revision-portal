@@ -8,7 +8,7 @@ import { MockResultsView } from "./mock-results";
 import { MockRunner } from "./mock-runner";
 
 // The test while it runs; its results once it has ended.
-export default async function MockAttemptPage({ params }: PageProps<"/dashboard/mock/[attemptId]">) {
+export default async function MockAttemptPage({ params, searchParams }: PageProps<"/dashboard/mock/[attemptId]">) {
   const session = await requireRole(["candidate"]);
   const { attemptId } = await params;
   if (!isUuid(attemptId)) notFound();
@@ -25,7 +25,7 @@ export default async function MockAttemptPage({ params }: PageProps<"/dashboard/
   if (!results) redirect("/dashboard/mock");
   return (
     <FocusedShell label="Mock test tools" status="Your results">
-      <MockResultsView attemptId={attemptId} results={results} />
+      <MockResultsView attemptId={attemptId} results={results} practiceUnavailable={(await searchParams).practice === "unavailable"} />
     </FocusedShell>
   );
 }

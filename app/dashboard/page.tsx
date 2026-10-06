@@ -4,8 +4,8 @@ import { requireRole } from "@/lib/auth/guard";
 import { SESSION_ENDED_LOGIN } from "@/lib/auth/constants";
 import { daysLeftUk, formatUkDate } from "@/lib/candidates/access";
 import { loadCandidateHome } from "@/lib/candidates/home";
-import { loadMockInProgress } from "@/lib/mock/attempts";
-import { timeLeftText } from "@/lib/mock/types";
+import { loadMockHistory, loadMockInProgress } from "@/lib/mock/attempts";
+import { scorePercent, timeLeftText } from "@/lib/mock/types";
 import { loadPracticeInProgress } from "@/lib/practice/sessions";
 import { PageBody } from "@/components/candidate/page-body";
 import { SectionCard, SectionIcons } from "@/components/candidate/section-card";
@@ -15,11 +15,13 @@ const ACCESS_WARNING_DAYS = 7;
 
 export default async function CandidateHomePage({ searchParams }: PageProps<"/dashboard">) {
   const session = await requireRole(["candidate"]);
-  const [home, practice, mock] = await Promise.all([
+  const [home, practice, mock, mockHistory] = await Promise.all([
     loadCandidateHome(session.sub),
     loadPracticeInProgress(session.sub),
     loadMockInProgress(session.sub),
+    loadMockHistory(session.sub, 1),
   ]);
+  const lastMock = mockHistory.items[0];
   if (!home) redirect(SESSION_ENDED_LOGIN);
   const justSwitched = (await searchParams).switched === "1";
 
@@ -111,7 +113,9 @@ export default async function CandidateHomePage({ searchParams }: PageProps<"/da
                 description={
                   mock
                     ? `Continue your mock test: ${timeLeftText(mock.secondsLeft).toLowerCase()}.`
-                    : "A timed test in exam-style conditions, with your results at the end."
+                    : lastMock
+                      ? `Last mock test: ${lastMock.rightCount} of ${lastMock.outOf} (${scorePercent(lastMock.rightCount, lastMock.outOf)}%).`
+                      : "A timed test in exam-style conditions, with your results at the end."
                 }
                 icon={SectionIcons.timer}
                 href="/dashboard/mock"

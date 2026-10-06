@@ -4,6 +4,7 @@ import { resolveMedia } from "@/lib/content/pages";
 import { pool } from "@/lib/db/pool";
 import { withTransaction } from "@/lib/db/transaction";
 import { sectionLetter } from "@/lib/handbook/structure";
+import { mockMissesForPractice } from "@/lib/mock/attempts";
 import { recordQuestionResult } from "@/lib/progress/question-results";
 import { checkAnswer, isOversizedResponse } from "@/lib/questions/check";
 import { shuffle } from "@/lib/questions/shuffle";
@@ -197,6 +198,17 @@ export async function startRetry(userId: string, sessionId: string): Promise<Sta
     const questions = (await loadPool(client, "practice", category.id)).filter((q) => wrong.includes(q.id));
     if (questions.length === 0) return { ok: false, error: "These questions are no longer available for practice." };
     return { ok: true, id: await createSession(client, userId, category.id, "retry", [], shuffle(questions, random)) };
+  });
+}
+
+// "Practise the questions you missed" on a mock test's results: its wrong and unanswered questions.
+export async function startFromMock(userId: string, attemptId: string): Promise<StartReply> {
+  return withTransaction(async (client) => {
+    await client.query(`select 1 from users where id = $1 for update`, [userId]);
+    const missed = await mockMissesForPractice(client, userId, attemptId);
+    if (!missed) return { ok: false, error: "These questions can’t be practised from here." };
+    if (missed.questions.length === 0) return { ok: false, error: "These questions are no longer available for practice." };
+    return { ok: true, id: await createSession(client, userId, missed.categoryId, "mock", [attemptId], shuffle(missed.questions, random)) };
   });
 }
 
