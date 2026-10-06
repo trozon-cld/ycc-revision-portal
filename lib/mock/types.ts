@@ -1,5 +1,6 @@
 import type { ResolvedMedia } from "@/lib/content/book";
 import type { ClientQuestion } from "@/lib/questions/public";
+import type { NextStep, TopicResult } from "./results";
 
 // Mock test shapes shared by the server and the browser. Pure types and constants only.
 
@@ -50,14 +51,17 @@ export type MockRun = {
   media: ResolvedMedia;
 };
 
-// A test that has ended, for the screen shown after it (the full results come in E5b).
-export type MockSummary = {
+// A test that has ended, as its results page shows it. Topics are chapters, in Handbook order.
+export type MockResults = {
   how: MockEnd;
   rightCount: number;
   outOf: number;
   answered: number;
   total: number;
   secondsTaken: number;
+  topics: TopicResult[];
+  weakest: TopicResult[];
+  next: NextStep;
 };
 
 export type MockChange = { position: number; response?: unknown; flagged?: boolean };

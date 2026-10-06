@@ -1,13 +1,13 @@
 import { notFound, redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
 import { loadReaderTextSize } from "@/lib/content/candidate-book";
-import { loadMockRun, loadMockSummary } from "@/lib/mock/attempts";
+import { loadMockResults, loadMockRun } from "@/lib/mock/attempts";
 import { isUuid } from "@/lib/ids";
 import { FocusedShell } from "@/components/learning/focused-shell";
-import { MockEnded } from "./mock-ended";
+import { MockResultsView } from "./mock-results";
 import { MockRunner } from "./mock-runner";
 
-// The test while it runs; its score and time once it has ended.
+// The test while it runs; its results once it has ended.
 export default async function MockAttemptPage({ params }: PageProps<"/dashboard/mock/[attemptId]">) {
   const session = await requireRole(["candidate"]);
   const { attemptId } = await params;
@@ -21,11 +21,11 @@ export default async function MockAttemptPage({ params }: PageProps<"/dashboard/
   }
 
   // A test removed because nothing was answered before a category change: back to the start page.
-  const summary = await loadMockSummary(session.sub, attemptId);
-  if (!summary) redirect("/dashboard/mock");
+  const results = await loadMockResults(session.sub, attemptId);
+  if (!results) redirect("/dashboard/mock");
   return (
-    <FocusedShell label="Mock test tools" status="Mock test">
-      <MockEnded summary={summary} />
+    <FocusedShell label="Mock test tools" status="Your results">
+      <MockResultsView results={results} />
     </FocusedShell>
   );
 }

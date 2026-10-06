@@ -3,11 +3,13 @@ import { resolveMedia } from "@/lib/content/pages";
 import { pool } from "@/lib/db/pool";
 import { withTransaction } from "@/lib/db/transaction";
 import { checkAnswer, isOversizedResponse } from "@/lib/questions/check";
-import { currentCategory, drawRandom, loadPool, loadQuestions } from "@/lib/questions/pool";
+import { NUMBERED, chapterLabel, currentCategory, drawRandom, loadPool, loadQuestions } from "@/lib/questions/pool";
 import { toClientQuestion } from "@/lib/questions/public";
 import { drawMock } from "./draw";
+import { nextStep, weakestTopics, type TopicResult } from "./results";
 import {
   MOCK_QUESTIONS,
+  READINESS_TARGET,
   SAVE_GRACE_SECONDS,
   mockMinutes,
   type MockChange,
@@ -15,7 +17,7 @@ import {
   type MockHome,
   type MockRun,
   type MockSaveReply,
-  type MockSummary,
+  type MockResults,
   type OpenMock,
 } from "./types";
 
@@ -158,15 +160,52 @@ export async function loadMockRun(userId: string, attemptId: string): Promise<Mo
   };
 }
 
-// The candidate's own ended test.
-export async function loadMockSummary(userId: string, attemptId: string): Promise<MockSummary | null> {
-  const { rows } = await pool.query<{ ended_how: MockEnd; right_count: number; out_of: number; answered: number; total: number; seconds_taken: number }>(
-    `select ended_how, right_count, out_of, answered, total, seconds_taken from mock_attempts where id = $1 and user_id = $2 and ended_at is not null`,
+// The candidate's own ended test, with results by chapter (from the totals every test keeps).
+export async function loadMockResults(userId: string, attemptId: string): Promise<MockResults | null> {
+  const { rows } = await pool.query<{
+    ended_how: MockEnd;
+    right_count: number;
+    out_of: number;
+    answered: number;
+    total: number;
+    seconds_taken: number;
+    chapter_summary: Record<string, [number, number]> | null;
+    same_category: boolean;
+  }>(
+    `select a.ended_how, a.right_count, a.out_of, a.answered, a.total, a.seconds_taken, a.chapter_summary,
+            a.category_id = u.current_category_id as same_category
+     from mock_attempts a join users u on u.id = a.user_id
+     where a.id = $1 and a.user_id = $2 and a.ended_at is not null`,
     [attemptId, userId]
   );
   const row = rows[0];
   if (!row) return null;
-  return { how: row.ended_how, rightCount: row.right_count, outOf: row.out_of, answered: row.answered, total: row.total, secondsTaken: row.seconds_taken };
+  const summary = row.chapter_summary ?? {};
+  const { rows: chapters } = await pool.query<{ id: string; title: string; number: number }>(
+    `with ${NUMBERED} select id, title, number from numbered where id = any($1::uuid[]) order by number`,
+    [Object.keys(summary)]
+  );
+  const known = new Set(chapters.map((chapter) => chapter.id));
+  const topics: TopicResult[] = [
+    ...chapters.map((chapter) => ({ id: chapter.id, label: chapterLabel(chapter), right: summary[chapter.id][0], outOf: summary[chapter.id][1] })),
+    // A chapter deleted since the test still counts in the score.
+    ...Object.keys(summary)
+      .filter((id) => !known.has(id))
+      .map((id) => ({ id, label: "A chapter no longer in the Handbook", right: summary[id][0], outOf: summary[id][1] })),
+  ];
+  const weakest = weakestTopics(topics.filter((topic) => known.has(topic.id)));
+  const share = row.out_of > 0 ? row.right_count / row.out_of : 0;
+  return {
+    how: row.ended_how,
+    rightCount: row.right_count,
+    outOf: row.out_of,
+    answered: row.answered,
+    total: row.total,
+    secondsTaken: row.seconds_taken,
+    topics,
+    weakest,
+    next: nextStep(weakest, share, READINESS_TARGET, row.same_category),
+  };
 }
 
 const validPosition = (value: unknown): value is number => Number.isInteger(value) && (value as number) >= 0 && (value as number) < MOCK_QUESTIONS;

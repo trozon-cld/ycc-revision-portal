@@ -3,6 +3,7 @@ import { formatUkDate } from "@/lib/candidates/access";
 import type { PracticeReport } from "@/lib/practice/sessions";
 import { PageBody } from "@/components/candidate/page-body";
 import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { ChapterResults } from "@/components/candidate/chapter-results";
 import { InlineText } from "@/components/learning/inline-text";
 import { FocusedShell } from "@/components/learning/focused-shell";
 import { practiseAgain } from "../actions";
@@ -94,26 +95,11 @@ export function PracticeReportView({ report, againUnavailable }: { report: Pract
           </div>
 
           {report.chapters.length > 0 && (
-            <section aria-labelledby="chapters-heading" className="mt-10">
-              <h2 id="chapters-heading" className="text-2xl font-bold text-ink">
-                By chapter
-              </h2>
-              <ul className="mt-4 flex flex-col gap-3">
-                {report.chapters.map((chapter) => (
-                  <li key={chapter.label} className="rounded-xl border-2 border-ink/15 bg-white p-4">
-                    <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                      <span className="min-w-0 text-lg font-semibold text-ink [overflow-wrap:anywhere]">{chapter.label}</span>
-                      <span className="text-lg text-ink">
-                        {chapter.right} of {chapter.answered} right
-                      </span>
-                    </div>
-                    <div aria-hidden="true" className="mt-2 h-3 overflow-hidden rounded-full bg-ink/10">
-                      <div className="h-full rounded-full bg-primary" style={{ width: `${(chapter.right / chapter.answered) * 100}%` }} />
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </section>
+            <ChapterResults
+              id="chapters-heading"
+              title="By chapter"
+              items={report.chapters.map((chapter) => ({ key: chapter.label, label: chapter.label, right: chapter.right, outOf: chapter.answered }))}
+            />
           )}
 
           {report.wrong && report.answered > 0 && (
