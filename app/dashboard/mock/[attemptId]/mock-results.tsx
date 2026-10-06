@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { countOf, formatDuration } from "@/lib/format";
-import { READINESS_TARGET, type MockEnd, type MockResults } from "@/lib/mock/types";
+import { MOCK_KEEP_ANSWERS, READINESS_TARGET, type MockEnd, type MockResults } from "@/lib/mock/types";
 import { PageBody } from "@/components/candidate/page-body";
 import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { ChapterResults } from "@/components/candidate/chapter-results";
@@ -15,7 +15,7 @@ const ENDINGS: Record<MockEnd, { title: string; text: string }> = {
 const percentOf = (right: number, outOf: number) => (outOf > 0 ? Math.round((right / outOf) * 100) : 0);
 
 // A mock test's results: score, readiness, counts, time, the recommended next step and results by topic.
-export function MockResultsView({ results }: { results: MockResults }) {
+export function MockResultsView({ attemptId, results }: { attemptId: string; results: MockResults }) {
   const ending = ENDINGS[results.how];
   const share = results.outOf > 0 ? results.rightCount / results.outOf : 0;
   const target = Math.round(READINESS_TARGET * 100);
@@ -68,6 +68,14 @@ export function MockResultsView({ results }: { results: MockResults }) {
             </p>
           )}
         </section>
+
+        {results.answersKept ? (
+          <Link href={`/dashboard/mock/${attemptId}/review`} className={`${SECONDARY_BUTTON} mt-4 w-full sm:w-auto`}>
+            Review your answers
+          </Link>
+        ) : (
+          <p className="mt-4 text-base text-ink/80">Answers are kept for your {MOCK_KEEP_ANSWERS} newest mock tests, so this one can’t be reviewed question by question.</p>
+        )}
 
         <section aria-labelledby="next-heading" className="mt-6 rounded-xl border-2 border-primary bg-primary/5 p-5">
           <h2 id="next-heading" className="text-xl font-bold text-ink">

@@ -25,7 +25,7 @@ export default async function MockAttemptPage({ params }: PageProps<"/dashboard/
   if (!results) redirect("/dashboard/mock");
   return (
     <FocusedShell label="Mock test tools" status="Your results">
-      <MockResultsView results={results} />
+      <MockResultsView attemptId={attemptId} results={results} />
     </FocusedShell>
   );
 }

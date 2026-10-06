@@ -5,11 +5,11 @@ import { PageBody } from "@/components/candidate/page-body";
 import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { ChapterResults } from "@/components/candidate/chapter-results";
 import { InlineText } from "@/components/learning/inline-text";
+import { ReviewQuestion } from "@/components/learning/questions/review-question";
 import { FocusedShell } from "@/components/learning/focused-shell";
 import { practiseAgain } from "../actions";
 import { FlagButton } from "../flag-button";
 import { RetryButton } from "./retry-button";
-import { ReviewQuestion } from "./review-question";
 
 const MODE_NAMES: Record<PracticeReport["mode"], string> = {
   smart: "Smart practice",
@@ -127,7 +127,14 @@ export function PracticeReportView({ report, againUnavailable }: { report: Pract
                           </span>
                         </summary>
                         <div className="border-t border-ink/15 px-4 py-5 text-[18px] text-ink">
-                          <ReviewQuestion sessionId={report.id} question={item.question} checked={item.checked} media={report.media} />
+                          <ReviewQuestion
+                            question={item.question}
+                            seed={`${report.id}:${item.question.id}`}
+                            label="Correct answer"
+                            media={report.media}
+                            answer={item.checked.answer}
+                            explanation={item.checked.explanation}
+                          />
                           {report.canRetry && <FlagButton questionId={item.question.id} initialFlagged={item.flagged} className="mt-5" />}
                         </div>
                       </details>

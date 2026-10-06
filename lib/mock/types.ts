@@ -9,6 +9,8 @@ export const MOCK_QUESTIONS = 50;
 export const MOCK_MINUTES = 45;
 // Readiness target: 45 of 50 (90%), never described as a pass.
 export const READINESS_TARGET = 0.9;
+// Tests that keep their questions and answers for review; older ones keep totals only.
+export const MOCK_KEEP_ANSWERS = 10;
 // Answers arriving this long after the deadline still count (slow networks).
 export const SAVE_GRACE_SECONDS = 10;
 
@@ -62,7 +64,27 @@ export type MockResults = {
   topics: TopicResult[];
   weakest: TopicResult[];
   next: NextStep;
+  // Only the newest tests keep their questions and answers for review.
+  answersKept: boolean;
 };
+
+export type MockMark = "R" | "W" | "U";
+
+// One question of an ended test, with the candidate's answer and the correct one.
+export type MockReviewItem = {
+  position: number;
+  mark: MockMark;
+  flaggedInTest: boolean;
+  chapterLabel: string;
+  question: ClientQuestion;
+  response: unknown;
+  answer: unknown;
+  explanation: string | null;
+  // Flag for review in Practice: its current state, or null where the question isn't in Practice now.
+  practiceFlag: boolean | null;
+};
+
+export type MockReview = { kept: boolean; total: number; items: MockReviewItem[]; media: ResolvedMedia };
 
 export type MockChange = { position: number; response?: unknown; flagged?: boolean };
 export type MockSaveReply = { ok: true; secondsLeft: number } | { ok: false; reason: "ended" | "invalid" };
