@@ -49,7 +49,7 @@ Status: in active development.
 
 - `app/` — routes:
   - `/login`, `/access-expired`
-  - `/admin/*` (Admin/Superadmin): `/admin/candidates`, `/admin/admins`, `/admin/categories`, `/admin/handbook` (sections and chapters; `chapters/[id]` a chapter's pages and questions; `pages/[id]` the page editor; `preview` the book as candidates see it), `/admin/questions` (bank; `new`, `[id]`), `/admin/media`, `/admin/activity` (actions, logins and login-record archives), `/admin/account`
+  - `/admin/*` (Admin/Superadmin): `/admin/candidates`, `/admin/admins`, `/admin/categories`, `/admin/handbook` (sections and chapters; `chapters/[id]` a chapter's pages and questions; `pages/[id]` the page editor; `preview` the book as candidates see it), `/admin/questions` (bank; `new`, `[id]`), `/admin/media`, `/admin/faq` (General queries and support contact details; Superadmin only), `/admin/activity` (actions, logins and login-record archives), `/admin/account`
   - `/dashboard` (Candidate home): `category` to switch within the group, `prepare` the Handbook, `practice` Practice setup and `practice/[id]` a run or its report, `mock` the Mock test start page and `mock/[id]` a test (its results and `review` once ended), `progress` My progress, `help`
 - `components/admin/` — compact admin console UI (sidebar shell, tables, row menus, slide-in panels, `ActionForm`, `Pagination`); admin pages must build from these. Candidate pages keep the large, simple style.
 - `components/candidate/` — candidate page shell (header, `PageBody`), home-screen section cards and the shared large button styles
@@ -64,6 +64,7 @@ Status: in active development.
 - `lib/questions/` — question types (`types/`), validation, server-side marking, the safe client shape, shuffling, bank queries and the Practice/Mock question pool (`pool.ts`)
 - `lib/practice/` — Practice: Smart practice picking, runs and reports (server-marked)
 - `lib/mock/` — Mock test: the draw (50 questions spread across chapters), tests in progress, deadline and marking
+- `lib/faq/` — General queries: questions in order and the support contact details (`types.ts` safe in forms)
 - `lib/progress/` — candidates' progress per category (Handbook pages done, question results), the My progress overview and the readiness score (`readiness.ts`, pure); not activity-log data
 - `lib/storage/` — the only code that talks to the storage provider (upload, delete, signed links; pictures and archive buckets)
 - `lib/media/` — image checks (real type and size from the file) and in-browser WebP conversion

@@ -13,6 +13,8 @@ type TargetType =
   | "page"
   | "question"
   | "media"
+  | "faq"
+  | "support_contact"
   | "account"
   | "log_archive";
 type Details = Record<string, string>;

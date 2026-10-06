@@ -477,3 +477,28 @@ create table mock_attempts (
 create unique index mock_attempts_open_key on mock_attempts (user_id) where ended_at is null;
 create index mock_attempts_user_idx on mock_attempts (user_id, ended_at desc);
 create index mock_attempts_category_idx on mock_attempts (category_id);
+
+-- General queries (FAQ) and support contact details, edited by the Superadmin.
+create table faq_items (
+  id uuid primary key default gen_random_uuid(),
+  position integer not null check (position > 0),
+  question varchar(200) not null check (btrim(question) <> ''),
+  answer text not null check (btrim(answer) <> '' and char_length(answer) <= 3000),
+  -- draft = hidden from candidates; published = shown.
+  status varchar(10) not null default 'draft' check (status in ('draft', 'published')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint faq_items_position_key unique (position) deferrable initially deferred
+);
+
+-- One row only. Every field is optional; candidates see only the ones filled in.
+create table support_contact (
+  id boolean primary key default true check (id),
+  email varchar(255),
+  phone varchar(40),
+  hours varchar(120),
+  note varchar(500),
+  updated_at timestamptz not null default now()
+);
+
+insert into support_contact default values;
