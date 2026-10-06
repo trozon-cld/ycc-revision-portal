@@ -46,6 +46,10 @@ export const isUnseen = (history: ReadonlyMap<string, PracticeHistory>, id: stri
 export const isWrong = (history: ReadonlyMap<string, PracticeHistory>, id: string) => tried(history, id) && history.get(id)?.lastRight === false;
 export const isFlagged = (history: ReadonlyMap<string, PracticeHistory>, id: string) => history.get(id)?.flagged === true;
 
+// A chapter's Practice totals: different questions answered, all tries, right tries.
+export type AreaTotals = { answered: number; tries: number; right: number };
+export const isWeakArea = (t: AreaTotals, minAnswered: number, below: number) => t.answered >= minAnswered && t.right / t.tries < below;
+
 // Chapters answered enough in Practice and below the line, weakest first.
 export function weakChapters(
   pool: readonly PoolQuestion[],
@@ -53,7 +57,7 @@ export function weakChapters(
   minAnswered: number,
   below: number
 ): { chapterId: string; share: number }[] {
-  const totals = new Map<string, { answered: number; tries: number; right: number }>();
+  const totals = new Map<string, AreaTotals>();
   for (const item of pool) {
     const h = history.get(item.id);
     if (!h || h.tries === 0) continue;
@@ -64,7 +68,7 @@ export function weakChapters(
     totals.set(item.chapterId, t);
   }
   return [...totals]
-    .filter(([, t]) => t.answered >= minAnswered && t.right / t.tries < below)
+    .filter(([, t]) => isWeakArea(t, minAnswered, below))
     .map(([chapterId, t]) => ({ chapterId, share: t.right / t.tries }))
     .sort((a, b) => a.share - b.share);
 }

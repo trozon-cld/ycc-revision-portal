@@ -50,7 +50,7 @@ Status: in active development.
 - `app/` — routes:
   - `/login`, `/access-expired`
   - `/admin/*` (Admin/Superadmin): `/admin/candidates`, `/admin/admins`, `/admin/categories`, `/admin/handbook` (sections and chapters; `chapters/[id]` a chapter's pages and questions; `pages/[id]` the page editor; `preview` the book as candidates see it), `/admin/questions` (bank; `new`, `[id]`), `/admin/media`, `/admin/activity` (actions, logins and login-record archives), `/admin/account`
-  - `/dashboard` (Candidate home): `category` to switch within the group, `prepare` the Handbook, `practice` Practice setup and `practice/[id]` a run or its report, `mock` the Mock test start page and `mock/[id]` a test, `help`
+  - `/dashboard` (Candidate home): `category` to switch within the group, `prepare` the Handbook, `practice` Practice setup and `practice/[id]` a run or its report, `mock` the Mock test start page and `mock/[id]` a test (its results and `review` once ended), `progress` My progress, `help`
 - `components/admin/` — compact admin console UI (sidebar shell, tables, row menus, slide-in panels, `ActionForm`, `Pagination`); admin pages must build from these. Candidate pages keep the large, simple style.
 - `components/candidate/` — candidate page shell (header, `PageBody`), home-screen section cards and the shared large button styles
 - `components/learning/` — candidate-facing renderers: blocks, questions (`questions/`), the fixed-page book reader, the reader bar/Settings, and the focused frame shared by Practice and the Mock test (`focused-shell.tsx`)
@@ -64,7 +64,7 @@ Status: in active development.
 - `lib/questions/` — question types (`types/`), validation, server-side marking, the safe client shape, shuffling, bank queries and the Practice/Mock question pool (`pool.ts`)
 - `lib/practice/` — Practice: Smart practice picking, runs and reports (server-marked)
 - `lib/mock/` — Mock test: the draw (50 questions spread across chapters), tests in progress, deadline and marking
-- `lib/progress/` — candidates' progress per category (Handbook pages done, question results); not activity-log data
+- `lib/progress/` — candidates' progress per category (Handbook pages done, question results) and the My progress overview; not activity-log data
 - `lib/storage/` — the only code that talks to the storage provider (upload, delete, signed links; pictures and archive buckets)
 - `lib/media/` — image checks (real type and size from the file) and in-browser WebP conversion
 - `lib/ids.ts`, `lib/text.ts`, `lib/format.ts`, `lib/limits.ts`, `lib/forms.ts`, `lib/params.ts` — small shared helpers (id checks, text clean-up, display formats, length limits, form results, URL parameters)

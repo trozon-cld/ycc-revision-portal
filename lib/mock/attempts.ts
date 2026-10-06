@@ -247,7 +247,7 @@ const toEntry = (row: HistoryRow): MockHistoryEntry => ({
   secondsTaken: row.seconds_taken,
 });
 
-// Ended tests in the current category, newest first (`limit` of them), with the count and the best score.
+// Ended tests in the current category, newest first (`limit` of them), with the count, best and average score.
 export async function loadMockHistory(userId: string, limit: number): Promise<MockHistory> {
   const scope = `from mock_attempts a join users u on u.id = a.user_id
                  where a.user_id = $1 and a.ended_at is not null and a.category_id = u.current_category_id`;
@@ -258,9 +258,18 @@ export async function loadMockHistory(userId: string, limit: number): Promise<Mo
       `select ${columns} ${scope} order by a.right_count::float8 / nullif(a.out_of, 0) desc nulls last, a.ended_at desc limit 1`,
       [userId]
     ),
-    pool.query<{ count: number }>(`select count(*)::int as count ${scope}`, [userId]),
+    pool.query<{ count: number; average: number | null }>(
+      `select count(*)::int as count, avg(a.right_count::float8 / nullif(a.out_of, 0)) as average ${scope}`,
+      [userId]
+    ),
   ]);
-  return { count: count.rows[0].count, best: best.rows[0] ? toEntry(best.rows[0]) : null, items: items.rows.map(toEntry) };
+  const average = count.rows[0].average;
+  return {
+    count: count.rows[0].count,
+    best: best.rows[0] ? toEntry(best.rows[0]) : null,
+    items: items.rows.map(toEntry),
+    averagePercent: average === null ? null : Math.round(average * 100),
+  };
 }
 
 // The candidate's own ended test, question by question with answers. Never for a test still running.

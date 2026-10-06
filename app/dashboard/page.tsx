@@ -126,6 +126,7 @@ export default async function CandidateHomePage({ searchParams }: PageProps<"/da
                 title="My progress"
                 description="Your results from every section in one place."
                 icon={SectionIcons.progress}
+                href="/dashboard/progress"
               />
             </li>
           </ul>

@@ -14,21 +14,38 @@ const ENDED: Partial<Record<MockEnd, string>> = {
 const score = (entry: MockHistoryEntry) => `${entry.rightCount} of ${entry.outOf} (${scorePercent(entry.rightCount, entry.outOf)}%)`;
 
 // The candidate's past mock tests in this category, newest first; each opens its results.
-export function MockHistoryList({ history, moreHref }: { history: MockHistory; moreHref: string | null }) {
+export function MockHistoryList({
+  history,
+  moreHref,
+  moreLabel = "Show more",
+  showAverage = false,
+  title = "Your mock tests",
+  level = 2,
+}: {
+  history: MockHistory;
+  moreHref: string | null;
+  moreLabel?: string;
+  showAverage?: boolean;
+  title?: string;
+  level?: 2 | 3;
+}) {
+  const Heading = level === 2 ? "h2" : "h3";
   const last = history.items[0];
+  const tiles: [string, string][] = [
+    ["Last score", last ? score(last) : "–"],
+    ...(showAverage ? [["Average score", history.averagePercent === null ? "–" : `${history.averagePercent}%`] as [string, string]] : []),
+    ["Best score", history.best ? score(history.best) : "–"],
+  ];
   return (
-    <section aria-labelledby="history-heading" className="mt-10">
-      <h2 id="history-heading" className="text-2xl font-bold text-ink">
-        Your mock tests
-      </h2>
-      <dl className="mt-4 grid gap-3 sm:grid-cols-2">
-        {[
-          ["Last score", last],
-          ["Best score", history.best],
-        ].map(([label, entry]) => (
-          <div key={label as string} className="rounded-xl border-2 border-ink/15 bg-white p-4">
-            <dt className="text-base text-ink/80">{label as string}</dt>
-            <dd className="text-2xl font-bold text-ink">{entry ? score(entry as MockHistoryEntry) : "–"}</dd>
+    <section aria-labelledby="history-heading" className={level === 2 ? "mt-10" : "mt-4"}>
+      <Heading id="history-heading" className={level === 2 ? "text-2xl font-bold text-ink" : "text-xl font-bold text-ink"}>
+        {title}
+      </Heading>
+      <dl className={`mt-4 grid gap-3 ${showAverage ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+        {tiles.map(([label, value]) => (
+          <div key={label} className="rounded-xl border-2 border-ink/15 bg-white p-4">
+            <dt className="text-base text-ink/80">{label}</dt>
+            <dd className="text-2xl font-bold text-ink">{value}</dd>
           </div>
         ))}
       </dl>
@@ -66,7 +83,7 @@ export function MockHistoryList({ history, moreHref }: { history: MockHistory; m
       </p>
       {moreHref && (
         <Link href={moreHref} className={`${SECONDARY_BUTTON} mt-3 w-full sm:w-auto`}>
-          Show more
+          {moreLabel}
         </Link>
       )}
     </section>
