@@ -87,6 +87,7 @@ export default async function CandidateHomePage({ searchParams }: PageProps<"/da
                 title="General queries"
                 description="Answers to common questions and how to get help."
                 icon={SectionIcons.help}
+                href="/dashboard/help"
               />
             </li>
             <li>

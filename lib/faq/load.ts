@@ -16,3 +16,12 @@ export async function loadSupportContact(): Promise<SupportContact> {
   const { rows } = await pool.query<SupportContact>(`select email, phone, hours, note from support_contact`);
   return rows[0] ?? EMPTY_CONTACT;
 }
+
+// The name of the Admin who owns this candidate (null if unnamed). Name only: an Admin's email is their login.
+export async function loadOwnAdminName(candidateId: string): Promise<string | null> {
+  const { rows } = await pool.query<{ full_name: string | null }>(
+    `select a.full_name from users u join users a on a.id = u.admin_id where u.id = $1 and u.role = 'candidate'`,
+    [candidateId]
+  );
+  return rows[0]?.full_name ?? null;
+}
