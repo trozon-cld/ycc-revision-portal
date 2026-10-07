@@ -247,20 +247,21 @@ const toEntry = (row: HistoryRow): MockHistoryEntry => ({
   secondsTaken: row.seconds_taken,
 });
 
-// Ended tests in the current category, newest first (`limit` of them), with the count, best and average score.
-export async function loadMockHistory(userId: string, limit: number): Promise<MockHistory> {
+// Ended tests in one category (current unless given), newest first (`limit` from `offset`), with count, best and average.
+export async function loadMockHistory(userId: string, limit: number, options: { categoryId?: string; offset?: number } = {}): Promise<MockHistory> {
   const scope = `from mock_attempts a join users u on u.id = a.user_id
-                 where a.user_id = $1 and a.ended_at is not null and a.category_id = u.current_category_id`;
+                 where a.user_id = $1 and a.ended_at is not null and a.category_id = coalesce($2::uuid, u.current_category_id)`;
   const columns = `a.id, a.ended_at, a.ended_how, a.right_count, a.out_of, a.seconds_taken`;
+  const scopeValues = [userId, options.categoryId ?? null];
   const [items, best, count] = await Promise.all([
-    pool.query<HistoryRow>(`select ${columns} ${scope} order by a.ended_at desc, a.id limit $2`, [userId, limit]),
+    pool.query<HistoryRow>(`select ${columns} ${scope} order by a.ended_at desc, a.id limit $3 offset $4`, [...scopeValues, limit, options.offset ?? 0]),
     pool.query<HistoryRow>(
       `select ${columns} ${scope} order by a.right_count::float8 / nullif(a.out_of, 0) desc nulls last, a.ended_at desc limit 1`,
-      [userId]
+      scopeValues
     ),
     pool.query<{ count: number; average: number | null }>(
       `select count(*)::int as count, avg(a.right_count::float8 / nullif(a.out_of, 0)) as average ${scope}`,
-      [userId]
+      scopeValues
     ),
   ]);
   const average = count.rows[0].average;

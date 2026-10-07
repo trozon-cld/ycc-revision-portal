@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition, type ReactNode } from "react";
 import type { FormState } from "@/lib/forms";
 import { Dialog } from "./dialog";
@@ -24,13 +25,17 @@ export type InstantRowAction = {
   successMessage?: string;
 };
 
-export type RowAction = PanelRowAction | InstantRowAction;
+// Opens another page (e.g. a candidate's progress).
+export type LinkRowAction = { label: string; danger?: never; href: string };
 
-// A row's "⋯" menu; each item opens its own slide-in panel or confirmation, or runs instantly.
+export type RowAction = PanelRowAction | InstantRowAction | LinkRowAction;
+
+// A row's "⋯" menu; each item opens its own slide-in panel or confirmation, runs instantly, or opens a page.
 export function RowActions({ label, actions }: { label: string; actions: RowAction[] }) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [, startTransition] = useTransition();
   const toast = useToast();
+  const router = useRouter();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const selected = activeIndex === null ? null : actions[activeIndex];
   const active = selected && "render" in selected ? selected : null;
@@ -58,7 +63,7 @@ export function RowActions({ label, actions }: { label: string; actions: RowActi
         items={actions.map((action, index) => ({
           label: action.label,
           danger: action.danger,
-          onSelect: () => ("run" in action ? runInstant(action) : setActiveIndex(index)),
+          onSelect: () => ("href" in action ? router.push(action.href) : "run" in action ? runInstant(action) : setActiveIndex(index)),
         }))}
       />
       {active && (

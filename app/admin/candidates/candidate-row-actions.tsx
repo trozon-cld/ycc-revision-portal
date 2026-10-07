@@ -14,6 +14,7 @@ import {
   updateCandidateName,
   updateCandidatePassword,
 } from "./actions";
+import { candidateProgressPath } from "@/lib/candidates/paths";
 import { NAME_MAX_LENGTH } from "@/lib/users/name";
 import { MIN_PASSWORD_LENGTH } from "@/lib/users/credentials";
 import { AccessLengthField } from "./access-length-field";
@@ -44,6 +45,7 @@ export function AdminCandidateActions({
   const hidden = { candidateId: id };
 
   const actions: RowAction[] = [
+    { label: "View progress", href: candidateProgressPath(id) },
     {
       label: "Change name",
       title: "Change name",
@@ -250,6 +252,7 @@ export function SuperadminCandidateActions({
   const otherAdmins = admins.filter((admin) => admin.id !== candidate.adminId);
 
   const actions: RowAction[] = [
+    { label: "View progress", href: candidateProgressPath(candidate.id) },
     {
       label: "Change admin",
       title: "Move to another admin",

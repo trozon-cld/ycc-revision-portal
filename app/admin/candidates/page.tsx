@@ -4,7 +4,6 @@ import { customDateBounds, formatUkDate } from "@/lib/candidates/access";
 import { isUuid } from "@/lib/ids";
 import { firstParam } from "@/lib/params";
 import { escapeLike } from "@/lib/db/like";
-import { Badge } from "@/components/admin/badge";
 import { FilterBar, FilterSearch, FilterSelect } from "@/components/admin/filter-bar";
 import { Breakable } from "@/components/admin/breakable";
 import { PersonLabel } from "@/components/admin/person-label";
@@ -14,6 +13,8 @@ import { Cell, Row, Table } from "@/components/admin/table";
 import { NewCandidateButton } from "./create-candidate-form";
 import { AdminCandidateActions, SuperadminCandidateActions } from "./candidate-row-actions";
 import { CategoryOptions, type CategoryChoice } from "./category-options";
+import { CandidateStatusBadge } from "./status-badge";
+import { candidateProgressPath } from "@/lib/candidates/paths";
 
 interface CandidateRow {
   id: string;
@@ -170,7 +171,7 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
           return (
             <Row key={candidate.id}>
               <Cell kind="primary">
-                <PersonLabel name={candidate.full_name} email={candidate.email} />
+                <PersonLabel name={candidate.full_name} email={candidate.email} href={candidateProgressPath(candidate.id)} />
               </Cell>
               <Cell label="Category">
                 {candidate.current_category_name}
@@ -184,13 +185,7 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
                 </Cell>
               )}
               <Cell label="Status">
-                {candidate.is_blocked ? (
-                  <Badge tone="danger">Blocked</Badge>
-                ) : isExpired ? (
-                  <Badge tone="warning">Expired</Badge>
-                ) : (
-                  <Badge tone="success">Active</Badge>
-                )}
+                <CandidateStatusBadge isBlocked={candidate.is_blocked} isExpired={isExpired} />
               </Cell>
               <Cell label="Access until" nowrap>
                 {expiryDate}

@@ -22,8 +22,9 @@ export type ProgressOverview = {
 
 const RECENT_MOCKS = 5;
 
-export async function loadProgress(userId: string): Promise<ProgressOverview | null> {
-  const category = await currentCategory(pool, userId);
+// For one category: the candidate's current one, or `categoryId` (staff views; the caller checks it's allowed).
+export async function loadProgress(userId: string, categoryId?: string): Promise<ProgressOverview | null> {
+  const category = categoryId ? await categoryById(categoryId) : await currentCategory(pool, userId);
   if (!category) return null;
 
   // Handbook: the items of this category's published book, and which of them are done.
@@ -57,7 +58,7 @@ export async function loadProgress(userId: string): Promise<ProgressOverview | n
       `select count(*)::int as count from question_flags where user_id = $1 and category_id = $2 and question_id = any($3::uuid[])`,
       [userId, category.id, ids]
     ),
-    loadMockHistory(userId, RECENT_MOCKS),
+    loadMockHistory(userId, RECENT_MOCKS, { categoryId: category.id }),
   ]);
 
   const chapterIds = [...new Set([...book.rows.map((row) => row.chapter_id), ...questions.map((question) => question.chapterId)])];
@@ -110,4 +111,9 @@ export async function loadProgress(userId: string): Promise<ProgressOverview | n
     mock,
     readiness,
   };
+}
+
+async function categoryById(id: string): Promise<{ id: string; name: string } | null> {
+  const { rows } = await pool.query<{ id: string; name: string }>(`select id, name from categories where id = $1`, [id]);
+  return rows[0] ?? null;
 }
