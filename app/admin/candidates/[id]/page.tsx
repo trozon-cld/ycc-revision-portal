@@ -7,7 +7,7 @@ import { loadCandidateDetail } from "@/lib/candidates/detail";
 import { candidateProgressPath } from "@/lib/candidates/paths";
 import { countOf, formatDuration } from "@/lib/format";
 import { loadMockHistory } from "@/lib/mock/attempts";
-import { READINESS_TARGET, scorePercent, type MockEnd, type MockHistoryEntry } from "@/lib/mock/types";
+import { READINESS_TARGET, scorePercent, scoreText, type MockEnd, type MockHistoryEntry } from "@/lib/mock/types";
 import { firstParam } from "@/lib/params";
 import { loadProgress } from "@/lib/progress/overview";
 import { Badge } from "@/components/admin/badge";
@@ -27,8 +27,7 @@ const ENDED: Record<MockEnd, string> = {
   moved: "Ended by a category change",
 };
 
-const score = (entry: Pick<MockHistoryEntry, "rightCount" | "outOf">) =>
-  `${entry.rightCount} of ${entry.outOf} (${scorePercent(entry.rightCount, entry.outOf)}%)`;
+const score = (entry: Pick<MockHistoryEntry, "rightCount" | "outOf">) => scoreText(entry.rightCount, entry.outOf);
 
 function Section({ id, title, children }: { id: string; title: string; children: ReactNode }) {
   return (

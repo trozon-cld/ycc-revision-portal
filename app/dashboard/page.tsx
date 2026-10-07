@@ -5,7 +5,7 @@ import { SESSION_ENDED_LOGIN } from "@/lib/auth/constants";
 import { daysLeftUk, formatUkDate } from "@/lib/candidates/access";
 import { loadCandidateHome } from "@/lib/candidates/home";
 import { loadMockInProgress } from "@/lib/mock/attempts";
-import { scorePercent, timeLeftText } from "@/lib/mock/types";
+import { scoreText, timeLeftText } from "@/lib/mock/types";
 import { loadPracticeInProgress } from "@/lib/practice/sessions";
 import { loadProgress } from "@/lib/progress/overview";
 import { PageBody } from "@/components/candidate/page-body";
@@ -117,7 +117,7 @@ export default async function CandidateHomePage({ searchParams }: PageProps<"/da
                   mock
                     ? `Continue your mock test: ${timeLeftText(mock.secondsLeft).toLowerCase()}.`
                     : lastMock
-                      ? `Last mock test: ${lastMock.rightCount} of ${lastMock.outOf} (${scorePercent(lastMock.rightCount, lastMock.outOf)}%).`
+                      ? `Last mock test: ${scoreText(lastMock.rightCount, lastMock.outOf)}.`
                       : "A timed test in exam-style conditions, with your results at the end."
                 }
                 icon={SectionIcons.timer}

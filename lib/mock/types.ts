@@ -24,6 +24,11 @@ export function scorePercent(right: number, outOf: number): number {
   return outOf > 0 ? Math.round((right / outOf) * 100) : 0;
 }
 
+// "36 of 50 (72%)".
+export function scoreText(right: number, outOf: number): string {
+  return `${right} of ${outOf} (${scorePercent(right, outOf)}%)`;
+}
+
 // "32 minutes left", for pages that show the time without a running clock.
 export function timeLeftText(seconds: number): string {
   if (seconds < 60) return "Less than a minute left";

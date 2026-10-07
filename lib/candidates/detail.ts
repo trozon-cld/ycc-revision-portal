@@ -19,6 +19,9 @@ export type CandidateDetail = {
   lastLoginAt: Date | null;
 };
 
+// The latest successful login of `u` (newest first on the user/time index; login records cover the last 180 days or so).
+export const LAST_LOGIN_SQL = `(select e.created_at from auth_events e where e.user_id = u.id and e.event = 'login_success' order by e.created_at desc limit 1)`;
+
 export async function loadCandidateDetail(candidateId: string, viewer: SessionPayload): Promise<CandidateDetail | null> {
   if (!isUuid(candidateId)) return null;
   const { rows } = await pool.query<{
@@ -38,7 +41,7 @@ export async function loadCandidateDetail(candidateId: string, viewer: SessionPa
     `select u.id, u.email, u.full_name, a.full_name as admin_name, a.email as admin_email,
             asg.id as assigned_id, asg.name as assigned_name, cur.id as current_id, cur.name as current_name,
             u.is_blocked, u.access_expires_at,
-            (select max(e.created_at) from auth_events e where e.user_id = u.id and e.event = 'login_success') as last_login_at
+            ${LAST_LOGIN_SQL} as last_login_at
      from users u
      join users a on a.id = u.admin_id
      join categories asg on asg.id = u.category_id

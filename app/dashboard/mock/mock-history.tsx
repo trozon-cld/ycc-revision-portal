@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { formatUkDate, formatUkTime } from "@/lib/candidates/access";
 import { formatDuration } from "@/lib/format";
-import { READINESS_TARGET, scorePercent, type MockEnd, type MockHistory, type MockHistoryEntry } from "@/lib/mock/types";
+import { READINESS_TARGET, scoreText, type MockEnd, type MockHistory, type MockHistoryEntry } from "@/lib/mock/types";
 import { SECONDARY_BUTTON } from "@/components/candidate/buttons";
 
 // How a test ended, where it wasn't simply submitted.
@@ -11,7 +11,7 @@ const ENDED: Partial<Record<MockEnd, string>> = {
   moved: "Ended when your category changed",
 };
 
-const score = (entry: MockHistoryEntry) => `${entry.rightCount} of ${entry.outOf} (${scorePercent(entry.rightCount, entry.outOf)}%)`;
+const score = (entry: MockHistoryEntry) => scoreText(entry.rightCount, entry.outOf);
 
 // The candidate's past mock tests in this category, newest first; each opens its results.
 export function MockHistoryList({
