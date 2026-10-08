@@ -5,8 +5,9 @@ import { SESSION_ENDED_LOGIN } from "@/lib/auth/constants";
 import { daysLeftUk, formatUkDate } from "@/lib/candidates/access";
 import { loadCandidateHome } from "@/lib/candidates/home";
 import { loadMockInProgress } from "@/lib/mock/attempts";
-import { timeLeftText } from "@/lib/mock/types";
+import { scoreText, timeLeftText } from "@/lib/mock/types";
 import { loadPracticeInProgress } from "@/lib/practice/sessions";
+import { loadProgress } from "@/lib/progress/overview";
 import { PageBody } from "@/components/candidate/page-body";
 import { SectionCard, SectionIcons } from "@/components/candidate/section-card";
 
@@ -15,11 +16,14 @@ const ACCESS_WARNING_DAYS = 7;
 
 export default async function CandidateHomePage({ searchParams }: PageProps<"/dashboard">) {
   const session = await requireRole(["candidate"]);
-  const [home, practice, mock] = await Promise.all([
+  const [home, practice, mock, progress] = await Promise.all([
     loadCandidateHome(session.sub),
     loadPracticeInProgress(session.sub),
     loadMockInProgress(session.sub),
+    loadProgress(session.sub),
   ]);
+  const lastMock = progress?.mock.items[0];
+  const readiness = progress?.readiness;
   if (!home) redirect(SESSION_ENDED_LOGIN);
   const justSwitched = (await searchParams).switched === "1";
 
@@ -83,6 +87,7 @@ export default async function CandidateHomePage({ searchParams }: PageProps<"/da
                 title="General queries"
                 description="Answers to common questions and how to get help."
                 icon={SectionIcons.help}
+                href="/dashboard/help"
               />
             </li>
             <li>
@@ -111,7 +116,9 @@ export default async function CandidateHomePage({ searchParams }: PageProps<"/da
                 description={
                   mock
                     ? `Continue your mock test: ${timeLeftText(mock.secondsLeft).toLowerCase()}.`
-                    : "A timed test in exam-style conditions, with your results at the end."
+                    : lastMock
+                      ? `Last mock test: ${scoreText(lastMock.rightCount, lastMock.outOf)}.`
+                      : "A timed test in exam-style conditions, with your results at the end."
                 }
                 icon={SectionIcons.timer}
                 href="/dashboard/mock"
@@ -120,8 +127,9 @@ export default async function CandidateHomePage({ searchParams }: PageProps<"/da
             <li className="sm:col-span-2">
               <SectionCard
                 title="My progress"
-                description="Your results from every section in one place."
+                description={readiness ? `Readiness: ${readiness.score}% · ${readiness.label}` : "Your results from every section in one place."}
                 icon={SectionIcons.progress}
+                href="/dashboard/progress"
               />
             </li>
           </ul>

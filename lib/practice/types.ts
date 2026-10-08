@@ -6,8 +6,8 @@ import type { CheckResult, QuestionType } from "@/lib/questions/types";
 
 export const PRACTICE_WAYS = ["smart", "chapters", "types", "all", "wrong", "flagged", "unseen", "weak"] as const;
 export type PracticeWay = (typeof PRACTICE_WAYS)[number];
-// "retry" is a practice made from the wrong answers of the last one.
-export type PracticeMode = PracticeWay | "retry";
+// "retry" is a practice made from the wrong answers of the last one; "mock" from a mock test's misses.
+export type PracticeMode = PracticeWay | "retry" | "mock";
 
 export const PRACTICE_SIZES = [10, 20, 30] as const;
 
@@ -28,6 +28,8 @@ export function isPracticeWay(value: unknown): value is PracticeWay {
 // Weak area: a chapter answered at least this many different questions in Practice, below this share right.
 export const WEAK_MIN_ANSWERED = 3;
 export const WEAK_BELOW = 0.7;
+// Strong area (My progress): as many questions answered, and at least this share right.
+export const STRONG_FROM = 0.9;
 
 // Most questions one practice can hold.
 export const MAX_QUESTIONS = 2000;

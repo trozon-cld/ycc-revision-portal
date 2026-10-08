@@ -183,7 +183,7 @@ export function QuestionView({
       >
         <div role="status" aria-live="polite" className="min-w-0 flex-1 basis-[12em]">
           {notice && <p className="mt-[calc(0.9em*var(--q-space,1))] font-semibold text-ink">{notice}</p>}
-          {phase === "checked" && result && <Feedback correct={result.correct} showsAnswer={showsAnswer} />}
+          {phase === "checked" && result && <Feedback result={result} showsAnswer={showsAnswer} />}
           {phase === "revealed" && (
             <p className="rounded-lg border-l-[0.3em] border-primary bg-primary/[0.07] px-[0.9em] py-[0.6em] font-semibold text-ink">
               The correct answer is highlighted.
@@ -209,7 +209,9 @@ export function QuestionView({
   );
 }
 
-function Feedback({ correct, showsAnswer }: { correct: boolean; showsAnswer: boolean }) {
+// "Not answered" only comes up when reviewing a mock test; a check always has an answer.
+function Feedback({ result, showsAnswer }: { result: CheckResult; showsAnswer: boolean }) {
+  const { correct } = result;
   return (
     <p
       className={`flex items-start gap-[0.5em] rounded-lg border-l-[0.3em] px-[0.9em] py-[0.6em] font-semibold ${
@@ -218,7 +220,7 @@ function Feedback({ correct, showsAnswer }: { correct: boolean; showsAnswer: boo
     >
       <MarkIcon name={correct ? "tick" : "cross"} className="mt-[0.15em] size-[1.1em] shrink-0" />
       <span>
-        {correct ? "Correct." : "Not quite."}
+        {correct ? "Correct." : result.answered ? "Not quite." : "Not answered."}
         {!correct && showsAnswer && <span className="font-normal"> The correct answer is highlighted.</span>}
       </span>
     </p>

@@ -8,12 +8,16 @@ import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons
 import { FocusedShell } from "@/components/learning/focused-shell";
 import { PracticeSetup } from "./practice-setup";
 
-export default async function PracticePage() {
+export default async function PracticePage({ searchParams }: PageProps<"/dashboard/practice">) {
   const session = await requireRole(["candidate"]);
   // A run from another category is closed first, so the setup below always matches the open one.
   const open = await loadOpenPractice(session.sub);
   const options = await loadPracticeOptions(session.sub);
   if (!options) redirect(SESSION_ENDED_LOGIN);
+  // ?chapter=…&chapter=… (from mock test results) ticks those chapters, if they're in this category's Practice.
+  const asked = (await searchParams).chapter;
+  const offered = new Set(options.sections.flatMap((section) => section.chapters.map((chapter) => chapter.id)));
+  const initialChapters = [...new Set(Array.isArray(asked) ? asked : asked ? [asked] : [])].filter((id) => offered.has(id));
 
   return (
     <FocusedShell label="Practice tools" status="Practice">
@@ -49,7 +53,7 @@ export default async function PracticePage() {
             </div>
           ) : (
             <>
-              <PracticeSetup options={options} hasOpen={Boolean(open)} />
+              <PracticeSetup options={options} hasOpen={Boolean(open)} initialChapters={initialChapters} />
               <Link href="/dashboard" className={`${SECONDARY_BUTTON} mt-3 w-full sm:w-auto`}>
                 Back to home
               </Link>

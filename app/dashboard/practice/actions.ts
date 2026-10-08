@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
-import { checkPractice, endPractice, nextPractice, setFlag, startPractice, startRetry } from "@/lib/practice/sessions";
+import { checkPractice, endPractice, nextPractice, setFlag, startFromMock, startPractice, startRetry } from "@/lib/practice/sessions";
 import { MAX_QUESTIONS, isPracticeWay, type PracticeCheckReply, type PracticeNextReply } from "@/lib/practice/types";
 import { isUuid } from "@/lib/ids";
 
@@ -35,6 +35,15 @@ export async function practiseAgain(formData: FormData): Promise<void> {
   if (!isUuid(sessionId)) redirect("/dashboard/practice");
   const reply = await startRetry(session.sub, sessionId);
   redirect(reply.ok ? `/dashboard/practice/${reply.id}` : `/dashboard/practice/${sessionId}?again=unavailable`);
+}
+
+// "Practise the questions you missed" on a mock test's results.
+export async function practiseMockMisses(formData: FormData): Promise<void> {
+  const session = await requireRole(["candidate"]);
+  const attemptId = String(formData.get("attemptId") ?? "");
+  if (!isUuid(attemptId)) redirect("/dashboard/mock");
+  const reply = await startFromMock(session.sub, attemptId);
+  redirect(reply.ok ? `/dashboard/practice/${reply.id}` : `/dashboard/mock/${attemptId}?practice=unavailable`);
 }
 
 export async function checkPracticeAnswer(sessionId: string, position: number, response: unknown): Promise<PracticeCheckReply> {

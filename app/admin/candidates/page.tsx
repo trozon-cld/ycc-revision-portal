@@ -4,7 +4,6 @@ import { customDateBounds, formatUkDate } from "@/lib/candidates/access";
 import { isUuid } from "@/lib/ids";
 import { firstParam } from "@/lib/params";
 import { escapeLike } from "@/lib/db/like";
-import { Badge } from "@/components/admin/badge";
 import { FilterBar, FilterSearch, FilterSelect } from "@/components/admin/filter-bar";
 import { Breakable } from "@/components/admin/breakable";
 import { PersonLabel } from "@/components/admin/person-label";
@@ -14,6 +13,10 @@ import { Cell, Row, Table } from "@/components/admin/table";
 import { NewCandidateButton } from "./create-candidate-form";
 import { AdminCandidateActions, SuperadminCandidateActions } from "./candidate-row-actions";
 import { CategoryOptions, type CategoryChoice } from "./category-options";
+import { CandidateStatusBadge } from "./status-badge";
+import { candidateProgressPath } from "@/lib/candidates/paths";
+import { LAST_LOGIN_SQL } from "@/lib/candidates/detail";
+import { scoreText } from "@/lib/mock/types";
 
 interface CandidateRow {
   id: string;
@@ -27,6 +30,10 @@ interface CandidateRow {
   admin_name: string | null;
   access_expires_at: string | null;
   is_blocked: boolean;
+  // The latest ended mock test in the current category, if any.
+  mock_right: number | null;
+  mock_out_of: number | null;
+  last_login_at: Date | null;
 }
 
 interface Option {
@@ -73,11 +80,17 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
   const [{ rows: candidates }, { rows: categories }, { rows: admins }] = await Promise.all([
     pool.query<CandidateRow>(
       `select u.id, u.email, u.full_name, u.category_id, c.name as category_name, cc.name as current_category_name,
-              u.admin_id, a.email as admin_email, a.full_name as admin_name, u.access_expires_at, u.is_blocked
+              u.admin_id, a.email as admin_email, a.full_name as admin_name, u.access_expires_at, u.is_blocked,
+              lm.right_count as mock_right, lm.out_of as mock_out_of, ${LAST_LOGIN_SQL} as last_login_at
        from users u
        join categories c on c.id = u.category_id
        join categories cc on cc.id = u.current_category_id
        join users a on a.id = u.admin_id
+       left join lateral (
+         select m.right_count, m.out_of from mock_attempts m
+         where m.user_id = u.id and m.ended_at is not null and m.category_id = u.current_category_id
+         order by m.ended_at desc limit 1
+       ) lm on true
        where ${where}
        order by u.created_at desc, u.id
        limit $5 offset $6`,
@@ -98,8 +111,8 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
 
   const now = Date.now();
   const columns = isSuperadmin
-    ? ["Candidate", "Category", "Admin", "Status", "Access until", ""]
-    : ["Candidate", "Category", "Status", "Access until", ""];
+    ? ["Candidate", "Category", "Admin", "Status", "Access until", "Recent activity", ""]
+    : ["Candidate", "Category", "Status", "Access until", "Recent activity", ""];
   const countLabel = `${total.toLocaleString("en-GB")} candidate${total === 1 ? "" : "s"}`;
   const query: Record<string, string> = {
     q: search,
@@ -170,7 +183,7 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
           return (
             <Row key={candidate.id}>
               <Cell kind="primary">
-                <PersonLabel name={candidate.full_name} email={candidate.email} />
+                <PersonLabel name={candidate.full_name} email={candidate.email} href={candidateProgressPath(candidate.id)} />
               </Cell>
               <Cell label="Category">
                 {candidate.current_category_name}
@@ -184,16 +197,22 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
                 </Cell>
               )}
               <Cell label="Status">
-                {candidate.is_blocked ? (
-                  <Badge tone="danger">Blocked</Badge>
-                ) : isExpired ? (
-                  <Badge tone="warning">Expired</Badge>
-                ) : (
-                  <Badge tone="success">Active</Badge>
-                )}
+                <CandidateStatusBadge isBlocked={candidate.is_blocked} isExpired={isExpired} />
               </Cell>
               <Cell label="Access until" nowrap>
                 {expiryDate}
+              </Cell>
+              <Cell label="Recent activity">
+                <span className="block">
+                  <span className="text-slate-600">Last mock:</span>{" "}
+                  <span className="whitespace-nowrap">
+                    {candidate.mock_right !== null && candidate.mock_out_of !== null ? scoreText(candidate.mock_right, candidate.mock_out_of) : "None"}
+                  </span>
+                </span>
+                <span className="block">
+                  <span className="text-slate-600">Last login:</span>{" "}
+                  <span className="whitespace-nowrap">{candidate.last_login_at ? formatUkDate(candidate.last_login_at) : "None"}</span>
+                </span>
               </Cell>
               <Cell kind="actions">
                 {isSuperadmin ? (

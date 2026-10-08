@@ -20,10 +20,11 @@ const FOCUS: { way: PracticeWay; title: string; description: string; none: strin
   { way: "weak", title: "Weak areas", description: `Chapters where you get less than ${Math.round(WEAK_BELOW * 100)}% right.`, none: "Practise a little more to find your weak areas." },
 ];
 
-export function PracticeSetup({ options, hasOpen }: { options: PracticeOptions; hasOpen: boolean }) {
+// `initialChapters` (e.g. a mock test's weakest topics) opens "By chapter" with those ticked.
+export function PracticeSetup({ options, hasOpen, initialChapters = [] }: { options: PracticeOptions; hasOpen: boolean; initialChapters?: string[] }) {
   const [state, action, pending] = useActionState<StartState, FormData>(startPracticeForm, { error: null });
-  const [way, setWay] = useState<PracticeWay>("smart");
-  const [chapters, setChapters] = useState<string[]>([]);
+  const [way, setWay] = useState<PracticeWay>(initialChapters.length > 0 ? "chapters" : "smart");
+  const [chapters, setChapters] = useState<string[]>(initialChapters);
   const [types, setTypes] = useState<string[]>([]);
   const [size, setSize] = useState<string>(String(PRACTICE_SIZES[0]));
 

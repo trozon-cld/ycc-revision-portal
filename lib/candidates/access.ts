@@ -71,6 +71,11 @@ export function formatUkDate(value: string | Date, month: "short" | "long" = "sh
   });
 }
 
+// "14:05", UK time.
+export function formatUkTime(value: string | Date): string {
+  return new Date(value).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: ACCESS_TIME_ZONE });
+}
+
 // Whole days left before access ends, counted in UK days (0 on the last day).
 export function daysLeftUk(expiresAt: string | Date): number {
   const end = new Intl.DateTimeFormat("en-CA", {
