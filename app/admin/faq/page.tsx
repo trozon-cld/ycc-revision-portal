@@ -13,18 +13,18 @@ import { FaqRowActions, NewFaqButton, SupportContactButton } from "./faq-row-act
 export default async function FaqAdminPage() {
   await requireRole(["superadmin"]);
   const [items, contact] = await Promise.all([loadFaqItems(false), loadSupportContact()]);
-  const shown = items.filter((item) => item.status === "published").length;
+  const published = items.filter((item) => item.status === "published").length;
 
   return (
     <div className="space-y-8">
       <div>
         <PageHeader
           title="General queries"
-          description={`${countOf(items.length, "question", "questions")} · ${shown} shown to candidates`}
+          description={`${countOf(items.length, "question", "questions")} · ${published} published`}
           actions={items.length < FAQ_MAX_ITEMS ? <NewFaqButton /> : undefined}
         />
         <p className="mb-4 text-sm text-slate-600">
-          Candidates see the shown questions in this order. Hidden questions are kept here until you show them.
+          Candidates see the published questions in this order. Drafts are kept here until you publish them.
           {items.length >= FAQ_MAX_ITEMS && ` You have reached the limit of ${FAQ_MAX_ITEMS} questions.`}
         </p>
         <Table columns={["Question", "Status", ""]} isEmpty={items.length === 0} emptyMessage="No questions yet.">
@@ -37,7 +37,7 @@ export default async function FaqAdminPage() {
                 <span className="mt-0.5 line-clamp-2 block text-sm font-normal text-slate-600">{item.answer}</span>
               </Cell>
               <Cell label="Status" nowrap>
-                {item.status === "published" ? <Badge tone="success">Shown</Badge> : <Badge>Hidden</Badge>}
+                <Badge tone={item.status === "published" ? "success" : "neutral"}>{item.status === "published" ? "Published" : "Draft"}</Badge>
               </Cell>
               <Cell kind="actions">
                 <FaqRowActions item={item} isFirst={index === 0} isLast={index === items.length - 1} />

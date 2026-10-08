@@ -44,7 +44,7 @@ export function CategoryCoversForm({
         action={saveCategoryCovers}
         hidden={{ categoryId, frontMediaId: covers.front?.id ?? "", backMediaId: covers.back?.id ?? "" }}
         submitLabel="Save covers"
-        successMessage="Covers saved."
+        successMessage="Covers updated."
         onSuccess={onClose}
         onCancel={onClose}
       >

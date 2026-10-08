@@ -268,7 +268,7 @@ function ChapterCategoriesForm({
       action={saveChapterCategories}
       hidden={{ chapterId }}
       submitLabel="Save categories"
-      successMessage="Categories saved."
+      successMessage="Categories updated."
       onSuccess={onClose}
       onCancel={onClose}
     >

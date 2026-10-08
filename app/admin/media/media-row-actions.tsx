@@ -38,7 +38,7 @@ export function MediaRowActions({
           action={updateAltText}
           hidden={hidden}
           submitLabel="Save description"
-          successMessage="Description saved."
+          successMessage="Description updated."
           onSuccess={close}
           onCancel={close}
         >
