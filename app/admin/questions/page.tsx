@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireRole } from "@/lib/auth/guard";
 import { plainText } from "@/lib/content/inline";
 import { questionRef } from "@/lib/questions/labels";
-import { countQuestions, listBankQuestions, listChapterOptions, type BankFilters } from "@/lib/questions/queries";
+import { BANK_PAGE_SIZE, countBankQuestions, countQuestions, listBankQuestions, listChapterOptions, type BankFilters } from "@/lib/questions/queries";
 import { availableQuestionTypes, QUESTION_TYPES } from "@/lib/questions/registry";
 import { isQuestionType, QUESTION_TYPE_KEYS } from "@/lib/questions/types";
 import { loadCategoryGroups } from "@/lib/handbook/categories";
@@ -11,7 +11,7 @@ import { firstParam } from "@/lib/params";
 import { Badge } from "@/components/admin/badge";
 import { FilterBar, FilterSearch, FilterSelect } from "@/components/admin/filter-bar";
 import { PageHeader } from "@/components/admin/page-header";
-import { Pagination } from "@/components/admin/pagination";
+import { Pagination, pageFromParam } from "@/components/admin/pagination";
 import { Cell, Row, Table } from "@/components/admin/table";
 import { NewQuestionButton, QuestionRowActions } from "./question-row-actions";
 
@@ -28,18 +28,20 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
     categoryId: uuidOrNull(firstParam(params.category)),
     type: isQuestionType(typeParam) ? typeParam : null,
     status: statusParam === "draft" || statusParam === "published" ? statusParam : null,
-    page: Math.max(1, Number.parseInt(firstParam(params.page) ?? "1", 10) || 1),
   };
   const isFiltered = Boolean(
     filters.search || filters.sectionId || filters.chapterId || filters.categoryId || filters.type || filters.status
   );
 
-  const [{ rows, hasMore }, total, sections, categoryGroups] = await Promise.all([
-    listBankQuestions(filters),
+  const [matching, total, sections, categoryGroups] = await Promise.all([
+    countBankQuestions(filters),
     countQuestions(),
     listChapterOptions(),
     loadCategoryGroups(),
   ]);
+  const totalLabel = `${total.toLocaleString("en-GB")} question${total === 1 ? "" : "s"}`;
+  const page = pageFromParam(firstParam(params.page), matching, BANK_PAGE_SIZE);
+  const rows = await listBankQuestions(filters, page);
 
   const query = {
     q: filters.search,
@@ -54,7 +56,11 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
     <>
       <PageHeader
         title="Question bank"
-        description={`${total} question${total === 1 ? "" : "s"}`}
+        description={
+          isFiltered
+            ? `${matching.toLocaleString("en-GB")} of ${totalLabel} match your filters`
+            : totalLabel
+        }
         actions={
           <NewQuestionButton
             types={availableQuestionTypes().map((key) => ({ key, label: QUESTION_TYPES[key].label }))}
@@ -121,7 +127,7 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
         columns={["Question", "Chapter", "Type", "Status", "Used in", ""]}
         isEmpty={rows.length === 0}
         emptyMessage={
-          total === 0 ? "No questions yet. Add the first one with New question." : filters.page > 1 ? "No questions on this page." : "No questions match these filters."
+          total === 0 ? "No questions yet. Add the first one with New question." : "No questions match these filters."
         }
       >
         {rows.map((row) => {
@@ -166,7 +172,14 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
         })}
       </Table>
 
-      <Pagination basePath="/admin/questions" page={filters.page} hasMore={hasMore} query={query} />
+      <Pagination
+        basePath="/admin/questions"
+        page={page}
+        hasMore={page * BANK_PAGE_SIZE < matching}
+        query={query}
+        total={matching}
+        pageSize={BANK_PAGE_SIZE}
+      />
     </>
   );
 }

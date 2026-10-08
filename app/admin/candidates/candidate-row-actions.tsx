@@ -28,6 +28,8 @@ export interface RowCandidate {
   adminId: string;
   isBlocked: boolean;
   expiryLabel: string;
+  // YYYY-MM-DD that access presets add to (the current end date, or today once it has passed).
+  accessBase: string;
 }
 
 export function AdminCandidateActions({
@@ -163,7 +165,13 @@ export function AdminCandidateActions({
           onCancel={close}
         >
           <p className="text-sm text-slate-600">Currently: {candidate.expiryLabel}</p>
-          <AccessLengthField idPrefix={`access-${id}`} label="New access length" minDate={minDate} maxDate={maxDate} />
+          <AccessLengthField
+            idPrefix={`access-${id}`}
+            label="New access length"
+            minDate={minDate}
+            maxDate={maxDate}
+            base={candidate.accessBase}
+          />
         </ActionForm>
       ),
     },

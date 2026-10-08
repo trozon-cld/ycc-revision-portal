@@ -1,6 +1,6 @@
 import { requireRole } from "@/lib/auth/guard";
 import { pool } from "@/lib/db/pool";
-import { customDateBounds, formatUkDate } from "@/lib/candidates/access";
+import { accessBaseDate, customDateBounds, formatUkDate } from "@/lib/candidates/access";
 import { isUuid } from "@/lib/ids";
 import { firstParam } from "@/lib/params";
 import { escapeLike } from "@/lib/db/like";
@@ -17,6 +17,8 @@ import { CandidateStatusBadge } from "./status-badge";
 import { candidateProgressPath } from "@/lib/candidates/paths";
 import { LAST_LOGIN_SQL } from "@/lib/candidates/detail";
 import { scoreText } from "@/lib/mock/types";
+import { STALE_MOCK_SQL, settleMocks } from "@/lib/mock/attempts";
+import { withTransaction } from "@/lib/db/transaction";
 
 interface CandidateRow {
   id: string;
@@ -34,6 +36,7 @@ interface CandidateRow {
   mock_right: number | null;
   mock_out_of: number | null;
   last_login_at: Date | null;
+  stale_mock: boolean;
 }
 
 interface Option {
@@ -77,11 +80,13 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
   const total = counted[0].total;
   const page = pageFromParam(firstParam(params.page), total, PAGE_SIZE);
 
-  const [{ rows: candidates }, { rows: categories }, { rows: admins }] = await Promise.all([
+  // A test left to run out of time shows as the last mock straight away: such tests on this page end first.
+  const loadPage = () =>
     pool.query<CandidateRow>(
       `select u.id, u.email, u.full_name, u.category_id, c.name as category_name, cc.name as current_category_name,
               u.admin_id, a.email as admin_email, a.full_name as admin_name, u.access_expires_at, u.is_blocked,
-              lm.right_count as mock_right, lm.out_of as mock_out_of, ${LAST_LOGIN_SQL} as last_login_at
+              lm.right_count as mock_right, lm.out_of as mock_out_of, ${LAST_LOGIN_SQL} as last_login_at,
+              exists (select 1 from mock_attempts a where a.user_id = u.id and ${STALE_MOCK_SQL}) as stale_mock
        from users u
        join categories c on c.id = u.category_id
        join categories cc on cc.id = u.current_category_id
@@ -95,7 +100,15 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
        order by u.created_at desc, u.id
        limit $5 offset $6`,
       [...filterValues, PAGE_SIZE, (page - 1) * PAGE_SIZE]
-    ),
+    );
+  let { rows: candidates } = await loadPage();
+  const stale = candidates.filter((candidate) => candidate.stale_mock).map((candidate) => candidate.id);
+  if (stale.length > 0) {
+    await withTransaction((client) => settleMocks(client, stale));
+    ({ rows: candidates } = await loadPage());
+  }
+
+  const [{ rows: categories }, { rows: admins }] = await Promise.all([
     pool.query<CategoryChoice>(
       `select c.id, c.name, g.name as "group"
        from categories c join category_groups g on g.id = c.group_id
@@ -178,6 +191,7 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
             adminId: candidate.admin_id,
             isBlocked: candidate.is_blocked,
             expiryLabel: expiresAt ? `${isExpired ? "Expired on" : "Expires"} ${expiryDate}` : "No expiry set",
+            accessBase: accessBaseDate(expiresAt),
           };
 
           return (

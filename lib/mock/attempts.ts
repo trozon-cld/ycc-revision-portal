@@ -68,6 +68,16 @@ async function settleOpen(client: Db, userId: string): Promise<AttemptRow | null
   return null;
 }
 
+// Open tests that have run out of time, or whose category the candidate no longer works in.
+export const STALE_MOCK_SQL = `a.ended_at is null and (a.deadline_at < now() - make_interval(secs => ${SAVE_GRACE_SECONDS}) or a.category_id <> u.current_category_id)`;
+
+// Ends these candidates' stale tests, as their own pages would, so staff see every test. Call inside a transaction.
+export async function settleMocks(db: Db, userIds: string[]): Promise<void> {
+  if (userIds.length === 0) return;
+  const { rows } = await db.query<AttemptRow>(`${ATTEMPT} where a.user_id = any($1::uuid[]) and ${STALE_MOCK_SQL} order by a.id for update of a`, [userIds]);
+  for (const row of rows) await finish(db, row, isOverdue(row) ? "away" : "moved");
+}
+
 const toOpen = (row: AttemptRow): OpenMock => ({ id: row.id, total: row.total, answered: countAnswered(row.responses), secondsLeft: secondsLeft(row) });
 
 // --- Start page

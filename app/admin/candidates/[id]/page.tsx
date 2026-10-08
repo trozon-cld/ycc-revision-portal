@@ -6,7 +6,8 @@ import { formatUkDate, formatUkTime } from "@/lib/candidates/access";
 import { loadCandidateDetail } from "@/lib/candidates/detail";
 import { candidateProgressPath } from "@/lib/candidates/paths";
 import { countOf, formatDuration } from "@/lib/format";
-import { loadMockHistory } from "@/lib/mock/attempts";
+import { loadMockHistory, settleMocks } from "@/lib/mock/attempts";
+import { withTransaction } from "@/lib/db/transaction";
 import { READINESS_TARGET, scorePercent, scoreText, type MockEnd, type MockHistoryEntry } from "@/lib/mock/types";
 import { firstParam } from "@/lib/params";
 import { loadProgress } from "@/lib/progress/overview";
@@ -53,12 +54,14 @@ function Summary({ items }: { items: [string, ReactNode][] }) {
   );
 }
 
-// A candidate's progress for staff: Admins see their own candidates, the Superadmin everyone's. Read only.
+// A candidate's progress for staff: Admins see their own candidates, the Superadmin everyone's.
 export default async function CandidateProgressPage({ params, searchParams }: PageProps<"/admin/candidates/[id]">) {
   const session = await requireRole(["admin", "superadmin"]);
   const { id } = await params;
   const candidate = await loadCandidateDetail(id, session);
   if (!candidate) notFound();
+  // A test left to run out of time counts as soon as staff look, not only once the candidate returns.
+  await withTransaction((client) => settleMocks(client, [candidate.id]));
   const query = await searchParams;
 
   const asked = firstParam(query.category);

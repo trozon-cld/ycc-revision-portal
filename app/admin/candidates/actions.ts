@@ -8,8 +8,9 @@ import type { SessionPayload } from "@/lib/auth/jwt";
 import { getErrorCode, withTransaction } from "@/lib/db/transaction";
 import { logActivity } from "@/lib/audit/log";
 import { NO_NAME, normaliseName, validateName } from "@/lib/users/name";
-import { accessEndSql, formatUkDate, resolveAccessEndDate } from "@/lib/candidates/access";
+import { accessBaseDate, accessEndSql, formatUkDate, resolveAccessEndDate } from "@/lib/candidates/access";
 import { isUuid } from "@/lib/ids";
+import { settleMocks } from "@/lib/mock/attempts";
 import { DUPLICATE_EMAIL, EMAIL_PATTERN, MIN_PASSWORD_LENGTH } from "@/lib/users/credentials";
 import type { FormState } from "@/lib/forms";
 
@@ -192,6 +193,8 @@ export async function updateCandidateCategory(
       id,
       categoryId,
     ]);
+    // A test open in the old category ends now with what was saved, as agreed for mock tests.
+    await settleMocks(client, [id]);
     const details: Record<string, string> = { from: candidate.category_name, to: newName };
     if (candidate.current_category_name !== candidate.category_name) {
       details.previousCurrent = candidate.current_category_name;
@@ -215,17 +218,19 @@ export async function updateCandidateAccess(
   formData: FormData
 ): Promise<CandidateActionState> {
   const session = await requireRole(["admin"]);
-  const access = resolveAccessEndDate(formData);
-  if ("error" in access) {
-    return { error: access.error };
-  }
 
   return changeOwnCandidate(session, formData, async (client, id, candidate) => {
+    // Presets add to the current end date (or today, if it has passed), read under the row lock.
+    const access = resolveAccessEndDate(formData, accessBaseDate(candidate.access_expires_at));
+    if ("error" in access) return access.error;
+    // The same end date again changes nothing, so nothing is written or logged.
     const { rows } = await client.query<{ access_expires_at: string }>(
-      `update users set access_expires_at = ${accessEndSql("$2")} where id = $1
+      `update users set access_expires_at = ${accessEndSql("$2")}
+       where id = $1 and access_expires_at is distinct from ${accessEndSql("$2")}
        returning access_expires_at`,
       [id, access.date]
     );
+    if (!rows[0]) return;
     await logActivity(
       client,
       session,
@@ -339,11 +344,11 @@ export async function changeCandidateAdmin(
 }
 
 // Locks the row only if this admin owns the candidate — a forged candidateId matches nothing.
-// `change` returning without writing means "nothing to change", which still counts as success.
+// `change` returning without writing means "nothing to change" (success); returning a message refuses.
 async function changeOwnCandidate(
   session: SessionPayload,
   formData: FormData,
-  change: (client: PoolClient, candidateId: string, candidate: OwnedCandidate) => Promise<void>
+  change: (client: PoolClient, candidateId: string, candidate: OwnedCandidate) => Promise<void | string>
 ): Promise<CandidateActionState> {
   const candidateId = String(formData.get("candidateId") ?? "");
 
@@ -362,8 +367,8 @@ async function changeOwnCandidate(
       );
       if (!rows[0]) return { error: NOT_FOUND };
 
-      await change(client, candidateId, rows[0]);
-      return { success: true };
+      const refused = await change(client, candidateId, rows[0]);
+      return refused ? { error: refused } : { success: true };
     });
   } catch (error) {
     const code = getErrorCode(error);
