@@ -263,7 +263,7 @@ export function SuperadminCandidateActions({
     { label: "View progress", href: candidateProgressPath(candidate.id) },
     {
       label: "Change admin",
-      title: "Move to another admin",
+      title: "Change admin",
       description: candidate.email,
       render: (close) =>
         otherAdmins.length === 0 ? (
@@ -272,8 +272,8 @@ export function SuperadminCandidateActions({
           <ActionForm
             action={changeCandidateAdmin}
             hidden={{ candidateId: candidate.id }}
-            submitLabel="Move candidate"
-            successMessage="Admin changed."
+            submitLabel="Save admin"
+            successMessage="Admin updated."
             onSuccess={close}
             onCancel={close}
           >

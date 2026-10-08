@@ -94,6 +94,18 @@ export function formatUkDate(value: string | Date, month: "short" | "long" = "sh
   });
 }
 
+// "8 Oct 2026, 15:34", UK time: dates with a time on admin pages.
+export function formatUkDateTime(value: string | Date): string {
+  return new Date(value).toLocaleString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: ACCESS_TIME_ZONE,
+  });
+}
+
 // "14:05", UK time.
 export function formatUkTime(value: string | Date): string {
   return new Date(value).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: ACCESS_TIME_ZONE });

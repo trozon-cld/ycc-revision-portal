@@ -48,8 +48,8 @@ export default async function MediaPage({ searchParams }: PageProps<"/admin/medi
     `select id, thumb_path, original_name, mime_type, width, height, byte_size, alt_text,
             (select count(*) from content_page_media u where u.media_id = media.id)::int as used_in,
             (select count(*) from question_media u where u.media_id = media.id)::int as used_in_questions,
-            (select count(*) from categories u where u.front_cover_media_id = media.id or u.back_cover_media_id = media.id)::int
-              as used_in_covers
+            (select count(*) filter (where u.front_cover_media_id = media.id) + count(*) filter (where u.back_cover_media_id = media.id)
+               from categories u)::int as used_in_covers
      from media
      where ${matches}
      order by created_at desc, id

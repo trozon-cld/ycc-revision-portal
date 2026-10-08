@@ -30,7 +30,7 @@ function FaqFields({ id, item }: { id: string; item?: FaqItem }) {
 
 export function NewFaqButton() {
   return (
-    <PanelButton label="Add question" title="Add question">
+    <PanelButton label="New question" title="New question">
       {(close) => (
         <ActionForm action={createFaq} submitLabel="Add question" pendingLabel="Adding…" successMessage="Question added. It's hidden until you show it." onSuccess={close} onCancel={close}>
           <FaqFields id="new-faq" />

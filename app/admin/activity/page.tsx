@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/auth/guard";
 import { pool } from "@/lib/db/pool";
-import { ACCESS_TIME_ZONE, formatUkDate } from "@/lib/candidates/access";
+import { formatUkDate, formatUkDateTime } from "@/lib/candidates/access";
 import {
   ACTION_AREAS,
   ACTIVITY_ACTIONS,
@@ -17,7 +17,7 @@ import { FilterBar, FilterSearch, FilterSelect } from "@/components/admin/filter
 import { Breakable } from "@/components/admin/breakable";
 import { PageHeader } from "@/components/admin/page-header";
 import { buttonClass } from "@/components/admin/styles";
-import { Pagination } from "@/components/admin/pagination";
+import { Pagination, pageFromParam } from "@/components/admin/pagination";
 import { Cell, Row, Table } from "@/components/admin/table";
 import { ActionForm } from "@/components/admin/action-form";
 import { ARCHIVE_AFTER_DAYS, archiveMonthText, listArchives, loadArchiveStatus } from "@/lib/audit/archive";
@@ -64,7 +64,8 @@ export default async function ActivityPage({ searchParams }: PageProps<"/admin/a
 
   const tabParam = firstParam(params.tab);
   const tab = tabParam === "logins" ? "logins" : tabParam === "archives" && isSuperadmin ? "archives" : "activity";
-  const page = Math.max(1, Number.parseInt(firstParam(params.page) ?? "1", 10) || 1);
+  const pageParam = firstParam(params.page);
+  const page = Math.max(1, Number.parseInt(pageParam ?? "1", 10) || 1);
   const actionParam = firstParam(params.action) ?? "";
   const eventParam = firstParam(params.event) ?? "";
   const actorParam = firstParam(params.actor) ?? "";
@@ -77,7 +78,6 @@ export default async function ActivityPage({ searchParams }: PageProps<"/admin/a
   const event = isAuthEvent(eventParam) ? eventParam : null;
   // Admins are always pinned to their own entries, whatever the URL says.
   const actorId = isSuperadmin ? (isUuid(actorParam) ? actorParam : null) : session.sub;
-  const offset = (page - 1) * PAGE_SIZE;
 
   const filters: Record<string, string> =
     tab === "activity"
@@ -108,8 +108,7 @@ export default async function ActivityPage({ searchParams }: PageProps<"/admin/a
           actorId={actorId}
           action={action}
           allowedActions={allowedActions}
-          offset={offset}
-          page={page}
+          pageParam={pageParam}
           filters={filters}
         />
       ) : tab === "archives" ? (
@@ -120,8 +119,7 @@ export default async function ActivityPage({ searchParams }: PageProps<"/admin/a
           userId={isSuperadmin ? null : session.sub}
           event={event}
           emailSearch={emailSearch}
-          offset={offset}
-          page={page}
+          pageParam={pageParam}
           filters={filters}
         />
       )}
@@ -135,8 +133,7 @@ async function ActivityTab({
   actorId,
   action,
   allowedActions,
-  offset,
-  page,
+  pageParam,
   filters,
 }: {
   isSuperadmin: boolean;
@@ -145,21 +142,26 @@ async function ActivityTab({
   actorId: string | null;
   action: ActivityAction | null;
   allowedActions: ActivityAction[];
-  offset: number;
-  page: number;
+  pageParam: string | undefined;
   filters: Record<string, string>;
 }) {
+  // One filter for the count and the page, so both always agree.
+  const where = `where ($1::uuid is null or actor_id = $1::uuid
+              or ($3::uuid is not null and action = 'candidate.category_switched'
+                  and target_id in (select id from users where admin_id = $3::uuid)))
+         and ($2::varchar is null or action = $2::varchar)`;
+  const values = [actorId, action, ownerId];
+  const { rows: counted } = await pool.query<{ total: number }>(`select count(*)::int as total from activity_logs ${where}`, values);
+  const total = counted[0].total;
+  const page = pageFromParam(pageParam, total, PAGE_SIZE);
   const [{ rows }, { rows: actors }] = await Promise.all([
     pool.query<ActivityRow>(
       `select id, created_at, actor_email, actor_role, action, target_label, details, ip_address
        from activity_logs
-       where ($1::uuid is null or actor_id = $1::uuid
-              or ($5::uuid is not null and action = 'candidate.category_switched'
-                  and target_id in (select id from users where admin_id = $5::uuid)))
-         and ($2::varchar is null or action = $2::varchar)
-       order by created_at desc
-       limit $3 offset $4`,
-      [actorId, action, PAGE_SIZE + 1, offset, ownerId]
+       ${where}
+       order by created_at desc, id
+       limit $4 offset $5`,
+      [...values, PAGE_SIZE, (page - 1) * PAGE_SIZE]
     ),
     isSuperadmin
       ? pool.query<ActorRow>(
@@ -170,8 +172,7 @@ async function ActivityTab({
         )
       : Promise.resolve({ rows: [] as ActorRow[] }),
   ]);
-  const hasMore = rows.length > PAGE_SIZE;
-  const entries = rows.slice(0, PAGE_SIZE);
+  const entries = rows;
   const isFiltered = Boolean(filters.action || filters.actor);
   const columns = isSuperadmin
     ? ["When", "Action", "Applies to", "Details", "Done by", "IP"]
@@ -212,6 +213,10 @@ async function ActivityTab({
           })}
         </FilterSelect>
       </FilterBar>
+      <p className="mb-3 text-sm text-slate-600">
+        {total.toLocaleString("en-GB")} entr{total === 1 ? "y" : "ies"}
+        {isFiltered ? " match your filters" : ""}
+      </p>
 
       <Table
         columns={columns}
@@ -243,7 +248,7 @@ async function ActivityTab({
         ))}
       </Table>
 
-      <Pagination basePath="/admin/activity" page={page} hasMore={hasMore} query={filters} />
+      <Pagination basePath="/admin/activity" page={page} hasMore={page * PAGE_SIZE < total} query={filters} total={total} pageSize={PAGE_SIZE} />
     </>
   );
 }
@@ -253,30 +258,31 @@ async function LoginsTab({
   userId,
   event,
   emailSearch,
-  offset,
-  page,
+  pageParam,
   filters,
 }: {
   isSuperadmin: boolean;
   userId: string | null;
   event: AuthEvent | null;
   emailSearch: string;
-  offset: number;
-  page: number;
+  pageParam: string | undefined;
   filters: Record<string, string>;
 }) {
-  const { rows } = await pool.query<AuthRow>(
+  const where = `where ($1::uuid is null or user_id = $1::uuid)
+       and ($2::varchar is null or event = $2::varchar)
+       and ($3::text is null or email ilike '%' || $3::text || '%')`;
+  const values = [userId, event, emailSearch ? escapeLike(emailSearch) : null];
+  const { rows: counted } = await pool.query<{ total: number }>(`select count(*)::int as total from auth_events ${where}`, values);
+  const total = counted[0].total;
+  const page = pageFromParam(pageParam, total, PAGE_SIZE);
+  const { rows: entries } = await pool.query<AuthRow>(
     `select id, created_at, event, email, role, ip_address
      from auth_events
-     where ($1::uuid is null or user_id = $1::uuid)
-       and ($2::varchar is null or event = $2::varchar)
-       and ($3::text is null or email ilike '%' || $3::text || '%')
-     order by created_at desc
+     ${where}
+     order by created_at desc, id
      limit $4 offset $5`,
-    [userId, event, emailSearch ? escapeLike(emailSearch) : null, PAGE_SIZE + 1, offset]
+    [...values, PAGE_SIZE, (page - 1) * PAGE_SIZE]
   );
-  const hasMore = rows.length > PAGE_SIZE;
-  const entries = rows.slice(0, PAGE_SIZE);
   const isFiltered = Boolean(filters.event || filters.q);
   const columns = isSuperadmin ? ["When", "Event", "Account", "IP"] : ["When", "Event", "IP"];
 
@@ -298,6 +304,10 @@ async function LoginsTab({
           ))}
         </FilterSelect>
       </FilterBar>
+      <p className="mb-3 text-sm text-slate-600">
+        {total.toLocaleString("en-GB")} login record{total === 1 ? "" : "s"}
+        {isFiltered ? " match your filters" : ""}
+      </p>
 
       <Table
         columns={columns}
@@ -329,7 +339,7 @@ async function LoginsTab({
         ))}
       </Table>
 
-      <Pagination basePath="/admin/activity" page={page} hasMore={hasMore} query={filters} />
+      <Pagination basePath="/admin/activity" page={page} hasMore={page * PAGE_SIZE < total} query={filters} total={total} pageSize={PAGE_SIZE} />
     </>
   );
 }
@@ -446,15 +456,4 @@ function describeDetails(details: Record<string, string>): string | null {
   if (details.accessUntil) parts.push(`Access until ${details.accessUntil}`);
   if (details.records) parts.push(`${details.records} record${details.records === "1" ? "" : "s"}`);
   return parts.length > 0 ? parts.join(" · ") : null;
-}
-
-function formatUkDateTime(value: string): string {
-  return new Date(value).toLocaleString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: ACCESS_TIME_ZONE,
-  });
 }

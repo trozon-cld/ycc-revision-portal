@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
-import { formatUkDate, formatUkTime } from "@/lib/candidates/access";
+import { formatUkDate, formatUkDateTime } from "@/lib/candidates/access";
 import { loadCandidateDetail } from "@/lib/candidates/detail";
 import { candidateProgressPath } from "@/lib/candidates/paths";
 import { countOf, formatDuration } from "@/lib/format";
@@ -12,6 +12,7 @@ import { READINESS_TARGET, scorePercent, scoreText, type MockEnd, type MockHisto
 import { firstParam } from "@/lib/params";
 import { loadProgress } from "@/lib/progress/overview";
 import { Badge } from "@/components/admin/badge";
+import { PersonLabel } from "@/components/admin/person-label";
 import { PageHeader } from "@/components/admin/page-header";
 import { Pagination, pageFromParam } from "@/components/admin/pagination";
 import { buttonClass, cardClass } from "@/components/admin/styles";
@@ -88,11 +89,11 @@ export default async function CandidateProgressPage({ params, searchParams }: Pa
         <Summary
           items={[
             ["Status", <CandidateStatusBadge key="status" isBlocked={candidate.isBlocked} isExpired={isExpired} />],
-            ["Access until", candidate.accessExpiresAt ? formatUkDate(candidate.accessExpiresAt, "long") : "No expiry"],
-            ["Last login", candidate.lastLoginAt ? `${formatUkDate(candidate.lastLoginAt, "long")} at ${formatUkTime(candidate.lastLoginAt)}` : "No logins recorded"],
+            ["Access until", candidate.accessExpiresAt ? formatUkDate(candidate.accessExpiresAt) : "No expiry"],
+            ["Last login", candidate.lastLoginAt ? formatUkDateTime(candidate.lastLoginAt) : "No logins recorded"],
             ["Assigned category", candidate.assigned.name],
             ["Current category", candidate.current.name],
-            ...(session.role === "superadmin" ? [["Admin", candidate.admin.name ? `${candidate.admin.name} (${candidate.admin.email})` : candidate.admin.email] as [string, string]] : []),
+            ...(session.role === "superadmin" ? [["Admin", <PersonLabel key="admin" name={candidate.admin.name} email={candidate.admin.email} />] as [string, ReactNode]] : []),
           ]}
         />
 
@@ -210,7 +211,7 @@ export default async function CandidateProgressPage({ params, searchParams }: Pa
                 {history.items.map((entry) => (
                   <Row key={entry.id}>
                     <Cell kind="primary">
-                      {formatUkDate(entry.endedAt, "long")} at {formatUkTime(entry.endedAt)}
+                      {formatUkDateTime(entry.endedAt)}
                     </Cell>
                     <Cell label="Score" nowrap>
                       {score(entry)}
