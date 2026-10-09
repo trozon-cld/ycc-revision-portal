@@ -8,7 +8,8 @@ import { FilterBar, FilterSearch, FilterSelect } from "@/components/admin/filter
 import { Breakable } from "@/components/admin/breakable";
 import { PersonLabel } from "@/components/admin/person-label";
 import { PageHeader } from "@/components/admin/page-header";
-import { Pagination, pageFromParam } from "@/components/admin/pagination";
+import { Pagination, listSearch, pageFromParam } from "@/components/admin/pagination";
+import { RememberListPlace } from "@/components/admin/list-place";
 import { Cell, Row, Table } from "@/components/admin/table";
 import { NewCandidateButton } from "./create-candidate-form";
 import { AdminCandidateActions, SuperadminCandidateActions } from "./candidate-row-actions";
@@ -123,6 +124,7 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
   return (
     <>
       {firstParam(params.done) === "deleted" && <FlashToast message="Candidate deleted." />}
+      <RememberListPlace list="candidates" search={listSearch(query, page)} />
       <PageHeader
         title="Candidates"
         description={isFiltered ? `${countLabel} match your filters` : countLabel}

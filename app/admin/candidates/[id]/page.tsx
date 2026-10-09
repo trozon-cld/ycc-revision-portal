@@ -14,6 +14,7 @@ import { loadProgress } from "@/lib/progress/overview";
 import { Badge } from "@/components/admin/badge";
 import { PersonLabel } from "@/components/admin/person-label";
 import { PageHeader } from "@/components/admin/page-header";
+import { ListBackLink } from "@/components/admin/list-place";
 import { Pagination, pageFromParam } from "@/components/admin/pagination";
 import { buttonClass, cardClass } from "@/components/admin/styles";
 import { Cell, Row, Table } from "@/components/admin/table";
@@ -95,9 +96,9 @@ export default async function CandidateProgressPage({ params, searchParams }: Pa
 
   return (
     <>
-      <Link href="/admin/candidates" className={`${buttonClass("ghost", "sm")} mb-3 -ml-2.5`}>
+      <ListBackLink list="candidates" href="/admin/candidates" className={`${buttonClass("ghost", "sm")} mb-3 -ml-2.5`}>
         ← Candidates
-      </Link>
+      </ListBackLink>
       <PageHeader
         title={candidate.name ?? candidate.email}
         description={candidate.name ? candidate.email : "No name yet"}

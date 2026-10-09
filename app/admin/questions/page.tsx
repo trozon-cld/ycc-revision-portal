@@ -11,7 +11,8 @@ import { firstParam } from "@/lib/params";
 import { Badge } from "@/components/admin/badge";
 import { FilterBar, FilterSearch, FilterSelect } from "@/components/admin/filter-bar";
 import { PageHeader } from "@/components/admin/page-header";
-import { Pagination, pageFromParam } from "@/components/admin/pagination";
+import { Pagination, listSearch, pageFromParam } from "@/components/admin/pagination";
+import { RememberListPlace } from "@/components/admin/list-place";
 import { Cell, Row, Table } from "@/components/admin/table";
 import { NewQuestionButton, QuestionRowActions } from "./question-row-actions";
 
@@ -54,6 +55,7 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
 
   return (
     <>
+      <RememberListPlace list="questions" search={listSearch(query, page)} />
       <PageHeader
         title="Question bank"
         description={

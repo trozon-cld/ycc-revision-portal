@@ -4,7 +4,8 @@ import { ActionForm } from "@/components/admin/action-form";
 import { Field } from "@/components/admin/field";
 import { RowActions, type RowAction } from "@/components/admin/row-actions";
 import { buttonClass, textareaClass } from "@/components/admin/styles";
-import { describeMediaUse } from "@/lib/media/usage";
+import Link from "next/link";
+import { describeMediaUse, type MediaUse } from "@/lib/media/usage";
 import { ALT_TEXT_MAX_LENGTH } from "@/lib/limits";
 import { deleteMedia, updateAltText } from "./actions";
 
@@ -16,6 +17,7 @@ export function MediaRowActions({
   usedIn,
   usedInQuestions,
   usedInCovers = 0,
+  uses = [],
 }: {
   id: string;
   altText: string;
@@ -24,6 +26,7 @@ export function MediaRowActions({
   usedIn: number;
   usedInQuestions: number;
   usedInCovers?: number;
+  uses?: MediaUse[];
 }) {
   const inUse = usedIn > 0 || usedInQuestions > 0 || usedInCovers > 0;
   const hidden = { mediaId: id };
@@ -72,6 +75,20 @@ export function MediaRowActions({
               <strong className="font-medium">{name}</strong> is used in {describeMediaUse(usedIn, usedInQuestions, usedInCovers)}.
               {" "}{removeFrom(usedIn, usedInQuestions, usedInCovers)}
             </p>
+            {uses.length > 0 && (
+              <ul className="-mt-2 list-disc space-y-1 px-5 pb-4 pl-10 text-sm [overflow-wrap:anywhere]">
+                {uses.map((use, index) => (
+                  <li key={index}>
+                    <Link href={use.href} className="text-primary underline underline-offset-2">
+                      {use.label}
+                    </Link>
+                  </li>
+                ))}
+                {usedIn + usedInQuestions + usedInCovers > uses.length && (
+                  <li className="list-none text-slate-600">and {usedIn + usedInQuestions + usedInCovers - uses.length} more</li>
+                )}
+              </ul>
+            )}
             <div className="flex justify-end border-t border-slate-200 px-5 py-3">
               <button type="button" onClick={close} className={buttonClass("secondary")}>
                 Close
@@ -102,7 +119,7 @@ export function MediaRowActions({
 
 function removeFrom(pages: number, questions: number, covers: number): string {
   const kinds = [pages > 0, questions > 0, covers > 0].filter(Boolean).length;
-  if (kinds > 1) return "Remove it from all of them first (covers are chosen on the Categories page).";
+  if (kinds > 1) return `Remove it from all of them first${covers > 0 ? " (covers are chosen on the Categories page)" : ""}.`;
   if (covers > 0) return `Choose another picture for ${covers === 1 ? "that cover" : "those covers"} on the Categories page first.`;
   if (questions === 0) return `Remove it from ${pages === 1 ? "that page" : "those pages"} first.`;
   return `Remove it from ${questions === 1 ? "that question" : "those questions"} first.`;

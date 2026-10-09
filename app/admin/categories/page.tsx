@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireRole } from "@/lib/auth/guard";
 import { pool } from "@/lib/db/pool";
 import { getSignedUrls, isStorageConfigured } from "@/lib/storage/storage";
@@ -157,7 +158,16 @@ export default async function CategoriesPage() {
                   return (
                     <Row key={category.id}>
                       <Cell kind="primary">{category.name}</Cell>
-                      <Cell label="Candidates">{category.candidate_count}</Cell>
+                      <Cell label="Candidates">
+                        {category.candidate_count > 0 ? (
+                          <Link href={`/admin/candidates?category=${category.id}`} className="text-primary underline underline-offset-2">
+                            {category.candidate_count}
+                            <span className="sr-only"> candidates: see them</span>
+                          </Link>
+                        ) : (
+                          0
+                        )}
+                      </Cell>
                       <Cell label="Chapters" nowrap>
                         {linked.length === 0 ? (
                           <Badge tone="warning">None</Badge>

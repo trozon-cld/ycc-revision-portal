@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { ActionForm } from "@/components/admin/action-form";
 import { Field } from "@/components/admin/field";
 import { PanelButton, RowActions, type RowAction } from "@/components/admin/row-actions";
@@ -127,10 +128,13 @@ export function CategoryRowActions({
               <strong className="font-medium">{name}</strong> has {countLabel}. Their admins need to move them to
               another category first.
             </p>
-            <div className="flex justify-end border-t border-slate-200 px-5 py-3">
+            <div className="flex justify-end gap-2 border-t border-slate-200 px-5 py-3">
               <button type="button" onClick={close} className={buttonClass("secondary")}>
                 Close
               </button>
+              <Link href={`/admin/candidates?category=${id}`} className={buttonClass("primary")}>
+                See these candidates
+              </Link>
             </div>
           </div>
         ) : (
@@ -166,10 +170,13 @@ export function CategoryRowActions({
               <strong className="font-medium">{name}</strong> has {countLabel}. Candidates can only switch within their
               group, so it can&apos;t move while they use it.
             </p>
-            <div className="flex justify-end border-t border-slate-200 px-5 py-3">
+            <div className="flex justify-end gap-2 border-t border-slate-200 px-5 py-3">
               <button type="button" onClick={close} className={buttonClass("secondary")}>
                 Close
               </button>
+              <Link href={`/admin/candidates?category=${id}`} className={buttonClass("primary")}>
+                See these candidates
+              </Link>
             </div>
           </div>
         ) : (

@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { ListBackLink } from "@/components/admin/list-place";
 import { useRouter } from "next/navigation";
 import { useCallback, useDeferredValue, useEffect, useMemo, useState, useTransition } from "react";
 import type { PictureAlign, PictureSize } from "@/lib/content/blocks";
@@ -198,9 +198,9 @@ export function QuestionEditor({
   return (
     <>
       <nav aria-label="Breadcrumb" className="mb-2 text-sm">
-        <Link href="/admin/questions" className="text-primary underline-offset-2 hover:underline">
+        <ListBackLink list="questions" href="/admin/questions" className="text-primary underline-offset-2 hover:underline">
           Question bank
-        </Link>
+        </ListBackLink>
         <span aria-hidden="true" className="mx-1.5 text-slate-500">/</span>
         <span className="text-slate-700">{refLabel ?? "New question"}</span>
       </nav>

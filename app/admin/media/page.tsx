@@ -9,6 +9,8 @@ import { PageHeader } from "@/components/admin/page-header";
 import { Pagination, pageFromParam } from "@/components/admin/pagination";
 import { cardClass } from "@/components/admin/styles";
 import { formatBytes } from "@/lib/format";
+import { MEDIA_USES_SHOWN, type MediaUse } from "@/lib/media/usage";
+import { questionRef } from "@/lib/questions/labels";
 import { MediaRowActions } from "./media-row-actions";
 import { UploadMediaButton } from "./upload-media-form";
 
@@ -24,6 +26,7 @@ interface MediaRow {
   used_in: number;
   used_in_questions: number;
   used_in_covers: number;
+  uses: { kind: "page" | "question" | "front" | "back"; id: string; name: string; ref_no: number | null }[];
 }
 
 const PAGE_SIZE = 60;
@@ -49,7 +52,21 @@ export default async function MediaPage({ searchParams }: PageProps<"/admin/medi
             (select count(*) from content_page_media u where u.media_id = media.id)::int as used_in,
             (select count(*) from question_media u where u.media_id = media.id)::int as used_in_questions,
             (select count(*) filter (where u.front_cover_media_id = media.id) + count(*) filter (where u.back_cover_media_id = media.id)
-               from categories u)::int as used_in_covers
+               from categories u)::int as used_in_covers,
+            (select coalesce(jsonb_agg(jsonb_build_object('kind', x.kind, 'id', x.id, 'name', x.name, 'ref_no', x.ref_no) order by x.ord, x.name, x.ref_no), '[]'::jsonb)
+             from (
+               select 1 as ord, 'page' as kind, p.id, p.title as name, null::int as ref_no
+               from content_page_media u join content_pages p on p.id = u.content_page_id where u.media_id = media.id
+               union all
+               select 2, 'question', q.id, '', q.ref_no
+               from question_media u join questions q on q.id = u.question_id where u.media_id = media.id
+               union all
+               select 3, 'front', c.id, c.name, null from categories c where c.front_cover_media_id = media.id
+               union all
+               select 3, 'back', c.id, c.name, null from categories c where c.back_cover_media_id = media.id
+               order by 1, 4, 5
+               limit ${MEDIA_USES_SHOWN}
+             ) x) as uses
      from media
      where ${matches}
      order by created_at desc, id
@@ -142,6 +159,7 @@ export default async function MediaPage({ searchParams }: PageProps<"/admin/medi
                     usedIn={item.used_in}
                     usedInQuestions={item.used_in_questions}
                     usedInCovers={item.used_in_covers}
+                    uses={item.uses.map(useLink)}
                   />
                 </div>
               </li>
@@ -181,4 +199,10 @@ function usedLabel(pages: number, questions: number, covers: number): string {
   if (questions > 0) parts.push(`${questions} question${questions === 1 ? "" : "s"}`);
   if (covers > 0) parts.push(`${covers} cover${covers === 1 ? "" : "s"}`);
   return `Used in ${parts.join(" · ")}`;
+}
+
+function useLink(use: MediaRow["uses"][number]): MediaUse {
+  if (use.kind === "page") return { label: `Handbook page: ${use.name}`, href: `/admin/handbook/pages/${use.id}` };
+  if (use.kind === "question") return { label: `Question ${questionRef(use.ref_no ?? 0)}`, href: `/admin/questions/${use.id}` };
+  return { label: `${use.name}: ${use.kind} cover`, href: "/admin/categories" };
 }

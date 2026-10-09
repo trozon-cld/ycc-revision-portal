@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireRole } from "@/lib/auth/guard";
 import { pool } from "@/lib/db/pool";
 import { formatUkDate } from "@/lib/candidates/access";
@@ -40,7 +41,16 @@ export default async function AdminsPage() {
             <Cell kind="primary">
               <PersonLabel name={admin.full_name} email={admin.email} />
             </Cell>
-            <Cell label="Candidates">{admin.candidate_count}</Cell>
+            <Cell label="Candidates">
+              {admin.candidate_count > 0 ? (
+                <Link href={`/admin/candidates?admin=${admin.id}`} className="text-primary underline underline-offset-2">
+                  {admin.candidate_count}
+                  <span className="sr-only"> candidates: see them</span>
+                </Link>
+              ) : (
+                0
+              )}
+            </Cell>
             <Cell label="Created" nowrap>{formatUkDate(admin.created_at)}</Cell>
             <Cell kind="actions">
               <AdminRowActions
