@@ -15,7 +15,11 @@ export function PageHeader({
         <h1 className="text-xl font-semibold text-ink">{title}</h1>
         {description && <p className="mt-0.5 text-sm text-slate-600">{description}</p>}
       </div>
-      {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+      {actions && (
+        <div className="flex flex-wrap gap-2 max-sm:has-[>:nth-child(2)]:grid max-sm:has-[>:nth-child(2)]:w-full max-sm:has-[>:nth-child(2)]:grid-cols-2">
+          {actions}
+        </div>
+      )}
     </div>
   );
 }

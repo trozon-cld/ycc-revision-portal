@@ -117,13 +117,14 @@ export default async function MediaPage({ searchParams }: PageProps<"/admin/medi
           {search ? "No pictures match your search." : "No pictures yet. Upload the first one."}
         </p>
       ) : (
-        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {media.map((item) => {
             const thumbUrl = thumbs.get(item.thumb_path);
             const thumbSize = fitWithin(item.width, item.height, THUMB_EDGE);
+            // Phones: one picture per row, the small picture beside its details.
             return (
-              <li key={item.id} className={`${cardClass} flex min-w-0 flex-col`}>
-                <div className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-t-lg bg-slate-100">
+              <li key={item.id} className={`${cardClass} flex min-w-0 flex-col max-sm:flex-row`}>
+                <div className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-t-lg bg-slate-100 max-sm:w-28 max-sm:shrink-0 max-sm:self-start max-sm:rounded-l-lg max-sm:rounded-tr-none">
                   {thumbUrl ? (
                     // Signed links change each visit, so Next's optimiser can't cache them; files are pre-shrunk instead.
                     <Image
@@ -143,8 +144,8 @@ export default async function MediaPage({ searchParams }: PageProps<"/admin/medi
                   <div className="min-w-0 flex-1">
                     <p className="line-clamp-2 text-sm text-ink [overflow-wrap:anywhere]">{item.alt_text}</p>
                     <p className="mt-1 text-xs text-slate-600" title={item.original_name}>
-                      <span className="lg:whitespace-nowrap">{item.width} × {item.height}</span> ·{" "}
-                      <span className="lg:whitespace-nowrap">{formatBytes(item.byte_size)}</span> · {formatType(item.mime_type)}
+                      <span className="whitespace-nowrap">{item.width} × {item.height}</span> ·{" "}
+                      <span className="whitespace-nowrap">{formatBytes(item.byte_size)}</span> · {formatType(item.mime_type)}
                     </p>
                     <p className="mt-0.5 text-xs text-slate-600">
                       {item.used_in === 0 && item.used_in_questions === 0 && item.used_in_covers === 0

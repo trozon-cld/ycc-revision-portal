@@ -60,7 +60,7 @@ export function AdminShell({ role, email, name, children }: { role: Role; email:
           <SidebarContent role={role} email={email} name={name} />
         </aside>
 
-        <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-slate-200 bg-white px-4 lg:hidden">
+        <header className="sticky top-0 z-20 flex h-14 [@media(max-height:500px)]:static items-center justify-between border-b border-slate-200 bg-white px-4 lg:hidden">
           <Brand role={role} />
           <button
             type="button"

@@ -129,7 +129,7 @@ export default async function ChapterPagesPage({ params }: PageProps<"/admin/han
           </>
         }
         actions={
-          <div className="flex flex-wrap gap-2">
+          <>
             <Link href={`/admin/handbook/preview?chapter=${chapter.id}`} className={buttonClass("secondary")}>
               Preview chapter
             </Link>
@@ -145,7 +145,7 @@ export default async function ChapterPagesPage({ params }: PageProps<"/admin/han
               draftCount={drafts}
               hasCategories={categoryIds.length > 0}
             />
-          </div>
+          </>
         }
       />
 

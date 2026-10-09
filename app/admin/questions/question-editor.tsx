@@ -206,16 +206,21 @@ export function QuestionEditor({
       </nav>
 
       {/* On tablets and laptops the title, status and Save stay in view while scrolling. */}
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3 md:sticky md:top-14 md:z-10 md:-mx-6 md:border-b md:border-slate-200 md:bg-slate-50/95 md:px-6 md:py-3 md:backdrop-blur lg:top-0 lg:-mx-8 lg:px-8">
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3 md:sticky md:top-14 md:z-10 md:[@media(max-height:500px)]:top-0 md:-mx-6 md:border-b md:border-slate-200 md:bg-slate-50/95 md:px-6 md:py-3 md:backdrop-blur lg:top-0 lg:-mx-8 lg:px-8">
         <div className="min-w-0">
           <h1 className="text-xl font-semibold text-ink">{refLabel ? `Question ${refLabel}` : "New question"}</h1>
           <p className="mt-0.5 text-sm text-slate-600">{questionTypeLabel(type)}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          {status && <Badge tone={status === "published" ? "success" : "neutral"}>{status === "published" ? "Published" : "Draft"}</Badge>}
-          <p aria-live="polite" className={`text-sm ${dirty && !isSaving ? "font-medium text-amber-900" : "text-slate-600"}`}>
-            {saveState}
-          </p>
+        <div
+          data-editor-bar
+          className="flex flex-wrap items-center gap-3 max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-20 max-md:flex-nowrap max-md:gap-2 max-md:border-t max-md:border-slate-200 max-md:bg-white max-md:px-4 max-md:py-2.5 max-md:shadow-[0_-2px_8px_rgb(0_0_0/0.06)]"
+        >
+          <span className="flex items-center gap-3 max-md:mr-auto max-md:flex-col max-md:items-start max-md:gap-0.5 md:contents">
+            {status && <Badge tone={status === "published" ? "success" : "neutral"}>{status === "published" ? "Published" : "Draft"}</Badge>}
+            <p aria-live="polite" className={`text-sm max-md:text-xs ${dirty && !isSaving ? "font-medium text-amber-900" : "text-slate-600"}`}>
+              {saveState}
+            </p>
+          </span>
           {status && (
             <button
               type="button"
@@ -269,7 +274,7 @@ export function QuestionEditor({
         ))}
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[3fr_2fr]">
+      <div className="grid gap-6 max-md:pb-20 xl:grid-cols-[3fr_2fr]">
         <section aria-label="Question content" className={`min-w-0 space-y-4 ${tab === "preview" ? "hidden xl:block" : ""}`}>
           <div className={`${cardClass} space-y-4 p-4`}>
             <div className="space-y-1">
