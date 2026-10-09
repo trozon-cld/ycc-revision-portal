@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Children, isValidElement, type ReactNode } from "react";
-import { FilterForm } from "./filter-form";
+import { FilterApplyButton, FilterForm } from "./filter-form";
 import { buttonClass, inputClass } from "./styles";
 
 // Filters live in the URL, so they survive refreshes and can be shared.
@@ -27,9 +27,7 @@ export function FilterBar({
         ))}
       {children}
       <div className={`flex gap-2 ${selects % 2 === 0 ? "col-span-2" : ""}`}>
-        <button type="submit" className={`${buttonClass("secondary")} flex-1 sm:flex-none`}>
-          Apply
-        </button>
+        <FilterApplyButton className={`${buttonClass("secondary")} flex-1 sm:flex-none`} />
         {isFiltered && (
           <Link href={clearHref} className={`${buttonClass("ghost")} flex-1 sm:flex-none`}>
             Clear

@@ -229,7 +229,7 @@ export function QuestionEditor({
               title={dirty ? "Save your changes first" : undefined}
               className={buttonClass("secondary")}
             >
-              {status === "published" ? "Unpublish" : "Publish"}
+              {status === "published" ? (isPublishing ? "Unpublishing…" : "Unpublish") : isPublishing ? "Publishing…" : "Publish"}
             </button>
           )}
           <button type="button" onClick={save} disabled={isSaving || (!dirty && !isNew)} className={buttonClass("primary")}>

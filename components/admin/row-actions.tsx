@@ -23,6 +23,8 @@ export type InstantRowAction = {
   danger?: boolean;
   run: () => Promise<FormState>;
   successMessage?: string;
+  // Shown on a page-level button while it runs (e.g. "Publishing…").
+  pendingLabel?: string;
 };
 
 // Opens another page (e.g. a candidate's progress).
@@ -33,7 +35,7 @@ export type RowAction = PanelRowAction | InstantRowAction | LinkRowAction;
 // A row's "⋯" menu; each item opens its own slide-in panel or confirmation, runs instantly, or opens a page.
 export function RowActions({ label, actions, triggerText }: { label: string; actions: RowAction[]; triggerText?: string }) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
-  const [, startTransition] = useTransition();
+  const [isPending, startTransition] = useTransition();
   const toast = useToast();
   const router = useRouter();
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -61,6 +63,7 @@ export function RowActions({ label, actions, triggerText }: { label: string; act
         label={label}
         triggerRef={triggerRef}
         triggerText={triggerText}
+        busy={isPending}
         items={actions.map((action, index) => ({
           label: action.label,
           danger: action.danger,
@@ -105,7 +108,7 @@ export function ActionButton({ action, variant = "secondary" }: { action: PanelR
   return (
     <>
       <button ref={triggerRef} type="button" onClick={onClick} disabled={isPending} className={buttonClass(variant)}>
-        {action.label}
+        {isPending && "pendingLabel" in action && action.pendingLabel ? action.pendingLabel : action.label}
       </button>
       {open && "render" in action && (
         <Dialog title={action.title} description={action.description} variant={action.variant} onClose={close}>

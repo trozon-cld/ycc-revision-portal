@@ -12,12 +12,15 @@ export function RowMenu({
   items,
   triggerRef,
   triggerText,
+  busy = false,
 }: {
   label: string;
   items: RowMenuItem[];
   triggerRef: RefObject<HTMLButtonElement | null>;
   // A visible word ("Actions") instead of "⋯", for a page header.
   triggerText?: string;
+  // An item is still running: a spinner shows and the menu stays shut (focus stays on the button).
+  busy?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [openUp, setOpenUp] = useState(false);
@@ -37,6 +40,7 @@ export function RowMenu({
   }, [open]);
 
   function toggle() {
+    if (busy) return;
     if (!open && triggerRef.current) {
       const spaceBelow = window.innerHeight - triggerRef.current.getBoundingClientRect().bottom;
       setOpenUp(spaceBelow < items.length * ITEM_HEIGHT_PX + 16);
@@ -78,9 +82,15 @@ export function RowMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
-        className={triggerText ? buttonClass("secondary") : buttonClass("ghost", "icon")}
+        aria-disabled={busy || undefined}
+        className={`${triggerText ? buttonClass("secondary") : buttonClass("ghost", "icon")} aria-disabled:cursor-progress aria-disabled:opacity-60`}
       >
-        {triggerText ? (
+        {busy ? (
+          <>
+            {triggerText}
+            <Spinner />
+          </>
+        ) : triggerText ? (
           <>
             {triggerText}
             <svg viewBox="0 0 20 20" aria-hidden="true" className="size-4 fill-current">
@@ -95,6 +105,9 @@ export function RowMenu({
           </svg>
         )}
       </button>
+      <span role="status" className="sr-only">
+        {busy ? "Working…" : ""}
+      </span>
       {open && (
         <div
           ref={menuRef}
@@ -127,5 +140,14 @@ export function RowMenu({
         </div>
       )}
     </div>
+  );
+}
+
+function Spinner() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true" className="size-4 motion-safe:animate-spin">
+      <circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" strokeOpacity="0.25" strokeWidth="2.5" />
+      <path d="M10 3a7 7 0 0 1 7 7" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+    </svg>
   );
 }

@@ -236,7 +236,7 @@ export function PageEditor({
             title={dirty ? "Save your changes first" : undefined}
             className={buttonClass("secondary")}
           >
-            {status === "published" ? "Unpublish" : "Publish"}
+            {status === "published" ? (isPublishing ? "Unpublishing…" : "Unpublish") : isPublishing ? "Publishing…" : "Publish"}
           </button>
           <button type="button" onClick={save} disabled={isSaving || !dirty} className={buttonClass("primary")}>
             {isSaving ? "Saving…" : "Save"}

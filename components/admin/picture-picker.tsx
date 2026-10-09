@@ -25,9 +25,12 @@ export function PicturePicker({
   const [tab, setTab] = useState<"library" | "upload">("library");
   const [search, setSearch] = useState("");
   const [items, setItems] = useState<PickerItem[] | null>(null);
+  // The search the shown pictures are for; while it differs from the box, a search is running.
+  const [shownSearch, setShownSearch] = useState("");
   const [failed, setFailed] = useState(false);
   const [uploadedId, setUploadedId] = useState<string | null>(null);
   const [reloads, setReloads] = useState(0);
+  const searching = items !== null && !failed && shownSearch !== search;
   const uploaded = uploadedId ? items?.find((item) => item.id === uploadedId) : undefined;
 
   function onUploaded(mediaId: string) {
@@ -46,6 +49,7 @@ export function PicturePicker({
         const result = await load(search);
         if (!cancelled) {
           setItems(result);
+          setShownSearch(search);
           setFailed(false);
         }
       } catch {
@@ -82,18 +86,23 @@ export function PicturePicker({
               </p>
             )}
             {items === null && !failed && <p className="text-sm text-slate-600">Loading pictures…</p>}
-            {items?.length === 0 && (
+            {searching && (
+              <p role="status" className="text-sm text-slate-600">
+                Searching…
+              </p>
+            )}
+            {!searching && items?.length === 0 && (
               <p className="text-sm text-slate-700">
                 {search ? "No pictures match your search." : "No pictures yet. Use Upload new to add one."}
               </p>
             )}
-            {items && items.length >= PICKER_LIMIT && (
+            {!searching && items && items.length >= PICKER_LIMIT && (
               <p className="text-sm text-slate-700">
                 {search ? `Showing the first ${PICKER_LIMIT} matches. Add more words to narrow it down.` : `Showing the newest ${PICKER_LIMIT} pictures. Search to find older ones.`}
               </p>
             )}
             {items && items.length > 0 && (
-              <ul className="grid grid-cols-2 gap-2">
+              <ul aria-busy={searching || undefined} className={`grid grid-cols-2 gap-2 transition-opacity ${searching ? "opacity-50" : ""}`}>
                 {items.map((item) => (
                   <li key={item.id}>
                     <button

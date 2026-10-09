@@ -305,7 +305,7 @@ function chapterStatusAction({ id, number, title, status, itemCount, draftCount,
     };
   }
   if (hasCategories) {
-    return { label: "Publish", run: () => setChapterStatus(id, "published"), successMessage: "Chapter published." };
+    return { label: "Publish", run: () => setChapterStatus(id, "published"), successMessage: "Chapter published.", pendingLabel: "Publishing…" };
   }
   return {
     label: "Publish",
