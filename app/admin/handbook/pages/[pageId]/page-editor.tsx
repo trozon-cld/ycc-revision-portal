@@ -203,8 +203,8 @@ export function PageEditor({
         </Link>
       </nav>
 
-      {/* On laptops the title, status and Save stay in view while scrolling. */}
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3 lg:sticky lg:top-0 lg:z-10 lg:-mx-8 lg:border-b lg:border-slate-200 lg:bg-slate-50/95 lg:px-8 lg:py-3 lg:backdrop-blur">
+      {/* On tablets and laptops the title, status and Save stay in view while scrolling. */}
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3 md:sticky md:top-14 md:z-10 md:-mx-6 md:border-b md:border-slate-200 md:bg-slate-50/95 md:px-6 md:py-3 md:backdrop-blur lg:top-0 lg:-mx-8 lg:px-8">
         <div className="w-full min-w-0 space-y-1 sm:w-auto sm:max-w-md sm:flex-1">
           <label htmlFor="page-title" className={labelClass}>
             Page title <span className="font-normal text-slate-600">(only admins see this)</span>

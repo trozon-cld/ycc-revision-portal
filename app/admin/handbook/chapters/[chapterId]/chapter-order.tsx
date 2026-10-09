@@ -16,7 +16,7 @@ import { PageRowActions } from "./page-row-actions";
 type Status = "draft" | "published";
 export type OrderItem =
   | { kind: "page"; id: string; position: number; pageId: string; title: string; status: Status; summary: string }
-  | { kind: "question"; id: string; position: number; questionId: string; label: string; typeLabel: string; status: Status };
+  | { kind: "question"; id: string; position: number; questionId: string; label: string; text: string; typeLabel: string; status: Status };
 export type AddableQuestion = { id: string; label: string; typeLabel: string; status: Status };
 
 type Drag = { from: number; to: number };
@@ -136,15 +136,16 @@ export function ChapterOrder({ items }: { items: OrderItem[] }) {
                       {[6, 10, 14].flatMap((y) => [7, 13].map((x) => <circle key={`${x}-${y}`} cx={x} cy={y} r="1.5" />))}
                     </svg>
                   </button>
-                  <span className="min-w-0">
+                  <span className="line-clamp-2 min-w-0">
                     <span className="mr-1 font-mono text-slate-600 tabular-nums">{index + 1}.</span>{" "}
                     {item.kind === "page" ? (
                       <Link href={`/admin/handbook/pages/${item.pageId}`} className="text-ink underline-offset-2 hover:text-primary hover:underline">
                         {item.title}
                       </Link>
                     ) : (
+                      // The whole question, cut to two lines by the space there is rather than by a letter count.
                       <Link href={`/admin/questions/${item.questionId}`} className="text-ink underline-offset-2 hover:text-primary hover:underline">
-                        {item.label}
+                        {item.text}
                       </Link>
                     )}
                   </span>

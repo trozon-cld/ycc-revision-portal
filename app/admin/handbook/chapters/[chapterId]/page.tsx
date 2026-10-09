@@ -4,7 +4,8 @@ import { requireRole } from "@/lib/auth/guard";
 import { pool } from "@/lib/db/pool";
 import { getChapterContext } from "@/lib/content/pages";
 import { listNames, loadCategoryGroups, loadChapterCategoryIds } from "@/lib/handbook/categories";
-import { questionLogLabel } from "@/lib/questions/labels";
+import { questionLogLabel, questionRef } from "@/lib/questions/labels";
+import { plainText } from "@/lib/content/inline";
 import { questionTypeLabel } from "@/lib/questions/registry";
 import type { QuestionType } from "@/lib/questions/types";
 import { PageHeader } from "@/components/admin/page-header";
@@ -94,6 +95,7 @@ export default async function ChapterPagesPage({ params }: PageProps<"/admin/han
           position: row.position,
           questionId: row.question_id ?? "",
           label: questionLogLabel(row.ref_no ?? 0, row.stem_text ?? ""),
+          text: `${questionRef(row.ref_no ?? 0)} · ${plainText(row.stem_text ?? "").replace(/\s+/g, " ").trim()}`,
           typeLabel: questionTypeLabel(row.question_type ?? "single_text"),
           status: row.question_status ?? "draft",
         }

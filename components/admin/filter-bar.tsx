@@ -39,7 +39,7 @@ export function FilterBar({
 
 export function FilterSearch({ name, label, defaultValue, wide = false }: { name: string; label: string; defaultValue: string; wide?: boolean }) {
   return (
-    <div className={`col-span-2 sm:w-64 ${wide ? "lg:w-80" : ""}`}>
+    <div className={`col-span-2 sm:w-64 ${wide ? "md:w-80" : ""}`}>
       <label htmlFor={`filter-${name}`} className="sr-only">
         {label}
       </label>

@@ -149,7 +149,7 @@ export default async function CategoriesPage() {
 
               <Table
                 columns={["Name", "Candidates", "Chapters", "Covers", ""]}
-                widths={["", "lg:w-32", "lg:w-32", "lg:w-40", "lg:w-14"]}
+                widths={["", "md:w-32", "md:w-32", "md:w-40", "md:w-14"]}
                 isEmpty={groupCategories.length === 0}
                 emptyMessage="No categories in this group yet."
               >

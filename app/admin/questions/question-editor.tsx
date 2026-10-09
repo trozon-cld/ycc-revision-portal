@@ -205,8 +205,8 @@ export function QuestionEditor({
         <span className="text-slate-700">{refLabel ?? "New question"}</span>
       </nav>
 
-      {/* On laptops the title, status and Save stay in view while scrolling. */}
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3 lg:sticky lg:top-0 lg:z-10 lg:-mx-8 lg:border-b lg:border-slate-200 lg:bg-slate-50/95 lg:px-8 lg:py-3 lg:backdrop-blur">
+      {/* On tablets and laptops the title, status and Save stay in view while scrolling. */}
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3 md:sticky md:top-14 md:z-10 md:-mx-6 md:border-b md:border-slate-200 md:bg-slate-50/95 md:px-6 md:py-3 md:backdrop-blur lg:top-0 lg:-mx-8 lg:px-8">
         <div className="min-w-0">
           <h1 className="text-xl font-semibold text-ink">{refLabel ? `Question ${refLabel}` : "New question"}</h1>
           <p className="mt-0.5 text-sm text-slate-600">{questionTypeLabel(type)}</p>

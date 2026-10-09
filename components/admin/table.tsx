@@ -11,15 +11,15 @@ export function Table({
   columns: string[];
   isEmpty: boolean;
   emptyMessage: string;
-  // Laptop-and-up column widths (Tailwind classes, one per column; "" = the rest), so tables in sections line up.
+  // Tablet-and-up column widths (Tailwind classes, one per column; "" = the rest), so tables in sections line up.
   widths?: string[];
   children: ReactNode;
 }) {
   return (
     <div className="rounded-lg border border-slate-200 bg-white">
-      <table className={`block w-full text-sm md:table ${widths ? "lg:table-fixed" : ""}`}>
+      <table className={`block w-full text-sm md:table ${widths ? "md:table-fixed" : ""}`}>
         {widths && (
-          <colgroup className="hidden lg:table-column-group">
+          <colgroup className="hidden md:table-column-group">
             {widths.map((width, index) => (
               <col key={index} className={width} />
             ))}
@@ -31,7 +31,7 @@ export function Table({
               <th
                 key={column || `column-${index}`}
                 scope="col"
-                className="whitespace-nowrap px-4 py-2.5 lg:max-xl:px-3 text-xs font-medium uppercase tracking-wide text-slate-600 first:rounded-tl-lg last:rounded-tr-lg"
+                className="whitespace-nowrap px-4 py-2.5 md:max-xl:px-3 text-xs font-medium uppercase tracking-wide text-slate-600 first:rounded-tl-lg last:rounded-tr-lg"
               >
                 {column || <span className="sr-only">Actions</span>}
               </th>
@@ -66,7 +66,7 @@ export function Row({ children, extra }: { children: ReactNode; extra?: HTMLAttr
 type CellKind = "primary" | "data" | "actions";
 
 const cellClasses: Record<CellKind, string> = {
-  primary: "block pr-12 font-medium text-ink md:table-cell md:pr-4 lg:min-w-40",
+  primary: "block pr-12 font-medium text-ink md:table-cell md:pr-4 md:min-w-40",
   data:
     "flex items-baseline justify-between gap-4 text-ink before:shrink-0 before:text-slate-600 before:content-[attr(data-label)] md:table-cell md:before:content-none",
   actions: "absolute right-2 top-1.5 md:static md:w-14 md:text-right",
@@ -86,7 +86,7 @@ export function Cell({
   kind?: CellKind;
   nowrap?: boolean;
   breakAnywhere?: boolean;
-  // A primary cell with longer text (e.g. question text) keeps more room on laptops.
+  // A primary cell with longer text (e.g. question text) keeps more room on tablets and laptops.
   wide?: boolean;
   children: ReactNode;
 }) {
@@ -97,7 +97,7 @@ export function Cell({
   return (
     <td
       data-label={kind === "data" ? label : undefined}
-      className={`${cellClasses[kind]} ${wrapping} ${nowrap ? "md:whitespace-nowrap" : ""} ${wide ? "lg:min-w-60" : ""} align-middle md:px-4 md:py-2.5 lg:max-xl:px-3`}
+      className={`${cellClasses[kind]} ${wrapping} ${nowrap ? "md:whitespace-nowrap" : ""} ${wide ? "md:min-w-60" : ""} align-middle md:px-4 md:py-2.5 md:max-xl:px-3`}
     >
       {kind === "data" ? <span className="min-w-0 text-right md:text-left">{children}</span> : children}
     </td>

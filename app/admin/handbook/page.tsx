@@ -119,7 +119,7 @@ export default async function HandbookPage() {
 
               <Table
                 columns={["Chapter", "Pages", "Questions", "Categories", "Status", ""]}
-                widths={["", "lg:w-20", "lg:w-24", "lg:w-28", "lg:w-44", "lg:w-14"]}
+                widths={["", "md:w-20", "md:w-24", "md:w-28", "md:w-44", "md:w-14"]}
                 isEmpty={sectionChapters.length === 0}
                 emptyMessage="No chapters in this section yet."
               >
