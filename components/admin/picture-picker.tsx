@@ -107,7 +107,7 @@ export function PicturePicker({
                       <span className="flex aspect-[4/3] w-full items-center justify-center bg-slate-100">
                         {item.thumbUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element -- short-lived signed thumbnail
-                          <img src={item.thumbUrl} alt="" className="size-full object-contain" />
+                          <img src={item.thumbUrl} alt="" loading="lazy" decoding="async" className="size-full object-contain" />
                         ) : (
                           <span className="text-xs text-slate-600">No preview</span>
                         )}

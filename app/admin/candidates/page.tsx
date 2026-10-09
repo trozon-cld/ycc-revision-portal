@@ -72,10 +72,11 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
               or ($4::text = 'active' and not u.is_blocked
                   and (u.access_expires_at is null or u.access_expires_at > now())))`;
   const filterValues = [ownerFilter, search ? escapeLike(search) : null, categoryFilter, status];
-  const { rows: counted } = await pool.query<{ total: number }>(
-    `select count(*)::int as total from users u where ${where}`,
-    filterValues
-  );
+  const [{ rows: counted }, categories, admins] = await Promise.all([
+    pool.query<{ total: number }>(`select count(*)::int as total from users u where ${where}`, filterValues),
+    loadCategoryChoices(),
+    isSuperadmin ? loadAdminOptions() : Promise.resolve([]),
+  ]);
   const total = counted[0].total;
   const page = pageFromParam(firstParam(params.page), total, PAGE_SIZE);
 
@@ -106,8 +107,6 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
     await withTransaction((client) => settleMocks(client, stale));
     ({ rows: candidates } = await loadPage());
   }
-
-  const [categories, admins] = await Promise.all([loadCategoryChoices(), isSuperadmin ? loadAdminOptions() : Promise.resolve([])]);
 
   const now = Date.now();
   const columns = isSuperadmin

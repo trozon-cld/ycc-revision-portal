@@ -71,11 +71,21 @@ export default async function CandidateProgressPage({ params, searchParams }: Pa
 
   const asked = firstParam(query.category);
   const category = candidate.groupCategories.find((item) => item.id === asked) ?? candidate.groupCategories.find((item) => item.isCurrent)!;
-  const progress = await loadProgress(candidate.id, category.id);
+  const historyPage = (page: number) =>
+    loadMockHistory(candidate.id, HISTORY_PAGE_SIZE, { categoryId: category.id, offset: (page - 1) * HISTORY_PAGE_SIZE });
+  // Loaded together; the history page is loaded again only if the asked page is past the end.
+  const askedPage = pageFromParam(firstParam(query.page), Number.MAX_SAFE_INTEGER, HISTORY_PAGE_SIZE);
+  const isSuperadmin = session.role === "superadmin";
+  const [progress, askedHistory, admins, categories] = await Promise.all([
+    loadProgress(candidate.id, category.id),
+    historyPage(askedPage),
+    isSuperadmin ? loadAdminOptions() : Promise.resolve([]),
+    isSuperadmin ? Promise.resolve([]) : loadCategoryChoices(),
+  ]);
   if (!progress) notFound();
   const { handbook, practice, mock, readiness } = progress;
   const page = pageFromParam(firstParam(query.page), mock.count, HISTORY_PAGE_SIZE);
-  const history = await loadMockHistory(candidate.id, HISTORY_PAGE_SIZE, { categoryId: category.id, offset: (page - 1) * HISTORY_PAGE_SIZE });
+  const history = page === askedPage ? askedHistory : await historyPage(page);
 
   const isExpired = candidate.accessExpiresAt !== null && candidate.accessExpiresAt.getTime() <= Date.now();
   const path = candidateProgressPath(candidate.id);
@@ -103,10 +113,10 @@ export default async function CandidateProgressPage({ params, searchParams }: Pa
         title={candidate.name ?? candidate.email}
         description={candidate.name ? candidate.email : "No name yet"}
         actions={
-          session.role === "superadmin" ? (
-            <SuperadminCandidateActions candidate={rowCandidate} admins={await loadAdminOptions()} onProgressPage />
+          isSuperadmin ? (
+            <SuperadminCandidateActions candidate={rowCandidate} admins={admins} onProgressPage />
           ) : (
-            <AdminCandidateActions candidate={rowCandidate} categories={await loadCategoryChoices()} minDate={minDate} maxDate={maxDate} onProgressPage />
+            <AdminCandidateActions candidate={rowCandidate} categories={categories} minDate={minDate} maxDate={maxDate} onProgressPage />
           )
         }
       />

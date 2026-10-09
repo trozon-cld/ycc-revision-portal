@@ -49,6 +49,17 @@ body {
   }
 }
 
+/* Staff loading screen: stays invisible for a moment, so quick pages don't flash it. */
+.admin-loading {
+  animation: admin-loading-in 200ms ease-out 150ms both;
+}
+
+@keyframes admin-loading-in {
+  from {
+    opacity: 0;
+  }
+}
+
 @keyframes admin-slide-from-right {
   from {
     transform: translateX(100%);
