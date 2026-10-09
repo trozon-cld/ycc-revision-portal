@@ -11,7 +11,8 @@ import { ALT_TEXT_MAX_LENGTH } from "@/lib/limits";
 import { cleanLine } from "@/lib/text";
 import type { FormState } from "@/lib/forms";
 
-export type MediaActionState = FormState;
+// After an upload, the new picture's id (so the picker can select it).
+export type MediaActionState = FormState & { mediaId?: string };
 
 const MAX_NAME_LENGTH = 255;
 const PAGE_PATH = "/admin/media";
@@ -71,7 +72,7 @@ export async function uploadMedia(_prevState: MediaActionState, formData: FormDa
   }
 
   revalidatePath(PAGE_PATH);
-  return { success: true };
+  return { success: true, mediaId: id };
 }
 
 export async function updateAltText(_prevState: MediaActionState, formData: FormData): Promise<MediaActionState> {

@@ -3,24 +3,40 @@
 import { useEffect, useState } from "react";
 import type { PickerItem } from "@/app/admin/handbook/pages/actions";
 import { Dialog } from "./dialog";
+import { MediaUploadForm } from "./media-upload-form";
 import { PICKER_LIMIT } from "@/lib/media/limits";
-import { inputClass } from "./styles";
+import { buttonClass, inputClass } from "./styles";
 
-// Media library picker, shared by the page and question editors. `load` is a server action.
+// Media library picker, shared by the page and question editors and the covers. `load` is a server action.
+// "Upload new" adds a picture to the library without leaving the editor; it then shows selected, ready to use.
 export function PicturePicker({
   load,
   storageReady,
   onPick,
   onClose,
+  uploadHint,
 }: {
   load: (search: string) => Promise<PickerItem[]>;
   storageReady: boolean;
   onPick: (item: PickerItem) => void;
   onClose: () => void;
+  uploadHint?: string;
 }) {
+  const [tab, setTab] = useState<"library" | "upload">("library");
   const [search, setSearch] = useState("");
   const [items, setItems] = useState<PickerItem[] | null>(null);
   const [failed, setFailed] = useState(false);
+  const [uploadedId, setUploadedId] = useState<string | null>(null);
+  const [reloads, setReloads] = useState(0);
+  const uploaded = uploadedId ? items?.find((item) => item.id === uploadedId) : undefined;
+
+  function onUploaded(mediaId: string) {
+    setUploadedId(mediaId);
+    setSearch("");
+    setItems(null);
+    setReloads((count) => count + 1);
+    setTab("library");
+  }
 
   useEffect(() => {
     if (!storageReady) return;
@@ -40,10 +56,10 @@ export function PicturePicker({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [load, search, storageReady]);
+  }, [load, search, storageReady, reloads]);
 
-  return (
-    <Dialog title="Choose a picture" description="From your Media library, newest first." onClose={onClose}>
+  const library = (
+    <>
       <div className="space-y-3 px-5 py-4">
         {!storageReady ? (
           <p className="text-sm">Image storage isn&apos;t set up yet, so there are no pictures to choose from.</p>
@@ -68,7 +84,7 @@ export function PicturePicker({
             {items === null && !failed && <p className="text-sm text-slate-600">Loading pictures…</p>}
             {items?.length === 0 && (
               <p className="text-sm text-slate-700">
-                {search ? "No pictures match your search." : "No pictures yet. Upload them on the Media page first."}
+                {search ? "No pictures match your search." : "No pictures yet. Use Upload new to add one."}
               </p>
             )}
             {items && items.length >= PICKER_LIMIT && (
@@ -83,7 +99,10 @@ export function PicturePicker({
                     <button
                       type="button"
                       onClick={() => onPick(item)}
-                      className="flex w-full flex-col overflow-hidden rounded-md border border-slate-200 bg-white text-left hover:border-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                      aria-current={item.id === uploadedId ? "true" : undefined}
+                      className={`flex w-full flex-col overflow-hidden rounded-md border bg-white text-left hover:border-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+                        item.id === uploadedId ? "border-primary ring-2 ring-primary" : "border-slate-200"
+                      }`}
                     >
                       <span className="flex aspect-[4/3] w-full items-center justify-center bg-slate-100">
                         {item.thumbUrl ? (
@@ -93,6 +112,7 @@ export function PicturePicker({
                           <span className="text-xs text-slate-600">No preview</span>
                         )}
                       </span>
+                      {item.id === uploadedId && <span className="px-2 pt-1.5 text-xs font-semibold text-primary">Just uploaded · selected</span>}
                       <span className="line-clamp-2 px-2 py-1.5 text-xs text-ink [overflow-wrap:anywhere]">{item.alt}</span>
                     </button>
                   </li>
@@ -102,6 +122,47 @@ export function PicturePicker({
           </>
         )}
       </div>
+      {uploaded && (
+        <div className="sticky bottom-0 flex justify-end gap-2 border-t border-slate-200 bg-white px-5 py-3">
+          <button type="button" onClick={onClose} className={buttonClass("secondary")}>
+            Cancel
+          </button>
+          <button type="button" onClick={() => onPick(uploaded)} className={buttonClass("primary")}>
+            Use this picture
+          </button>
+        </div>
+      )}
+    </>
+  );
+
+  return (
+    <Dialog
+      title="Choose a picture"
+      description={tab === "library" ? "From your Media library, newest first." : "Add it to your Media library, then use it here."}
+      onClose={onClose}
+    >
+      {storageReady && (
+        <div className="px-5 pt-4">
+          <div role="group" aria-label="Picture source" className="inline-flex rounded-md border border-slate-300 bg-white p-0.5">
+            {(["library", "upload"] as const).map((key) => (
+              <button
+                key={key}
+                type="button"
+                aria-pressed={tab === key}
+                onClick={() => setTab(key)}
+                className={`h-10 rounded px-3 text-sm font-medium sm:h-8 ${tab === key ? "bg-primary text-white" : "text-ink hover:bg-slate-100"}`}
+              >
+                {key === "library" ? "Media library" : "Upload new"}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {storageReady && tab === "upload" ? (
+        <MediaUploadForm onCancel={() => setTab("library")} onUploaded={onUploaded} hint={uploadHint} />
+      ) : (
+        library
+      )}
     </Dialog>
   );
 }
