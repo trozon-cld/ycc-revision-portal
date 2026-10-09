@@ -14,13 +14,14 @@ export type ChapterContext = {
   number: string;
   sectionLabel: string;
   chapterLabel: string;
+  status: "draft" | "published";
 };
 
 export async function getChapterContext(chapterId: string): Promise<ChapterContext | null> {
   if (!isUuid(chapterId)) return null;
-  const { rows } = await pool.query<{ id: string; title: string; number: number; section_position: number; section_title: string }>(
+  const { rows } = await pool.query<{ id: string; title: string; status: "draft" | "published"; number: number; section_position: number; section_title: string }>(
     `select * from (
-       select c.id, c.title, s.position as section_position, s.title as section_title,
+       select c.id, c.title, c.status, s.position as section_position, s.title as section_title,
               (row_number() over (order by s.position, c.position))::int as number
        from chapters c join sections s on s.id = c.section_id
      ) ranked
@@ -36,6 +37,7 @@ export async function getChapterContext(chapterId: string): Promise<ChapterConte
     number,
     sectionLabel: `${sectionLetter(row.section_position)} · ${row.section_title}`,
     chapterLabel: `${number} ${row.title}`,
+    status: row.status,
   };
 }
 

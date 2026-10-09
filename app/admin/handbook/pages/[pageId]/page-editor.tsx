@@ -14,7 +14,7 @@ import { buttonClass, inputClass, labelClass } from "@/components/admin/styles";
 import { useToast } from "@/components/admin/toast";
 import { PicturePicker } from "@/components/admin/picture-picker";
 import { TITLE_MAX_LENGTH } from "@/lib/limits";
-import { getPreviewMedia, listPickerMedia, savePageContent, type PickerItem } from "../actions";
+import { getPreviewMedia, listPickerMedia, savePageContent, setPageStatus, type PickerItem } from "../actions";
 import { BlockEditor } from "./block-editor";
 
 const ADD_ORDER: BlockType[] = ["heading", "paragraph", "list", "picture", "callout"];
@@ -50,6 +50,7 @@ export function PageEditor({
   const [savedSnapshot, setSavedSnapshot] = useState(() => snapshotOf(initialTitle, initialBlocks));
   const [problem, setProblem] = useState<SaveProblem>(null);
   const [isSaving, startSaving] = useTransition();
+  const [isPublishing, startPublishing] = useTransition();
   const [media, setMedia] = useState<ResolvedMedia>(initialMedia);
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
   const [pickingFor, setPickingFor] = useState<string | null>(null);
@@ -85,6 +86,14 @@ export function PageEditor({
       }
     });
   }, [blocks, dirty, isSaving, pageId, title, toast, version]);
+
+  function publish(next: "draft" | "published") {
+    startPublishing(async () => {
+      const result = await setPageStatus(pageId, next);
+      toast(result.error ?? (next === "published" ? "Page published." : "Page is a draft again."));
+      router.refresh();
+    });
+  }
 
   // Ctrl/Cmd+S saves from anywhere on the page.
   useEffect(() => {
@@ -213,6 +222,15 @@ export function PageEditor({
           <p aria-live="polite" className={`text-sm ${dirty && !isSaving ? "font-medium text-amber-900" : "text-slate-600"}`}>
             {saveState}
           </p>
+          <button
+            type="button"
+            onClick={() => publish(status === "published" ? "draft" : "published")}
+            disabled={dirty || isSaving || isPublishing}
+            title={dirty ? "Save your changes first" : undefined}
+            className={buttonClass("secondary")}
+          >
+            {status === "published" ? "Unpublish" : "Publish"}
+          </button>
           <button type="button" onClick={save} disabled={isSaving || !dirty} className={buttonClass("primary")}>
             {isSaving ? "Saving…" : "Save"}
           </button>

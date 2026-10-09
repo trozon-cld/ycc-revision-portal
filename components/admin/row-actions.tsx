@@ -80,6 +80,41 @@ export function RowActions({ label, actions }: { label: string; actions: RowActi
   );
 }
 
+// One row action as a page-level button (e.g. Publish on a chapter's own page): same panel or instant run as in the menu.
+export function ActionButton({ action, variant = "secondary" }: { action: PanelRowAction | InstantRowAction; variant?: ButtonVariant }) {
+  const [open, setOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const toast = useToast();
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  function close() {
+    setOpen(false);
+    requestAnimationFrame(() => triggerRef.current?.focus());
+  }
+
+  function onClick() {
+    if ("render" in action) return setOpen(true);
+    startTransition(async () => {
+      const result = await action.run();
+      const message = result.error ?? action.successMessage;
+      if (message) toast(message);
+    });
+  }
+
+  return (
+    <>
+      <button ref={triggerRef} type="button" onClick={onClick} disabled={isPending} className={buttonClass(variant)}>
+        {action.label}
+      </button>
+      {open && "render" in action && (
+        <Dialog title={action.title} description={action.description} variant={action.variant} onClose={close}>
+          {action.render(close)}
+        </Dialog>
+      )}
+    </>
+  );
+}
+
 // Page-level "+ New …" button that opens a slide-in panel.
 export function PanelButton({
   label,

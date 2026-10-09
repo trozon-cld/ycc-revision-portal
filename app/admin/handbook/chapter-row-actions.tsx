@@ -2,7 +2,8 @@
 
 import { ActionForm } from "@/components/admin/action-form";
 import { Field } from "@/components/admin/field";
-import { PanelButton, RowActions, type RowAction } from "@/components/admin/row-actions";
+import Link from "next/link";
+import { ActionButton, PanelButton, RowActions, type InstantRowAction, type PanelRowAction, type RowAction } from "@/components/admin/row-actions";
 import { buttonClass, inputClass } from "@/components/admin/styles";
 import {
   createChapter,
@@ -38,10 +39,8 @@ export function NewChapterButton({ sections, categoryGroups }: { sections: Secti
         ) : (
           <ActionForm
             action={createChapter}
-            submitLabel="Add chapter"
-            pendingLabel="Adding…"
-            successMessage="Chapter added."
-            onSuccess={close}
+            submitLabel="Create and open"
+            pendingLabel="Creating…"
             onCancel={close}
           >
             <Field id="new-chapter-title" label="Chapter title">
@@ -67,6 +66,8 @@ export function ChapterRowActions({
   otherSections,
   pageCount,
   questionCount,
+  itemCount,
+  draftCount,
   status,
   categoryGroups,
   categoryIds,
@@ -79,6 +80,8 @@ export function ChapterRowActions({
   otherSections: SectionOption[];
   pageCount: number;
   questionCount: number;
+  itemCount: number;
+  draftCount: number;
   status: "draft" | "published";
   categoryGroups: CategoryGroupOption[];
   categoryIds: string[];
@@ -153,59 +156,7 @@ export function ChapterRowActions({
     });
   }
 
-  actions.push(
-    status === "draft"
-      ? categoryIds.length > 0
-        ? { label: "Publish", run: () => setChapterStatus(id, "published"), successMessage: "Chapter published." }
-        : {
-            label: "Publish",
-            title: "Publish chapter?",
-            variant: "confirm",
-            render: (close) => (
-              <ActionForm
-                action={publishChapterForm}
-                hidden={hidden}
-                submitLabel="Publish anyway"
-                pendingLabel="Publishing…"
-                successMessage="Chapter published."
-                onSuccess={close}
-                onCancel={close}
-              >
-                <p className="text-sm [overflow-wrap:anywhere]">
-                  <strong className="font-medium">
-                    {number} {title}
-                  </strong>{" "}
-                  isn&apos;t in any category yet, so no candidate will see it. Add it to categories with the
-                  Categories action.
-                </p>
-              </ActionForm>
-            ),
-          }
-      : {
-          label: "Unpublish",
-          title: "Unpublish chapter?",
-          variant: "confirm",
-          render: (close) => (
-            <ActionForm
-              action={unpublishChapterForm}
-              hidden={hidden}
-              submitLabel="Unpublish"
-              pendingLabel="Unpublishing…"
-              successMessage="Chapter is a draft again."
-              onSuccess={close}
-              onCancel={close}
-            >
-              <p className="text-sm [overflow-wrap:anywhere]">
-                Candidates will no longer see{" "}
-                <strong className="font-medium">
-                  {number} {title}
-                </strong>
-                . Its pages and questions stay as they are.
-              </p>
-            </ActionForm>
-          ),
-        }
-  );
+  actions.push(chapterStatusAction({ id, number, title, status, itemCount, draftCount, hasCategories: categoryIds.length > 0, onChapterPage: false }));
 
   actions.push({
     label: "Delete",
@@ -283,6 +234,104 @@ export function ChapterCategoriesButton(props: { chapterId: string; groups: Cate
       {(close) => <ChapterCategoriesForm {...props} onClose={close} />}
     </PanelButton>
   );
+}
+
+type ChapterStatusProps = {
+  id: string;
+  number: string;
+  title: string;
+  status: "draft" | "published";
+  itemCount: number;
+  draftCount: number;
+  hasCategories: boolean;
+  // On the chapter's own page the items are right below, so no "Open chapter" link.
+  onChapterPage: boolean;
+};
+
+// Publish or Unpublish, shared by the Handbook row menu and the chapter page. A chapter that isn't ready says why.
+function chapterStatusAction({ id, number, title, status, itemCount, draftCount, hasCategories, onChapterPage }: ChapterStatusProps): PanelRowAction | InstantRowAction {
+  const name = (
+    <strong className="font-medium">
+      {number} {title}
+    </strong>
+  );
+  if (status === "published") {
+    return {
+      label: "Unpublish",
+      title: "Unpublish chapter?",
+      variant: "confirm",
+      render: (close) => (
+        <ActionForm
+          action={unpublishChapterForm}
+          hidden={{ chapterId: id }}
+          submitLabel="Unpublish"
+          pendingLabel="Unpublishing…"
+          successMessage="Chapter is a draft again."
+          onSuccess={close}
+          onCancel={close}
+        >
+          <p className="text-sm [overflow-wrap:anywhere]">
+            Candidates will no longer see {name}. Its pages and questions stay as they are.
+          </p>
+        </ActionForm>
+      ),
+    };
+  }
+  if (itemCount === 0 || draftCount > 0) {
+    return {
+      label: "Publish",
+      title: "Can't publish yet",
+      variant: "confirm",
+      render: (close) => (
+        <div>
+          <p className="px-5 py-4 text-sm [overflow-wrap:anywhere]">
+            {name}{" "}
+            {itemCount === 0
+              ? "has no pages or questions yet. Add at least one, publish it, then publish the chapter."
+              : `${draftCount === 1 ? "has 1 item that is" : `has ${draftCount} items that are`} still ${draftCount === 1 ? "a draft" : "drafts"}. Publish ${draftCount === 1 ? "it" : "them"} first, then publish the chapter.`}
+          </p>
+          <div className="flex justify-end gap-2 border-t border-slate-200 px-5 py-3">
+            <button type="button" onClick={close} className={buttonClass("secondary")}>
+              Close
+            </button>
+            {!onChapterPage && (
+              <Link href={`/admin/handbook/chapters/${id}`} className={buttonClass("primary")}>
+                Open chapter
+              </Link>
+            )}
+          </div>
+        </div>
+      ),
+    };
+  }
+  if (hasCategories) {
+    return { label: "Publish", run: () => setChapterStatus(id, "published"), successMessage: "Chapter published." };
+  }
+  return {
+    label: "Publish",
+    title: "Publish chapter?",
+    variant: "confirm",
+    render: (close) => (
+      <ActionForm
+        action={publishChapterForm}
+        hidden={{ chapterId: id }}
+        submitLabel="Publish anyway"
+        pendingLabel="Publishing…"
+        successMessage="Chapter published."
+        onSuccess={close}
+        onCancel={close}
+      >
+        <p className="text-sm [overflow-wrap:anywhere]">
+          {name} isn&apos;t in any category yet, so no candidate will see it. Add it to categories with the Categories
+          {onChapterPage ? " button" : " action"}.
+        </p>
+      </ActionForm>
+    ),
+  };
+}
+
+export function ChapterStatusButton(props: Omit<ChapterStatusProps, "onChapterPage">) {
+  return <ActionButton action={chapterStatusAction({ ...props, onChapterPage: true })} />;
 }
 
 function blockedBy(pages: number, questions: number): string {

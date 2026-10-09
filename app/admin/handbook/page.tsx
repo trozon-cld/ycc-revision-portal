@@ -156,6 +156,8 @@ export default async function HandbookPage() {
                         otherSections={sectionOptions.filter((option) => option.id !== section.id)}
                         pageCount={chapter.page_count}
                         questionCount={chapter.question_count}
+                        itemCount={chapter.item_count}
+                        draftCount={chapter.draft_count}
                         status={chapter.status}
                         categoryGroups={categoryGroups}
                         categoryIds={chapterCategories.get(chapter.id) ?? []}

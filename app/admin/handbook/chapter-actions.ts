@@ -2,6 +2,7 @@
 
 import type { PoolClient } from "pg";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
 import { getErrorCode, withTransaction } from "@/lib/db/transaction";
 import { logActivity } from "@/lib/audit/log";
@@ -37,6 +38,7 @@ export async function createChapter(
   if (categoryIds.length > MAX_CATEGORIES) return { error: "Too many categories selected." };
 
   let result: StructureActionState;
+  let chapterId = "";
   try {
     result = await withTransaction<StructureActionState>(async (client) => {
       await lockHandbookStructure(client);
@@ -66,6 +68,7 @@ export async function createChapter(
           ...(categoryIds.length > 0 ? { categories: listNames(categoryIds.map((id) => categories.get(id) ?? "")) } : {}),
         }
       );
+      chapterId = created[0].id;
       return { success: true };
     });
   } catch (error) {
@@ -77,6 +80,8 @@ export async function createChapter(
 
   revalidatePath(PAGE_PATH);
   revalidatePath("/admin/categories");
+  // The next step is adding pages, so open the new chapter.
+  if (result.success) redirect(`/admin/handbook/chapters/${chapterId}`);
   return result;
 }
 
