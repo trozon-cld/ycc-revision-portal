@@ -29,6 +29,8 @@ export type BankRow = {
   chapterLabel: string;
   // Chapter number of the Handbook page order this question is placed in, if any.
   bookChapter: string | null;
+  inPractice: boolean;
+  inMock: boolean;
 };
 
 export type ChapterOption = { id: string; label: string };
@@ -75,10 +77,13 @@ export async function listBankQuestions(filters: BankFilters, page: number): Pro
     chapter_number: number;
     chapter_title: string;
     book_chapter: number | null;
+    in_practice: boolean;
+    in_mock: boolean;
   }>(
     `with ${NUMBERED_CHAPTERS}
      select q.id, q.ref_no, q.type, q.status, q.stem_text, q.stem_media_id is not null as has_picture,
-            n.number as chapter_number, n.title as chapter_title, hn.number as book_chapter
+            n.number as chapter_number, n.title as chapter_title, hn.number as book_chapter,
+            q.in_practice, q.in_mock
      from questions q
      join numbered n on n.id = q.chapter_id
      left join handbook_items hi on hi.question_id = q.id
@@ -97,6 +102,8 @@ export async function listBankQuestions(filters: BankFilters, page: number): Pro
     hasPicture: row.has_picture,
     chapterLabel: `${chapterNumber(row.chapter_number)} ${row.chapter_title}`,
     bookChapter: row.book_chapter === null ? null : chapterNumber(row.book_chapter),
+    inPractice: row.in_practice,
+    inMock: row.in_mock,
   }));
 }
 

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireRole } from "@/lib/auth/guard";
 import { plainText } from "@/lib/content/inline";
 import { questionRef } from "@/lib/questions/labels";
-import { BANK_PAGE_SIZE, countBankQuestions, countQuestions, listBankQuestions, listChapterOptions, type BankFilters } from "@/lib/questions/queries";
+import { BANK_PAGE_SIZE, countBankQuestions, countQuestions, listBankQuestions, listChapterOptions, type BankFilters, type BankRow } from "@/lib/questions/queries";
 import { availableQuestionTypes, QUESTION_TYPES } from "@/lib/questions/registry";
 import { isQuestionType, QUESTION_TYPE_KEYS } from "@/lib/questions/types";
 import { loadCategoryGroups } from "@/lib/handbook/categories";
@@ -163,8 +163,8 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
                   {row.status === "published" ? "Published" : "Draft"}
                 </Badge>
               </Cell>
-              <Cell label="Used in" nowrap>
-                {row.bookChapter ? `Handbook · ${row.bookChapter}` : <span className="text-slate-600">Not used yet</span>}
+              <Cell label="Used in">
+                {usedIn(row).join(", ") || <span className="text-slate-600">Not used</span>}
               </Cell>
               <Cell kind="actions">
                 <QuestionRowActions id={row.id} refLabel={refLabel} status={row.status} bookChapter={row.bookChapter} />
@@ -208,4 +208,9 @@ function PictureIcon() {
 
 function uuidOrNull(value: string | undefined): string | null {
   return value && isUuid(value) ? value : null;
+}
+
+// Where the question is set to appear: placed in its chapter's Handbook pages, and its Practice / Mock test switches.
+function usedIn(row: BankRow): string[] {
+  return [row.bookChapter && "Handbook", row.inPractice && "Practice", row.inMock && "Mock test"].filter((use): use is string => Boolean(use));
 }
