@@ -34,7 +34,7 @@ export function NewFaqButton() {
       {(close) => (
         <ActionForm action={createFaq} submitLabel="Add question" pendingLabel="Adding…" successMessage="Question added. It's a draft until you publish it." onSuccess={close} onCancel={close}>
           <FaqFields id="new-faq" />
-          <p className="text-sm text-slate-600">It&apos;s added at the end and hidden from candidates until you show it.</p>
+          <p className="text-sm text-slate-600">It&apos;s added at the end as a draft. Publish it when it&apos;s ready.</p>
         </ActionForm>
       )}
     </PanelButton>
@@ -46,7 +46,7 @@ export function FaqRowActions({ item, isFirst, isLast }: { item: FaqItem; isFirs
   const shown = item.status === "published";
   const actions: RowAction[] = [
     {
-      label: "Edit",
+      label: "Edit question",
       title: "Edit question",
       render: (close) => (
         <ActionForm action={updateFaq} hidden={hidden} submitLabel="Save changes" successMessage="Question updated." onSuccess={close} onCancel={close}>

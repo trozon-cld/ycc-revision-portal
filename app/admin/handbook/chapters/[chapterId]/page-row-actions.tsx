@@ -53,7 +53,7 @@ export function PageRowActions({
   const hidden = { pageId: id };
   const actions: RowAction[] = [
     {
-      label: "Edit content",
+      label: "Edit page",
       run: async () => {
         router.push(`/admin/handbook/pages/${id}`);
         return { success: true };
@@ -62,7 +62,7 @@ export function PageRowActions({
     {
       label: "Rename",
       title: "Rename page",
-      description: "Only admins see page titles.",
+      description: "Candidates never see page titles.",
       render: (close) => (
         <ActionForm action={renamePage} hidden={hidden} submitLabel="Save title" successMessage="Page renamed." onSuccess={close} onCancel={close}>
           <Field id={`rename-page-${id}`} label="New title">

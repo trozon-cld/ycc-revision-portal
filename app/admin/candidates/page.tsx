@@ -153,7 +153,7 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
         </FilterSelect>
         {isSuperadmin && (
           <FilterSelect name="admin" label="Admin" defaultValue={ownerFilter ?? ""}>
-            <option value="">All admins</option>
+            <option value="">All Admins</option>
             {admins.map((admin) => (
               <option key={admin.id} value={admin.id}>
                 {admin.label}

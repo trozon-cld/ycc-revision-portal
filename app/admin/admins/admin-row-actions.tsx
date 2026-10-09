@@ -10,11 +10,11 @@ import { createAdmin, deleteAdmin, moveAllCandidates, updateAdminEmail, updateAd
 
 export function NewAdminButton() {
   return (
-    <PanelButton label="New admin" title="New admin">
+    <PanelButton label="New Admin" title="New Admin">
       {(close) => (
         <ActionForm
           action={createAdmin}
-          submitLabel="Create admin"
+          submitLabel="Create Admin"
           pendingLabel="Creating…"
           successMessage="Admin created."
           onSuccess={close}
@@ -102,7 +102,7 @@ export function AdminRowActions({
           onSuccess={close}
           onCancel={close}
         >
-          <Field id={`email-${id}`} label="New email" hint="This admin will log in with this email from now on.">
+          <Field id={`email-${id}`} label="New email" hint="This Admin will log in with this email from now on.">
             <input
               id={`email-${id}`}
               name="email"
@@ -157,7 +157,7 @@ export function AdminRowActions({
     {
       label: "Delete",
       danger: true,
-      title: candidateCount > 0 ? "Move their candidates first" : "Delete admin?",
+      title: candidateCount > 0 ? "Move their candidates first" : "Delete Admin?",
       variant: "confirm",
       render: (close) =>
         candidateCount > 0 ? (
@@ -165,7 +165,7 @@ export function AdminRowActions({
             <div>
               <p className="px-5 py-4 text-sm">
                 <strong className="font-medium [overflow-wrap:anywhere]">{email}</strong> owns {countLabel}. Add another
-                admin first, so they can be moved there.
+                Admin first, so they can be moved there.
               </p>
               <div className="flex justify-end border-t border-slate-200 px-5 py-3">
                 <button type="button" onClick={close} className={buttonClass("secondary")}>
@@ -179,18 +179,18 @@ export function AdminRowActions({
               hidden={hidden}
               submitLabel={`Move ${countLabel}`}
               pendingLabel="Moving…"
-              successMessage={`${candidateCount === 1 ? "Candidate" : `${candidateCount} candidates`} moved. You can delete this admin now.`}
+              successMessage={`${candidateCount === 1 ? "Candidate" : `${candidateCount} candidates`} moved. You can delete this Admin now.`}
               onSuccess={close}
               onCancel={close}
             >
               <p className="text-sm">
                 <strong className="font-medium [overflow-wrap:anywhere]">{email}</strong> owns {countLabel}. Move{" "}
-                {candidateCount === 1 ? "them" : "them all"} to another admin, then you can delete this admin.
+                {candidateCount === 1 ? "them" : "them all"} to another Admin, then you can delete this Admin.
               </p>
               <Field id={`move-all-${id}`} label="Move to">
                 <select id={`move-all-${id}`} name="toAdminId" required defaultValue="" className={inputClass}>
                   <option value="" disabled>
-                    Select an admin
+                    Select an Admin
                   </option>
                   {otherAdmins.map((admin) => (
                     <option key={admin.id} value={admin.id}>

@@ -208,7 +208,7 @@ export function PageEditor({
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3 md:sticky md:top-14 md:z-10 md:[@media(max-height:500px)]:top-0 md:-mx-6 md:border-b md:border-slate-200 md:bg-slate-50/95 md:px-6 md:py-3 md:backdrop-blur lg:top-0 lg:-mx-8 lg:px-8">
         <div className="w-full min-w-0 space-y-1 sm:w-auto sm:max-w-md sm:flex-1">
           <label htmlFor="page-title" className={labelClass}>
-            Page title <span className="font-normal text-slate-600">(only admins see this)</span>
+            Page title <span className="font-normal text-slate-600">(candidates don&apos;t see this)</span>
           </label>
           <input
             id="page-title"
@@ -281,7 +281,7 @@ export function PageEditor({
         <section aria-label="Page content" className={`min-w-0 space-y-3 ${tab === "preview" ? "hidden xl:block" : ""}`}>
           {blocks.length === 0 ? (
             <p className="rounded-lg border border-dashed border-slate-300 bg-white px-4 py-6 text-center text-sm text-slate-600">
-              This page is empty. Add your first block below, e.g. a heading.
+              This page is empty. Add your first block below, for example a heading.
             </p>
           ) : (
             <ol className="space-y-3">

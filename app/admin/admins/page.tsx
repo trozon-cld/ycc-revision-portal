@@ -31,7 +31,7 @@ export default async function AdminsPage() {
     <>
       <PageHeader
         title="Admins"
-        description={`${admins.length} admin${admins.length === 1 ? "" : "s"}`}
+        description={`${admins.length} Admin${admins.length === 1 ? "" : "s"}`}
         actions={<NewAdminButton />}
       />
 

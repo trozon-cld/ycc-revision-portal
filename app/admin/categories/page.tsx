@@ -122,7 +122,7 @@ export default async function CategoriesPage() {
       />
 
       <p className="mb-6 text-sm text-slate-600">
-        Candidates can switch to any category in the same group as the one their admin assigned.
+        Candidates can switch to any category in the same group as the one their Admin assigned.
       </p>
 
       <div className="space-y-8">

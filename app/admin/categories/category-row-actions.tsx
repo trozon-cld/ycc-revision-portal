@@ -125,7 +125,7 @@ export function CategoryRowActions({
         candidateCount > 0 ? (
           <div>
             <p className="px-5 py-4 text-sm">
-              <strong className="font-medium">{name}</strong> has {countLabel}. Their admins need to move them to
+              <strong className="font-medium">{name}</strong> has {countLabel}. Their Admins need to move them to
               another category first.
             </p>
             <div className="flex justify-end gap-2 border-t border-slate-200 px-5 py-3">
@@ -149,7 +149,7 @@ export function CategoryRowActions({
             onCancel={close}
           >
             <p className="text-sm">
-              <strong className="font-medium">{name}</strong> will be removed, and admins will no longer be able to
+              <strong className="font-medium">{name}</strong> will be removed, and Admins will no longer be able to
               choose it for new candidates. This can&apos;t be undone.
             </p>
           </ActionForm>

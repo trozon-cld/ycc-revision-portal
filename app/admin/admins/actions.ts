@@ -201,7 +201,7 @@ export async function deleteAdmin(
     // The row lock makes the candidate count final: new candidates for this admin must wait.
     result = await withTransaction<AdminActionState>(async (client) => {
       const admin = await lockAdmin(client, adminId);
-      if (!admin) return { error: "This admin has already been deleted." };
+      if (!admin) return { error: "This Admin has already been deleted." };
 
       const { rows } = await client.query<{ count: number }>(
         `select count(*)::int as count from users where admin_id = $1`,
@@ -237,7 +237,7 @@ export async function moveAllCandidates(
 
   const fromId = String(formData.get("adminId") ?? "");
   const toId = String(formData.get("toAdminId") ?? "");
-  if (!toId) return { error: "Choose an admin." };
+  if (!toId) return { error: "Choose an Admin." };
   if (!isUuid(fromId) || !isUuid(toId) || fromId === toId) return { error: NOT_FOUND };
 
   let result: AdminActionState;
@@ -289,7 +289,7 @@ async function lockAdmin(
 }
 
 function blockedMessage(candidateCount: number) {
-  return `This admin still owns ${candidateCount} candidate${
+  return `This Admin still owns ${candidateCount} candidate${
     candidateCount === 1 ? "" : "s"
-  }. Move them to another admin before deleting.`;
+  }. Move them to another Admin before deleting.`;
 }

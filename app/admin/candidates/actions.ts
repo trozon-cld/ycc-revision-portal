@@ -47,7 +47,7 @@ export async function createCandidate(
   const invalidName = validateName(name);
   if (invalidName) return { error: invalidName };
   if (!email || !password || !categoryId) {
-    return { error: "Email, password, and category are required." };
+    return { error: "Email, password and category are required." };
   }
   if (!EMAIL_PATTERN.test(email)) {
     return { error: "Enter a valid email address." };
@@ -297,7 +297,7 @@ export async function changeCandidateAdmin(
   const adminId = String(formData.get("adminId") ?? "");
 
   if (!candidateId || !adminId) {
-    return { error: "Choose an admin." };
+    return { error: "Choose an Admin." };
   }
 
   let result: CandidateActionState;
@@ -318,7 +318,7 @@ export async function changeCandidateAdmin(
       const candidate = candidates[0];
       const newAdmin = admins[0];
       if (!candidate || !newAdmin) {
-        return { error: "Candidate or admin not found. The page has been refreshed." };
+        return { error: "Candidate or Admin not found. The page has been refreshed." };
       }
       if (candidate.admin_email === newAdmin.email) return { success: true };
 
@@ -336,7 +336,7 @@ export async function changeCandidateAdmin(
     // 23503: the admin was deleted at the same moment.
     const code = getErrorCode(error);
     if (code === "22P02" || code === "23503") {
-      return { error: "Candidate or admin not found." };
+      return { error: "Candidate or Admin not found." };
     }
     throw error;
   }

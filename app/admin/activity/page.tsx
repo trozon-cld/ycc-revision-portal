@@ -90,7 +90,7 @@ export default async function ActivityPage({ searchParams }: PageProps<"/admin/a
         title={isSuperadmin ? "Activity" : "My activity"}
         description={
           isSuperadmin
-            ? "Everything admins and the Superadmin have changed, candidates’ category switches, and every login."
+            ? "Everything Admins and the Superadmin have changed, candidates' category switches, and every login."
             : "Changes you have made, category switches by your current candidates, and your logins."
         }
       />

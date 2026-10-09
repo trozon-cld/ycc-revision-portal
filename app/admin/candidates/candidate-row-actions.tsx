@@ -270,25 +270,25 @@ export function SuperadminCandidateActions({
   const actions: RowAction[] = [
     ...(onProgressPage ? [] : [{ label: "View progress", href: candidateProgressPath(candidate.id) }]),
     {
-      label: "Change admin",
-      title: "Change admin",
+      label: "Change Admin",
+      title: "Change Admin",
       description: candidate.email,
       render: (close) =>
         otherAdmins.length === 0 ? (
-          <p className="px-5 py-4 text-sm">There are no other admins to move this candidate to.</p>
+          <p className="px-5 py-4 text-sm">There are no other Admins to move this candidate to.</p>
         ) : (
           <ActionForm
             action={changeCandidateAdmin}
             hidden={{ candidateId: candidate.id }}
-            submitLabel="Save admin"
+            submitLabel="Save Admin"
             successMessage="Admin updated."
             onSuccess={close}
             onCancel={close}
           >
-            <Field id={`admin-${candidate.id}`} label="New admin">
+            <Field id={`admin-${candidate.id}`} label="New Admin">
               <select id={`admin-${candidate.id}`} name="adminId" required defaultValue="" className={inputClass}>
                 <option value="" disabled>
-                  Select an admin
+                  Select an Admin
                 </option>
                 {otherAdmins.map((admin) => (
                   <option key={admin.id} value={admin.id}>

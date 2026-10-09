@@ -20,7 +20,7 @@ export default async function AccountPage() {
 
       <div className="grid gap-4 md:max-w-2xl">
         <section className={`${cardClass} p-5`}>
-          <h2 className="mb-4 text-base font-semibold text-ink">Name</h2>
+          <h2 className="mb-4 text-base font-semibold text-ink">Change name</h2>
           <ChangeNameForm currentName={me?.full_name ?? null} />
         </section>
         {isSuperadmin && (

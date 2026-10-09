@@ -15,11 +15,11 @@ export async function archiveOldLoginRecords(_prev: FormState): Promise<FormStat
     console.error("Login record archive failed", error);
     revalidatePath("/admin/activity");
     if (error instanceof StorageConfigError) {
-      return { error: "Archive storage isn’t set up: create the private log-archives bucket in Supabase Storage (see README). Nothing was archived." };
+      return { error: "Archive storage isn't set up: create the private log-archives bucket in Supabase Storage (see README). Nothing was archived." };
     }
-    return { error: "The archive couldn’t be completed. Any month already listed below was saved; nothing else was deleted. Please try again." };
+    return { error: "The archive couldn't be completed. Any month already listed below was saved; nothing else was deleted. Please try again." };
   }
   revalidatePath("/admin/activity");
-  if (result.archived.length === 0) return { error: "There’s nothing to archive yet." };
+  if (result.archived.length === 0) return { error: "There's nothing to archive yet." };
   return { success: true };
 }
