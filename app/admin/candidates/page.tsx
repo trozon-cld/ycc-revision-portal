@@ -1,6 +1,6 @@
 import { requireRole } from "@/lib/auth/guard";
 import { pool } from "@/lib/db/pool";
-import { accessBaseDate, customDateBounds, formatUkDate } from "@/lib/candidates/access";
+import { customDateBounds, formatUkDate } from "@/lib/candidates/access";
 import { isUuid } from "@/lib/ids";
 import { firstParam } from "@/lib/params";
 import { escapeLike } from "@/lib/db/like";
@@ -12,7 +12,10 @@ import { Pagination, pageFromParam } from "@/components/admin/pagination";
 import { Cell, Row, Table } from "@/components/admin/table";
 import { NewCandidateButton } from "./create-candidate-form";
 import { AdminCandidateActions, SuperadminCandidateActions } from "./candidate-row-actions";
-import { CategoryOptions, type CategoryChoice } from "./category-options";
+import { CategoryOptions } from "./category-options";
+import { loadAdminOptions, loadCategoryChoices } from "./options";
+import { toRowCandidate } from "./row-candidate";
+import { FlashToast } from "@/components/admin/flash-toast";
 import { CandidateStatusBadge } from "./status-badge";
 import { candidateProgressPath } from "@/lib/candidates/paths";
 import { LAST_LOGIN_SQL } from "@/lib/candidates/detail";
@@ -37,11 +40,6 @@ interface CandidateRow {
   mock_out_of: number | null;
   last_login_at: Date | null;
   stale_mock: boolean;
-}
-
-interface Option {
-  id: string;
-  label: string;
 }
 
 const PAGE_SIZE = 50;
@@ -108,19 +106,7 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
     ({ rows: candidates } = await loadPage());
   }
 
-  const [{ rows: categories }, { rows: admins }] = await Promise.all([
-    pool.query<CategoryChoice>(
-      `select c.id, c.name, g.name as "group"
-       from categories c join category_groups g on g.id = c.group_id
-       order by g.position, c.name`
-    ),
-    isSuperadmin
-      ? pool.query<Option>(
-          `select id, coalesce(full_name || ' (' || email || ')', email) as label
-           from users where role = 'admin' order by lower(coalesce(full_name, email))`
-        )
-      : Promise.resolve({ rows: [] as Option[] }),
-  ]);
+  const [categories, admins] = await Promise.all([loadCategoryChoices(), isSuperadmin ? loadAdminOptions() : Promise.resolve([])]);
 
   const now = Date.now();
   const columns = isSuperadmin
@@ -136,6 +122,7 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
 
   return (
     <>
+      {firstParam(params.done) === "deleted" && <FlashToast message="Candidate deleted." />}
       <PageHeader
         title="Candidates"
         description={isFiltered ? `${countLabel} match your filters` : countLabel}
@@ -183,16 +170,17 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
           const expiresAt = candidate.access_expires_at;
           const isExpired = expiresAt !== null && new Date(expiresAt).getTime() <= now;
           const expiryDate = expiresAt ? formatUkDate(expiresAt) : "No expiry";
-          const rowCandidate = {
+          const rowCandidate = toRowCandidate({
             id: candidate.id,
             email: candidate.email,
             name: candidate.full_name,
             categoryId: candidate.category_id,
+            categoryName: candidate.category_name,
+            currentCategoryName: candidate.current_category_name,
             adminId: candidate.admin_id,
             isBlocked: candidate.is_blocked,
-            expiryLabel: expiresAt ? `${isExpired ? "Expired on" : "Expires"} ${expiryDate}` : "No expiry set",
-            accessBase: accessBaseDate(expiresAt),
-          };
+            accessExpiresAt: expiresAt,
+          });
 
           return (
             <Row key={candidate.id}>

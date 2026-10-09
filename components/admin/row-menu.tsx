@@ -11,10 +11,13 @@ export function RowMenu({
   label,
   items,
   triggerRef,
+  triggerText,
 }: {
   label: string;
   items: RowMenuItem[];
   triggerRef: RefObject<HTMLButtonElement | null>;
+  // A visible word ("Actions") instead of "⋯", for a page header.
+  triggerText?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [openUp, setOpenUp] = useState(false);
@@ -75,13 +78,22 @@ export function RowMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
-        className={buttonClass("ghost", "icon")}
+        className={triggerText ? buttonClass("secondary") : buttonClass("ghost", "icon")}
       >
-        <svg viewBox="0 0 20 20" aria-hidden="true" className="size-5 fill-current">
-          <circle cx="4" cy="10" r="1.6" />
-          <circle cx="10" cy="10" r="1.6" />
-          <circle cx="16" cy="10" r="1.6" />
-        </svg>
+        {triggerText ? (
+          <>
+            {triggerText}
+            <svg viewBox="0 0 20 20" aria-hidden="true" className="size-4 fill-current">
+              <path d="M5.5 7.5 10 12l4.5-4.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </>
+        ) : (
+          <svg viewBox="0 0 20 20" aria-hidden="true" className="size-5 fill-current">
+            <circle cx="4" cy="10" r="1.6" />
+            <circle cx="10" cy="10" r="1.6" />
+            <circle cx="16" cy="10" r="1.6" />
+          </svg>
+        )}
       </button>
       {open && (
         <div

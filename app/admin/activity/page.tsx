@@ -91,7 +91,7 @@ export default async function ActivityPage({ searchParams }: PageProps<"/admin/a
         description={
           isSuperadmin
             ? "Everything admins and the Superadmin have changed, candidates’ category switches, and every login."
-            : "Changes you have made, category switches by your candidates, and your logins."
+            : "Changes you have made, category switches by your current candidates, and your logins."
         }
       />
 

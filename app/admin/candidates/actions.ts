@@ -3,6 +3,7 @@
 import bcrypt from "bcryptjs";
 import type { PoolClient } from "pg";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
 import type { SessionPayload } from "@/lib/auth/jwt";
 import { getErrorCode, withTransaction } from "@/lib/db/transaction";
@@ -281,6 +282,8 @@ export async function deleteCandidate(
 
   revalidatePath("/admin/categories");
   revalidatePath("/admin/admins");
+  // Deleted from their Progress page: that page is gone, so go back to the list.
+  if (result.success && formData.get("back") === "list") redirect("/admin/candidates?done=deleted");
   return result;
 }
 

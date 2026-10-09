@@ -43,7 +43,13 @@ export default async function AdminsPage() {
             <Cell label="Candidates">{admin.candidate_count}</Cell>
             <Cell label="Created" nowrap>{formatUkDate(admin.created_at)}</Cell>
             <Cell kind="actions">
-              <AdminRowActions id={admin.id} email={admin.email} name={admin.full_name} candidateCount={admin.candidate_count} />
+              <AdminRowActions
+                id={admin.id}
+                email={admin.email}
+                name={admin.full_name}
+                candidateCount={admin.candidate_count}
+                otherAdmins={admins.filter((other) => other.id !== admin.id).map((other) => ({ id: other.id, label: other.full_name ? `${other.full_name} (${other.email})` : other.email }))}
+              />
             </Cell>
           </Row>
         ))}

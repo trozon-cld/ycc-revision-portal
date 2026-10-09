@@ -9,6 +9,7 @@ import { logActivity } from "@/lib/audit/log";
 import { NO_NAME, normaliseName, validateName } from "@/lib/users/name";
 import { DUPLICATE_EMAIL, EMAIL_PATTERN, MIN_PASSWORD_LENGTH } from "@/lib/users/credentials";
 import type { FormState } from "@/lib/forms";
+import { isUuid } from "@/lib/ids";
 
 export type AdminActionState = FormState;
 
@@ -224,6 +225,55 @@ export async function deleteAdmin(
   }
 
   revalidatePath("/admin/admins");
+  return result;
+}
+
+// Moves every candidate of one admin to another (e.g. before deleting the first), logged per candidate.
+export async function moveAllCandidates(
+  _prevState: AdminActionState,
+  formData: FormData
+): Promise<AdminActionState> {
+  const session = await requireRole(["superadmin"]);
+
+  const fromId = String(formData.get("adminId") ?? "");
+  const toId = String(formData.get("toAdminId") ?? "");
+  if (!toId) return { error: "Choose an admin." };
+  if (!isUuid(fromId) || !isUuid(toId) || fromId === toId) return { error: NOT_FOUND };
+
+  let result: AdminActionState;
+  try {
+    result = await withTransaction<AdminActionState>(async (client) => {
+      const from = await lockAdmin(client, fromId);
+      const { rows: targets } = await client.query<{ email: string }>(
+        `select email from users where id = $1 and role = 'admin' for key share`,
+        [toId]
+      );
+      if (!from || !targets[0]) return { error: "Admin not found. The page has been refreshed." };
+      const { rows: moved } = await client.query<{ id: string; email: string }>(
+        `update users set admin_id = $2
+         where id in (select id from users where admin_id = $1 and role = 'candidate' order by id for update)
+         returning id, email`,
+        [fromId, toId]
+      );
+      for (const candidate of moved) {
+        await logActivity(
+          client,
+          session,
+          "candidate.admin_changed",
+          { type: "candidate", id: candidate.id, label: candidate.email },
+          { from: from.email, to: targets[0].email }
+        );
+      }
+      return { success: true };
+    });
+  } catch (error) {
+    // 23503: the target admin was deleted at the same moment.
+    if (getErrorCode(error) === "23503") return { error: "Admin not found. The page has been refreshed." };
+    throw error;
+  }
+
+  revalidatePath("/admin/admins");
+  revalidatePath("/admin/candidates");
   return result;
 }
 

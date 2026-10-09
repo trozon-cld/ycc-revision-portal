@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
-import { formatUkDate, formatUkDateTime } from "@/lib/candidates/access";
+import { customDateBounds, formatUkDate, formatUkDateTime } from "@/lib/candidates/access";
 import { loadCandidateDetail } from "@/lib/candidates/detail";
 import { candidateProgressPath } from "@/lib/candidates/paths";
 import { countOf, formatDuration } from "@/lib/format";
@@ -18,6 +18,9 @@ import { Pagination, pageFromParam } from "@/components/admin/pagination";
 import { buttonClass, cardClass } from "@/components/admin/styles";
 import { Cell, Row, Table } from "@/components/admin/table";
 import { CandidateStatusBadge } from "../status-badge";
+import { AdminCandidateActions, SuperadminCandidateActions } from "../candidate-row-actions";
+import { loadAdminOptions, loadCategoryChoices } from "../options";
+import { toRowCandidate } from "../row-candidate";
 
 const HISTORY_PAGE_SIZE = 10;
 
@@ -77,13 +80,35 @@ export default async function CandidateProgressPage({ params, searchParams }: Pa
   const path = candidateProgressPath(candidate.id);
   const categoryQuery: Record<string, string> = { category: category.isCurrent ? "" : category.id };
   const last = mock.items[0];
+  const { min: minDate, max: maxDate } = customDateBounds();
+  const rowCandidate = toRowCandidate({
+    id: candidate.id,
+    email: candidate.email,
+    name: candidate.name,
+    categoryId: candidate.assigned.id,
+    categoryName: candidate.assigned.name,
+    currentCategoryName: candidate.current.name,
+    adminId: candidate.admin.id,
+    isBlocked: candidate.isBlocked,
+    accessExpiresAt: candidate.accessExpiresAt,
+  });
 
   return (
     <>
       <Link href="/admin/candidates" className={`${buttonClass("ghost", "sm")} mb-3 -ml-2.5`}>
         ← Candidates
       </Link>
-      <PageHeader title={candidate.name ?? candidate.email} description={candidate.name ? candidate.email : "No name yet"} />
+      <PageHeader
+        title={candidate.name ?? candidate.email}
+        description={candidate.name ? candidate.email : "No name yet"}
+        actions={
+          session.role === "superadmin" ? (
+            <SuperadminCandidateActions candidate={rowCandidate} admins={await loadAdminOptions()} onProgressPage />
+          ) : (
+            <AdminCandidateActions candidate={rowCandidate} categories={await loadCategoryChoices()} minDate={minDate} maxDate={maxDate} onProgressPage />
+          )
+        }
+      />
 
       <div className="space-y-8">
         <Summary

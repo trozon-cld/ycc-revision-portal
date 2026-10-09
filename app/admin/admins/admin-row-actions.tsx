@@ -6,7 +6,7 @@ import { PanelButton, RowActions, type RowAction } from "@/components/admin/row-
 import { buttonClass, inputClass } from "@/components/admin/styles";
 import { NAME_MAX_LENGTH } from "@/lib/users/name";
 import { MIN_PASSWORD_LENGTH } from "@/lib/users/credentials";
-import { createAdmin, deleteAdmin, updateAdminEmail, updateAdminName, updateAdminPassword } from "./actions";
+import { createAdmin, deleteAdmin, moveAllCandidates, updateAdminEmail, updateAdminName, updateAdminPassword } from "./actions";
 
 export function NewAdminButton() {
   return (
@@ -48,11 +48,14 @@ export function AdminRowActions({
   email,
   name,
   candidateCount,
+  otherAdmins,
 }: {
   id: string;
   email: string;
   name: string | null;
   candidateCount: number;
+  // label: "Name (email)", or the email when there is no name.
+  otherAdmins: { id: string; label: string }[];
 }) {
   const hidden = { adminId: id };
   const countLabel = `${candidateCount} candidate${candidateCount === 1 ? "" : "s"}`;
@@ -154,21 +157,50 @@ export function AdminRowActions({
     {
       label: "Delete",
       danger: true,
-      title: candidateCount > 0 ? "Can't delete this admin" : "Delete admin?",
+      title: candidateCount > 0 ? "Move their candidates first" : "Delete admin?",
       variant: "confirm",
       render: (close) =>
         candidateCount > 0 ? (
-          <div>
-            <p className="px-5 py-4 text-sm">
-              <strong className="font-medium [overflow-wrap:anywhere]">{email}</strong> owns {countLabel}. Move them to
-              another admin from the Candidates page first.
-            </p>
-            <div className="flex justify-end border-t border-slate-200 px-5 py-3">
-              <button type="button" onClick={close} className={buttonClass("secondary")}>
-                Close
-              </button>
+          otherAdmins.length === 0 ? (
+            <div>
+              <p className="px-5 py-4 text-sm">
+                <strong className="font-medium [overflow-wrap:anywhere]">{email}</strong> owns {countLabel}. Add another
+                admin first, so they can be moved there.
+              </p>
+              <div className="flex justify-end border-t border-slate-200 px-5 py-3">
+                <button type="button" onClick={close} className={buttonClass("secondary")}>
+                  Close
+                </button>
+              </div>
             </div>
-          </div>
+          ) : (
+            <ActionForm
+              action={moveAllCandidates}
+              hidden={hidden}
+              submitLabel={`Move ${countLabel}`}
+              pendingLabel="Moving…"
+              successMessage={`${candidateCount === 1 ? "Candidate" : `${candidateCount} candidates`} moved. You can delete this admin now.`}
+              onSuccess={close}
+              onCancel={close}
+            >
+              <p className="text-sm">
+                <strong className="font-medium [overflow-wrap:anywhere]">{email}</strong> owns {countLabel}. Move{" "}
+                {candidateCount === 1 ? "them" : "them all"} to another admin, then you can delete this admin.
+              </p>
+              <Field id={`move-all-${id}`} label="Move to">
+                <select id={`move-all-${id}`} name="toAdminId" required defaultValue="" className={inputClass}>
+                  <option value="" disabled>
+                    Select an admin
+                  </option>
+                  {otherAdmins.map((admin) => (
+                    <option key={admin.id} value={admin.id}>
+                      {admin.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </ActionForm>
+          )
         ) : (
           <ActionForm
             action={deleteAdmin}

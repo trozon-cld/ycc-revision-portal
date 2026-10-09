@@ -31,7 +31,7 @@ export type LinkRowAction = { label: string; danger?: never; href: string };
 export type RowAction = PanelRowAction | InstantRowAction | LinkRowAction;
 
 // A row's "⋯" menu; each item opens its own slide-in panel or confirmation, runs instantly, or opens a page.
-export function RowActions({ label, actions }: { label: string; actions: RowAction[] }) {
+export function RowActions({ label, actions, triggerText }: { label: string; actions: RowAction[]; triggerText?: string }) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [, startTransition] = useTransition();
   const toast = useToast();
@@ -60,6 +60,7 @@ export function RowActions({ label, actions }: { label: string; actions: RowActi
       <RowMenu
         label={label}
         triggerRef={triggerRef}
+        triggerText={triggerText}
         items={actions.map((action, index) => ({
           label: action.label,
           danger: action.danger,
