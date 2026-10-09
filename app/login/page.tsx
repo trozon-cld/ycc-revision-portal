@@ -36,7 +36,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex flex-1 items-center justify-center p-4">
+    <main className="flex flex-1 items-center justify-center p-4">
       <form
         onSubmit={handleSubmit}
         className="w-full max-w-sm space-y-5 rounded-xl border border-ink/15 p-6 sm:p-8"
@@ -98,6 +98,6 @@ export default function LoginPage() {
           {isSubmitting ? "Logging in…" : "Log in"}
         </button>
       </form>
-    </div>
+    </main>
   );
 }

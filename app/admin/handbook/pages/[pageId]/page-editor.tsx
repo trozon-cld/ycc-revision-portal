@@ -194,15 +194,16 @@ export function PageEditor({
   return (
     <>
       <nav aria-label="Breadcrumb" className="mb-2 text-sm">
-        <Link href="/admin/handbook" className="text-primary underline-offset-2 hover:underline">
+        <Link href="/admin/handbook" className="text-primary underline underline-offset-2 hover:text-ink">
           Handbook
         </Link>
         <span aria-hidden="true" className="mx-1.5 text-slate-500">/</span>
-        <Link href={`/admin/handbook/chapters/${chapter.id}`} className="text-primary underline-offset-2 hover:underline">
+        <Link href={`/admin/handbook/chapters/${chapter.id}`} className="text-primary underline underline-offset-2 hover:text-ink">
           {chapter.chapterLabel}
         </Link>
       </nav>
 
+      <h1 className="sr-only">Edit page: {title.trim() || "Untitled page"}</h1>
       {/* On tablets and laptops the title, status and Save stay in view while scrolling. */}
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3 md:sticky md:top-14 md:z-10 md:[@media(max-height:500px)]:top-0 md:-mx-6 md:border-b md:border-slate-200 md:bg-slate-50/95 md:px-6 md:py-3 md:backdrop-blur lg:top-0 lg:-mx-8 lg:px-8">
         <div className="w-full min-w-0 space-y-1 sm:w-auto sm:max-w-md sm:flex-1">

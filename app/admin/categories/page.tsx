@@ -161,7 +161,7 @@ export default async function CategoriesPage() {
                       <Cell kind="primary">{category.name}</Cell>
                       <Cell label="Candidates">
                         {category.candidate_count > 0 ? (
-                          <Link href={`/admin/candidates?category=${category.id}`} className="text-primary underline underline-offset-2">
+                          <Link href={`/admin/candidates?category=${category.id}`} className="inline-flex min-h-6 min-w-6 items-center justify-center text-primary underline underline-offset-2">
                             {category.candidate_count}
                             <span className="sr-only"> candidates: see them</span>
                           </Link>

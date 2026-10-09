@@ -114,7 +114,7 @@ export default async function ChapterPagesPage({ params }: PageProps<"/admin/han
   return (
     <>
       <nav aria-label="Breadcrumb" className="mb-2 text-sm">
-        <Link href="/admin/handbook" className="text-primary underline-offset-2 hover:underline">
+        <Link href="/admin/handbook" className="text-primary underline underline-offset-2 hover:text-ink">
           Handbook
         </Link>
         <span aria-hidden="true" className="mx-1.5 text-slate-500">/</span>

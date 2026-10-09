@@ -152,3 +152,20 @@ body:has([data-focused-owns-header]) .candidate-header {
     display: none;
   }
 }
+
+/* Admin editors: a field reached with Tab scrolls clear of the fixed Save bar (bottom on phones, top from tablets). */
+@media (max-width: 767px) {
+  html:has([data-editor-bar]) {
+    scroll-padding-bottom: 5.5rem;
+  }
+}
+@media (min-width: 768px) {
+  html:has([data-editor-bar]) {
+    scroll-padding-top: 10rem;
+  }
+}
+@media (min-width: 1024px) {
+  html:has([data-editor-bar]) {
+    scroll-padding-top: 7rem;
+  }
+}

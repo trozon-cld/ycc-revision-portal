@@ -65,8 +65,10 @@ export function Row({ children, extra }: { children: ReactNode; extra?: HTMLAttr
 
 type CellKind = "primary" | "data" | "actions";
 
+// Phone cards: the primary cell is at least as tall as the "⋯" button beside it, so it never overlaps the first value.
+
 const cellClasses: Record<CellKind, string> = {
-  primary: "block pr-12 font-medium text-ink md:table-cell md:pr-4 md:min-w-40",
+  primary: "block min-h-7 pr-12 font-medium text-ink md:table-cell md:min-h-0 md:pr-4 md:min-w-40",
   data:
     "flex items-baseline justify-between gap-4 text-ink before:shrink-0 before:text-slate-600 before:content-[attr(data-label)] md:table-cell md:before:content-none",
   actions: "absolute right-2 top-1.5 md:static md:w-14 md:text-right",

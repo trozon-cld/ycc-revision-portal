@@ -43,7 +43,7 @@ export default async function AdminsPage() {
             </Cell>
             <Cell label="Candidates">
               {admin.candidate_count > 0 ? (
-                <Link href={`/admin/candidates?admin=${admin.id}`} className="text-primary underline underline-offset-2">
+                <Link href={`/admin/candidates?admin=${admin.id}`} className="inline-flex min-h-6 min-w-6 items-center justify-center text-primary underline underline-offset-2">
                   {admin.candidate_count}
                   <span className="sr-only"> candidates: see them</span>
                 </Link>

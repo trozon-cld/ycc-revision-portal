@@ -55,6 +55,12 @@ export function AdminShell({ role, email, name, children }: { role: Role; email:
 
   return (
     <ToastProvider>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-md focus:bg-white focus:px-4 focus:py-2.5 focus:text-sm focus:font-medium focus:text-primary focus:shadow-lg focus:outline-2 focus:outline-primary"
+      >
+        Skip to main content
+      </a>
       <div className="flex min-h-dvh flex-1 flex-col bg-slate-50 lg:flex-row">
         <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-slate-200 bg-white lg:flex">
           <SidebarContent role={role} email={email} name={name} />
@@ -81,7 +87,7 @@ export function AdminShell({ role, email, name, children }: { role: Role; email:
           </MobileDrawer>
         )}
 
-        <main className="min-w-0 flex-1">
+        <main id="main-content" tabIndex={-1} className="min-w-0 flex-1 focus:outline-none">
           <div className="mx-auto w-full max-w-6xl px-4 py-6 2xl:max-w-[90rem] sm:px-6 lg:px-8 lg:py-8">{children}</div>
         </main>
       </div>

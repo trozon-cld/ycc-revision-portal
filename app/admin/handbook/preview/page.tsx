@@ -30,19 +30,19 @@ export default async function BookPreviewPage({ searchParams }: PageProps<"/admi
   return (
     <>
       <nav aria-label="Breadcrumb" className="mb-2 text-sm">
-        <Link href="/admin/handbook" className="text-primary underline-offset-2 hover:underline">
+        <Link href="/admin/handbook" className="text-primary underline underline-offset-2 hover:text-ink">
           Handbook
         </Link>
         {chapter && (
           <>
             <span aria-hidden="true" className="mx-1.5 text-slate-500">/</span>
-            <Link href={`/admin/handbook/chapters/${chapter.id}`} className="text-primary underline-offset-2 hover:underline">
+            <Link href={`/admin/handbook/chapters/${chapter.id}`} className="text-primary underline underline-offset-2 hover:text-ink">
               {chapter.label}
             </Link>
           </>
         )}
         <span aria-hidden="true" className="mx-1.5 text-slate-500">/</span>
-        <span className="text-slate-700">Preview</span>
+        <span aria-current="page" className="text-slate-700">Preview</span>
       </nav>
       <PageHeader title="Book preview" description="The Handbook as candidates will read it. Only you can see this preview." />
 

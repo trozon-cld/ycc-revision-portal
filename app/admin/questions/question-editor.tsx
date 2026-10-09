@@ -198,11 +198,11 @@ export function QuestionEditor({
   return (
     <>
       <nav aria-label="Breadcrumb" className="mb-2 text-sm">
-        <ListBackLink list="questions" href="/admin/questions" className="text-primary underline-offset-2 hover:underline">
+        <ListBackLink list="questions" href="/admin/questions" className="text-primary underline underline-offset-2 hover:text-ink">
           Question bank
         </ListBackLink>
         <span aria-hidden="true" className="mx-1.5 text-slate-500">/</span>
-        <span className="text-slate-700">{refLabel ?? "New question"}</span>
+        <span aria-current="page" className="text-slate-700">{refLabel ?? "New question"}</span>
       </nav>
 
       {/* On tablets and laptops the title, status and Save stay in view while scrolling. */}
