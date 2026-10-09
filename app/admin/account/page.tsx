@@ -18,7 +18,7 @@ export default async function AccountPage() {
     <>
       <PageHeader title="My account" description={me?.email ?? session.email} />
 
-      <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+      <div className="grid gap-4 lg:max-w-2xl">
         <section className={`${cardClass} p-5`}>
           <h2 className="mb-4 text-base font-semibold text-ink">Name</h2>
           <ChangeNameForm currentName={me?.full_name ?? null} />

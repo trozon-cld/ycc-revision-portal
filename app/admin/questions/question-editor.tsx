@@ -205,7 +205,8 @@ export function QuestionEditor({
         <span className="text-slate-700">{refLabel ?? "New question"}</span>
       </nav>
 
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+      {/* On laptops the title, status and Save stay in view while scrolling. */}
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3 lg:sticky lg:top-0 lg:z-10 lg:-mx-8 lg:border-b lg:border-slate-200 lg:bg-slate-50/95 lg:px-8 lg:py-3 lg:backdrop-blur">
         <div className="min-w-0">
           <h1 className="text-xl font-semibold text-ink">{refLabel ? `Question ${refLabel}` : "New question"}</h1>
           <p className="mt-0.5 text-sm text-slate-600">{questionTypeLabel(type)}</p>
@@ -254,7 +255,7 @@ export function QuestionEditor({
         </div>
       )}
 
-      <div role="group" aria-label="View" className="mb-3 inline-flex rounded-md border border-slate-300 bg-white p-0.5 lg:hidden">
+      <div role="group" aria-label="View" className="mb-3 inline-flex rounded-md border border-slate-300 bg-white p-0.5 xl:hidden">
         {(["edit", "preview"] as const).map((key) => (
           <button
             key={key}
@@ -268,8 +269,8 @@ export function QuestionEditor({
         ))}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <section aria-label="Question content" className={`min-w-0 space-y-4 ${tab === "preview" ? "hidden lg:block" : ""}`}>
+      <div className="grid gap-6 xl:grid-cols-[3fr_2fr]">
+        <section aria-label="Question content" className={`min-w-0 space-y-4 ${tab === "preview" ? "hidden xl:block" : ""}`}>
           <div className={`${cardClass} space-y-4 p-4`}>
             <div className="space-y-1">
               <label htmlFor="question-chapter" className={labelClass}>
@@ -424,8 +425,8 @@ export function QuestionEditor({
           </fieldset>
         </section>
 
-        <section aria-label="Live preview" className={`min-w-0 ${tab === "edit" ? "hidden lg:block" : ""}`}>
-          <div className="lg:sticky lg:top-4">
+        <section aria-label="Live preview" className={`min-w-0 ${tab === "edit" ? "hidden xl:block" : ""}`}>
+          <div className="xl:sticky xl:top-28">
             <QuestionPreview question={preview} media={media} shuffles={editor.shuffles(deferred.content)} chapter={previewChapter} />
           </div>
         </section>

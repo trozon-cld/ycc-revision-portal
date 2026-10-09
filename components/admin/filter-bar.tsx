@@ -37,9 +37,9 @@ export function FilterBar({
   );
 }
 
-export function FilterSearch({ name, label, defaultValue }: { name: string; label: string; defaultValue: string }) {
+export function FilterSearch({ name, label, defaultValue, wide = false }: { name: string; label: string; defaultValue: string; wide?: boolean }) {
   return (
-    <div className="col-span-2 sm:w-64">
+    <div className={`col-span-2 sm:w-64 ${wide ? "lg:w-80" : ""}`}>
       <label htmlFor={`filter-${name}`} className="sr-only">
         {label}
       </label>
@@ -67,7 +67,7 @@ export function FilterSelect({
   children: ReactNode;
 }) {
   return (
-    <div className="min-w-0 sm:w-48">
+    <div className="min-w-0 sm:w-48 lg:w-44">
       <label htmlFor={`filter-${name}`} className="sr-only">
         {label}
       </label>

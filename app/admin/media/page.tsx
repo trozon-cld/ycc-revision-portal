@@ -109,7 +109,7 @@ export default async function MediaPage({ searchParams }: PageProps<"/admin/medi
       )}
 
       <FilterBar action="/admin/media" clearHref="/admin/media" isFiltered={Boolean(search)}>
-        <FilterSearch name="q" label="Search descriptions or file names" defaultValue={search} />
+        <FilterSearch name="q" label="Search descriptions or file names" defaultValue={search} wide />
       </FilterBar>
 
       {media.length === 0 ? (
@@ -117,7 +117,7 @@ export default async function MediaPage({ searchParams }: PageProps<"/admin/medi
           {search ? "No pictures match your search." : "No pictures yet. Upload the first one."}
         </p>
       ) : (
-        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {media.map((item) => {
             const thumbUrl = thumbs.get(item.thumb_path);
             const thumbSize = fitWithin(item.width, item.height, THUMB_EDGE);
@@ -143,7 +143,8 @@ export default async function MediaPage({ searchParams }: PageProps<"/admin/medi
                   <div className="min-w-0 flex-1">
                     <p className="line-clamp-2 text-sm text-ink [overflow-wrap:anywhere]">{item.alt_text}</p>
                     <p className="mt-1 text-xs text-slate-600" title={item.original_name}>
-                      {item.width} × {item.height} · {formatBytes(item.byte_size)} · {formatType(item.mime_type)}
+                      <span className="lg:whitespace-nowrap">{item.width} × {item.height}</span> ·{" "}
+                      <span className="lg:whitespace-nowrap">{formatBytes(item.byte_size)}</span> · {formatType(item.mime_type)}
                     </p>
                     <p className="mt-0.5 text-xs text-slate-600">
                       {item.used_in === 0 && item.used_in_questions === 0 && item.used_in_covers === 0

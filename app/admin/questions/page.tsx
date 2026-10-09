@@ -136,7 +136,7 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
           const refLabel = questionRef(row.refNo);
           return (
             <Row key={row.id}>
-              <Cell kind="primary">
+              <Cell kind="primary" wide>
                 <div className="flex gap-2">
                   <span className="shrink-0 font-mono text-slate-600 tabular-nums">{refLabel}</span>
                   <div className="min-w-0 font-normal">
@@ -155,7 +155,7 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
                 </div>
               </Cell>
               <Cell label="Chapter">{row.chapterLabel}</Cell>
-              <Cell label="Type" nowrap>
+              <Cell label="Type">
                 {QUESTION_TYPES[row.type].label}
               </Cell>
               <Cell label="Status" nowrap>
@@ -164,7 +164,16 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
                 </Badge>
               </Cell>
               <Cell label="Used in">
-                {usedIn(row).join(", ") || <span className="text-slate-600">Not used</span>}
+                {usedIn(row).length > 0 ? (
+                  usedIn(row).map((use, index) => (
+                    <span key={use} className="xl:whitespace-nowrap">
+                      {use}
+                      {index < usedIn(row).length - 1 && ", "}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-slate-600">Not used</span>
+                )}
               </Cell>
               <Cell kind="actions">
                 <QuestionRowActions id={row.id} refLabel={refLabel} status={row.status} bookChapter={row.bookChapter} />

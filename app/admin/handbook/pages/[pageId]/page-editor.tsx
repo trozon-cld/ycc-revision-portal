@@ -203,7 +203,8 @@ export function PageEditor({
         </Link>
       </nav>
 
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+      {/* On laptops the title, status and Save stay in view while scrolling. */}
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3 lg:sticky lg:top-0 lg:z-10 lg:-mx-8 lg:border-b lg:border-slate-200 lg:bg-slate-50/95 lg:px-8 lg:py-3 lg:backdrop-blur">
         <div className="w-full min-w-0 space-y-1 sm:w-auto sm:max-w-md sm:flex-1">
           <label htmlFor="page-title" className={labelClass}>
             Page title <span className="font-normal text-slate-600">(only admins see this)</span>
@@ -256,7 +257,7 @@ export function PageEditor({
         </div>
       )}
 
-      <div role="group" aria-label="View" className="mb-3 inline-flex rounded-md border border-slate-300 bg-white p-0.5 lg:hidden">
+      <div role="group" aria-label="View" className="mb-3 inline-flex rounded-md border border-slate-300 bg-white p-0.5 xl:hidden">
         {(["edit", "preview"] as const).map((key) => (
           <button
             key={key}
@@ -270,8 +271,8 @@ export function PageEditor({
         ))}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <section aria-label="Page content" className={`min-w-0 space-y-3 ${tab === "preview" ? "hidden lg:block" : ""}`}>
+      <div className="grid gap-6 xl:grid-cols-[3fr_2fr]">
+        <section aria-label="Page content" className={`min-w-0 space-y-3 ${tab === "preview" ? "hidden xl:block" : ""}`}>
           {blocks.length === 0 ? (
             <p className="rounded-lg border border-dashed border-slate-300 bg-white px-4 py-6 text-center text-sm text-slate-600">
               This page is empty. Add your first block below, e.g. a heading.
@@ -317,8 +318,8 @@ export function PageEditor({
           </div>
         </section>
 
-        <section aria-label="Live preview" className={`min-w-0 ${tab === "edit" ? "hidden lg:block" : ""}`}>
-          <div className="lg:sticky lg:top-4">
+        <section aria-label="Live preview" className={`min-w-0 ${tab === "edit" ? "hidden xl:block" : ""}`}>
+          <div className="xl:sticky xl:top-28">
             <BookPreview
               pages={previewPages}
               media={media}

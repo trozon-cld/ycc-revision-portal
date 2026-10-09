@@ -82,7 +82,7 @@ export function AdminShell({ role, email, name, children }: { role: Role; email:
         )}
 
         <main className="min-w-0 flex-1">
-          <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</div>
+          <div className="mx-auto w-full max-w-6xl px-4 py-6 2xl:max-w-[90rem] sm:px-6 lg:px-8 lg:py-8">{children}</div>
         </main>
       </div>
     </ToastProvider>
