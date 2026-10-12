@@ -14,6 +14,7 @@ import { buttonClass, inputClass, labelClass } from "@/components/admin/styles";
 import { useToast } from "@/components/admin/toast";
 import { PicturePicker } from "@/components/admin/picture-picker";
 import { TITLE_MAX_LENGTH } from "@/lib/limits";
+import { NOT_THROUGH_MESSAGE, reachServer } from "@/lib/forms";
 import { getPreviewMedia, listPickerMedia, savePageContent, setPageStatus, type PickerItem } from "../actions";
 import { BlockEditor } from "./block-editor";
 
@@ -75,8 +76,10 @@ export function PageEditor({
     }
     const sentSnapshot = snapshotOf(title, blocks);
     startSaving(async () => {
-      const result = await savePageContent({ pageId, expectedVersion: version, title, blocks: savable });
-      if (result.ok) {
+      const result = await reachServer(() => savePageContent({ pageId, expectedVersion: version, title, blocks: savable }));
+      if (!result) {
+        setProblem({ message: NOT_THROUGH_MESSAGE });
+      } else if (result.ok) {
         setVersion(result.version);
         setSavedSnapshot(sentSnapshot);
         setProblem(null);
@@ -89,7 +92,7 @@ export function PageEditor({
 
   function publish(next: "draft" | "published") {
     startPublishing(async () => {
-      const result = await setPageStatus(pageId, next);
+      const result = (await reachServer(() => setPageStatus(pageId, next))) ?? { error: NOT_THROUGH_MESSAGE };
       toast(result.error ?? (next === "published" ? "Page published." : "Page is a draft again."));
       router.refresh();
     });
@@ -169,7 +172,7 @@ export function PageEditor({
     setBlocks((current) => current.map((block) => (block.id === blockId && block.type === "picture" ? { ...block, mediaId: item.id } : block)));
     if (item.thumbUrl) setThumbs((current) => ({ ...current, [item.id]: item.thumbUrl as string }));
     if (!media[item.id]) {
-      getPreviewMedia([item.id]).then((found) => setMedia((current) => ({ ...current, ...found })));
+      reachServer(() => getPreviewMedia([item.id])).then((found) => found && setMedia((current) => ({ ...current, ...found })));
     }
     requestAnimationFrame(() => document.getElementById(`${blockId}-caption`)?.focus());
   }

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition, type ReactNode } from "react";
-import type { FormState } from "@/lib/forms";
+import { NOT_THROUGH_MESSAGE, reachServer, type FormState } from "@/lib/forms";
 import { Dialog } from "./dialog";
 import { RowMenu } from "./row-menu";
 import { buttonClass, type ButtonVariant } from "./styles";
@@ -44,7 +44,7 @@ export function RowActions({ label, actions, triggerText }: { label: string; act
 
   function runInstant(action: InstantRowAction) {
     startTransition(async () => {
-      const result = await action.run();
+      const result = (await reachServer(action.run)) ?? { error: NOT_THROUGH_MESSAGE };
       const message = result.error ?? action.successMessage;
       if (message) toast(message);
       triggerRef.current?.focus();
@@ -99,7 +99,7 @@ export function ActionButton({ action, variant = "secondary" }: { action: PanelR
   function onClick() {
     if ("render" in action) return setOpen(true);
     startTransition(async () => {
-      const result = await action.run();
+      const result = (await reachServer(action.run)) ?? { error: NOT_THROUGH_MESSAGE };
       const message = result.error ?? action.successMessage;
       if (message) toast(message);
     });

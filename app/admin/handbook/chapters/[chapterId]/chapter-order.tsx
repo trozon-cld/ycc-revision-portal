@@ -9,6 +9,7 @@ import { PanelButton, RowActions, type RowAction } from "@/components/admin/row-
 import { buttonClass, inputClass } from "@/components/admin/styles";
 import { Cell, Row, Table } from "@/components/admin/table";
 import { useToast } from "@/components/admin/toast";
+import { NOT_THROUGH_MESSAGE, reachServer } from "@/lib/forms";
 import { setQuestionStatus } from "@/app/admin/questions/actions";
 import { addQuestionsToChapter, moveHandbookItem, removeQuestionForm } from "../../order-actions";
 import { PageRowActions } from "./page-row-actions";
@@ -44,7 +45,7 @@ export function ChapterOrder({ items }: { items: OrderItem[] }) {
     setOrder(next);
     setAnnouncement(`Moved to position ${to + 1} of ${order.length}.`);
     startMove(async () => {
-      const result = await moveHandbookItem(item.id, item.position, to + 1);
+      const result = (await reachServer(() => moveHandbookItem(item.id, item.position, to + 1))) ?? { error: NOT_THROUGH_MESSAGE };
       if (result.error) {
         toast(result.error);
         setOrder(items);
@@ -286,7 +287,7 @@ function AddQuestionsForm({ chapterId, questions, close }: { chapterId: string; 
     const ids = questions.filter((question) => chosen.has(question.id)).map((question) => question.id);
     if (ids.length === 0) return;
     startAdding(async () => {
-      const result = await addQuestionsToChapter(chapterId, ids);
+      const result = (await reachServer(() => addQuestionsToChapter(chapterId, ids))) ?? { error: NOT_THROUGH_MESSAGE };
       if (result.error) {
         setError(result.error);
         return;

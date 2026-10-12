@@ -9,6 +9,7 @@ import type { SectionOptions } from "@/lib/questions/queries";
 import { questionTypeLabel } from "@/lib/questions/registry";
 import type { QuestionType } from "@/lib/questions/types";
 import { parseQuestion, QUESTION_LIMITS } from "@/lib/questions/validate";
+import { NOT_THROUGH_MESSAGE, reachServer } from "@/lib/forms";
 import { Badge } from "@/components/admin/badge";
 import { Dialog } from "@/components/admin/dialog";
 import { BoldTextarea, Segmented } from "@/components/admin/editor-fields";
@@ -96,7 +97,11 @@ export function QuestionEditor({
     }
     const sent = JSON.stringify(draft);
     startSaving(async () => {
-      const result = await saveQuestion({ questionId, expectedVersion: version, type, ...draft });
+      const result = await reachServer(() => saveQuestion({ questionId, expectedVersion: version, type, ...draft }));
+      if (!result) {
+        setProblem({ message: NOT_THROUGH_MESSAGE });
+        return;
+      }
       if (!result.ok) {
         setProblem({ message: result.error, conflict: result.conflict });
         return;
@@ -148,13 +153,15 @@ export function QuestionEditor({
     pickFor?.(item.id);
     setPickFor(null);
     if (item.thumbUrl) setThumbs((current) => ({ ...current, [item.id]: item.thumbUrl as string }));
-    if (!media[item.id]) getPreviewMedia([item.id]).then((found) => setMedia((current) => ({ ...current, ...found })));
+    if (!media[item.id]) {
+      reachServer(() => getPreviewMedia([item.id])).then((found) => found && setMedia((current) => ({ ...current, ...found })));
+    }
   }
 
   function publish(next: "draft" | "published") {
     if (!questionId) return;
     startPublishing(async () => {
-      const result = await setQuestionStatus(questionId, next);
+      const result = (await reachServer(() => setQuestionStatus(questionId, next))) ?? { error: NOT_THROUGH_MESSAGE };
       toast(result.error ?? (next === "published" ? "Question published." : "Question is a draft again."));
       router.refresh();
     });
