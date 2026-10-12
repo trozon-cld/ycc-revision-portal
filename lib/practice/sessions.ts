@@ -550,9 +550,9 @@ export async function loadPracticeReport(userId: string, sessionId: string): Pro
 }
 
 // Home card: the run in progress in the current category, read only.
-export async function loadPracticeInProgress(userId: string): Promise<{ position: number; total: number } | null> {
-  const { rows } = await pool.query<{ position: number; total: number }>(
-    `select s.position, s.total from practice_sessions s join users u on u.id = s.user_id
+export async function loadPracticeInProgress(userId: string): Promise<{ id: string; position: number; total: number } | null> {
+  const { rows } = await pool.query<{ id: string; position: number; total: number }>(
+    `select s.id, s.position, s.total from practice_sessions s join users u on u.id = s.user_id
      where s.user_id = $1 and s.finished_at is null and s.category_id = u.current_category_id`,
     [userId]
   );

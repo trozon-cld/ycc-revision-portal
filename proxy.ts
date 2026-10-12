@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { signToken, verifyToken, type SessionPayload } from "@/lib/auth/jwt";
-import { AUTH_COOKIE_NAME, RENEW_AFTER_SECONDS } from "@/lib/auth/constants";
+import { AUTH_COOKIE_NAME, RENEW_AFTER_SECONDS, SESSION_ENDED_LOGIN } from "@/lib/auth/constants";
 import { sessionCookieOptions } from "@/lib/auth/cookie-options";
 
 // Optimistic routing by role from the sign-in cookie, and renewal of sign-ins in use. Blocking,
@@ -28,8 +28,9 @@ export async function proxy(request: NextRequest) {
     return renew(NextResponse.redirect(new URL(home, request.url)), session);
   }
 
+  // Signed out on a signed-in page (the sign-in ended, or an old link): the login form says why.
   if (!session) {
-    return NextResponse.redirect(new URL(LOGIN_PATH, request.url));
+    return NextResponse.redirect(new URL(SESSION_ENDED_LOGIN, request.url));
   }
 
   // Wrong area for this role: go to the user's own area.

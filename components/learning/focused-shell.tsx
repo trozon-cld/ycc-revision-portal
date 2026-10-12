@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode, type RefObject } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type MouseEvent, type ReactNode, type RefObject } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { DEFAULT_TEXT_SIZE, type TextSize } from "@/lib/content/book";
+import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { AccountLinks, HomeLogo } from "@/components/candidate/header";
+import { logOut } from "@/components/logout-button";
 import {
   BAR_BUTTON_DENSE,
   HOME_ICON,
@@ -51,6 +54,7 @@ export function FocusedShell({
   actions,
   timer,
   accountInSettings = false,
+  leaveWarning,
   scrollRef,
   children,
 }: {
@@ -70,6 +74,8 @@ export function FocusedShell({
   timer?: (place: "bar" | "strip") => ReactNode;
   // Help and Log out live in Settings on every screen (the Mock test keeps its bar for the clock).
   accountInSettings?: boolean;
+  // Mock test: leaving (Home, Help, Log out) asks first, on the page, with this text.
+  leaveWarning?: string;
   scrollRef?: RefObject<HTMLDivElement | null>;
   children: ReactNode;
 }) {
@@ -78,6 +84,33 @@ export function FocusedShell({
   const settingsButton = useRef<HTMLButtonElement>(null);
   const wasOpen = useRef(false);
   const wide = useSyncExternalStore(subscribeWide, () => window.matchMedia(WIDE_QUERY).matches, () => false);
+  const router = useRouter();
+  const [leaving, setLeaving] = useState<{ href: string } | { logout: true } | null>(null);
+  const stayButton = useRef<HTMLButtonElement>(null);
+
+  // With a leave warning, a tap on a link or Log out inside the frame asks first.
+  function onClickCapture(event: MouseEvent<HTMLDivElement>) {
+    if (!leaveWarning || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const target = event.target as Element;
+    const link = target.closest<HTMLAnchorElement>("a[href]");
+    const logout = target.closest("[data-logout]");
+    if (link && (link.target === "_blank" || link.origin !== window.location.origin)) return;
+    if (!link && !logout) return;
+    event.preventDefault();
+    event.stopPropagation();
+    setSettings(false);
+    setLeaving(link ? { href: link.pathname + link.search } : { logout: true });
+  }
+
+  function leave() {
+    if (!leaving) return;
+    if ("href" in leaving) router.push(leaving.href);
+    else logOut().catch(() => setLeaving(null));
+  }
+
+  useEffect(() => {
+    if (leaving) stayButton.current?.focus();
+  }, [leaving]);
 
   // Closing Settings puts focus back on its button.
   useEffect(() => {
@@ -91,7 +124,7 @@ export function FocusedShell({
 
   return (
     <ReaderLabelsContext.Provider value={showLabels}>
-      <div data-focused-owns-header="" className="flex h-dvh min-h-0 flex-col">
+      <div data-focused-owns-header="" onClickCapture={onClickCapture} className="flex h-dvh min-h-0 flex-col">
         {/* Three columns with equal sides, so the status stays in the middle of the screen, like the Handbook. */}
         <div
           role="toolbar"
@@ -174,6 +207,32 @@ export function FocusedShell({
               }
               onClose={() => setSettings(false)}
             />
+          )}
+          {leaving && leaveWarning && (
+            <div className="absolute inset-0 z-20 overflow-y-auto bg-white px-4 py-8">
+              <div
+                role="alertdialog"
+                aria-labelledby="leave-heading"
+                aria-describedby="leave-text"
+                onKeyDown={(event) => event.key === "Escape" && setLeaving(null)}
+                className="mx-auto max-w-xl rounded-xl border-2 border-primary bg-primary/5 p-5"
+              >
+                <h2 id="leave-heading" className="text-xl font-bold text-ink">
+                  Leave the test?
+                </h2>
+                <p id="leave-text" className="mt-2 text-lg leading-relaxed text-ink">
+                  {leaveWarning}
+                </p>
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                  <button ref={stayButton} type="button" onClick={() => setLeaving(null)} className={PRIMARY_BUTTON}>
+                    Stay in the test
+                  </button>
+                  <button type="button" onClick={leave} className={SECONDARY_BUTTON}>
+                    {"logout" in leaving ? "Leave and log out" : "Leave"}
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </div>

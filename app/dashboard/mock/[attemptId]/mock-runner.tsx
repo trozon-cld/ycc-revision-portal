@@ -170,6 +170,7 @@ export function MockRunner({ run, initialTextSize }: { run: MockRun; initialText
       onTextSizeChange={changeSize}
       timer={(place) => <MockClock seconds={secondsLeft} place={place} />}
       accountInSettings
+      leaveWarning={timeUp ? undefined : "Your timer keeps running while you’re away. Your answers so far are saved."}
       scrollRef={scrollRef}
     >
       <div className="mx-auto w-full max-w-3xl px-4 pt-5 pb-12 sm:pt-8">

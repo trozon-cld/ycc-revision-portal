@@ -5,6 +5,7 @@ import { SESSION_ENDED_LOGIN } from "@/lib/auth/constants";
 import { PageBody } from "@/components/candidate/page-body";
 import { loadSwitchableCategories } from "@/lib/candidates/categories";
 import { loadMockInProgress } from "@/lib/mock/attempts";
+import { loadPracticeInProgress } from "@/lib/practice/sessions";
 import { CHOICE_INPUT, CHOICE_ROW, ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { switchCategory } from "./actions";
 
@@ -16,7 +17,11 @@ const ERRORS: Record<string, string> = {
 
 export default async function ChangeCategoryPage({ searchParams }: PageProps<"/dashboard/category">) {
   const session = await requireRole(["candidate"]);
-  const [categories, mock] = await Promise.all([loadSwitchableCategories(session.sub), loadMockInProgress(session.sub)]);
+  const [categories, mock, practice] = await Promise.all([
+    loadSwitchableCategories(session.sub),
+    loadMockInProgress(session.sub),
+    loadPracticeInProgress(session.sub),
+  ]);
   if (categories.length === 0) redirect(SESSION_ENDED_LOGIN);
 
   const params = await searchParams;
@@ -51,6 +56,14 @@ export default async function ChangeCategoryPage({ searchParams }: PageProps<"/d
             {error && (
               <p role="alert" className={`mt-6 ${ERROR_BOX}`}>
                 {error}
+              </p>
+            )}
+            {practice && (
+              <p className="mt-6 rounded-xl border-2 border-amber-500 bg-amber-50 p-4 text-lg leading-relaxed text-amber-950">
+                <span className="font-bold">
+                  You have a practice in progress (question {Math.min(practice.position + 1, practice.total)} of {practice.total}).
+                </span>{" "}
+                Changing category ends it. Your answers so far are kept.
               </p>
             )}
 

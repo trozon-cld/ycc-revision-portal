@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { ERROR_BOX, PRIMARY_BUTTON } from "@/components/candidate/buttons";
 
 export default function LoginPage() {
@@ -8,6 +8,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Sent here because a sign-in ended (time limit, password changed elsewhere, or a page opened signed out).
+  const [ended, setEnded] = useState(false);
+  useEffect(() => {
+    setEnded(new URLSearchParams(window.location.search).has("ended"));
+  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -46,6 +51,12 @@ export default function LoginPage() {
           <h1 className="text-3xl font-bold text-ink">Log in</h1>
           <p className="mt-1 text-base text-ink/80">YCC Revision Portal</p>
         </div>
+
+        {ended && (
+          <p role="status" className="rounded-xl border-2 border-primary bg-primary/5 p-4 text-lg leading-relaxed text-ink">
+            You were logged out to keep your account safe. Log in again to carry on.
+          </p>
+        )}
 
         <div className="space-y-2">
           <label

@@ -2,7 +2,9 @@ import Link from "next/link";
 import { requireRole } from "@/lib/auth/guard";
 import { loadFaqItems, loadOwnAdminName, loadSupportContact } from "@/lib/faq/load";
 import { PageBody } from "@/components/candidate/page-body";
-import { PRIMARY_BUTTON } from "@/components/candidate/buttons";
+import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { loadMockInProgress } from "@/lib/mock/attempts";
+import { loadPracticeInProgress } from "@/lib/practice/sessions";
 
 const LINK = "inline-flex min-h-11 items-center font-semibold text-primary underline underline-offset-4 [overflow-wrap:anywhere] hover:no-underline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary";
 
@@ -16,7 +18,19 @@ function telHref(phone: string): string {
 // Help: general queries — the questions the Superadmin has shown, then who to contact.
 export default async function CandidateHelpPage() {
   const session = await requireRole(["candidate"]);
-  const [items, contact, adminName] = await Promise.all([loadFaqItems(true), loadSupportContact(), loadOwnAdminName(session.sub)]);
+  const [items, contact, adminName, mock, practice] = await Promise.all([
+    loadFaqItems(true),
+    loadSupportContact(),
+    loadOwnAdminName(session.sub),
+    loadMockInProgress(session.sub),
+    loadPracticeInProgress(session.sub),
+  ]);
+  // Opened from a test or practice in progress: the way back to it comes first.
+  const resume = mock
+    ? { href: `/dashboard/mock/${mock.id}`, label: "Back to your mock test" }
+    : practice
+      ? { href: `/dashboard/practice/${practice.id}`, label: "Back to your practice" }
+      : null;
   const hasSupport = Boolean(contact.email || contact.phone || contact.hours || contact.note);
 
   return (
@@ -104,9 +118,16 @@ export default async function CandidateHelpPage() {
           )}
         </section>
 
-        <Link href="/dashboard" className={`${PRIMARY_BUTTON} mt-8 w-full sm:w-auto`}>
-          Back to home
-        </Link>
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+          {resume && (
+            <Link href={resume.href} className={`${PRIMARY_BUTTON} w-full sm:w-auto`}>
+              {resume.label}
+            </Link>
+          )}
+          <Link href="/dashboard" className={`${resume ? SECONDARY_BUTTON : PRIMARY_BUTTON} w-full sm:w-auto`}>
+            Back to home
+          </Link>
+        </div>
       </div>
     </PageBody>
   );

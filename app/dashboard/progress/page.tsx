@@ -59,7 +59,12 @@ export default async function ProgressPage() {
               <p className="mt-3 text-base text-ink/80">This is a guide to help you prepare, not a prediction of your official result.</p>
             </>
           ) : (
-            <p className="mt-2 text-lg text-ink">Take a mock test to see your readiness score.</p>
+            <>
+              <p className="mt-2 text-lg text-ink">Take a mock test to see your readiness score.</p>
+              <Link href="/dashboard/mock" className={`${PRIMARY_BUTTON} mt-4 w-full sm:w-auto`}>
+                Go to Mock test
+              </Link>
+            </>
           )}
         </section>
 

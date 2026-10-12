@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { PRACTICE_SIZES, WEAK_BELOW, type PracticeOptions, type PracticeWay } from "@/lib/practice/types";
-import { CHOICE_INPUT, CHOICE_ROW, ERROR_BOX, PRIMARY_BUTTON } from "@/components/candidate/buttons";
+import { CHOICE_INPUT, CHOICE_ROW, ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { countOf } from "@/lib/format";
 import { startPracticeForm, type StartState } from "./actions";
 
@@ -184,7 +184,8 @@ export function PracticeSetup({ options, hasOpen, initialChapters = [] }: { opti
         )}
       </div>
 
-      <button type="submit" disabled={pending} className={`${PRIMARY_BUTTON} mt-2 w-full sm:w-auto`}>
+      {/* With a practice open, Continue (above) is the main button; this one starts over. */}
+      <button type="submit" disabled={pending} className={`${hasOpen ? SECONDARY_BUTTON : PRIMARY_BUTTON} mt-2 w-full sm:w-auto`}>
         {pending ? "Starting…" : hasOpen ? "Start a new practice" : "Start practice"}
       </button>
     </form>

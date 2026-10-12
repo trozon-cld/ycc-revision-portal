@@ -43,8 +43,10 @@ export function PracticeRunner({ initialStep, initialTextSize }: { initialStep: 
     scrollRef.current?.scrollTo({ top: 0 });
   }, [step.position]);
 
-  function leave() {
-    router.push("/dashboard/practice");
+  // Back to the Practice page, which says why ("empty": ended with nothing answered; "closed": ended
+  // elsewhere, e.g. another tab or a category change).
+  function leave(why: "empty" | "closed") {
+    router.push(`/dashboard/practice?ended=${why}`);
   }
 
   async function goNext() {
@@ -53,7 +55,7 @@ export function PracticeRunner({ initialStep, initialTextSize }: { initialStep: 
     setProblem(null);
     try {
       const reply = await nextPracticeQuestion(step.sessionId, step.position);
-      if (!reply.ok) return leave();
+      if (!reply.ok) return leave("closed");
       if ("finished" in reply) return router.refresh();
       moved.current = true;
       setStep(reply.step);
@@ -70,7 +72,7 @@ export function PracticeRunner({ initialStep, initialTextSize }: { initialStep: 
     try {
       const outcome = await endPracticeRun(step.sessionId);
       if (outcome === "finished") router.refresh();
-      else leave();
+      else leave(outcome === "removed" ? "empty" : "closed");
     } catch {
       setBusy(false);
       setProblem("Something went wrong. Please try again.");
@@ -148,7 +150,7 @@ export function PracticeRunner({ initialStep, initialTextSize }: { initialStep: 
                 return reply.checked;
               }
               if (reply.reason === "moved") {
-                leave();
+                leave("closed");
                 return false;
               }
               if (reply.reason === "gone") {
