@@ -16,7 +16,7 @@ import {
 } from "./actions";
 import { candidateProgressPath } from "@/lib/candidates/paths";
 import { NAME_MAX_LENGTH } from "@/lib/users/name";
-import { MIN_PASSWORD_LENGTH } from "@/lib/users/credentials";
+import { MAX_EMAIL_LENGTH, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from "@/lib/users/credentials";
 import { AccessLengthField } from "./access-length-field";
 import { CategoryOptions, type CategoryChoice } from "./category-options";
 
@@ -98,7 +98,7 @@ export function AdminCandidateActions({
             <input
               id={`email-${id}`}
               name="email"
-              type="email"
+              type="email" maxLength={MAX_EMAIL_LENGTH}
               required
               defaultValue={email}
               autoComplete="off"
@@ -315,6 +315,7 @@ function PasswordFields({ id }: { id: string }) {
           type="password"
           required
           minLength={MIN_PASSWORD_LENGTH}
+          maxLength={MAX_PASSWORD_LENGTH}
           autoComplete="new-password"
           className={inputClass}
         />
@@ -326,6 +327,7 @@ function PasswordFields({ id }: { id: string }) {
           type="password"
           required
           minLength={MIN_PASSWORD_LENGTH}
+          maxLength={MAX_PASSWORD_LENGTH}
           autoComplete="new-password"
           className={inputClass}
         />

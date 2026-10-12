@@ -8,7 +8,7 @@ import { logActivity } from "@/lib/audit/log";
 import { requireRole } from "@/lib/auth/guard";
 import { setSessionCookie } from "@/lib/auth/cookies";
 import { NO_NAME, normaliseName, validateName } from "@/lib/users/name";
-import { DUPLICATE_EMAIL, EMAIL_PATTERN, MIN_PASSWORD_LENGTH } from "@/lib/users/credentials";
+import { BCRYPT_COST, DUPLICATE_EMAIL, EMAIL_PATTERN, EMAIL_TOO_LONG, isPasswordTooLong, MAX_EMAIL_LENGTH, MIN_PASSWORD_LENGTH, PASSWORD_TOO_LONG } from "@/lib/users/credentials";
 import type { FormState } from "@/lib/forms";
 
 export type AccountActionState = FormState;
@@ -59,6 +59,9 @@ export async function updateOwnEmail(
   if (!EMAIL_PATTERN.test(email)) {
     return { error: "Enter a valid email address." };
   }
+  if (email.length > MAX_EMAIL_LENGTH) {
+    return { error: EMAIL_TOO_LONG };
+  }
   if (!(await currentPasswordMatches(session.sub, currentPassword))) {
     return { error: WRONG_PASSWORD };
   }
@@ -107,6 +110,9 @@ export async function updateOwnPassword(
   if (password.length < MIN_PASSWORD_LENGTH) {
     return { error: `New password must be at least ${MIN_PASSWORD_LENGTH} characters.` };
   }
+  if (isPasswordTooLong(password)) {
+    return { error: PASSWORD_TOO_LONG };
+  }
   if (password !== confirmPassword) {
     return { error: "The two new passwords don't match." };
   }
@@ -114,7 +120,7 @@ export async function updateOwnPassword(
     return { error: WRONG_PASSWORD };
   }
 
-  const passwordHash = await bcrypt.hash(password, 12);
+  const passwordHash = await bcrypt.hash(password, BCRYPT_COST);
   // A new password signs out every other device; this one gets a fresh sign-in so it stays in.
   const version = await withTransaction(async (client) => {
     const { rows } = await client.query<{ session_version: number }>(

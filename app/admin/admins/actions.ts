@@ -7,7 +7,7 @@ import { requireRole } from "@/lib/auth/guard";
 import { getErrorCode, withTransaction } from "@/lib/db/transaction";
 import { logActivity } from "@/lib/audit/log";
 import { NO_NAME, normaliseName, validateName } from "@/lib/users/name";
-import { DUPLICATE_EMAIL, EMAIL_PATTERN, MIN_PASSWORD_LENGTH } from "@/lib/users/credentials";
+import { BCRYPT_COST, DUPLICATE_EMAIL, EMAIL_PATTERN, EMAIL_TOO_LONG, isPasswordTooLong, MAX_EMAIL_LENGTH, MIN_PASSWORD_LENGTH, PASSWORD_TOO_LONG } from "@/lib/users/credentials";
 import type { FormState } from "@/lib/forms";
 import { isUuid } from "@/lib/ids";
 
@@ -35,11 +35,17 @@ export async function createAdmin(
   if (!EMAIL_PATTERN.test(email)) {
     return { error: "Enter a valid email address." };
   }
+  if (email.length > MAX_EMAIL_LENGTH) {
+    return { error: EMAIL_TOO_LONG };
+  }
   if (password.length < MIN_PASSWORD_LENGTH) {
     return { error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` };
   }
+  if (isPasswordTooLong(password)) {
+    return { error: PASSWORD_TOO_LONG };
+  }
 
-  const passwordHash = await bcrypt.hash(password, 12);
+  const passwordHash = await bcrypt.hash(password, BCRYPT_COST);
 
   try {
     await withTransaction(async (client) => {
@@ -116,6 +122,9 @@ export async function updateAdminEmail(
   if (!EMAIL_PATTERN.test(email)) {
     return { error: "Enter a valid email address." };
   }
+  if (email.length > MAX_EMAIL_LENGTH) {
+    return { error: EMAIL_TOO_LONG };
+  }
 
   try {
     const result = await withTransaction<AdminActionState>(async (client) => {
@@ -159,11 +168,14 @@ export async function updateAdminPassword(
   if (password.length < MIN_PASSWORD_LENGTH) {
     return { error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` };
   }
+  if (isPasswordTooLong(password)) {
+    return { error: PASSWORD_TOO_LONG };
+  }
   if (password !== confirmPassword) {
     return { error: "The two passwords don't match." };
   }
 
-  const passwordHash = await bcrypt.hash(password, 12);
+  const passwordHash = await bcrypt.hash(password, BCRYPT_COST);
 
   try {
     return await withTransaction<AdminActionState>(async (client) => {

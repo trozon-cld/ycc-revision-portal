@@ -11,7 +11,11 @@ export function LogoutButton({ className = DEFAULT_CLASS }: { className?: string
   async function handleLogout() {
     setBusy(true);
     try {
-      const response = await fetch("/api/auth/logout", { method: "POST" });
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
       if (!response.ok) throw new Error(`Logout failed (${response.status})`);
       window.location.href = "/login";
     } catch {

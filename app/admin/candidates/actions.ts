@@ -12,7 +12,7 @@ import { NO_NAME, normaliseName, validateName } from "@/lib/users/name";
 import { accessBaseDate, accessEndSql, formatUkDate, resolveAccessEndDate } from "@/lib/candidates/access";
 import { isUuid } from "@/lib/ids";
 import { settleMocks } from "@/lib/mock/attempts";
-import { DUPLICATE_EMAIL, EMAIL_PATTERN, MIN_PASSWORD_LENGTH } from "@/lib/users/credentials";
+import { BCRYPT_COST, DUPLICATE_EMAIL, EMAIL_PATTERN, EMAIL_TOO_LONG, isPasswordTooLong, MAX_EMAIL_LENGTH, MIN_PASSWORD_LENGTH, PASSWORD_TOO_LONG } from "@/lib/users/credentials";
 import type { FormState } from "@/lib/forms";
 
 export type CandidateActionState = FormState;
@@ -52,15 +52,21 @@ export async function createCandidate(
   if (!EMAIL_PATTERN.test(email)) {
     return { error: "Enter a valid email address." };
   }
+  if (email.length > MAX_EMAIL_LENGTH) {
+    return { error: EMAIL_TOO_LONG };
+  }
   if (password.length < MIN_PASSWORD_LENGTH) {
     return { error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` };
+  }
+  if (isPasswordTooLong(password)) {
+    return { error: PASSWORD_TOO_LONG };
   }
   const access = resolveAccessEndDate(formData);
   if ("error" in access) {
     return { error: access.error };
   }
 
-  const passwordHash = await bcrypt.hash(password, 12);
+  const passwordHash = await bcrypt.hash(password, BCRYPT_COST);
 
   try {
     await withTransaction(async (client) => {
@@ -130,6 +136,9 @@ export async function updateCandidateEmail(
   if (!EMAIL_PATTERN.test(email)) {
     return { error: "Enter a valid email address." };
   }
+  if (email.length > MAX_EMAIL_LENGTH) {
+    return { error: EMAIL_TOO_LONG };
+  }
 
   return changeOwnCandidate(session, formData, async (client, id, candidate) => {
     if (candidate.email === email) return;
@@ -155,11 +164,14 @@ export async function updateCandidatePassword(
   if (password.length < MIN_PASSWORD_LENGTH) {
     return { error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` };
   }
+  if (isPasswordTooLong(password)) {
+    return { error: PASSWORD_TOO_LONG };
+  }
   if (password !== confirmPassword) {
     return { error: "The two passwords don't match." };
   }
 
-  const passwordHash = await bcrypt.hash(password, 12);
+  const passwordHash = await bcrypt.hash(password, BCRYPT_COST);
   return changeOwnCandidate(session, formData, async (client, id, candidate) => {
     // Also signs the candidate out everywhere (their sign-ins carry the old version).
     await client.query(`update users set password_hash = $2, session_version = session_version + 1 where id = $1`, [
