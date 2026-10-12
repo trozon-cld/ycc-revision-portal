@@ -5,6 +5,7 @@ import { requireRole } from "@/lib/auth/guard";
 import { SESSION_ENDED_LOGIN } from "@/lib/auth/constants";
 import { coverPreloads, loadCandidateBook } from "@/lib/content/candidate-book";
 import { PRIMARY_BUTTON } from "@/components/candidate/buttons";
+import { PageBody } from "@/components/candidate/page-body";
 import { PrepareReader } from "./prepare-reader";
 
 export default async function PreparePage() {
@@ -14,18 +15,17 @@ export default async function PreparePage() {
 
   if (book.pages.length === 0) {
     return (
-      <div className="mx-auto w-full max-w-2xl px-4 pt-6 pb-10 sm:pt-8">
-        <h1 className="text-3xl font-bold text-ink">Prepare</h1>
-        <p className="mt-4 text-lg leading-relaxed text-ink">
-          The Handbook for {book.categoryName} isn’t ready yet. Please check back soon.
-        </p>
-        <Link
-          href="/dashboard"
-          className={`${PRIMARY_BUTTON} mt-8`}
-        >
-          Back to home
-        </Link>
-      </div>
+      <PageBody>
+        <div className="max-w-2xl">
+          <h1 className="text-3xl font-bold text-ink">Prepare</h1>
+          <p className="mt-4 text-lg leading-relaxed text-ink">
+            There’s no Handbook for {book.categoryName} yet. Please check back soon.
+          </p>
+          <Link href="/dashboard" className={`${PRIMARY_BUTTON} mt-8 w-full sm:w-auto`}>
+            Back to home
+          </Link>
+        </div>
+      </PageBody>
     );
   }
 
@@ -33,7 +33,7 @@ export default async function PreparePage() {
   for (const { href, priority } of coverPreloads(book)) preload(href, { as: "image", fetchPriority: priority });
 
   return (
-    <div className="flex h-[calc(100dvh-var(--candidate-header))] min-h-[480px] flex-col lg:h-dvh phone-upright:h-dvh phone-sideways:h-dvh phone-sideways:min-h-0">
+    <div className="flex h-dvh min-h-[480px] flex-col phone-sideways:min-h-0">
       <h1 className="sr-only">Prepare: Handbook for {book.categoryName}</h1>
       <PrepareReader
         categoryId={book.categoryId}

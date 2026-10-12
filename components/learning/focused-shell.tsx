@@ -107,7 +107,7 @@ export function FocusedShell({
               {word("Home")}
             </Link>
           </div>
-          <span className="min-w-0 truncate px-1 text-center text-base font-semibold text-ink lg:text-lg">
+          <span className="min-w-0 truncate px-1 text-center text-base font-semibold text-ink">
             {shortStatus ? (
               <>
                 <span className="phone-upright:hidden">{status}</span>

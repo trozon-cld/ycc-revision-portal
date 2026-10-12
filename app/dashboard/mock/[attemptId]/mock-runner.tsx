@@ -178,7 +178,7 @@ export function MockRunner({ run, initialTextSize }: { run: MockRun; initialText
         </p>
         {reminder && !timeUp && (
           <div role="status" className="mb-5 flex flex-col gap-3 rounded-xl border-2 border-red-700 bg-red-50 p-4 sm:flex-row sm:items-center">
-            <p className="flex-1 text-lg font-semibold text-red-800">5 minutes remaining. Please review unanswered questions.</p>
+            <p className="flex-1 text-lg font-semibold text-red-800">5 minutes left. Please check any questions you haven’t answered.</p>
             {!reviewing && (
               <button type="button" onClick={openReview} className={`${PRIMARY_BUTTON} w-full sm:w-auto`}>
                 Review answers
@@ -231,7 +231,7 @@ export function MockRunner({ run, initialTextSize }: { run: MockRun; initialText
 
             <div className="mt-5 grid gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-start">
               <button type="button" onClick={() => (isLast ? openReview() : goTo(position + 1))} className={`${PRIMARY_BUTTON} w-full sm:order-3 sm:w-auto sm:justify-self-end`}>
-                {isLast ? "Review answers" : "Next"}
+                {isLast ? "Review answers" : "Next question"}
                 {!isLast && (
                   <svg viewBox="0 0 24 24" aria-hidden="true" className="size-6" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M9 6l6 6-6 6" />
@@ -245,13 +245,13 @@ export function MockRunner({ run, initialTextSize }: { run: MockRun; initialText
                 <svg viewBox="0 0 24 24" aria-hidden="true" className="size-6" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M15 6l-6 6 6 6" />
                 </svg>
-                Previous
+                Previous question
               </button>
             </div>
 
             {!isLast && (
               <button type="button" onClick={openReview} className={`${SECONDARY_BUTTON} mt-3 w-full sm:w-auto`}>
-                Review all answers
+                Review answers
               </button>
             )}
             <p className={`mt-4 text-base ${saver.status === "retrying" ? "font-semibold text-amber-950" : "text-ink/80"}`}>

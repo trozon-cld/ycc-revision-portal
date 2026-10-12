@@ -5,7 +5,7 @@ import { SESSION_ENDED_LOGIN } from "@/lib/auth/constants";
 import { PageBody } from "@/components/candidate/page-body";
 import { loadSwitchableCategories } from "@/lib/candidates/categories";
 import { loadMockInProgress } from "@/lib/mock/attempts";
-import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { CHOICE_INPUT, CHOICE_ROW, ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { switchCategory } from "./actions";
 
 const ERRORS: Record<string, string> = {
@@ -28,7 +28,7 @@ export default async function ChangeCategoryPage({ searchParams }: PageProps<"/d
       <div className="max-w-2xl">
         <h1 className="text-3xl font-bold text-ink">Change category</h1>
         <p className="mt-3 text-lg leading-relaxed text-ink">
-          Your Handbook, Practice questions and Mock tests follow the category you choose. You can change it again at
+          Your Handbook, Practice questions and mock tests follow the category you choose. You can change it again at
           any time.
         </p>
 
@@ -49,7 +49,7 @@ export default async function ChangeCategoryPage({ searchParams }: PageProps<"/d
         ) : (
           <>
             {error && (
-              <p role="alert" className="mt-6 rounded-xl border-2 border-red-700 bg-red-50 p-4 text-lg font-semibold text-red-800">
+              <p role="alert" className={`mt-6 ${ERROR_BOX}`}>
                 {error}
               </p>
             )}
@@ -59,17 +59,14 @@ export default async function ChangeCategoryPage({ searchParams }: PageProps<"/d
                 <legend className="mb-3 text-xl font-bold text-ink">Choose a category</legend>
                 <div className="flex flex-col gap-3">
                   {categories.map((category) => (
-                    <label
-                      key={category.id}
-                      className="flex min-h-16 cursor-pointer items-center gap-4 rounded-xl border-2 border-ink/20 bg-white px-5 py-3 hover:border-primary has-checked:border-primary has-checked:bg-primary/5 has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-primary"
-                    >
+                    <label key={category.id} className={CHOICE_ROW}>
                       <input
                         type="radio"
                         name="categoryId"
                         value={category.id}
                         defaultChecked={category.isCurrent}
                         required
-                        className="size-6 shrink-0 accent-primary focus-visible:outline-none"
+                        className={CHOICE_INPUT}
                       />
                       <span className="flex min-w-0 flex-col">
                         <span className="text-lg font-semibold text-ink [overflow-wrap:anywhere]">{category.name}</span>

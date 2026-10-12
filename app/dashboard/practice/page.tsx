@@ -47,7 +47,7 @@ export default async function PracticePage({ searchParams }: PageProps<"/dashboa
           {options.total === 0 ? (
             <div className="mt-8">
               <p className="text-lg leading-relaxed text-ink">There are no practice questions for {options.categoryName} yet. Please check back soon.</p>
-              <Link href="/dashboard" className={`${PRIMARY_BUTTON} mt-6`}>
+              <Link href="/dashboard" className={`${PRIMARY_BUTTON} mt-6 w-full sm:w-auto`}>
                 Back to home
               </Link>
             </div>

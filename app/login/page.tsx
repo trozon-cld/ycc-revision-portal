@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { ERROR_BOX, PRIMARY_BUTTON } from "@/components/candidate/buttons";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -39,11 +40,11 @@ export default function LoginPage() {
     <main className="flex flex-1 items-center justify-center p-4">
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-sm space-y-5 rounded-xl border border-ink/15 p-6 sm:p-8"
+        className="w-full max-w-sm space-y-5 rounded-xl border-2 border-ink/15 p-6 sm:p-8"
       >
         <div>
-          <h1 className="text-2xl font-semibold text-ink">Log in</h1>
-          <p className="mt-1 text-base text-ink/70">YCC Revision Portal</p>
+          <h1 className="text-3xl font-bold text-ink">Log in</h1>
+          <p className="mt-1 text-base text-ink/80">YCC Revision Portal</p>
         </div>
 
         <div className="space-y-2">
@@ -85,7 +86,7 @@ export default function LoginPage() {
         </div>
 
         {error && (
-          <p role="alert" className="text-base text-red-700">
+          <p role="alert" className={ERROR_BOX}>
             {error}
           </p>
         )}
@@ -93,7 +94,7 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full rounded-lg bg-primary px-4 py-3 text-base font-medium text-surface transition-colors hover:bg-primary/90 disabled:opacity-60"
+          className={`${PRIMARY_BUTTON} w-full`}
         >
           {isSubmitting ? "Logging in…" : "Log in"}
         </button>

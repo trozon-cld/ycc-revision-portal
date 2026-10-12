@@ -13,7 +13,7 @@ function telHref(phone: string): string {
   return `tel:${international ? "+" : ""}${digits}`;
 }
 
-// General queries: the questions the Superadmin has shown, then who to contact.
+// Help: general queries — the questions the Superadmin has shown, then who to contact.
 export default async function CandidateHelpPage() {
   const session = await requireRole(["candidate"]);
   const [items, contact, adminName] = await Promise.all([loadFaqItems(true), loadSupportContact(), loadOwnAdminName(session.sub)]);
@@ -22,7 +22,7 @@ export default async function CandidateHelpPage() {
   return (
     <PageBody>
       <div className="max-w-3xl">
-        <h1 className="text-3xl font-bold text-ink">General queries</h1>
+        <h1 className="text-3xl font-bold text-ink">Help: general queries</h1>
         <p className="mt-2 text-lg text-ink">Answers to common questions about using the portal. Tap a question to see its answer.</p>
 
         {items.length === 0 ? (
@@ -104,7 +104,7 @@ export default async function CandidateHelpPage() {
           )}
         </section>
 
-        <Link href="/dashboard" className={`${PRIMARY_BUTTON} mt-8`}>
+        <Link href="/dashboard" className={`${PRIMARY_BUTTON} mt-8 w-full sm:w-auto`}>
           Back to home
         </Link>
       </div>

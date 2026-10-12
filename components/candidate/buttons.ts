@@ -9,3 +9,6 @@ export const SECONDARY_BUTTON = `${BASE} border-2 border-ink/25 bg-white text-in
 export const CHOICE_ROW =
   "flex min-h-16 cursor-pointer items-center gap-4 rounded-xl border-2 border-ink/20 bg-white px-5 py-3 hover:border-primary has-checked:border-primary has-checked:bg-primary/5 has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-primary has-disabled:cursor-default has-disabled:border-ink/10 has-disabled:bg-ink/5 has-disabled:text-ink/60";
 export const CHOICE_INPUT = "size-6 shrink-0 accent-primary focus-visible:outline-none";
+
+// Something went wrong or can't be done: one red box everywhere on candidate pages.
+export const ERROR_BOX = "rounded-xl border-2 border-red-700 bg-red-50 p-4 text-lg font-semibold text-red-800";

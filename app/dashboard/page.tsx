@@ -8,6 +8,7 @@ import { loadMockInProgress, settleOwnMocks } from "@/lib/mock/attempts";
 import { scoreText, timeLeftText } from "@/lib/mock/types";
 import { loadPracticeInProgress } from "@/lib/practice/sessions";
 import { loadProgress } from "@/lib/progress/overview";
+import { SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { PageBody } from "@/components/candidate/page-body";
 import { SectionCard, SectionIcons } from "@/components/candidate/section-card";
 
@@ -69,10 +70,7 @@ export default async function CandidateHomePage({ searchParams }: PageProps<"/da
           <p className="mt-1 text-2xl font-bold text-ink [overflow-wrap:anywhere]">{home.current.name}</p>
           <p className="mt-1 text-base text-ink/80">Group: {home.current.groupName}</p>
           {home.choices > 1 && (
-            <Link
-              href="/dashboard/category"
-              className="mt-4 inline-flex min-h-14 items-center justify-center rounded-lg border-2 border-primary bg-white px-6 text-lg font-semibold text-primary hover:bg-primary/5 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary"
-            >
+            <Link href="/dashboard/category" className={`${SECONDARY_BUTTON} mt-4 w-full sm:w-auto`}>
               Change category
             </Link>
           )}
@@ -85,7 +83,7 @@ export default async function CandidateHomePage({ searchParams }: PageProps<"/da
           <ul className="grid gap-4 sm:grid-cols-2">
             <li>
               <SectionCard
-                title="General queries"
+                title="Help: general queries"
                 description="Answers to common questions and how to get help."
                 icon={SectionIcons.help}
                 href="/dashboard/help"

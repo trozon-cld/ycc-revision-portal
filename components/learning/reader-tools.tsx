@@ -215,7 +215,7 @@ export function ReaderBar({
     return (
       <div ref={barRef} role="toolbar" aria-label="Reader tools" className="flex items-center gap-2 border-b border-slate-300 bg-white px-3 py-2">
         {leftTools}
-        <span aria-hidden="true" className="min-w-0 flex-1 truncate px-2 text-center text-base font-medium text-ink">
+        <span aria-hidden="true" className="min-w-0 flex-1 truncate px-2 text-center text-base font-semibold text-ink">
           {status}
         </span>
         {rightTools}
@@ -230,7 +230,7 @@ export function ReaderBar({
         className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-slate-300 bg-white px-6 py-2"
       >
         <div className="flex min-w-0 items-center gap-2">{leftTools}</div>
-        <span aria-hidden="true" className="whitespace-nowrap px-2 text-center text-base font-medium text-ink">
+        <span aria-hidden="true" className="whitespace-nowrap px-2 text-center text-base font-semibold text-ink">
           {status}
         </span>
         <div className="flex min-w-0 items-center justify-end gap-2">{rightTools}</div>

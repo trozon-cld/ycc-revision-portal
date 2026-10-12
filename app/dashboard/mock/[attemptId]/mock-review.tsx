@@ -1,7 +1,7 @@
 "use client";
 
 import type { RefObject } from "react";
-import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { countOf } from "@/lib/format";
 
 // The review screen before submitting: every question as a numbered tile (answered, not answered,
@@ -114,7 +114,7 @@ export function MockReview({
             </button>
           </div>
         )}
-        <div aria-live="polite">{problem && <p className="mt-4 text-lg font-semibold text-red-800">{problem}</p>}</div>
+        <div aria-live="polite">{problem && <p className={`mt-4 ${ERROR_BOX}`}>{problem}</p>}</div>
       </div>
     </div>
   );

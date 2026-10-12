@@ -653,7 +653,8 @@ export function BookReader({
   const wide = (stageSize?.width ?? 0) >= SPREAD_MIN_WIDTH;
   // Previous/Next beside the page and the page status in the bar (laptops, desktops, sideways phones).
   const sideNav = wide || sideways;
-  const phone = Boolean(homeHref) && (compact || sideways);
+  // Without the laptop bar's logo, Help and Log out: Home goes in the bar, the rest in Settings.
+  const phone = Boolean(homeHref) && !wide;
 
   const sheetStyle = geometry
     ? ({
@@ -792,7 +793,7 @@ export function BookReader({
       aria-label={label}
       tabIndex={-1}
       onKeyDown={onKeyDown}
-      // Tells the page's CSS to hide the candidate header on phones (see app/globals.css).
+      // Tells the page's CSS to hide the candidate header (see app/globals.css).
       data-reader-owns-header={homeHref ? "" : undefined}
       className="flex h-full min-h-0 flex-col bg-slate-100 text-ink outline-none"
     >
@@ -808,7 +809,7 @@ export function BookReader({
           hasQuestions={results.length > 0}
           dense={sideNav}
           narrow={(stageSize?.width ?? 0) < ROOMY_BAR}
-          stacked={!sideNav && !compact && (stageSize?.width ?? 0) < STACKED_BAR_BELOW}
+          stacked={!sideNav && !compact && (phone || (stageSize?.width ?? 0) < STACKED_BAR_BELOW)}
           status={sideNav ? status : undefined}
           centreStatus={!sideways}
           start={wide ? barStart : undefined}

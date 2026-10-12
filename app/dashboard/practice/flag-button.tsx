@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ERROR_BOX } from "@/components/candidate/buttons";
 import { FlagToggle } from "@/components/candidate/flag-toggle";
 import { setQuestionFlag } from "./actions";
 
@@ -32,7 +33,7 @@ export function FlagButton({ questionId, initialFlagged, className = "" }: { que
   return (
     <div className={className}>
       <FlagToggle flagged={flagged} onClick={toggle} disabled={busy} />
-      <div aria-live="polite">{problem && <p className="mt-2 text-base font-semibold text-ink">This question can’t be flagged right now.</p>}</div>
+      <div aria-live="polite">{problem && <p className={`mt-2 ${ERROR_BOX}`}>This question can’t be flagged right now.</p>}</div>
     </div>
   );
 }

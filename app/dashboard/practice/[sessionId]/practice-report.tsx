@@ -2,7 +2,7 @@ import Link from "next/link";
 import { formatUkDate } from "@/lib/candidates/access";
 import type { PracticeReport } from "@/lib/practice/sessions";
 import { PageBody } from "@/components/candidate/page-body";
-import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { ChapterResults } from "@/components/candidate/chapter-results";
 import { InlineText } from "@/components/learning/inline-text";
 import { ReviewQuestion } from "@/components/learning/questions/review-question";
@@ -53,8 +53,11 @@ export function PracticeReportView({ report, againUnavailable }: { report: Pract
             {report.categoryName} · {what} · {date}
           </p>
 
-          <section aria-label="Score" className="mt-6 rounded-xl border-2 border-primary/30 bg-primary/5 p-5 sm:p-6">
-            <p className="text-ink">
+          <section aria-labelledby="score-heading" className="mt-6 rounded-xl border-2 border-primary/30 bg-primary/5 p-5 sm:p-6">
+            <h2 id="score-heading" className="text-base font-semibold text-ink/80">
+              Your score
+            </h2>
+            <p className="mt-1 text-ink">
               <span className="text-5xl font-bold">{report.rightCount}</span>
               <span className="text-2xl font-semibold"> of {report.answered} right</span>
             </p>
@@ -77,7 +80,7 @@ export function PracticeReportView({ report, againUnavailable }: { report: Pract
           </section>
 
           {againUnavailable && (
-            <p role="alert" className="mt-6 rounded-xl border-2 border-red-700 bg-red-50 p-4 text-lg font-semibold text-red-800">
+            <p role="alert" className={`mt-6 ${ERROR_BOX}`}>
               These questions can’t be practised again right now. Try a new practice instead.
             </p>
           )}

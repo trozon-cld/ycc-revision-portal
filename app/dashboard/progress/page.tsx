@@ -68,7 +68,7 @@ export default async function ProgressPage() {
             Handbook
           </h2>
           {handbook.total === 0 ? (
-            <p className="mt-2 text-lg text-ink">There’s no Handbook for {progress.categoryName} yet.</p>
+            <p className="mt-2 text-lg text-ink">There’s no Handbook for {progress.categoryName} yet. Please check back soon.</p>
           ) : (
             <>
               <p className="mt-2 text-lg text-ink">
@@ -95,7 +95,7 @@ export default async function ProgressPage() {
             Practice
           </h2>
           {practice.pool === 0 ? (
-            <p className="mt-2 text-lg text-ink">There are no practice questions for {progress.categoryName} yet.</p>
+            <p className="mt-2 text-lg text-ink">There are no practice questions for {progress.categoryName} yet. Please check back soon.</p>
           ) : (
             <>
               <p className="mt-2 text-lg text-ink">
@@ -104,7 +104,7 @@ export default async function ProgressPage() {
               <Bar share={practice.practised / practice.pool} />
               <p className="mt-3 text-lg text-ink">
                 {practice.tries > 0
-                  ? `${scorePercent(practice.right, practice.tries)}% of your answers right (${practice.right} of ${practice.tries}).`
+                  ? `${practice.right} of ${practice.tries} answers right (${scorePercent(practice.right, practice.tries)}%).`
                   : "You haven’t practised any questions yet."}
                 {practice.flagged > 0 && ` ${countOf(practice.flagged, "question")} flagged for review.`}
               </p>
@@ -167,6 +167,10 @@ export default async function ProgressPage() {
             </>
           )}
         </section>
+
+        <Link href="/dashboard" className={`${SECONDARY_BUTTON} mt-8 w-full sm:w-auto`}>
+          Back to home
+        </Link>
 
         <p className="mt-8 text-base text-ink/80">Designed to help you prepare with confidence.</p>
       </div>

@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { PRACTICE_SIZES, WEAK_BELOW, type PracticeOptions, type PracticeWay } from "@/lib/practice/types";
-import { CHOICE_INPUT, CHOICE_ROW, PRIMARY_BUTTON } from "@/components/candidate/buttons";
+import { CHOICE_INPUT, CHOICE_ROW, ERROR_BOX, PRIMARY_BUTTON } from "@/components/candidate/buttons";
 import { countOf } from "@/lib/format";
 import { startPracticeForm, type StartState } from "./actions";
 
@@ -178,7 +178,7 @@ export function PracticeSetup({ options, hasOpen, initialChapters = [] }: { opti
 
       <div aria-live="polite" className="mt-6">
         {state.error && (
-          <p role="alert" className="rounded-xl border-2 border-red-700 bg-red-50 p-4 text-lg font-semibold text-red-800">
+          <p role="alert" className={ERROR_BOX}>
             {state.error}
           </p>
         )}

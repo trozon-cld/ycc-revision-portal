@@ -16,7 +16,7 @@ const validPosition = (value: unknown): value is number => Number.isInteger(valu
 export async function startPracticeForm(_prev: StartState, formData: FormData): Promise<StartState> {
   const session = await requireRole(["candidate"]);
   const way = formData.get("way");
-  if (!isPracticeWay(way)) return { error: "Choose what you'd like to practise." };
+  if (!isPracticeWay(way)) return { error: "Choose what you’d like to practise." };
   const field = way === "chapters" ? "chapter" : way === "types" ? "type" : null;
   const choices = field ? formData.getAll(field).map(String).slice(0, MAX_CHOICES) : [];
   if (way === "chapters" && !choices.every(isUuid)) return { error: "Choose at least one chapter." };

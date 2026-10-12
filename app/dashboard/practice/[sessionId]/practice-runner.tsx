@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import type { TextSize } from "@/lib/content/book";
 import type { PracticeStep } from "@/lib/practice/types";
 import { QuestionView, type QuestionViewState } from "@/components/learning/questions/question-view";
-import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { FocusedShell } from "@/components/learning/focused-shell";
 import { saveTextSize } from "@/app/dashboard/prepare/actions";
 import { checkPracticeAnswer, endPracticeRun, nextPracticeQuestion } from "../actions";
@@ -19,6 +19,7 @@ export function PracticeRunner({ initialStep, initialTextSize }: { initialStep: 
   const [busy, setBusy] = useState(false);
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [problem, setProblem] = useState<string | null>(null);
   const [textSize, setTextSize] = useState<TextSize>(initialTextSize);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -49,6 +50,7 @@ export function PracticeRunner({ initialStep, initialTextSize }: { initialStep: 
   async function goNext() {
     setBusy(true);
     setMessage(null);
+    setProblem(null);
     try {
       const reply = await nextPracticeQuestion(step.sessionId, step.position);
       if (!reply.ok) return leave();
@@ -57,7 +59,7 @@ export function PracticeRunner({ initialStep, initialTextSize }: { initialStep: 
       setStep(reply.step);
       setChecked(Boolean(reply.step.checked));
     } catch {
-      setMessage("Something went wrong. Please try again.");
+      setProblem("Something went wrong. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -71,7 +73,7 @@ export function PracticeRunner({ initialStep, initialTextSize }: { initialStep: 
       else leave();
     } catch {
       setBusy(false);
-      setMessage("Something went wrong. Please try again.");
+      setProblem("Something went wrong. Please try again.");
     }
   }
 
@@ -91,18 +93,18 @@ export function PracticeRunner({ initialStep, initialTextSize }: { initialStep: 
     : undefined;
 
   const endControls = confirmEnd ? (
-    <div role="group" aria-labelledby="end-heading" className="rounded-lg border-2 border-slate-300 p-4">
-      <h3 id="end-heading" className="text-lg font-bold text-ink">
+    <div role="group" aria-labelledby="end-heading" className="rounded-xl border-2 border-primary bg-primary/5 p-5">
+      <h3 id="end-heading" className="text-xl font-bold text-ink">
         End practice now?
       </h3>
-      <p className="mt-1 text-lg text-ink">
+      <p className="mt-2 text-lg leading-relaxed text-ink">
         {step.answered > 0
           ? `You’ll see your results for the ${step.answered} question${step.answered === 1 ? "" : "s"} you answered.`
           : "You haven’t answered any questions yet, so there are no results to show."}
       </p>
       <div className="mt-4 flex flex-col gap-3 sm:flex-row">
         <button type="button" onClick={end} disabled={busy} className={PRIMARY_BUTTON}>
-          Yes, end practice
+          {busy ? "Ending…" : "Yes, end practice"}
         </button>
         <button type="button" onClick={() => setConfirmEnd(false)} disabled={busy} className={SECONDARY_BUTTON}>
           Keep practising
@@ -162,7 +164,10 @@ export function PracticeRunner({ initialStep, initialTextSize }: { initialStep: 
           />
         </div>
 
-        <div aria-live="polite">{message && <p className="mt-4 text-lg font-semibold text-ink">{message}</p>}</div>
+        <div aria-live="polite">
+          {message && <p className="mt-4 text-lg font-semibold text-ink">{message}</p>}
+          {problem && <p className={`mt-4 ${ERROR_BOX}`}>{problem}</p>}
+        </div>
 
         <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-start">
           {checked && (
