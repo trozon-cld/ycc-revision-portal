@@ -24,6 +24,11 @@ export function scorePercent(right: number, outOf: number): number {
   return outOf > 0 ? Math.round((right / outOf) * 100) : 0;
 }
 
+// How much is done, as a whole percentage rounded down: 100% only once everything is done.
+export function donePercent(done: number, total: number): number {
+  return total > 0 ? Math.floor((done / total) * 100) : 0;
+}
+
 // "36 of 50 (72%)".
 export function scoreText(right: number, outOf: number): string {
   return `${right} of ${outOf} (${scorePercent(right, outOf)}%)`;
@@ -82,7 +87,7 @@ export type MockResults = {
 
 // An ended test in the candidate's history.
 export type MockHistoryEntry = { id: string; endedAt: string; how: MockEnd; rightCount: number; outOf: number; secondsTaken: number };
-export type MockHistory = { count: number; best: MockHistoryEntry | null; items: MockHistoryEntry[]; averagePercent: number | null };
+export type MockHistory = { count: number; best: MockHistoryEntry | null; items: MockHistoryEntry[]; average: number | null; averagePercent: number | null };
 
 export type MockMark = "R" | "W" | "U";
 

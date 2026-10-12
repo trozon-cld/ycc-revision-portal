@@ -467,6 +467,8 @@ export type PracticeReport = {
   answered: number;
   rightCount: number;
   skipped: number;
+  // False once a newer run has finished: per-question details are gone, so skipped can't be told apart.
+  detailsKept: boolean;
   secondsSpent: number;
   finishedAt: string;
   chapters: { label: string; right: number; answered: number }[];
@@ -506,7 +508,9 @@ export async function loadPracticeReport(userId: string, sessionId: string): Pro
   let wrong: PracticeReport["wrong"] = null;
   let media: ResolvedMedia = {};
   if (session.question_ids && session.results) {
-    const wrongIds = session.question_ids.filter((_, index) => session.results?.[index] === "W");
+    // Only questions still in Practice: never a draft, and the same ones "Practise these again" uses.
+    const inPractice = new Set((await loadPool(pool, "practice", session.category_id)).map((question) => question.id));
+    const wrongIds = session.question_ids.filter((id, index) => session.results?.[index] === "W" && inPractice.has(id));
     const questions = await loadQuestions(pool, wrongIds);
     const list = wrongIds.flatMap((id) => {
       const question = questions.get(id);
@@ -535,6 +539,7 @@ export async function loadPracticeReport(userId: string, sessionId: string): Pro
     answered: session.answered,
     rightCount: session.right_count,
     skipped: (session.results ?? "").split("").filter((mark) => mark === "S").length,
+    detailsKept: session.results !== null,
     secondsSpent: session.seconds_spent,
     finishedAt: (session.finished_at ?? session.updated_at).toISOString(),
     chapters,

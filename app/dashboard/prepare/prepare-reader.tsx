@@ -38,7 +38,7 @@ function useDebounced<T>(save: (value: T) => Promise<void>, delay: number) {
 }
 
 // Pages seen are collected and sent together; leaving or hiding the page sends what's left.
-function usePagesDone() {
+function usePagesDone(categoryId: string) {
   const timer = useRef<number | undefined>(undefined);
   const pending = useRef(new Set<string>());
   const flush = useCallback(() => {
@@ -46,8 +46,8 @@ function usePagesDone() {
     if (pending.current.size === 0) return;
     const ids = [...pending.current];
     pending.current = new Set();
-    saveHandbookPagesDone(ids).catch(() => {});
-  }, []);
+    saveHandbookPagesDone(categoryId, ids).catch(() => {});
+  }, [categoryId]);
   useEffect(() => {
     const hidden = () => document.visibilityState === "hidden" && flush();
     document.addEventListener("visibilitychange", hidden);
@@ -67,17 +67,16 @@ function usePagesDone() {
   );
 }
 
-const saveAnswer = (pageId: string, outcome: HandbookOutcome) => {
-  saveHandbookAnswer(pageId, outcome).catch(() => {});
-};
-
 export function PrepareReader({
+  categoryId,
   pages,
   media,
   startPageId,
   initialTextSize,
   covers,
 }: {
+  // Every save names the category this book was opened for; the server ignores it after a switch.
+  categoryId: string;
   pages: BookPageData[];
   media: ResolvedMedia;
   startPageId: string | null;
@@ -85,9 +84,15 @@ export function PrepareReader({
   covers: BookCovers;
 }) {
   const [textSize, setTextSize] = useState<TextSize>(initialTextSize);
-  const savePosition = useDebounced(saveReadingPosition, POSITION_DELAY);
+  const savePosition = useDebounced(useCallback((itemId: string) => saveReadingPosition(categoryId, itemId), [categoryId]), POSITION_DELAY);
   const saveSize = useDebounced(saveTextSize, TEXT_SIZE_DELAY);
-  const pagesDone = usePagesDone();
+  const pagesDone = usePagesDone(categoryId);
+  const saveAnswer = useCallback(
+    (pageId: string, outcome: HandbookOutcome) => {
+      saveHandbookAnswer(categoryId, pageId, outcome).catch(() => {});
+    },
+    [categoryId]
+  );
 
   return (
     <BookReader

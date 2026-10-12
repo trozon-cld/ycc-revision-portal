@@ -36,8 +36,8 @@ async function addDone(
 }
 
 // Content pages the candidate has seen to the end. Anything not a published page of their current book
-// is ignored.
-export async function markPagesDone(userId: string, itemIds: string[]): Promise<void> {
+// is ignored, and so is all of it once they've switched away from categoryId.
+export async function markPagesDone(userId: string, categoryId: string, itemIds: string[]): Promise<void> {
   if (itemIds.length === 0) return;
   const { rows } = await pool.query<{ category_id: string; chapter_id: string; item_ids: string[] }>(
     `select u.current_category_id as category_id, i.chapter_id, array_agg(i.id) as item_ids
@@ -46,9 +46,9 @@ export async function markPagesDone(userId: string, itemIds: string[]): Promise<
      join chapters ch on ch.id = i.chapter_id and ch.status = 'published'
      join category_chapters cc on cc.chapter_id = ch.id and cc.category_id = u.current_category_id
      join content_pages p on p.id = i.content_page_id and p.status = 'published'
-     where u.id = $1 and u.role = 'candidate'
+     where u.id = $1 and u.role = 'candidate' and u.current_category_id = $3
      group by u.current_category_id, i.chapter_id`,
-    [userId, itemIds]
+    [userId, itemIds, categoryId]
   );
   if (rows.length === 0) return;
   await addDone(
@@ -60,7 +60,7 @@ export async function markPagesDone(userId: string, itemIds: string[]): Promise<
 }
 
 // A Handbook question checked or revealed. The answer is marked here, never trusted from the browser.
-export async function recordHandbookQuestion(userId: string, itemId: string, outcome: HandbookOutcome): Promise<void> {
+export async function recordHandbookQuestion(userId: string, categoryId: string, itemId: string, outcome: HandbookOutcome): Promise<void> {
   if (outcome.kind === "check" && isOversizedResponse(outcome.response)) return;
   const { rows } = await pool.query<{
     category_id: string;
@@ -76,8 +76,8 @@ export async function recordHandbookQuestion(userId: string, itemId: string, out
      join chapters ch on ch.id = i.chapter_id and ch.status = 'published'
      join category_chapters cc on cc.chapter_id = ch.id and cc.category_id = u.current_category_id
      join questions q on q.id = i.question_id and q.status = 'published'
-     where u.id = $1 and u.role = 'candidate'`,
-    [userId, itemId]
+     where u.id = $1 and u.role = 'candidate' and u.current_category_id = $3`,
+    [userId, itemId, categoryId]
   );
   const row = rows[0];
   if (!row) return;

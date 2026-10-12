@@ -78,6 +78,17 @@ export function MockRunner({ run, initialTextSize }: { run: MockRun; initialText
     return () => clearInterval(tick);
   }, [run.secondsLeft]);
 
+  // After sleep or a hidden tab the countdown can lag: coming back into view asks the server for the time
+  // left (a save of the question on screen), which also ends the test if time ran out meanwhile.
+  const { moveTo } = saver;
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState === "visible" && !timeUp) moveTo(position);
+    }
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [moveTo, position, timeUp]);
+
   // Sends what's waiting, then ends the test; the page then shows the result.
   async function finish() {
     await Promise.race([saver.flushAll(), new Promise((resolve) => setTimeout(resolve, LAST_SAVE_MS))]);

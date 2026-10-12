@@ -42,7 +42,7 @@ export function PracticeReportView({ report, againUnavailable }: { report: Pract
   const percent = report.answered ? Math.round((report.rightCount / report.answered) * 100) : 0;
   const date = formatUkDate(report.finishedAt, "long");
   const what = report.choiceNames.length ? `${MODE_NAMES[report.mode]}: ${report.choiceNames.join(", ")}` : MODE_NAMES[report.mode];
-  const endedEarly = report.answered + report.skipped < report.total;
+  const notAll = report.answered + report.skipped < report.total;
 
   return (
     <FocusedShell label="Practice tools" status="Your results">
@@ -60,9 +60,11 @@ export function PracticeReportView({ report, againUnavailable }: { report: Pract
             </p>
             {report.answered > 0 && <p className="mt-1 text-xl font-semibold text-ink">{percent}%</p>}
             <p className="mt-3 text-lg leading-relaxed text-ink">{report.answered > 0 ? encouragement(percent) : "No questions were answered."}</p>
-            {endedEarly && (
+            {notAll && (
               <p className="mt-2 text-base text-ink/80">
-                You ended this practice after answering {report.answered} of {report.total} questions.
+                {report.detailsKept
+                  ? `You ended this practice after answering ${report.answered} of ${report.total} questions.`
+                  : `You answered ${report.answered} of ${report.total} questions.`}
               </p>
             )}
             {report.skipped > 0 && (

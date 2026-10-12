@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
 import { SESSION_ENDED_LOGIN } from "@/lib/auth/constants";
 import { countOf } from "@/lib/format";
-import { scorePercent } from "@/lib/mock/types";
+import { settleOwnMocks } from "@/lib/mock/attempts";
+import { donePercent, scorePercent } from "@/lib/mock/types";
 import { loadProgress } from "@/lib/progress/overview";
 import { PageBody } from "@/components/candidate/page-body";
 import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
@@ -22,6 +23,7 @@ function Bar({ share }: { share: number }) {
 // My progress: Handbook, Practice and mock tests in the current category.
 export default async function ProgressPage() {
   const session = await requireRole(["candidate"]);
+  await settleOwnMocks(session.sub);
   const progress = await loadProgress(session.sub);
   if (!progress) redirect(SESSION_ENDED_LOGIN);
   const { handbook, practice, mock, readiness } = progress;
@@ -70,7 +72,7 @@ export default async function ProgressPage() {
           ) : (
             <>
               <p className="mt-2 text-lg text-ink">
-                <span className="text-3xl font-bold">{scorePercent(handbook.done, handbook.total)}%</span> done ·{" "}
+                <span className="text-3xl font-bold">{donePercent(handbook.done, handbook.total)}%</span> done ·{" "}
                 {handbook.done} of {handbook.total} pages and questions
               </p>
               <Bar share={handbook.done / handbook.total} />

@@ -91,7 +91,7 @@ export async function loadProgress(userId: string, categoryId?: string): Promise
   const readiness = latest
     ? readinessScore({
         latest: latest.outOf > 0 ? latest.rightCount / latest.outOf : 0,
-        average: (mock.averagePercent ?? 0) / 100,
+        average: mock.average ?? 0,
         handbook: bookTotal > 0 ? bookDone / bookTotal : null,
         // Not started counts as 0; left out only where the category has no Practice questions.
         areas: practiceChapters.length === 0 ? null : practisedChapters.length === 0 ? 0 : practisedChapters.filter((c) => c.area !== "weak").length / practisedChapters.length,

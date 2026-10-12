@@ -4,7 +4,7 @@ import { requireRole } from "@/lib/auth/guard";
 import { SESSION_ENDED_LOGIN } from "@/lib/auth/constants";
 import { daysLeftUk, formatUkDate } from "@/lib/candidates/access";
 import { loadCandidateHome } from "@/lib/candidates/home";
-import { loadMockInProgress } from "@/lib/mock/attempts";
+import { loadMockInProgress, settleOwnMocks } from "@/lib/mock/attempts";
 import { scoreText, timeLeftText } from "@/lib/mock/types";
 import { loadPracticeInProgress } from "@/lib/practice/sessions";
 import { loadProgress } from "@/lib/progress/overview";
@@ -16,6 +16,7 @@ const ACCESS_WARNING_DAYS = 7;
 
 export default async function CandidateHomePage({ searchParams }: PageProps<"/dashboard">) {
   const session = await requireRole(["candidate"]);
+  await settleOwnMocks(session.sub);
   const [home, practice, mock, progress] = await Promise.all([
     loadCandidateHome(session.sub),
     loadPracticeInProgress(session.sub),

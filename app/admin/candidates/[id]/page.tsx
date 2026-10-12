@@ -8,7 +8,7 @@ import { candidateProgressPath } from "@/lib/candidates/paths";
 import { countOf, formatDuration } from "@/lib/format";
 import { loadMockHistory, settleMocks } from "@/lib/mock/attempts";
 import { withTransaction } from "@/lib/db/transaction";
-import { READINESS_TARGET, scorePercent, scoreText, type MockEnd, type MockHistoryEntry } from "@/lib/mock/types";
+import { READINESS_TARGET, donePercent, scorePercent, scoreText, type MockEnd, type MockHistoryEntry } from "@/lib/mock/types";
 import { firstParam } from "@/lib/params";
 import { loadProgress } from "@/lib/progress/overview";
 import { Badge } from "@/components/admin/badge";
@@ -184,7 +184,7 @@ export default async function CandidateProgressPage({ params, searchParams }: Pa
           ) : (
             <>
               <p className="text-sm text-ink">
-                {scorePercent(handbook.done, handbook.total)}% done · {handbook.done} of {handbook.total} pages and questions
+                {donePercent(handbook.done, handbook.total)}% done · {handbook.done} of {handbook.total} pages and questions
               </p>
               <Table columns={["Chapter", "Done"]} isEmpty={false} emptyMessage="">
                 {handbook.chapters.map((chapter) => (

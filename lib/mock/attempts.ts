@@ -78,6 +78,12 @@ export async function settleMocks(db: Db, userIds: string[]): Promise<void> {
   for (const row of rows) await finish(db, row, isOverdue(row) ? "away" : "moved");
 }
 
+// The candidate's own pages (Home, My progress): a test that ran out while they were away ends first,
+// so they see the same last score and readiness as staff do.
+export async function settleOwnMocks(userId: string): Promise<void> {
+  await withTransaction((client) => settleMocks(client, [userId]));
+}
+
 const toOpen = (row: AttemptRow): OpenMock => ({ id: row.id, total: row.total, answered: countAnswered(row.responses), secondsLeft: secondsLeft(row) });
 
 // --- Start page
@@ -279,6 +285,7 @@ export async function loadMockHistory(userId: string, limit: number, options: { 
     count: count.rows[0].count,
     best: best.rows[0] ? toEntry(best.rows[0]) : null,
     items: items.rows.map(toEntry),
+    average,
     averagePercent: average === null ? null : Math.round(average * 100),
   };
 }
@@ -359,8 +366,9 @@ export async function saveMockAnswers(userId: string, attemptId: string, changes
     const row = rows[0];
     if (!row) return { ok: false, reason: "invalid" };
     if (row.ended_at) return { ok: false, reason: "ended" };
+    // Overdue means nothing reached us for a while (asleep, offline or closed): time ran out while away.
     if (isOverdue(row)) {
-      await finish(client, row, "time_up");
+      await finish(client, row, "away");
       return { ok: false, reason: "ended" };
     }
     if (row.category_id !== row.current_category_id) {
@@ -390,7 +398,7 @@ export async function submitMock(userId: string, attemptId: string): Promise<"en
     const { rows } = await client.query<AttemptRow>(`${ATTEMPT} where a.id = $1 and a.user_id = $2 for update of a`, [attemptId, userId]);
     const row = rows[0];
     if (!row) return "missing";
-    if (!row.ended_at) await finish(client, row, row.seconds_left <= TIME_UP_SECONDS ? "time_up" : "submitted");
+    if (!row.ended_at) await finish(client, row, isOverdue(row) ? "away" : row.seconds_left <= TIME_UP_SECONDS ? "time_up" : "submitted");
     return "ended";
   });
 }
@@ -421,9 +429,9 @@ async function finish(client: Db, row: AttemptRow, how: MockEnd) {
   await client.query(
     `update mock_attempts
      set ended_how = $2::varchar, marks = $3, answered = $4, right_count = $5, out_of = $6, chapter_summary = $7,
-         ended_at = case when $2::varchar = 'away' then deadline_at else now() end,
+         ended_at = case when $2::varchar = 'away' then deadline_at else least(now(), deadline_at) end,
          seconds_taken = case when $2::varchar = 'away' then duration_seconds
-                              else least(duration_seconds, greatest(0, extract(epoch from now() - started_at)))::int end
+                              else least(duration_seconds, greatest(0, extract(epoch from least(now(), deadline_at) - started_at)))::int end
      where id = $1`,
     [row.id, how, marks, count("R") + count("W"), count("R"), row.total - count("S"), JSON.stringify(summary)]
   );

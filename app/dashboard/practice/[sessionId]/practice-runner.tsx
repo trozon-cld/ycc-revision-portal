@@ -23,6 +23,16 @@ export function PracticeRunner({ initialStep, initialTextSize }: { initialStep: 
   const headingRef = useRef<HTMLHeadingElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const moved = useRef(false);
+  // A refresh (after the question changed on screen) brings the server's current step; the question
+  // view starts afresh with it.
+  const [shownStep, setShownStep] = useState(initialStep);
+  const [reloads, setReloads] = useState(0);
+  if (initialStep !== shownStep) {
+    setShownStep(initialStep);
+    setStep(initialStep);
+    setChecked(Boolean(initialStep.checked));
+    setReloads((count) => count + 1);
+  }
 
   const isLast = step.position + 1 >= step.total;
 
@@ -121,7 +131,7 @@ export function PracticeRunner({ initialStep, initialTextSize }: { initialStep: 
         </h1>
         <div className="rounded-xl border-2 border-ink/15 bg-white px-4 py-5 text-ink sm:px-6" style={{ fontSize: textSize }}>
           <QuestionView
-            key={`${step.sessionId}:${step.position}`}
+            key={`${step.sessionId}:${step.position}:${reloads}`}
             question={step.question}
             label={step.chapterLabel}
             media={step.media}
@@ -144,7 +154,10 @@ export function PracticeRunner({ initialStep, initialTextSize }: { initialStep: 
                 goNext();
                 return false;
               }
-              return null;
+              // The question changed while on screen (or another tab moved on): load it again.
+              setMessage("This question was updated, so we’ve loaded it again.");
+              router.refresh();
+              return false;
             }}
           />
         </div>
