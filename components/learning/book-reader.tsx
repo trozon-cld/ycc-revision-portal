@@ -75,6 +75,8 @@ const QUESTION_PICTURE_MIN = 80;
 const COMPACT_BELOW = 600;
 // Pages measured per step; a book this size or smaller is measured in one go, before it's shown.
 const MEASURE_BATCH = 40;
+// After that first batch, the rest goes in small steps, so page turns stay quick in a long book on a slow phone.
+const BACKGROUND_BATCH = 6;
 // A page that would spill over is fitted first: question pictures shrink (to half), text steps down
 // FIT_STEPS px (not below FIT_MIN_SIZE), then content pictures to CONTENT_PICTURE_FIT; else it continues.
 const FIT_MIN_SIZE = 14;
@@ -365,7 +367,7 @@ export function BookReader({
   positionRef.current = nearestPage;
 
   const nextBatch = useCallback(
-    (fresh: boolean[] | null) => measureOrder(pages, positionRef.current).filter((index) => !fresh?.[index]).slice(0, MEASURE_BATCH),
+    (fresh: boolean[] | null, size = MEASURE_BATCH) => measureOrder(pages, positionRef.current).filter((index) => !fresh?.[index]).slice(0, size),
     [pages]
   );
 
@@ -478,7 +480,7 @@ export function BookReader({
     if (!same) setCounts({ id: layoutId, values, fresh });
 
     // The rest of the book is measured a batch at a time, letting the reader paint in between.
-    const next = nextBatch(fresh);
+    const next = nextBatch(fresh, BACKGROUND_BATCH);
     if (next.length === 0) {
       setBatch([]);
       return;

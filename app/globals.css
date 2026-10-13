@@ -72,12 +72,13 @@ body {
   }
 }
 
-/* Staff loading screen: stays invisible for a moment, so quick pages don't flash it. */
-.admin-loading {
-  animation: admin-loading-in 200ms ease-out 150ms both;
+/* Loading screens (staff and candidate pages): invisible for a moment, so quick pages don’t flash them. */
+.admin-loading,
+.candidate-loading {
+  animation: loading-fade-in 200ms ease-out 150ms both;
 }
 
-@keyframes admin-loading-in {
+@keyframes loading-fade-in {
   from {
     opacity: 0;
   }

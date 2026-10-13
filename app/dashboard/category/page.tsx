@@ -8,6 +8,7 @@ import { loadSwitchableCategories } from "@/lib/candidates/categories";
 import { loadMockInProgress } from "@/lib/mock/attempts";
 import { loadPracticeInProgress } from "@/lib/practice/sessions";
 import { CHOICE_INPUT, CHOICE_ROW, ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { SaveCategoryButton } from "./save-button";
 import { switchCategory } from "./actions";
 
 export const metadata: Metadata = { title: "Change category" };
@@ -100,12 +101,7 @@ export default async function ChangeCategoryPage({ searchParams }: PageProps<"/d
               </fieldset>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <button
-                  type="submit"
-                  className={PRIMARY_BUTTON}
-                >
-                  Save category
-                </button>
+                <SaveCategoryButton />
                 <Link
                   href="/dashboard"
                   className={SECONDARY_BUTTON}
