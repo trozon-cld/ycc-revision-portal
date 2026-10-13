@@ -1246,7 +1246,7 @@ function SheetView({
         </span>
       )}
       <header
-        className="flex items-end justify-between gap-3 overflow-hidden border-b border-slate-200 pb-[0.35em] text-[0.72em] text-slate-700"
+        className="flex items-end justify-between gap-3 overflow-hidden border-b border-slate-200 pb-[0.35em] text-[max(14px,0.72em)] text-slate-700"
         style={{ height: geometry.headerHeight, marginLeft: geometry.padX, marginRight: geometry.padX }}
       >
         {/* Narrow sheets (phones) show only the chapter, so neither name is cut to a few letters. */}
@@ -1317,7 +1317,7 @@ function SheetView({
 
       <footer
         aria-hidden="true"
-        className="flex items-center justify-center text-[0.8em] text-slate-700"
+        className="flex items-center justify-center text-[max(14px,0.8em)] text-slate-700"
         style={{ height: geometry.footerHeight }}
       >
         {sheet.number}

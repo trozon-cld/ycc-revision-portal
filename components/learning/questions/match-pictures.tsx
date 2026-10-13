@@ -29,6 +29,7 @@ export function MatchPicturesAnswer({
   showCorrect,
   selection: selected,
   onSelection: setSelected,
+  review,
 }: AnswerAreaProps) {
   const data = content as MatchContent;
   const placed = useMemo(() => (response && typeof response === "object" ? (response as MatchResponse) : {}), [response]);
@@ -124,54 +125,59 @@ export function MatchPicturesAnswer({
 
   return (
     <div className="@container" data-no-swipe>
-      <p data-flow-unit className="mb-[0.6em] font-semibold text-ink [break-after:avoid] [break-inside:avoid]">
-        Put each picture in the box it belongs to.
-        <span className="block font-normal text-slate-700">Drag it, or tap a picture and then a box.</span>
-      </p>
+      {!review && (
+        <p data-flow-unit className="mb-[0.6em] font-semibold text-ink [break-after:avoid] [break-inside:avoid]">
+          Put each picture in the box it belongs to.
+          <span className="block font-normal text-slate-700">Drag it, or tap a picture and then a box.</span>
+        </p>
+      )}
 
-      <div className="@2xl:grid @2xl:grid-cols-[auto_1fr] @2xl:items-start @2xl:gap-[1.5em]">
-        <ul
-          data-flow-unit
-          data-match-pictures
-          aria-label="Pictures to place"
-          className={`m-0 mb-[0.8em] flex list-none flex-wrap gap-[0.5em] rounded-lg p-[0.3em] [break-inside:avoid] @2xl:flex-col ${
-            over === "pictures" ? "bg-primary/[0.08] ring-2 ring-primary" : ""
-          }`}
-        >
-          {items.map((item) => {
-            const inBox = boxOf(item.id);
-            return (
-              <li key={item.id} className="size-[max(64px,4.5em)] shrink-0 [break-inside:avoid]">
-                {/* inline-block: never split across book pages, like the button it stands in for. */}
-                {inBox ? (
-                  <span aria-hidden="true" className="inline-block size-full rounded-md border-2 border-dashed border-slate-300 align-top" />
-                ) : (
-                  <button
-                    type="button"
-                    data-match-item={item.id}
-                    aria-pressed={selected === item.id}
-                    aria-label={alt(item)}
-                    disabled={locked}
-                    onPointerDown={(event) => onPointerDown(event, item.id, () => tapPicture(item.id))}
-                    onPointerMove={onPointerMove}
-                    onPointerUp={onPointerUp}
-                    onPointerCancel={() => setDrag(null)}
-                    onClick={onClickGuard(() => tapPicture(item.id))}
-                    onKeyDown={(event) => {
-                      onKeyDownAny();
-                      if (event.key === "Escape") setSelected(null);
-                    }}
-                    className={`relative block size-full touch-none rounded-md border-2 bg-white p-[0.2em] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-default ${
-                      selected === item.id ? "border-primary ring-4 ring-primary/40" : "border-slate-300 hover:border-primary"
-                    } ${drag?.moved && drag.itemId === item.id ? "opacity-40" : ""} ${locked ? "" : "cursor-grab"}`}
-                  >
-                    <Picture media={media} item={item} />
-                  </button>
-                )}
-              </li>
-            );
-          })}
-        </ul>
+      <div className={!review ? "@2xl:grid @2xl:grid-cols-[auto_1fr] @2xl:items-start @2xl:gap-[1.5em]" : undefined}>
+        {/* Reports show only the boxes: each holds what was placed, with the right picture beside it. */}
+        {!review && (
+          <ul
+            data-flow-unit
+            data-match-pictures
+            aria-label="Pictures to place"
+            className={`m-0 mb-[0.8em] flex list-none flex-wrap gap-[0.5em] rounded-lg p-[0.3em] [break-inside:avoid] @2xl:flex-col ${
+              over === "pictures" ? "bg-primary/[0.08] ring-2 ring-primary" : ""
+            }`}
+          >
+            {items.map((item) => {
+              const inBox = boxOf(item.id);
+              return (
+                <li key={item.id} className="size-[max(64px,4.5em)] shrink-0 [break-inside:avoid]">
+                  {/* inline-block: never split across book pages, like the button it stands in for. */}
+                  {inBox ? (
+                    <span aria-hidden="true" className="inline-block size-full rounded-md border-2 border-dashed border-slate-300 align-top" />
+                  ) : (
+                    <button
+                      type="button"
+                      data-match-item={item.id}
+                      aria-pressed={selected === item.id}
+                      aria-label={alt(item)}
+                      disabled={locked}
+                      onPointerDown={(event) => onPointerDown(event, item.id, () => tapPicture(item.id))}
+                      onPointerMove={onPointerMove}
+                      onPointerUp={onPointerUp}
+                      onPointerCancel={() => setDrag(null)}
+                      onClick={onClickGuard(() => tapPicture(item.id))}
+                      onKeyDown={(event) => {
+                        onKeyDownAny();
+                        if (event.key === "Escape") setSelected(null);
+                      }}
+                      className={`relative block size-full touch-none rounded-md border-2 bg-white p-[0.2em] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-default ${
+                        selected === item.id ? "border-primary ring-4 ring-primary/40" : "border-slate-300 hover:border-primary"
+                      } ${drag?.moved && drag.itemId === item.id ? "opacity-40" : ""} ${locked ? "" : "cursor-grab"}`}
+                    >
+                      <Picture media={media} item={item} />
+                    </button>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
 
         <ul className="m-0 list-none space-y-[max(0.6em,10px)] p-0">
           {data.targets.map((target) => {
@@ -265,7 +271,7 @@ function dropTargetAt(x: number, y: number): string | null {
 function Picture({ media, item }: { media: ResolvedMedia; item: MatchItem | undefined }) {
   const picture = item ? media[item.mediaId] : undefined;
   const src = usePictureSrc(picture?.src);
-  if (!picture) return <span className="text-[0.7em] text-slate-700">Picture unavailable</span>;
+  if (!picture) return <span className="text-[max(14px,0.7em)] text-slate-700">Picture unavailable</span>;
   return (
     // eslint-disable-next-line @next/next/no-img-element -- short-lived signed link; files are pre-shrunk WebP
     <img src={src} alt="" draggable={false} loading="lazy" decoding="async" className="pointer-events-none size-full object-contain" />

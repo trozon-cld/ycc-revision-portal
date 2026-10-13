@@ -10,7 +10,7 @@ import type { AnswerAreaProps } from "./renderers";
 
 // "Multiple answers": choose exactly N (more is blocked with a note), real checkboxes under square badges.
 // On wide screens Practice and Mock also show N slots that fill as options are chosen.
-export function MultiPickAnswer({ mode, seed, content, answer, response, onResponse, onNotice, locked, showCorrect }: AnswerAreaProps) {
+export function MultiPickAnswer({ mode, seed, content, answer, response, onResponse, onNotice, locked, showCorrect, review }: AnswerAreaProps) {
   const name = useId();
   const data = content as MultiPickContent;
   const chosen = Array.isArray(response) ? (response as string[]) : [];
@@ -37,12 +37,14 @@ export function MultiPickAnswer({ mode, seed, content, answer, response, onRespo
 
   return (
     <div className="@container">
-      <p data-flow-unit className="mb-[calc(0.6em*var(--q-space,1))] font-semibold text-ink [break-after:avoid] [break-inside:avoid]">
-        {choosePrompt(data.pick)}
-        <span className="font-normal text-slate-700"> · {chosen.length} of {data.pick} chosen</span>
-      </p>
+      {!review && (
+        <p data-flow-unit className="mb-[calc(0.6em*var(--q-space,1))] font-semibold text-ink [break-after:avoid] [break-inside:avoid]">
+          {choosePrompt(data.pick)}
+          <span className="font-normal text-slate-700"> · {chosen.length} of {data.pick} chosen</span>
+        </p>
+      )}
 
-      {mode !== "learn" && (
+      {mode !== "learn" && !review && (
         // Answer slots mirror the test's drag-into-boxes look; only on wide Practice/Mock screens.
         <div data-flow-unit className="mb-[calc(0.6em*var(--q-space,1))] hidden gap-[0.5em] @xl:grid" style={{ gridTemplateColumns: `repeat(${data.pick}, minmax(0, 1fr))` }}>
           {Array.from({ length: data.pick }, (_, slot) => {
@@ -56,7 +58,7 @@ export function MultiPickAnswer({ mode, seed, content, answer, response, onRespo
                 disabled={locked}
                 className="flex min-h-[max(var(--answer-min-h,56px),var(--answer-min-em,3.5em))] items-center gap-[0.5em] rounded-lg border-2 border-primary bg-primary/[0.06] px-[0.7em] py-[0.4em] text-left text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-default"
               >
-                <span aria-hidden="true" className="grid size-[1.8em] shrink-0 place-items-center rounded-md bg-primary text-[0.85em] font-bold text-white">
+                <span aria-hidden="true" className="grid size-[1.8em] shrink-0 place-items-center rounded-md bg-primary text-[max(14px,0.85em)] font-bold text-white">
                   {letterOf(option.id)}
                 </span>
                 <span className="line-clamp-2 min-w-0 flex-1 [overflow-wrap:anywhere]">

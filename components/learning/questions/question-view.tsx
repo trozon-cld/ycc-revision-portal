@@ -42,6 +42,7 @@ export function QuestionView({
   state: controlledState,
   onStateChange,
   retry = true,
+  review = false,
 }: {
   question: ClientQuestion;
   // e.g. "Question 3" in the book, "3 of 36" in a mock test.
@@ -62,6 +63,8 @@ export function QuestionView({
   onStateChange?: (state: QuestionViewState) => void;
   // "Try again" after Check; Practice turns it off (every question counts once).
   retry?: boolean;
+  // Reports: the question text is already in the line above, so it's kept for screen readers only.
+  review?: boolean;
 }) {
   const [ownState, setOwnState] = useState<QuestionViewState>(initialState ?? { ...FRESH_QUESTION_STATE, response: initialResponse });
   const [checking, setChecking] = useState(false);
@@ -124,8 +127,8 @@ export function QuestionView({
   return (
     <section aria-labelledby={stemId} className="question-view">
       <fieldset className="m-0 min-w-0 border-0 p-0">
-        <legend id={stemId} data-flow-unit className="mb-[calc(0.8em*var(--q-space,1))] w-full p-0 [break-after:avoid] [break-inside:avoid]">
-          <span className="mb-[0.3em] block text-[0.8em] font-bold uppercase tracking-wide text-primary">{label}</span>
+        <legend id={stemId} data-flow-unit className={review ? "sr-only" : "mb-[calc(0.8em*var(--q-space,1))] w-full p-0 [break-after:avoid] [break-inside:avoid]"}>
+          <span className="mb-[0.3em] block text-[max(14px,0.8em)] font-bold uppercase tracking-wide text-primary">{label}</span>
           <span className="block whitespace-pre-line text-[1.25em] font-semibold leading-snug text-ink">
             <InlineText text={question.stemText} />
           </span>
@@ -160,6 +163,7 @@ export function QuestionView({
               locked={phase !== "answering"}
               showCorrect={showsAnswer}
               result={result}
+              review={review}
             />
           ) : (
             <p className="rounded-lg bg-slate-100 px-[0.9em] py-[0.7em] text-slate-700">This question can’t be shown yet.</p>
@@ -199,7 +203,7 @@ export function QuestionView({
 
       {showExplanation && (
         <div data-flow-unit data-question-explanation className="mt-[calc(0.9em*var(--q-space,1))]">
-          <p className="mb-[0.2em] text-[0.8em] font-bold uppercase tracking-wide text-primary [break-after:avoid]">Explanation</p>
+          <p className="mb-[0.2em] text-[max(14px,0.8em)] font-bold uppercase tracking-wide text-primary [break-after:avoid]">Explanation</p>
           <p className="whitespace-pre-line [orphans:2] [widows:2]">
             <InlineText text={explanation ?? ""} />
           </p>

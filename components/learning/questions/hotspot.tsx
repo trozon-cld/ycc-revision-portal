@@ -23,7 +23,7 @@ const clamp = (value: number) => Math.min(100, Math.max(0, roundTenth(value)));
 
 // "Tap the area": one marker, placed by tapping or moved with arrow keys (Enter checks). Results are drawn
 // over the picture, so nothing changes height after Check or moves page in the book.
-export function HotspotAnswer({ content, media, answer, response, onResponse, onSubmit, locked, showCorrect, result }: AnswerAreaProps) {
+export function HotspotAnswer({ content, media, answer, response, onResponse, onSubmit, locked, showCorrect, result, review }: AnswerAreaProps) {
   const measuring = useContext(MeasuringContext);
   const data = content as HotspotContent;
   const picture = media[data.mediaId];
@@ -61,9 +61,11 @@ export function HotspotAnswer({ content, media, answer, response, onResponse, on
 
   return (
     <div>
-      <p data-flow-unit className="mb-[0.6em] font-semibold text-ink [break-after:avoid] [break-inside:avoid]">
-        Tap the picture to answer.
-      </p>
+      {!review && (
+        <p data-flow-unit className="mb-[0.6em] font-semibold text-ink [break-after:avoid] [break-inside:avoid]">
+          Tap the picture to answer.
+        </p>
+      )}
 
       <div data-flow-unit data-question-picture data-no-swipe className="mx-auto [break-inside:avoid]" style={pictureWidth(ratio)}>
         <div
@@ -158,7 +160,7 @@ export function TapPicture({ picture, ratio, measuring }: { picture: ResolvedMed
       style={{ aspectRatio: String(ratio) }}
     />
   ) : (
-    <span className="grid w-full place-items-center text-[0.85em] text-slate-700" style={{ aspectRatio: String(ratio) }}>
+    <span className="grid w-full place-items-center text-[max(14px,0.85em)] text-slate-700" style={{ aspectRatio: String(ratio) }}>
       Picture unavailable
     </span>
   );

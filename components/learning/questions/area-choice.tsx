@@ -8,7 +8,7 @@ import { MeasuringContext } from "../measuring";
 
 // "Choose the area": areas tint on hover with a mouse and are faintly outlined on touch screens.
 // Real radio buttons underneath: Tab to the picture, arrow keys move between areas, Enter checks.
-export function AreaChoiceAnswer({ content, media, answer, response, onResponse, onSubmit, locked, showCorrect }: AnswerAreaProps) {
+export function AreaChoiceAnswer({ content, media, answer, response, onResponse, onSubmit, locked, showCorrect, review }: AnswerAreaProps) {
   const measuring = useContext(MeasuringContext);
   const name = useId();
   const data = content as AreaChoiceContent;
@@ -26,9 +26,11 @@ export function AreaChoiceAnswer({ content, media, answer, response, onResponse,
 
   return (
     <div>
-      <p data-flow-unit className="mb-[0.6em] font-semibold text-ink [break-after:avoid] [break-inside:avoid]">
-        Choose an area on the picture.
-      </p>
+      {!review && (
+        <p data-flow-unit className="mb-[0.6em] font-semibold text-ink [break-after:avoid] [break-inside:avoid]">
+          Choose an area on the picture.
+        </p>
+      )}
 
       <div data-flow-unit data-question-picture data-no-swipe className="mx-auto [break-inside:avoid]" style={pictureWidth(ratio)}>
         <div

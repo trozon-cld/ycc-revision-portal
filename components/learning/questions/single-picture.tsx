@@ -63,7 +63,7 @@ export function SinglePictureAnswer({ mode, seed, content, media, answer, respon
                   // eslint-disable-next-line @next/next/no-img-element -- short-lived signed link; files are pre-shrunk WebP
                   <img src={measuring ? undefined : picture.src} alt={picture.alt} loading="lazy" decoding="async" className="absolute inset-0 size-full object-contain" />
                 ) : (
-                  <span className="absolute inset-0 grid place-items-center p-[0.4em] text-center text-[0.8em] text-slate-700">
+                  <span className="absolute inset-0 grid place-items-center p-[0.4em] text-center text-[max(14px,0.8em)] text-slate-700">
                     Picture unavailable
                   </span>
                 )}
