@@ -7,6 +7,7 @@ import type { PracticeStep } from "@/lib/practice/types";
 import { QuestionView, type QuestionViewState } from "@/components/learning/questions/question-view";
 import { ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { useConfirmFocus } from "@/components/candidate/use-confirm-focus";
+import { NOT_THROUGH_MESSAGE, reachServer } from "@/lib/forms";
 import { FocusedShell } from "@/components/learning/focused-shell";
 import { saveTextSize } from "@/app/dashboard/prepare/actions";
 import { checkPracticeAnswer, endPracticeRun, nextPracticeQuestion } from "../actions";
@@ -21,6 +22,8 @@ export function PracticeRunner({ initialStep, initialTextSize }: { initialStep: 
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
+  // Shown inside the End practice box, which sits over the page in Settings.
+  const [endProblem, setEndProblem] = useState<string | null>(null);
   const [textSize, setTextSize] = useState<TextSize>(initialTextSize);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -62,7 +65,7 @@ export function PracticeRunner({ initialStep, initialTextSize }: { initialStep: 
       setStep(reply.step);
       setChecked(Boolean(reply.step.checked));
     } catch {
-      setProblem("Something went wrong. Please try again.");
+      setProblem(NOT_THROUGH_MESSAGE);
     } finally {
       setBusy(false);
     }
@@ -70,13 +73,14 @@ export function PracticeRunner({ initialStep, initialTextSize }: { initialStep: 
 
   async function end() {
     setBusy(true);
+    setEndProblem(null);
     try {
       const outcome = await endPracticeRun(step.sessionId);
       if (outcome === "finished") router.refresh();
       else leave(outcome === "removed" ? "empty" : "closed");
     } catch {
       setBusy(false);
-      setProblem("Something went wrong. Please try again.");
+      setEndProblem(NOT_THROUGH_MESSAGE);
     }
   }
 
@@ -106,11 +110,24 @@ export function PracticeRunner({ initialStep, initialTextSize }: { initialStep: 
           ? `You’ll see your results for the ${step.answered} question${step.answered === 1 ? "" : "s"} you answered.`
           : "You haven’t answered any questions yet, so there are no results to show."}
       </p>
+      {endProblem && (
+        <p role="alert" className={`mt-4 ${ERROR_BOX}`}>
+          {endProblem}
+        </p>
+      )}
       <div className="mt-4 flex flex-col gap-3 sm:flex-row">
         <button type="button" onClick={end} disabled={busy} className={PRIMARY_BUTTON}>
           {busy ? "Ending…" : "Yes, end practice"}
         </button>
-        <button type="button" onClick={() => setConfirmEnd(false)} disabled={busy} className={SECONDARY_BUTTON}>
+        <button
+          type="button"
+          onClick={() => {
+            setConfirmEnd(false);
+            setEndProblem(null);
+          }}
+          disabled={busy}
+          className={SECONDARY_BUTTON}
+        >
           Keep practising
         </button>
       </div>
@@ -146,7 +163,8 @@ export function PracticeRunner({ initialStep, initialTextSize }: { initialStep: 
             retry={false}
             onStateChange={(state) => setChecked(state.phase === "checked")}
             onCheck={async (response) => {
-              const reply = await checkPracticeAnswer(step.sessionId, step.position, response);
+              const reply = await reachServer(() => checkPracticeAnswer(step.sessionId, step.position, response));
+              if (!reply) return null;
               if (reply.ok) {
                 setStep((current) => (current.position === step.position && !current.checked ? { ...current, answered: current.answered + 1 } : current));
                 return reply.checked;

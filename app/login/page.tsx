@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { ERROR_BOX, PRIMARY_BUTTON } from "@/components/candidate/buttons";
+import { NOT_THROUGH_MESSAGE } from "@/lib/forms";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -36,7 +37,7 @@ export default function LoginPage() {
       // Full navigation so Proxy sees the cookie the browser just stored.
       window.location.href = data.redirectTo;
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError(NOT_THROUGH_MESSAGE);
       setIsSubmitting(false);
     }
   }

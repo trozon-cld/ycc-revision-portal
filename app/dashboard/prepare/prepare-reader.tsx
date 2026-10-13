@@ -22,7 +22,11 @@ function useDebounced<T>(save: (value: T) => Promise<void>, delay: number) {
     window.clearTimeout(timer.current);
     const next = pending.current;
     pending.current = null;
-    if (next) save(next.value).catch(() => {});
+    // Not saved (e.g. no connection): kept, unless something newer came meanwhile, and sent with the next change.
+    if (next)
+      save(next.value).catch(() => {
+        pending.current ??= next;
+      });
   }, [save]);
   const schedule = useCallback(
     (value: T) => {
@@ -32,8 +36,14 @@ function useDebounced<T>(save: (value: T) => Promise<void>, delay: number) {
     },
     [flush, delay]
   );
-  // Leaving the page (e.g. Home) still saves the last change.
-  useEffect(() => flush, [flush]);
+  // Leaving the page (e.g. Home) still saves the last change; so does the connection coming back.
+  useEffect(() => {
+    window.addEventListener("online", flush);
+    return () => {
+      window.removeEventListener("online", flush);
+      flush();
+    };
+  }, [flush]);
   return schedule;
 }
 
@@ -41,18 +51,29 @@ function useDebounced<T>(save: (value: T) => Promise<void>, delay: number) {
 function usePagesDone(categoryId: string) {
   const timer = useRef<number | undefined>(undefined);
   const pending = useRef(new Set<string>());
+  const flushRef = useRef<() => void>(() => {});
   const flush = useCallback(() => {
     window.clearTimeout(timer.current);
     if (pending.current.size === 0) return;
-    const ids = [...pending.current];
-    pending.current = new Set();
-    saveHandbookPagesDone(categoryId, ids).catch(() => {});
+    // At most a batch per save; once one is saved, the next goes straight after.
+    const ids = [...pending.current].slice(0, PAGES_DONE_BATCH);
+    for (const id of ids) pending.current.delete(id);
+    saveHandbookPagesDone(categoryId, ids).then(
+      () => pending.current.size > 0 && flushRef.current(),
+      // Not saved: back in the list, sent with the next batch (marking a page done twice changes nothing).
+      () => ids.forEach((id) => pending.current.add(id))
+    );
   }, [categoryId]);
+  useEffect(() => {
+    flushRef.current = flush;
+  });
   useEffect(() => {
     const hidden = () => document.visibilityState === "hidden" && flush();
     document.addEventListener("visibilitychange", hidden);
+    window.addEventListener("online", flush);
     return () => {
       document.removeEventListener("visibilitychange", hidden);
+      window.removeEventListener("online", flush);
       flush();
     };
   }, [flush]);

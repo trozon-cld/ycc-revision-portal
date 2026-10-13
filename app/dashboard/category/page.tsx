@@ -7,9 +7,8 @@ import { PageBody } from "@/components/candidate/page-body";
 import { loadSwitchableCategories } from "@/lib/candidates/categories";
 import { loadMockInProgress } from "@/lib/mock/attempts";
 import { loadPracticeInProgress } from "@/lib/practice/sessions";
-import { CHOICE_INPUT, CHOICE_ROW, ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
-import { SaveCategoryButton } from "./save-button";
-import { switchCategory } from "./actions";
+import { ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { CategoryForm } from "./category-form";
 
 export const metadata: Metadata = { title: "Change category" };
 
@@ -71,45 +70,7 @@ export default async function ChangeCategoryPage({ searchParams }: PageProps<"/d
               </p>
             )}
 
-            <form action={switchCategory} className="mt-6">
-              <fieldset>
-                <legend className="mb-3 text-xl font-bold text-ink">Choose a category</legend>
-                <div className="flex flex-col gap-3">
-                  {categories.map((category) => (
-                    <label key={category.id} className={CHOICE_ROW}>
-                      <input
-                        type="radio"
-                        name="categoryId"
-                        value={category.id}
-                        defaultChecked={category.isCurrent}
-                        required
-                        className={CHOICE_INPUT}
-                      />
-                      <span className="flex min-w-0 flex-col">
-                        <span className="text-lg font-semibold text-ink [overflow-wrap:anywhere]">{category.name}</span>
-                        {(category.isCurrent || category.isAssigned) && (
-                          <span className="text-base text-ink/80">
-                            {[category.isCurrent && "Studying now", category.isAssigned && "Your starting category"]
-                              .filter(Boolean)
-                              .join(" · ")}
-                          </span>
-                        )}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
-
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <SaveCategoryButton />
-                <Link
-                  href="/dashboard"
-                  className={SECONDARY_BUTTON}
-                >
-                  Back to home
-                </Link>
-              </div>
-            </form>
+            <CategoryForm categories={categories} />
           </>
         )}
       </div>

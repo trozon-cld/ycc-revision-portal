@@ -4,6 +4,8 @@ import { useActionState, useState } from "react";
 import { PRACTICE_SIZES, WEAK_BELOW, type PracticeOptions, type PracticeWay } from "@/lib/practice/types";
 import { CHOICE_INPUT, CHOICE_ROW, ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { countOf } from "@/lib/format";
+import { NOT_THROUGH_MESSAGE, reachServer } from "@/lib/forms";
+import { submitKeepingChoices } from "@/components/candidate/submit-form";
 import { startPracticeForm, type StartState } from "./actions";
 
 const WAYS: { way: PracticeWay; title: string; description: string }[] = [
@@ -22,7 +24,10 @@ const FOCUS: { way: PracticeWay; title: string; description: string; none: strin
 
 // `initialChapters` (e.g. a mock test's weakest chapters) opens "By chapter" with those ticked.
 export function PracticeSetup({ options, hasOpen, initialChapters = [] }: { options: PracticeOptions; hasOpen: boolean; initialChapters?: string[] }) {
-  const [state, action, pending] = useActionState<StartState, FormData>(startPracticeForm, { error: null });
+  const [state, action, pending] = useActionState<StartState, FormData>(
+    async (previous, formData) => (await reachServer(() => startPracticeForm(previous, formData))) ?? { error: NOT_THROUGH_MESSAGE },
+    { error: null }
+  );
   const [way, setWay] = useState<PracticeWay>(initialChapters.length > 0 ? "chapters" : "smart");
   const [chapters, setChapters] = useState<string[]>(initialChapters);
   const [types, setTypes] = useState<string[]>([]);
@@ -43,7 +48,7 @@ export function PracticeSetup({ options, hasOpen, initialChapters = [] }: { opti
   const toggle = (list: string[], value: string) => (list.includes(value) ? list.filter((item) => item !== value) : [...list, value]);
 
   return (
-    <form action={action} className="mt-8">
+    <form method="post" onSubmit={submitKeepingChoices(action)} className="mt-8">
       <fieldset>
         <legend className="mb-3 text-xl font-bold text-ink">1. What would you like to practise?</legend>
         <div className="flex flex-col gap-3">

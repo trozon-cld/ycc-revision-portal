@@ -10,7 +10,7 @@ import { ReviewQuestion } from "@/components/learning/questions/review-question"
 import { FocusedShell } from "@/components/learning/focused-shell";
 import { practiseAgain } from "../actions";
 import { FlagButton } from "../flag-button";
-import { RetryButton } from "./retry-button";
+import { RetryForm } from "./retry-button";
 
 const MODE_NAMES: Record<PracticeReport["mode"], string> = {
   smart: "Smart practice",
@@ -88,10 +88,7 @@ export function PracticeReportView({ report, againUnavailable }: { report: Pract
 
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
             {report.canRetry && report.wrong && (
-              <form action={practiseAgain}>
-                <input type="hidden" name="sessionId" value={report.id} />
-                <RetryButton count={report.wrong.length} />
-              </form>
+              <RetryForm action={practiseAgain} field="sessionId" value={report.id} count={report.wrong.length} />
             )}
             <Link href="/dashboard/practice" className={report.canRetry ? SECONDARY_BUTTON : PRIMARY_BUTTON}>
               New practice

@@ -6,6 +6,7 @@ import { checkAnswer } from "@/lib/questions/check";
 import { getQuestionTypeDef } from "@/lib/questions/registry";
 import type { ClientQuestion } from "@/lib/questions/public";
 import type { CheckResult } from "@/lib/questions/types";
+import { NOT_THROUGH_MESSAGE } from "@/lib/forms";
 import { InlineText } from "../inline-text";
 import { MarkIcon } from "./answer-parts";
 import { BookPicture } from "../picture";
@@ -114,12 +115,14 @@ export function QuestionView({
           : await onCheck?.(response);
       if (marked === false) return;
       if (!marked) {
-        setState({ notice: "This answer couldn’t be checked. Please try again." });
+        setState({ notice: NOT_THROUGH_MESSAGE });
         return;
       }
       const reveal = mode === "practice" && marked.answer !== undefined ? { answer: marked.answer, explanation: marked.explanation ?? null } : undefined;
       focusResult.current = true;
       setState({ result: { answered: marked.answered, correct: marked.correct }, phase: "checked", notice: null, shown: reveal });
+    } catch {
+      setState({ notice: NOT_THROUGH_MESSAGE });
     } finally {
       setChecking(false);
     }

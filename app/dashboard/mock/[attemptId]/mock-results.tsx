@@ -6,7 +6,7 @@ import { ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candid
 import { ArrivalHeading } from "@/components/candidate/arrival-heading";
 import { ChapterResults } from "@/components/candidate/chapter-results";
 import { practiseMockMisses } from "@/app/dashboard/practice/actions";
-import { RetryButton } from "@/app/dashboard/practice/[sessionId]/retry-button";
+import { RetryForm } from "@/app/dashboard/practice/[sessionId]/retry-button";
 
 const ENDINGS: Record<MockEnd, { title: string; text: string }> = {
   submitted: { title: "Test submitted", text: "Your mock test has been submitted." },
@@ -81,14 +81,14 @@ export function MockResultsView({ attemptId, results, practiceUnavailable }: { a
               See your answers
             </Link>
             {results.practiceCount > 0 && (
-              <form action={practiseMockMisses} className="sm:w-auto">
-                <input type="hidden" name="attemptId" value={attemptId} />
-                <RetryButton
-                  count={results.practiceCount}
-                  secondary
-                  label={`Practise the ${countOf(results.practiceCount, "question")} you missed`}
-                />
-              </form>
+              <RetryForm
+                action={practiseMockMisses}
+                field="attemptId"
+                value={attemptId}
+                count={results.practiceCount}
+                secondary
+                label={`Practise the ${countOf(results.practiceCount, "question")} you missed`}
+              />
             )}
           </div>
         ) : (
