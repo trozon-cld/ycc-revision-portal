@@ -58,17 +58,20 @@ export function MockHistoryList({
                 href={`/dashboard/mock/${entry.id}`}
                 className="flex min-h-16 items-center gap-3 rounded-xl border-2 border-ink/20 bg-white px-4 py-3 hover:border-primary hover:bg-primary/5 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
-                <span className="min-w-0 flex-1">
-                  <span className="block text-lg font-semibold text-ink">
-                    {formatUkDate(entry.endedAt, "long")} at {formatUkTime(entry.endedAt)}
+                {/* Phones: the score sits under the date, so neither is squeezed. */}
+                <span className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-lg font-semibold text-ink">
+                      {formatUkDate(entry.endedAt, "long")} at {formatUkTime(entry.endedAt)}
+                    </span>
+                    <span className="block text-base text-ink/80">
+                      {[ENDED[entry.how], `Time taken: ${formatDuration(entry.secondsTaken)}`].filter(Boolean).join(" · ")}
+                    </span>
                   </span>
-                  <span className="block text-base text-ink/80">
-                    {[ENDED[entry.how], `Time taken: ${formatDuration(entry.secondsTaken)}`].filter(Boolean).join(" · ")}
+                  <span className="flex flex-col sm:shrink-0 sm:items-end sm:text-right">
+                    <span className="text-lg font-bold text-ink">{score(entry)}</span>
+                    {reached && <span className="text-sm font-semibold text-green-900">Readiness target reached</span>}
                   </span>
-                </span>
-                <span className="flex shrink-0 flex-col items-end text-right">
-                  <span className="text-lg font-bold text-ink">{score(entry)}</span>
-                  {reached && <span className="text-sm font-semibold text-green-900">Readiness target reached</span>}
                 </span>
                 <span aria-hidden="true" className="text-3xl leading-none text-primary">
                   ›

@@ -22,7 +22,7 @@ const MODE_NAMES: Record<PracticeReport["mode"], string> = {
   wrong: "Questions I got wrong",
   flagged: "Flagged questions",
   unseen: "Not practised yet",
-  weak: "Weak areas",
+  weak: "Weak chapters",
 };
 
 // Encouraging, never pass/fail wording.

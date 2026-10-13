@@ -41,5 +41,5 @@ function pausedFor(rows: { created_at: Date }[], limit: number): number {
 
 export function pausedMessage(seconds: number) {
   const minutes = Math.max(1, Math.ceil(seconds / 60));
-  return `Too many sign-in attempts. Please wait ${minutes} minute${minutes === 1 ? "" : "s"} and try again.`;
+  return `Too many login attempts. Please wait ${minutes} minute${minutes === 1 ? "" : "s"} and try again.`;
 }

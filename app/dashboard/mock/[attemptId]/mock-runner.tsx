@@ -193,7 +193,7 @@ export function MockRunner({ run, initialTextSize }: { run: MockRun; initialText
 
         {timeUp ? (
           <p role="status" className="rounded-xl border-2 border-red-700 bg-red-50 p-5 text-lg font-semibold text-red-800">
-            Time is up. Your test is being submitted.
+            Time ran out. Your test is being submitted.
           </p>
         ) : reviewing ? (
           <MockReview

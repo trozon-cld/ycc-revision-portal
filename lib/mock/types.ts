@@ -31,7 +31,7 @@ export function donePercent(done: number, total: number): number {
 
 // "36 of 50 (72%)".
 export function scoreText(right: number, outOf: number): string {
-  return `${right} of ${outOf} (${scorePercent(right, outOf)}%)`;
+  return `${right} of ${outOf} right (${scorePercent(right, outOf)}%)`;
 }
 
 // "32 minutes left", for pages that show the time without a running clock.

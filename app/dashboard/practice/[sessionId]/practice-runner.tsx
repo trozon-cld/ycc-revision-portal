@@ -176,7 +176,7 @@ export function PracticeRunner({ initialStep, initialTextSize }: { initialStep: 
         <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-start">
           {checked && (
             <button type="button" onClick={goNext} disabled={busy} className={`${PRIMARY_BUTTON} w-full sm:w-auto`}>
-              {busy ? "Loading…" : isLast ? "See my results" : "Next question"}
+              {busy ? "Loading…" : isLast ? "See your results" : "Next question"}
             </button>
           )}
           <FlagButton key={`${step.sessionId}:${step.position}`} questionId={step.question.id} initialFlagged={step.flagged} />

@@ -7,7 +7,7 @@ import { countOf } from "@/lib/format";
 import { startPracticeForm, type StartState } from "./actions";
 
 const WAYS: { way: PracticeWay; title: string; description: string }[] = [
-  { way: "smart", title: "Smart practice", description: "A mix chosen for you: questions you haven’t practised yet first, then ones you got wrong or flagged, and your weak areas." },
+  { way: "smart", title: "Smart practice", description: "A mix chosen for you: questions you haven’t practised yet first, then ones you got wrong or flagged, and your weak chapters." },
   { way: "chapters", title: "By chapter", description: "Choose one or more chapters." },
   { way: "types", title: "By question type", description: "Choose one or more kinds of question." },
   { way: "all", title: "All questions", description: "Questions from every chapter, in a random order." },
@@ -17,10 +17,10 @@ const FOCUS: { way: PracticeWay; title: string; description: string; none: strin
   { way: "wrong", title: "Questions I got wrong", description: "Ones you got wrong the last time you practised them.", none: "None yet: you haven’t got any wrong in Practice." },
   { way: "flagged", title: "Flagged questions", description: "Ones you flagged for review.", none: "None yet: use “Flag for review” on a question to add it here." },
   { way: "unseen", title: "Not practised yet", description: "Ones you haven’t answered in Practice.", none: "None left: you’ve practised every question." },
-  { way: "weak", title: "Weak areas", description: `Chapters where you get less than ${Math.round(WEAK_BELOW * 100)}% right.`, none: "Practise a little more to find your weak areas." },
+  { way: "weak", title: "Weak chapters", description: `Chapters where you get less than ${Math.round(WEAK_BELOW * 100)}% right.`, none: "Practise a little more to find your weak chapters." },
 ];
 
-// `initialChapters` (e.g. a mock test's weakest topics) opens "By chapter" with those ticked.
+// `initialChapters` (e.g. a mock test's weakest chapters) opens "By chapter" with those ticked.
 export function PracticeSetup({ options, hasOpen, initialChapters = [] }: { options: PracticeOptions; hasOpen: boolean; initialChapters?: string[] }) {
   const [state, action, pending] = useActionState<StartState, FormData>(startPracticeForm, { error: null });
   const [way, setWay] = useState<PracticeWay>(initialChapters.length > 0 ? "chapters" : "smart");

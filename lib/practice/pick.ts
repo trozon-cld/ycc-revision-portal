@@ -110,7 +110,7 @@ export function smartPick(
   );
 }
 
-// Weak areas: questions from the weak chapters, wrong ones first, then unseen, then flagged.
+// Weak chapters: questions from the weak chapters, wrong ones first, then unseen, then flagged.
 export function weakPick(
   pool: readonly PoolQuestion[],
   history: ReadonlyMap<string, PracticeHistory>,

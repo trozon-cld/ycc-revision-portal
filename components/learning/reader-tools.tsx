@@ -488,7 +488,7 @@ export function GoToPanel({ total, onGo, onClose }: { total: number; onGo: (numb
 export type ResultStatus = "correct" | "wrong" | "revealed" | "open";
 export type ResultEntry = { pageIndex: number; status: ResultStatus; text: string };
 
-const STATUS_TEXT: Record<ResultStatus, string> = { correct: "Correct", wrong: "Not quite", revealed: "Revealed", open: "Not tried yet" };
+const STATUS_TEXT: Record<ResultStatus, string> = { correct: "Right", wrong: "Not quite", revealed: "Revealed", open: "Not tried yet" };
 const STATUS_TONE: Record<ResultStatus, string> = {
   correct: "bg-green-50 text-green-900 ring-green-700/40",
   wrong: "bg-amber-50 text-amber-950 ring-amber-600/40",
@@ -520,7 +520,7 @@ export function ResultsPanel({
       <div className="mx-auto max-w-2xl space-y-5">
         <div aria-live="polite">
           <p className="text-2xl font-bold text-ink">
-            {correct} of {entries.length} {entries.length === 1 ? "question" : "questions"} correct
+            {correct} of {entries.length} {entries.length === 1 ? "question" : "questions"} right
           </p>
           <p className="mt-1 text-lg text-slate-700">
             {count("wrong")} not quite · {count("revealed")} revealed · {count("open")} not tried yet

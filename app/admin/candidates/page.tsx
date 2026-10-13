@@ -211,9 +211,7 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
               <Cell label="Recent activity">
                 <span className="block">
                   <span className="text-slate-600">Last mock:</span>{" "}
-                  <span className="whitespace-nowrap">
-                    {candidate.mock_right !== null && candidate.mock_out_of !== null ? scoreText(candidate.mock_right, candidate.mock_out_of) : "None"}
-                  </span>
+                  <span>{candidate.mock_right !== null && candidate.mock_out_of !== null ? scoreText(candidate.mock_right, candidate.mock_out_of) : "None"}</span>
                 </span>
                 <span className="block">
                   <span className="text-slate-600">Last login:</span>{" "}

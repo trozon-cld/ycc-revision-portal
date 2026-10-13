@@ -45,7 +45,7 @@ export default async function MockReviewPage({ params, searchParams }: PageProps
           {!review.kept ? (
             <p className="mt-4 text-lg leading-relaxed text-ink">
               Answers are kept for your {MOCK_KEEP_ANSWERS} newest mock tests, so this test’s answers are no longer available. Its score and
-              results by topic are still on its results page.
+              results by chapter are still on its results page.
             </p>
           ) : (
             <>
@@ -68,7 +68,7 @@ export default async function MockReviewPage({ params, searchParams }: PageProps
                 })}
               </nav>
               {review.items.some((item) => item.practiceFlag !== null) && (
-                <p className="mt-4 text-base text-ink/80">Flag a question to practise it later: Practice → Flagged questions.</p>
+                <p className="mt-4 text-base text-ink/80">Flag a question to practise it later. You’ll find it in Practice, under Flagged questions.</p>
               )}
               {items.length === 0 ? (
                 <p className="mt-6 text-lg text-ink">{filter.none}</p>

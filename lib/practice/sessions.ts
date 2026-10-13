@@ -169,7 +169,7 @@ export async function startPractice(userId: string, request: StartRequest): Prom
     }
     if (request.way === "weak") {
       choices = [...weak];
-      if (choices.length === 0) return { ok: false, error: "You don’t have any weak areas yet. Practise a little more to find them." };
+      if (choices.length === 0) return { ok: false, error: "You don’t have any weak chapters yet. Practise a little more to find them." };
     }
     if (questions.length === 0) return { ok: false, error: "There are no practice questions for this choice yet." };
 
