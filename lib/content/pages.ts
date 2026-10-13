@@ -2,11 +2,9 @@ import { pool } from "@/lib/db/pool";
 import { chapterNumber, sectionLetter } from "@/lib/handbook/structure";
 import { getSignedUrls, isStorageConfigured } from "@/lib/storage/storage";
 import { isUuid } from "@/lib/ids";
-import type { ResolvedMedia } from "./book";
+import { PICTURE_LINK_SECONDS, type ResolvedMedia } from "./book";
 
 // Server-only reads for Handbook pages and their pictures (admin and candidate pages).
-
-export const PREVIEW_LINK_SECONDS = 2 * 60 * 60;
 
 export type ChapterContext = {
   id: string;
@@ -54,7 +52,7 @@ export async function resolveMedia(mediaIds: string[], thumbIds: string[] = []):
   const withThumb = new Set(thumbIds);
   const urls = await getSignedUrls(
     [...rows.map((row) => row.storage_path), ...rows.filter((row) => withThumb.has(row.id)).map((row) => row.thumb_path)],
-    PREVIEW_LINK_SECONDS
+    PICTURE_LINK_SECONDS
   );
   const media: ResolvedMedia = {};
   for (const row of rows) {

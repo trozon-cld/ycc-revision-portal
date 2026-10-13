@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { BookPageData, HandbookOutcome, ResolvedMedia, TextSize } from "@/lib/content/book";
+import { useRouter } from "next/navigation";
+import { PICTURE_LINK_SECONDS, type BookPageData, type HandbookOutcome, type ResolvedMedia, type TextSize } from "@/lib/content/book";
 import type { BookCovers } from "@/lib/content/covers";
 import { BookReader } from "@/components/learning/book-reader";
 import { BAR_BUTTON_DENSE, PANEL_LINK, barButton } from "@/components/learning/reader-tools";
@@ -88,6 +89,32 @@ function usePagesDone(categoryId: string) {
   );
 }
 
+// Picture links run out after PICTURE_LINK_SECONDS. In a long reading session, the first picture that fails
+// near then makes the page fetch fresh links (at most once a minute); a broken picture earlier changes nothing.
+const REFRESH_AFTER_MS = (PICTURE_LINK_SECONDS - 10 * 60) * 1000;
+const REFRESH_GAP_MS = 60 * 1000;
+
+function useFreshPictureLinks(media: ResolvedMedia) {
+  const router = useRouter();
+  const issued = useRef(0);
+  const lastRefresh = useRef(0);
+  useEffect(() => {
+    issued.current = Date.now();
+  }, [media]);
+  useEffect(() => {
+    const failed = (event: Event) => {
+      if (!(event.target instanceof HTMLImageElement)) return;
+      const now = Date.now();
+      if (now - issued.current < REFRESH_AFTER_MS || now - lastRefresh.current < REFRESH_GAP_MS) return;
+      lastRefresh.current = now;
+      router.refresh();
+    };
+    // Picture load errors don't bubble, so they're caught on the way down.
+    window.addEventListener("error", failed, true);
+    return () => window.removeEventListener("error", failed, true);
+  }, [router]);
+}
+
 export function PrepareReader({
   categoryId,
   pages,
@@ -105,6 +132,7 @@ export function PrepareReader({
   covers: BookCovers;
 }) {
   const [textSize, setTextSize] = useState<TextSize>(initialTextSize);
+  useFreshPictureLinks(media);
   const savePosition = useDebounced(useCallback((itemId: string) => saveReadingPosition(categoryId, itemId), [categoryId]), POSITION_DELAY);
   const saveSize = useDebounced(saveTextSize, TEXT_SIZE_DELAY);
   const pagesDone = usePagesDone(categoryId);
