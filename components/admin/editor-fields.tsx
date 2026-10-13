@@ -139,7 +139,7 @@ export function Segmented({
               disabled={disabled}
               onClick={() => onChange(optionValue)}
               className={`h-9 rounded px-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 sm:h-8 ${
-                pressed && !disabled ? "bg-primary text-white" : "text-ink hover:bg-slate-100"
+                pressed && !disabled ? "hc-fill bg-primary text-white" : "text-ink hover:bg-slate-100"
               }`}
             >
               {optionLabel}

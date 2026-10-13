@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { requireRole } from "@/lib/auth/guard";
 import { pool } from "@/lib/db/pool";
@@ -6,6 +7,8 @@ import { PersonLabel } from "@/components/admin/person-label";
 import { PageHeader } from "@/components/admin/page-header";
 import { Cell, Row, Table } from "@/components/admin/table";
 import { AdminRowActions, NewAdminButton } from "./admin-row-actions";
+
+export const metadata: Metadata = { title: "Admins" };
 
 interface AdminRow {
   id: string;

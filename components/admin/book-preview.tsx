@@ -132,7 +132,7 @@ export function BookPreview({
                 aria-pressed={device === key}
                 onClick={() => setDevice(key)}
                 className={`h-9 rounded px-3 text-sm font-medium sm:h-8 ${
-                  device === key ? "bg-primary text-white" : "text-ink hover:bg-slate-100"
+                  device === key ? "hc-fill bg-primary text-white" : "text-ink hover:bg-slate-100"
                 }`}
               >
                 {key === "full" ? "Full window" : DEVICES[key].label}

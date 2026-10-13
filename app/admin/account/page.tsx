@@ -1,8 +1,11 @@
+import type { Metadata } from "next";
 import { requireRole } from "@/lib/auth/guard";
 import { pool } from "@/lib/db/pool";
 import { PageHeader } from "@/components/admin/page-header";
 import { cardClass } from "@/components/admin/styles";
 import { ChangeEmailForm, ChangeNameForm, ChangePasswordForm } from "./account-forms";
+
+export const metadata: Metadata = { title: "My account" };
 
 // Admins can set their own name here; their email and password are managed by the Superadmin.
 export default async function AccountPage() {

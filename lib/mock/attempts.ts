@@ -1,4 +1,5 @@
 import type { PoolClient } from "pg";
+import { cache } from "react";
 import { resolveMedia } from "@/lib/content/pages";
 import { pool } from "@/lib/db/pool";
 import { withTransaction } from "@/lib/db/transaction";
@@ -141,7 +142,10 @@ export async function startMock(userId: string): Promise<StartReply> {
 
 export type MockView = { kind: "running"; run: MockRun } | { kind: "ended" } | { kind: "missing" };
 
-export async function loadMockRun(userId: string, attemptId: string): Promise<MockView> {
+// Once per request: the page and its title both ask.
+export const loadMockRun = cache(readMockRun);
+
+async function readMockRun(userId: string, attemptId: string): Promise<MockView> {
   const outcome = await withTransaction(async (client) => {
     const { rows } = await client.query<AttemptRow>(`${ATTEMPT} where a.id = $1 and a.user_id = $2 for update of a`, [attemptId, userId]);
     const row = rows[0];

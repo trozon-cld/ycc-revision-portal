@@ -23,8 +23,10 @@ export function ChapterResults({
   level?: 2 | 3;
 }) {
   const Heading = level === 2 ? "h2" : "h3";
+  // Inside another section (My progress) it's a plain part of it, so the page has no two landmarks named alike.
+  const Wrapper = level === 2 ? "section" : "div";
   return (
-    <section aria-labelledby={id} className={level === 2 ? "mt-10" : "mt-6"}>
+    <Wrapper aria-labelledby={level === 2 ? id : undefined} className={level === 2 ? "mt-10" : "mt-6"}>
       <Heading id={id} className={level === 2 ? "text-2xl font-bold text-ink" : "text-xl font-bold text-ink"}>
         {title}
       </Heading>
@@ -52,11 +54,11 @@ export function ChapterResults({
               </span>
             </div>
             <div aria-hidden="true" className="mt-2 h-3 overflow-hidden rounded-full bg-ink/10">
-              <div className="h-full rounded-full bg-primary" style={{ width: `${item.outOf > 0 ? (item.right / item.outOf) * 100 : 0}%` }} />
+              <div className="hc-fill h-full rounded-full bg-primary" style={{ width: `${item.outOf > 0 ? (item.right / item.outOf) * 100 : 0}%` }} />
             </div>
           </li>
         ))}
       </ul>
-    </section>
+    </Wrapper>
   );
 }

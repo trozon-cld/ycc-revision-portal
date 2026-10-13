@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
@@ -8,6 +9,8 @@ import { loadMockInProgress } from "@/lib/mock/attempts";
 import { loadPracticeInProgress } from "@/lib/practice/sessions";
 import { CHOICE_INPUT, CHOICE_ROW, ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { switchCategory } from "./actions";
+
+export const metadata: Metadata = { title: "Change category" };
 
 const ERRORS: Record<string, string> = {
   choose: "Please choose a category.",

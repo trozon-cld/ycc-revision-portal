@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
@@ -15,6 +16,8 @@ import { AddQuestionsButton, ChapterOrder, type AddableQuestion, type OrderItem 
 import { NewPageButton } from "./page-row-actions";
 import { ChapterCategoriesButton, ChapterStatusButton } from "../../chapter-row-actions";
 import { Badge } from "@/components/admin/badge";
+
+export const metadata: Metadata = { title: "Chapter" };
 
 interface ItemRow {
   id: string;

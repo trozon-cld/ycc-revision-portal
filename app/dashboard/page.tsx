@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
@@ -11,6 +12,8 @@ import { loadProgress } from "@/lib/progress/overview";
 import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { PageBody } from "@/components/candidate/page-body";
 import { SectionCard, SectionIcons } from "@/components/candidate/section-card";
+
+export const metadata: Metadata = { title: "Home" };
 
 // Days left at which the access notice turns amber.
 const ACCESS_WARNING_DAYS = 7;

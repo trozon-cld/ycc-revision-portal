@@ -3,6 +3,7 @@ import { formatUkDate } from "@/lib/candidates/access";
 import type { PracticeReport } from "@/lib/practice/sessions";
 import { PageBody } from "@/components/candidate/page-body";
 import { ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { ArrivalHeading } from "@/components/candidate/arrival-heading";
 import { ChapterResults } from "@/components/candidate/chapter-results";
 import { InlineText } from "@/components/learning/inline-text";
 import { ReviewQuestion } from "@/components/learning/questions/review-question";
@@ -48,7 +49,7 @@ export function PracticeReportView({ report, againUnavailable }: { report: Pract
     <FocusedShell label="Practice tools" status="Your results">
       <PageBody>
         <div className="max-w-3xl">
-          <h1 className="text-3xl font-bold text-ink">Your practice results</h1>
+          <ArrivalHeading className="text-3xl font-bold text-ink">Your practice results</ArrivalHeading>
           <p className="mt-2 text-base text-ink/80 [overflow-wrap:anywhere]">
             {report.categoryName} · {what} · {date}
           </p>

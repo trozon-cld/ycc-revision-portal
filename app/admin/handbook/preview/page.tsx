@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { requireRole } from "@/lib/auth/guard";
 import { loadBookCovers, loadPreviewBook, loadPreviewOptions } from "@/lib/content/preview";
@@ -6,6 +7,8 @@ import { firstParam } from "@/lib/params";
 import { PageHeader } from "@/components/admin/page-header";
 import { countOf } from "@/lib/format";
 import { PreviewControls, PreviewReader } from "./preview-client";
+
+export const metadata: Metadata = { title: "Book preview" };
 
 export default async function BookPreviewPage({ searchParams }: PageProps<"/admin/handbook/preview">) {
   await requireRole(["superadmin"]);

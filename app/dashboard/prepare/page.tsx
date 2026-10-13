@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { preload } from "react-dom";
@@ -7,6 +8,8 @@ import { coverPreloads, loadCandidateBook } from "@/lib/content/candidate-book";
 import { PRIMARY_BUTTON } from "@/components/candidate/buttons";
 import { PageBody } from "@/components/candidate/page-body";
 import { PrepareReader } from "./prepare-reader";
+
+export const metadata: Metadata = { title: "Prepare" };
 
 export default async function PreparePage() {
   const session = await requireRole(["candidate"]);

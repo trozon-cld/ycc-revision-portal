@@ -159,7 +159,7 @@ export function PicturePicker({
                 type="button"
                 aria-pressed={tab === key}
                 onClick={() => setTab(key)}
-                className={`h-10 rounded px-3 text-sm font-medium sm:h-8 ${tab === key ? "bg-primary text-white" : "text-ink hover:bg-slate-100"}`}
+                className={`h-10 rounded px-3 text-sm font-medium sm:h-8 ${tab === key ? "hc-fill bg-primary text-white" : "text-ink hover:bg-slate-100"}`}
               >
                 {key === "library" ? "Media library" : "Upload new"}
               </button>

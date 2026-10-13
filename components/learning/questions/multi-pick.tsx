@@ -112,7 +112,7 @@ export function MultiPickAnswer({ mode, seed, content, answer, response, onRespo
                 <span
                   aria-hidden="true"
                   className={`grid size-[2em] shrink-0 place-items-center rounded-md border-2 text-[0.9em] font-bold ${
-                    selected ? "border-primary bg-primary text-white" : "border-slate-400 text-slate-700"
+                    selected ? "hc-fill border-primary bg-primary text-white" : "border-slate-400 text-slate-700"
                   }`}
                 >
                   {optionLetter(index)}

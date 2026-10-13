@@ -125,11 +125,11 @@ export function FocusedShell({
   return (
     <ReaderLabelsContext.Provider value={showLabels}>
       <div data-focused-owns-header="" onClickCapture={onClickCapture} className="flex h-dvh min-h-0 flex-col">
-        {/* Three columns with equal sides, so the status stays in the middle of the screen, like the Handbook. */}
+        {/* Three columns with equal sides (never narrower than their buttons), so the status stays centred and clear. */}
         <div
           role="toolbar"
           aria-label={label}
-          className="relative grid grid-cols-[1fr_minmax(0,auto)_1fr] items-center gap-2 border-b border-slate-300 bg-white px-3 py-2 lg:px-6"
+          className="relative grid grid-cols-[minmax(max-content,1fr)_minmax(0,auto)_minmax(max-content,1fr)] items-center gap-2 border-b border-slate-300 bg-white px-3 py-2 lg:px-6"
         >
           <div className="flex min-w-0 items-center">
             <div className="hidden shrink-0 lg:flex">
@@ -179,7 +179,7 @@ export function FocusedShell({
           </div>
           {progress && progress.total > 0 && (
             <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-1 bg-ink/10">
-              <div className="h-full bg-primary" style={{ width: `${Math.min(100, (progress.done / progress.total) * 100)}%` }} />
+              <div className="hc-fill h-full bg-primary" style={{ width: `${Math.min(100, (progress.done / progress.total) * 100)}%` }} />
             </div>
           )}
         </div>

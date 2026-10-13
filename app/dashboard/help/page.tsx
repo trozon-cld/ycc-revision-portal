@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { requireRole } from "@/lib/auth/guard";
 import { loadFaqItems, loadOwnAdminName, loadSupportContact } from "@/lib/faq/load";
@@ -5,6 +6,8 @@ import { PageBody } from "@/components/candidate/page-body";
 import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { loadMockInProgress } from "@/lib/mock/attempts";
 import { loadPracticeInProgress } from "@/lib/practice/sessions";
+
+export const metadata: Metadata = { title: "Help: general queries" };
 
 const LINK = "inline-flex min-h-11 items-center font-semibold text-primary underline underline-offset-4 [overflow-wrap:anywhere] hover:no-underline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary";
 

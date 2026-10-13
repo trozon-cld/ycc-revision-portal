@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
@@ -11,11 +12,13 @@ import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons
 import { ChapterResults } from "@/components/candidate/chapter-results";
 import { MockHistoryList } from "@/app/dashboard/mock/mock-history";
 
+export const metadata: Metadata = { title: "My progress" };
+
 // A thick bar for a section's overall figure (the share is also written out next to it).
 function Bar({ share }: { share: number }) {
   return (
     <div aria-hidden="true" className="mt-3 h-4 overflow-hidden rounded-full bg-ink/10">
-      <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, share * 100)}%` }} />
+      <div className="hc-fill h-full rounded-full bg-primary" style={{ width: `${Math.min(100, share * 100)}%` }} />
     </div>
   );
 }

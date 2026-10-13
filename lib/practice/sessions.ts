@@ -1,4 +1,5 @@
 import type { PoolClient } from "pg";
+import { cache } from "react";
 import type { ResolvedMedia } from "@/lib/content/book";
 import { resolveMedia } from "@/lib/content/pages";
 import { pool } from "@/lib/db/pool";
@@ -249,7 +250,10 @@ const setChar = (text: string, index: number, char: string) => text.slice(0, ind
 export type PracticeView = { kind: "step"; step: PracticeStep } | { kind: "report" } | { kind: "closed" } | { kind: "missing" };
 
 // What /dashboard/practice/[id] shows. Skips questions removed since the start; finishes at the end.
-export async function loadPracticeView(userId: string, sessionId: string): Promise<PracticeView> {
+// Once per request: the page and its title both ask.
+export const loadPracticeView = cache(readPracticeView);
+
+async function readPracticeView(userId: string, sessionId: string): Promise<PracticeView> {
   const outcome = await withTransaction(async (client) => {
     const { rows } = await client.query<SessionRow & { current_category_id: string }>(
       `select s.*, u.current_category_id from practice_sessions s join users u on u.id = s.user_id

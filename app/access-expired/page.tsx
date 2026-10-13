@@ -1,9 +1,12 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { LogoutButton } from "@/components/logout-button";
 import { SESSION_ENDED_LOGIN } from "@/lib/auth/constants";
 import { getLiveSession, hasAccess } from "@/lib/auth/guard";
 import { getSession } from "@/lib/auth/session";
+
+export const metadata: Metadata = { title: "Access ended" };
 
 export default async function AccessExpiredPage() {
   if (!(await getSession())) redirect("/login");
@@ -14,7 +17,7 @@ export default async function AccessExpiredPage() {
   if (hasAccess(live.account)) redirect("/dashboard");
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-4 p-4 text-center">
+    <main className="flex flex-1 flex-col items-center justify-center gap-4 p-4 text-center">
       <h1 className="text-3xl font-bold text-ink">
         Your access has ended
       </h1>
@@ -23,6 +26,6 @@ export default async function AccessExpiredPage() {
         to extend or reactivate it.
       </p>
       <LogoutButton className={SECONDARY_BUTTON} />
-    </div>
+    </main>
   );
 }

@@ -2,7 +2,7 @@
 const BASE =
   "inline-flex min-h-14 items-center justify-center gap-2 rounded-lg px-6 text-lg font-semibold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-default disabled:opacity-60";
 
-export const PRIMARY_BUTTON = `${BASE} bg-primary text-white hover:bg-primary/90`;
+export const PRIMARY_BUTTON = `${BASE} hc-edge bg-primary text-white hover:bg-primary/90`;
 export const SECONDARY_BUTTON = `${BASE} border-2 border-ink/25 bg-white text-ink hover:border-primary hover:text-primary`;
 
 // A radio or checkbox row: the whole row is the target.

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { requireRole } from "@/lib/auth/guard";
 import { plainText } from "@/lib/content/inline";
@@ -15,6 +16,8 @@ import { Pagination, listSearch, pageFromParam } from "@/components/admin/pagina
 import { RememberListPlace } from "@/components/admin/list-place";
 import { Cell, Row, Table } from "@/components/admin/table";
 import { NewQuestionButton, QuestionRowActions } from "./question-row-actions";
+
+export const metadata: Metadata = { title: "Question bank" };
 
 export default async function QuestionBankPage({ searchParams }: PageProps<"/admin/questions">) {
   await requireRole(["superadmin"]);

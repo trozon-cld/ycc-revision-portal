@@ -11,6 +11,21 @@
 @custom-variant phone-upright (@media (max-width: 599.98px));
 @custom-variant phone-sideways (@media (max-height: 499.98px) and (orientation: landscape) and (max-width: 1023.98px));
 
+/* Windows high-contrast mode drops background colours: filled buttons keep an outline (hc-edge), and fills
+   that mean something, like progress bars and chosen answers, stay solid (hc-fill). Normal colours unchanged. */
+@utility hc-edge {
+  @media (forced-colors: active) {
+    border: 2px solid ButtonText;
+  }
+}
+@utility hc-fill {
+  @media (forced-colors: active) {
+    forced-color-adjust: none;
+    background-color: CanvasText !important; /* over the element's own bg-/text- colours */
+    color: Canvas !important;
+  }
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
@@ -7,6 +8,8 @@ import { PageBody } from "@/components/candidate/page-body";
 import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { FocusedShell } from "@/components/learning/focused-shell";
 import { PracticeSetup } from "./practice-setup";
+
+export const metadata: Metadata = { title: "Practice" };
 
 // Why the candidate was brought back here from a practice (see practice-runner.tsx).
 const ENDED: Record<string, string> = {

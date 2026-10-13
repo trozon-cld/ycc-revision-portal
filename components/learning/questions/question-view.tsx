@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import type { ResolvedMedia } from "@/lib/content/book";
 import { checkAnswer } from "@/lib/questions/check";
 import { getQuestionTypeDef } from "@/lib/questions/registry";
@@ -76,6 +76,14 @@ export function QuestionView({
     if (!controlledState) setOwnState(next);
   };
   const stemId = useId();
+  // After Check or Reveal here, focus moves to the result: the button pressed has gone.
+  const resultRef = useRef<HTMLDivElement>(null);
+  const focusResult = useRef(false);
+  useEffect(() => {
+    if (!focusResult.current || phase === "answering") return;
+    focusResult.current = false;
+    resultRef.current?.focus({ preventScroll: true });
+  }, [phase]);
 
   const { mode } = question;
   const AnswerArea = QUESTION_RENDERERS[question.type];
@@ -110,6 +118,7 @@ export function QuestionView({
         return;
       }
       const reveal = mode === "practice" && marked.answer !== undefined ? { answer: marked.answer, explanation: marked.explanation ?? null } : undefined;
+      focusResult.current = true;
       setState({ result: { answered: marked.answered, correct: marked.correct }, phase: "checked", notice: null, shown: reveal });
     } finally {
       setChecking(false);
@@ -176,7 +185,13 @@ export function QuestionView({
           <FrameButton key="check" primary onClick={check} disabled={checking}>
             {checking ? "Checking…" : "Check answer"}
           </FrameButton>
-          {mode === "learn" && <FrameButton key="reveal" onClick={() => setState({ phase: "revealed", notice: null })}>Reveal answer</FrameButton>}
+          {mode === "learn" && <FrameButton
+              key="reveal"
+              onClick={() => {
+                focusResult.current = true;
+                setState({ phase: "revealed", notice: null });
+              }}
+            >Reveal answer</FrameButton>}
         </div>
       )}
 
@@ -185,13 +200,19 @@ export function QuestionView({
         data-flow-unit
         className={phase === "answering" ? "[break-inside:avoid]" : "mt-[calc(0.9em*var(--q-space,1))] flex flex-wrap items-center gap-[0.6em] [break-inside:avoid]"}
       >
-        <div role="status" aria-live="polite" className="min-w-0 flex-1 basis-[12em]">
-          {notice && <p className="mt-[calc(0.9em*var(--q-space,1))] font-semibold text-ink">{notice}</p>}
-          {phase === "checked" && result && <Feedback result={result} showsAnswer={showsAnswer} />}
-          {phase === "revealed" && (
-            <p className="rounded-lg border-l-[0.3em] border-primary bg-primary/[0.07] px-[0.9em] py-[0.6em] font-semibold text-ink">
-              The correct answer is highlighted.
-            </p>
+        <div className="min-w-0 flex-1 basis-[12em]">
+          <div role="status" aria-live="polite">
+            {notice && <p className="mt-[calc(0.9em*var(--q-space,1))] font-semibold text-ink">{notice}</p>}
+          </div>
+          {phase !== "answering" && (
+            <div ref={resultRef} tabIndex={-1} className="focus:outline-none">
+              {phase === "checked" && result && <Feedback result={result} showsAnswer={showsAnswer} />}
+              {phase === "revealed" && (
+                <p className="rounded-lg border-l-[0.3em] border-primary bg-primary/[0.07] px-[0.9em] py-[0.6em] font-semibold text-ink">
+                  The correct answer is highlighted.
+                </p>
+              )}
+            </div>
           )}
         </div>
         {canCheck && retry && AnswerArea && phase !== "answering" && (
@@ -248,7 +269,7 @@ function FrameButton({
       onClick={onClick}
       disabled={disabled}
       className={`inline-flex min-h-[max(var(--answer-min-h,56px),var(--answer-min-em,3.5em))] items-center justify-center rounded-lg px-[1em] font-semibold transition-colors focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60 ${
-        primary ? "bg-primary text-white hover:bg-primary/90" : "border-2 border-primary bg-white text-primary hover:bg-primary/[0.06]"
+        primary ? "hc-edge bg-primary text-white hover:bg-primary/90" : "border-2 border-primary bg-white text-primary hover:bg-primary/[0.06]"
       }`}
     >
       {children}

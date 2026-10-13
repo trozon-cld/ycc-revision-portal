@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { requireRole } from "@/lib/auth/guard";
 import { pool } from "@/lib/db/pool";
 import { customDateBounds, formatUkDate } from "@/lib/candidates/access";
@@ -23,6 +24,8 @@ import { LAST_LOGIN_SQL } from "@/lib/candidates/detail";
 import { scoreText } from "@/lib/mock/types";
 import { STALE_MOCK_SQL, settleMocks } from "@/lib/mock/attempts";
 import { withTransaction } from "@/lib/db/transaction";
+
+export const metadata: Metadata = { title: "Candidates" };
 
 interface CandidateRow {
   id: string;

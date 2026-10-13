@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { requireRole } from "@/lib/auth/guard";
 import { countOf } from "@/lib/format";
 import { loadFaqItems, loadSupportContact } from "@/lib/faq/load";
@@ -8,6 +9,8 @@ import { PageHeader } from "@/components/admin/page-header";
 import { cardClass } from "@/components/admin/styles";
 import { Cell, Row, Table } from "@/components/admin/table";
 import { FaqRowActions, NewFaqButton, SupportContactButton } from "./faq-row-actions";
+
+export const metadata: Metadata = { title: "General queries" };
 
 // General queries: the questions candidates see, and the support contact details. Superadmin only.
 export default async function FaqAdminPage() {

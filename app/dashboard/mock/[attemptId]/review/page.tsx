@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
@@ -9,6 +10,8 @@ import { PageBody } from "@/components/candidate/page-body";
 import { SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { FocusedShell } from "@/components/learning/focused-shell";
 import { ReviewList } from "./review-list";
+
+export const metadata: Metadata = { title: "Your answers" };
 
 const FILTERS: { key: string; label: string; match: (item: MockReviewItem) => boolean; none: string }[] = [
   { key: "wrong", label: "Wrong", match: (item) => item.mark === "W", none: "No wrong answers in this test." },
@@ -56,7 +59,7 @@ export default async function MockReviewPage({ params, searchParams }: PageProps
                       href={`/dashboard/mock/${attemptId}/review?show=${item.key}`}
                       aria-current={current ? "page" : undefined}
                       className={`inline-flex min-h-12 items-center rounded-full border-2 px-4 text-lg font-semibold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary ${
-                        current ? "border-primary bg-primary text-white" : "border-ink/25 bg-white text-ink hover:border-primary hover:text-primary"
+                        current ? "hc-fill border-primary bg-primary text-white" : "border-ink/25 bg-white text-ink hover:border-primary hover:text-primary"
                       }`}
                     >
                       {item.label} ({counts.get(item.key)})

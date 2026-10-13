@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { randomUUID } from "node:crypto";
 import { requireRole } from "@/lib/auth/guard";
@@ -13,6 +14,8 @@ import { parseQuestion } from "@/lib/questions/validate";
 import { isStorageConfigured } from "@/lib/storage/storage";
 import { isUuid } from "@/lib/ids";
 import { QuestionEditor } from "../question-editor";
+
+export const metadata: Metadata = { title: "Edit question" };
 
 export default async function EditQuestionPage({ params }: PageProps<"/admin/questions/[questionId]">) {
   await requireRole(["superadmin"]);

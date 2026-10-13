@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
@@ -10,6 +11,8 @@ import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons
 import { FocusedShell } from "@/components/learning/focused-shell";
 import { MockHistoryList } from "./mock-history";
 import { StartMock } from "./start-mock";
+
+export const metadata: Metadata = { title: "Mock test" };
 
 // Past tests shown at first, and how many more each "Show more" adds (up to the cap).
 const HISTORY_STEP = 10;

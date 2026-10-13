@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { requireRole } from "@/lib/auth/guard";
 import { pool } from "@/lib/db/pool";
@@ -11,6 +12,8 @@ import type { ChapterOutline } from "./category-chapters-form";
 import type { CoverChoice } from "./category-covers-form";
 import { CategoryRowActions, NewCategoryButton, type GroupOption } from "./category-row-actions";
 import { GroupRowActions, NewGroupButton } from "./group-row-actions";
+
+export const metadata: Metadata = { title: "Categories" };
 
 interface GroupRow {
   id: string;

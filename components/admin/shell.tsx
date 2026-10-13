@@ -137,7 +137,7 @@ function SidebarContent({ role, email, name, onNavigate }: { role: Role; email: 
                   onClick={onNavigate}
                   aria-current={isCurrent ? "page" : undefined}
                   className={`flex h-10 items-center gap-2.5 rounded-md px-3 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:h-9 ${
-                    isCurrent ? "bg-primary/10 font-medium text-primary" : "text-slate-700 hover:bg-slate-100 hover:text-ink"
+                    isCurrent ? "hc-edge bg-primary/10 font-medium text-primary" : "text-slate-700 hover:bg-slate-100 hover:text-ink"
                   }`}
                 >
                   <NavIcon name={item.icon} />

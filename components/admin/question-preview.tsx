@@ -223,7 +223,7 @@ function Toggle<T extends string>({
           type="button"
           aria-pressed={value === key}
           onClick={() => onChange(key)}
-          className={`h-9 rounded px-3 text-sm font-medium sm:h-8 ${value === key ? "bg-primary text-white" : "text-ink hover:bg-slate-100"}`}
+          className={`h-9 rounded px-3 text-sm font-medium sm:h-8 ${value === key ? "hc-fill bg-primary text-white" : "text-ink hover:bg-slate-100"}`}
         >
           {text}
         </button>

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -22,6 +23,8 @@ import { CandidateStatusBadge } from "../status-badge";
 import { AdminCandidateActions, SuperadminCandidateActions } from "../candidate-row-actions";
 import { loadAdminOptions, loadCategoryChoices } from "../options";
 import { toRowCandidate } from "../row-candidate";
+
+export const metadata: Metadata = { title: "Candidate" };
 
 const HISTORY_PAGE_SIZE = 10;
 

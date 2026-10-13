@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
 import { loadReaderTextSize } from "@/lib/content/candidate-book";
@@ -5,6 +6,13 @@ import { loadPracticeReport, loadPracticeView } from "@/lib/practice/sessions";
 import { isUuid } from "@/lib/ids";
 import { PracticeReportView } from "./practice-report";
 import { PracticeRunner } from "./practice-runner";
+
+export async function generateMetadata({ params }: PageProps<"/dashboard/practice/[sessionId]">): Promise<Metadata> {
+  const session = await requireRole(["candidate"]);
+  const { sessionId } = await params;
+  const view = isUuid(sessionId) ? await loadPracticeView(session.sub, sessionId) : null;
+  return { title: view?.kind === "report" ? "Practice results" : "Practice" };
+}
 
 // A practice run: the current question while it's going, the report once it's finished.
 export default async function PracticeRunPage({ params, searchParams }: PageProps<"/dashboard/practice/[sessionId]">) {

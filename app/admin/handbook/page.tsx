@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { requireRole } from "@/lib/auth/guard";
 import { pool } from "@/lib/db/pool";
@@ -10,6 +11,8 @@ import { Cell, Row, Table } from "@/components/admin/table";
 import { countOf } from "@/lib/format";
 import { ChapterRowActions, NewChapterButton } from "./chapter-row-actions";
 import { NewSectionButton, SectionRowActions, type SectionOption } from "./section-row-actions";
+
+export const metadata: Metadata = { title: "Handbook" };
 
 interface SectionRow {
   id: string;

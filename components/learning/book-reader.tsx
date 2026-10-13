@@ -1048,7 +1048,7 @@ function SideButton({ direction, disabled, onClick }: { direction: "previous" | 
       disabled={disabled}
       title={showLabels ? undefined : isNext ? "Next page" : "Previous page"}
       className={`flex h-36 w-[72px] shrink-0 flex-col items-center justify-center gap-1 rounded-xl text-sm font-semibold transition-colors focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-40 ${
-        isNext ? "bg-primary text-white hover:bg-primary/90" : "border-2 border-ink/25 bg-white text-ink hover:bg-slate-50"
+        isNext ? "hc-edge bg-primary text-white hover:bg-primary/90" : "border-2 border-ink/25 bg-white text-ink hover:bg-slate-50"
       }`}
     >
       <svg viewBox="0 0 24 24" aria-hidden="true" className="size-8" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1074,7 +1074,7 @@ function PageButton({
   const showLabels = useContext(ReaderLabelsContext);
   const iconOnly = compact || !showLabels;
   const tone = isNext
-    ? "bg-primary text-white hover:bg-primary/90"
+    ? "hc-edge bg-primary text-white hover:bg-primary/90"
     : "border-2 border-ink/25 bg-white text-ink hover:bg-slate-50";
   const size = iconOnly ? "size-14" : "h-14 min-w-36 gap-2 px-5";
   const arrow = (
@@ -1357,7 +1357,7 @@ function CoverSheet({
           actions={
             <>
               {covers.homeHref && (
-                <Link href={covers.homeHref} className={`${COVER_BUTTON} bg-primary text-white hover:bg-primary/90`}>
+                <Link href={covers.homeHref} className={`${COVER_BUTTON} hc-edge bg-primary text-white hover:bg-primary/90`}>
                   Back to home
                 </Link>
               )}

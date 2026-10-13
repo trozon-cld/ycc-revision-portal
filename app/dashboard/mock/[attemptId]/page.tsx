@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
 import { loadReaderTextSize } from "@/lib/content/candidate-book";
@@ -6,6 +7,13 @@ import { isUuid } from "@/lib/ids";
 import { FocusedShell } from "@/components/learning/focused-shell";
 import { MockResultsView } from "./mock-results";
 import { MockRunner } from "./mock-runner";
+
+export async function generateMetadata({ params }: PageProps<"/dashboard/mock/[attemptId]">): Promise<Metadata> {
+  const session = await requireRole(["candidate"]);
+  const { attemptId } = await params;
+  const view = isUuid(attemptId) ? await loadMockRun(session.sub, attemptId) : null;
+  return { title: view?.kind === "ended" ? "Mock test results" : "Mock test" };
+}
 
 // The test while it runs; its results once it has ended.
 export default async function MockAttemptPage({ params, searchParams }: PageProps<"/dashboard/mock/[attemptId]">) {

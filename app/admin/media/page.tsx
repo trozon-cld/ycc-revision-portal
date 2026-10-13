@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import { requireRole } from "@/lib/auth/guard";
 import { pool } from "@/lib/db/pool";
@@ -13,6 +14,8 @@ import { MEDIA_USES_SHOWN, type MediaUse } from "@/lib/media/usage";
 import { questionRef } from "@/lib/questions/labels";
 import { MediaRowActions } from "./media-row-actions";
 import { UploadMediaButton } from "./upload-media-form";
+
+export const metadata: Metadata = { title: "Media" };
 
 interface MediaRow {
   id: string;

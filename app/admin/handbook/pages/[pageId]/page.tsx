@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
 import { pool } from "@/lib/db/pool";
@@ -7,6 +8,8 @@ import { getChapterContext, resolveMedia } from "@/lib/content/pages";
 import { isStorageConfigured } from "@/lib/storage/storage";
 import { isUuid } from "@/lib/ids";
 import { PageEditor } from "./page-editor";
+
+export const metadata: Metadata = { title: "Edit page" };
 
 export default async function EditPagePage({ params }: PageProps<"/admin/handbook/pages/[pageId]">) {
   await requireRole(["superadmin"]);

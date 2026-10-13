@@ -3,6 +3,7 @@ import { countOf, formatDuration } from "@/lib/format";
 import { MOCK_KEEP_ANSWERS, READINESS_TARGET, scorePercent, type MockEnd, type MockResults } from "@/lib/mock/types";
 import { PageBody } from "@/components/candidate/page-body";
 import { ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { ArrivalHeading } from "@/components/candidate/arrival-heading";
 import { ChapterResults } from "@/components/candidate/chapter-results";
 import { practiseMockMisses } from "@/app/dashboard/practice/actions";
 import { RetryButton } from "@/app/dashboard/practice/[sessionId]/retry-button";
@@ -29,7 +30,7 @@ export function MockResultsView({ attemptId, results, practiceUnavailable }: { a
   return (
     <PageBody>
       <div className="max-w-3xl">
-        <h1 className="text-3xl font-bold text-ink">{ending.title}</h1>
+        <ArrivalHeading className="text-3xl font-bold text-ink">{ending.title}</ArrivalHeading>
         <p className="mt-3 text-lg leading-relaxed text-ink">{ending.text}</p>
 
         <section aria-labelledby="score-heading" className="mt-6 rounded-xl border-2 border-ink/15 bg-white p-5">

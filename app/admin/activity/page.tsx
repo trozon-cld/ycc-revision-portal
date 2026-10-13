@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { requireRole } from "@/lib/auth/guard";
 import { pool } from "@/lib/db/pool";
@@ -55,6 +56,12 @@ interface ActorRow {
   actor_id: string;
   actor_email: string;
   actor_role: RoleKey;
+}
+
+// Named like the page heading: Admins see only their own activity.
+export async function generateMetadata(): Promise<Metadata> {
+  const session = await requireRole(["admin", "superadmin"]);
+  return { title: session.role === "superadmin" ? "Activity" : "My activity" };
 }
 
 export default async function ActivityPage({ searchParams }: PageProps<"/admin/activity">) {

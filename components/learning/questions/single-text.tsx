@@ -55,7 +55,7 @@ export function SingleTextAnswer({ mode, seed, content, answer, response, onResp
               <span
                 aria-hidden="true"
                 className={`grid size-[2em] shrink-0 place-items-center rounded-full border-2 text-[0.9em] font-bold ${
-                  selected ? "border-primary bg-primary text-white" : "border-slate-400 text-slate-700"
+                  selected ? "hc-fill border-primary bg-primary text-white" : "border-slate-400 text-slate-700"
                 }`}
               >
                 {optionLetter(index)}
