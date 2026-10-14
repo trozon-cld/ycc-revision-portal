@@ -111,6 +111,11 @@ export function formatUkTime(value: string | Date): string {
   return new Date(value).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: ACCESS_TIME_ZONE });
 }
 
+// Whether access has already ended (no end date: never).
+export function accessEnded(expiresAt: string | Date | null): boolean {
+  return expiresAt !== null && new Date(expiresAt).getTime() <= Date.now();
+}
+
 // Whole days left before access ends, counted in UK days (0 on the last day).
 export function daysLeftUk(expiresAt: string | Date): number {
   const diff = Date.parse(`${ukDay(expiresAt)}T00:00:00Z`) - Date.parse(`${todayInUk()}T00:00:00Z`);

@@ -32,7 +32,7 @@ export function MockReview({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
-  const submitFocus = useConfirmFocus(confirming);
+  const { heading: submitHeading, opener: submitOpener } = useConfirmFocus(confirming);
   const done = answered.filter(Boolean).length;
   const open = answered.length - done;
   const flagged = flags.filter(Boolean).length;
@@ -90,7 +90,7 @@ export function MockReview({
       <div className="mt-8">
         {confirming ? (
           <div role="group" aria-labelledby="submit-heading" className="rounded-xl border-2 border-primary bg-primary/5 p-5">
-            <h2 id="submit-heading" ref={submitFocus.heading} tabIndex={-1} className="text-xl font-bold text-ink focus:outline-none">
+            <h2 id="submit-heading" ref={submitHeading} tabIndex={-1} className="text-xl font-bold text-ink focus:outline-none">
               Submit your test now?
             </h2>
             <p className="mt-2 text-lg leading-relaxed text-ink">
@@ -108,7 +108,7 @@ export function MockReview({
           </div>
         ) : (
           <div className="flex flex-col gap-3 sm:flex-row">
-            <button type="button" ref={submitFocus.opener} onClick={onSubmit} className={`${PRIMARY_BUTTON} w-full sm:w-auto`}>
+            <button type="button" ref={submitOpener} onClick={onSubmit} className={`${PRIMARY_BUTTON} w-full sm:w-auto`}>
               Submit test
             </button>
             <button type="button" onClick={onBack} className={`${SECONDARY_BUTTON} w-full sm:w-auto`}>

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { requireRole } from "@/lib/auth/guard";
 import { pool } from "@/lib/db/pool";
-import { customDateBounds, formatUkDate } from "@/lib/candidates/access";
+import { accessEnded, customDateBounds, formatUkDate } from "@/lib/candidates/access";
 import { isUuid } from "@/lib/ids";
 import { firstParam } from "@/lib/params";
 import { escapeLike } from "@/lib/db/like";
@@ -111,7 +111,6 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
     ({ rows: candidates } = await loadPage());
   }
 
-  const now = Date.now();
   const columns = isSuperadmin
     ? ["Candidate", "Category", "Admin", "Status", "Access until", "Recent activity", ""]
     : ["Candidate", "Category", "Status", "Access until", "Recent activity", ""];
@@ -172,7 +171,7 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
       >
         {candidates.map((candidate) => {
           const expiresAt = candidate.access_expires_at;
-          const isExpired = expiresAt !== null && new Date(expiresAt).getTime() <= now;
+          const isExpired = accessEnded(expiresAt);
           const expiryDate = expiresAt ? formatUkDate(expiresAt) : "No expiry";
           const rowCandidate = toRowCandidate({
             id: candidate.id,

@@ -1,6 +1,7 @@
 "use client";
 
-import { useId, useRef } from "react";
+import { useId } from "react";
+import { useLatest } from "@/components/use-latest";
 import { SINGLE_PICTURE_LIMITS, type PictureOptionDraft } from "@/lib/questions/types/single-picture";
 import { optionLetter } from "@/lib/questions/types/single-text";
 import { IconButton } from "@/components/admin/editor-fields";
@@ -16,8 +17,7 @@ export function SinglePictureFields({ content, answer, onChange, newId, media, t
   const correct = (answer as Answer).correctOptionId;
   const groupName = useId();
   // The picker answers later; read the latest options then, not the ones from when it opened.
-  const latest = useRef({ data, correct });
-  latest.current = { data, correct };
+  const latest = useLatest({ data, correct });
 
   const setOptions = (options: PictureOptionDraft[]) => {
     const keep = options.some((option) => option.id === latest.current.correct) ? latest.current.correct : "";

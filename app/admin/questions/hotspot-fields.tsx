@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { useLatest } from "@/components/use-latest";
 import {
   HOTSPOT_LIMITS,
   roundTenth,
@@ -26,8 +27,7 @@ export function HotspotFields({ content, answer, onChange, newId, media, thumbs,
   const data = content as HotspotContent;
   const solution = answer as HotspotDraftAnswer;
   // The picker answers later; read the latest values then.
-  const latest = useRef({ data, solution });
-  latest.current = { data, solution };
+  const latest = useLatest({ data, solution });
   const [shape, setShape] = useState<HotspotShape>("rect");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 

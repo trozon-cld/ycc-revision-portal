@@ -13,6 +13,7 @@ export async function logOut(everywhere = false) {
     body: JSON.stringify(everywhere ? { everywhere: true } : {}),
   });
   if (!response.ok) throw new Error(`Logout failed (${response.status})`);
+  // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- a full load drops everything kept from the signed-in session
   window.location.href = "/login";
 }
 

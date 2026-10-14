@@ -4,7 +4,6 @@ import { Pool } from "pg";
 // (see its comment). DATABASE_URL should be the pooler string; see .env.example.
 
 declare global {
-  // eslint-disable-next-line no-var
   var pgPool: Pool | undefined;
 }
 

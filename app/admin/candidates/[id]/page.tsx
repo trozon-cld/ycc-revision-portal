@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
-import { customDateBounds, formatUkDate, formatUkDateTime } from "@/lib/candidates/access";
+import { accessEnded, customDateBounds, formatUkDate, formatUkDateTime } from "@/lib/candidates/access";
 import { loadCandidateDetail } from "@/lib/candidates/detail";
 import { candidateProgressPath } from "@/lib/candidates/paths";
 import { countOf, formatDuration } from "@/lib/format";
@@ -90,7 +90,7 @@ export default async function CandidateProgressPage({ params, searchParams }: Pa
   const page = pageFromParam(firstParam(query.page), mock.count, HISTORY_PAGE_SIZE);
   const history = page === askedPage ? askedHistory : await historyPage(page);
 
-  const isExpired = candidate.accessExpiresAt !== null && candidate.accessExpiresAt.getTime() <= Date.now();
+  const isExpired = accessEnded(candidate.accessExpiresAt);
   const path = candidateProgressPath(candidate.id);
   const categoryQuery: Record<string, string> = { category: category.isCurrent ? "" : category.id };
   const last = mock.items[0];

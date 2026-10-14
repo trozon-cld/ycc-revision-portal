@@ -71,7 +71,7 @@ Status: in active development.
 - `lib/ids.ts`, `lib/text.ts`, `lib/format.ts`, `lib/limits.ts`, `lib/forms.ts`, `lib/params.ts` — small shared helpers (id checks, text clean-up, display formats, length limits, form results, URL parameters)
 - `lib/brand.ts`, `lib/layout.ts` — logo and phone screen sizes
 - `proxy.ts` — route protection by role, block and expiry
-- `scripts/` — `generate-hash.js` (`npm run hash`)
+- `scripts/` — `generate-hash.mjs` (`npm run hash`)
 - `supabase/` — schema, migrations and seed
 
 This project runs Next.js 16, which differs from older versions. See `AGENTS.md` and `node_modules/next/dist/docs/` before changing routing, data fetching or config.

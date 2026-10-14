@@ -1,7 +1,9 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
+import { useDeviceSwitch } from "@/components/use-browser-value";
+import { useLatest } from "@/components/use-latest";
 import { TEXT_SIZES, type BookPageData, type Sheet, type TextSize } from "@/lib/content/book";
 
 // Phase 2 (planned soon, decided 13 Oct): set to true when Listen reads pages aloud, to show its button again.
@@ -23,25 +25,7 @@ export const ReaderLabelsContext = createContext(true);
 const LABELS_KEY = "ycc-reader-labels";
 
 export function useReaderLabels(): [showLabels: boolean, toggleLabels: () => void] {
-  const [showLabels, setShowLabels] = useState(true);
-  useEffect(() => {
-    try {
-      if (window.localStorage.getItem(LABELS_KEY) === "off") setShowLabels(false);
-    } catch {
-      // Storage can be blocked (private windows); labels simply stay on.
-    }
-  }, []);
-  const toggleLabels = useCallback(() => {
-    setShowLabels((current) => {
-      try {
-        window.localStorage.setItem(LABELS_KEY, current ? "off" : "on");
-      } catch {
-        // Not remembered, but still switched for this visit.
-      }
-      return !current;
-    });
-  }, []);
-  return [showLabels, toggleLabels];
+  return useDeviceSwitch(LABELS_KEY);
 }
 
 // Bar buttons on laptops and desktops (48px high), also used for the page's own items in the bar.
@@ -307,8 +291,7 @@ export function Panel({ title, onClose, children }: { title: string; onClose: ()
     first?.focus();
   }, []);
   // On the whole page, so Escape still works when focus was lost (e.g. A+ turned disabled at 24px).
-  const closeRef = useRef(onClose);
-  closeRef.current = onClose;
+  const closeRef = useLatest(onClose);
   useEffect(() => {
     const onKey = (event: globalThis.KeyboardEvent) => {
       if (event.key === "Escape" && !event.defaultPrevented) {

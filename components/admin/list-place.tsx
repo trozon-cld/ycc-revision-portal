@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
+import { useBrowserValue } from "@/components/use-browser-value";
 
 // Lists remember their filters and page for this tab, so "back" links return to the same place.
 const storageKeyFor = (list: string) => `ycc-list:${list}`;
@@ -17,13 +18,10 @@ export function RememberListPlace({ list, search }: { list: string; search: stri
 }
 
 export function ListBackLink({ list, href, className, children }: { list: string; href: string; className?: string; children: ReactNode }) {
-  const [target, setTarget] = useState(href);
-  useEffect(() => {
-    try {
-      const search = sessionStorage.getItem(storageKeyFor(list)) ?? "";
-      if (search.startsWith("?") && search.length <= MAX_SEARCH_LENGTH) setTarget(href + search);
-    } catch {}
-  }, [list, href]);
+  const target = useBrowserValue(() => {
+    const search = sessionStorage.getItem(storageKeyFor(list)) ?? "";
+    return search.startsWith("?") && search.length <= MAX_SEARCH_LENGTH ? href + search : href;
+  }, href);
   return (
     <Link href={target} className={className}>
       {children}

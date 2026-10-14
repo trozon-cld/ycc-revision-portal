@@ -6,7 +6,7 @@ import { archiveLoginRecords } from "@/lib/audit/archive";
 import type { FormState } from "@/lib/forms";
 import { StorageConfigError } from "@/lib/storage/storage";
 
-export async function archiveOldLoginRecords(_prev: FormState): Promise<FormState> {
+export async function archiveOldLoginRecords(): Promise<FormState> {
   const session = await requireRole(["superadmin"]);
   let result;
   try {

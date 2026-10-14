@@ -15,6 +15,8 @@ import {
   type ReactNode,
 } from "react";
 import Link from "next/link";
+import { useDeviceSwitch } from "@/components/use-browser-value";
+import { useLatest } from "@/components/use-latest";
 import { buildSheets, type BookPageData, type HandbookOutcome, type ResolvedMedia, type Sheet, type TextSize } from "@/lib/content/book";
 import type { BookCovers } from "@/lib/content/covers";
 import { PHONE_SIDEWAYS_QUERY } from "@/lib/layout";
@@ -242,7 +244,7 @@ export function BookReader({
   const [questionStates, setQuestionStates] = useState<QuestionStates>({});
   const [panel, setPanel] = useState<ReaderPanel | null>(null);
   const [showLabels, toggleLabels] = useReaderLabels();
-  const [pageTurn, setPageTurn] = useState(true);
+  const [pageTurn, togglePageTurn] = useDeviceSwitch(PAGE_TURN_KEY);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [turn, setTurn] = useState<Turn | null>(null);
   // Touch screens (tablets, phones): swipe to turn, 56px answers, and two pages only when there's room.
@@ -252,11 +254,6 @@ export function BookReader({
   const swipe = useRef<{ id: number; x: number; y: number; t: number } | null>(null);
   const swipedAt = useRef(-Infinity);
   useEffect(() => {
-    try {
-      if (window.localStorage.getItem(PAGE_TURN_KEY) === "off") setPageTurn(false);
-    } catch {
-      // Storage can be blocked (private windows); the defaults simply stay.
-    }
     const query = window.matchMedia("(prefers-reduced-motion: reduce)");
     const coarse = window.matchMedia("(pointer: coarse)");
     const update = () => {
@@ -271,18 +268,7 @@ export function BookReader({
       coarse.removeEventListener("change", update);
     };
   }, []);
-  const togglePageTurn = useCallback(() => {
-    setPageTurn((current) => {
-      try {
-        window.localStorage.setItem(PAGE_TURN_KEY, current ? "off" : "on");
-      } catch {
-        // Not remembered, but still switched for this visit.
-      }
-      return !current;
-    });
-  }, []);
-  const questionDone = useRef(onQuestionDone);
-  questionDone.current = onQuestionDone;
+  const questionDone = useLatest(onQuestionDone);
   const questionPages = useMemo(
     () => new Map(pages.flatMap((page): [string, string][] => (page.question ? [[questionKey(page), page.id]] : []))),
     [pages]
@@ -336,7 +322,7 @@ export function BookReader({
   );
 
   // A new identity whenever everything must be measured again.
-  const layoutId = useMemo(() => ({}), [geometry, textSize, fontsReady, pages, media]);
+  const layoutId = useMemo(() => ({ geometry, textSize, fontsReady, pages, media }), [geometry, textSize, fontsReady, pages, media]);
   const current = counts && counts.id === layoutId ? counts : null;
   const fitList = fits && fits.id === layoutId ? fits.list : null;
   const fitFloor = Math.max(FIT_MIN_SIZE, textSize - FIT_STEPS);
@@ -359,12 +345,10 @@ export function BookReader({
       fitList?.[index]?.smallPictures && pages[index]?.question && geometry ? Math.round(geometry.contentHeight * OPTION_PICTURE_LAST) : null,
     [pages, fitList, geometry]
   );
-  const countsRef = useRef(counts);
-  countsRef.current = counts;
+  const countsRef = useLatest(counts);
   // The authored page nearest the reader (a cover counts as the first or last page) for measuring order.
   const nearestPage = Math.min(Math.max(0, position.pageIndex), Math.max(0, pages.length - 1));
-  const positionRef = useRef(nearestPage);
-  positionRef.current = nearestPage;
+  const positionRef = useLatest(nearestPage);
 
   const nextBatch = useCallback(
     (fresh: boolean[] | null, size = MEASURE_BATCH) => measureOrder(pages, positionRef.current).filter((index) => !fresh?.[index]).slice(0, size),
@@ -372,9 +356,11 @@ export function BookReader({
   );
 
   // New layout: measure again, starting with the current chapter (before anything is painted).
-  useLayoutEffect(() => {
-    setBatch(nextBatch(null));
-  }, [layoutId, nextBatch]);
+  const [batchLayout, setBatchLayout] = useState<object | null>(null);
+  if (batchLayout !== layoutId) {
+    setBatchLayout(layoutId);
+    setBatch(measureOrder(pages, nearestPage).slice(0, MEASURE_BATCH));
+  }
 
   // Jumped to a chapter that isn't measured yet (e.g. from Contents): measure it now.
   useLayoutEffect(() => {
@@ -427,6 +413,7 @@ export function BookReader({
       }
     }
     if (caps.join() !== pictureCaps.join()) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- the room comes from measuring the laid-out pages
       setPictureCaps(caps);
       return;
     }
@@ -565,7 +552,12 @@ export function BookReader({
     const timer = window.setTimeout(() => setTurn(null), turnMs + 200);
     return () => window.clearTimeout(timer);
   }, [turn, turnMs]);
-  useEffect(() => setTurn(null), [layoutId, animate]);
+  // A new layout or animation setting ends any turn in progress.
+  const [turnSetting, setTurnSetting] = useState({ layoutId, animate });
+  if (turnSetting.layoutId !== layoutId || turnSetting.animate !== animate) {
+    setTurnSetting({ layoutId, animate });
+    setTurn(null);
+  }
 
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (panel || event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
@@ -614,8 +606,7 @@ export function BookReader({
   }, [sheets, viewStart, perView, pages, media, covers]);
 
   // A content page counts as done once its last part is on screen, measured and fitted (not an estimate).
-  const pagesDone = useRef(onPagesDone);
-  pagesDone.current = onPagesDone;
+  const pagesDone = useLatest(onPagesDone);
   const reportedDone = useRef(new Set<string>());
   useEffect(() => {
     if (!pagesDone.current || !current) return;

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useMemo, useRef, useState, useTransition, type KeyboardEvent, type PointerEvent } from "react";
+import { useId, useMemo, useRef, useState, useTransition, type KeyboardEvent, type PointerEvent } from "react";
 import { ActionForm } from "@/components/admin/action-form";
 import { Badge } from "@/components/admin/badge";
 import { PanelButton, RowActions, type RowAction } from "@/components/admin/row-actions";
@@ -35,7 +35,11 @@ export function ChapterOrder({ items }: { items: OrderItem[] }) {
   const hintId = useId();
 
   // The server's order wins whenever it arrives.
-  useEffect(() => setOrder(items), [items]);
+  const [serverItems, setServerItems] = useState(items);
+  if (serverItems !== items) {
+    setServerItems(items);
+    setOrder(items);
+  }
 
   function commit(from: number, to: number) {
     if (pending || to === from || to < 0 || to >= order.length) return;

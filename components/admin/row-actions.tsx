@@ -1,12 +1,23 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { NOT_THROUGH_MESSAGE, reachServer, type FormState } from "@/lib/forms";
 import { Dialog } from "./dialog";
 import { RowMenu } from "./row-menu";
 import { buttonClass, type ButtonVariant } from "./styles";
 import { useToast } from "./toast";
+
+// The button that opened a dialog gets focus back once the dialog has closed (focus can't leave an open modal).
+function useFocusAfterClose(open: boolean) {
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const wasOpen = useRef(open);
+  useEffect(() => {
+    if (wasOpen.current && !open) requestAnimationFrame(() => triggerRef.current?.focus());
+    wasOpen.current = open;
+  }, [open]);
+  return triggerRef;
+}
 
 export type PanelRowAction = {
   label: string;
@@ -38,7 +49,7 @@ export function RowActions({ label, actions, triggerText }: { label: string; act
   const [isPending, startTransition] = useTransition();
   const toast = useToast();
   const router = useRouter();
-  const triggerRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useFocusAfterClose(activeIndex !== null);
   const selected = activeIndex === null ? null : actions[activeIndex];
   const active = selected && "render" in selected ? selected : null;
 
@@ -53,8 +64,6 @@ export function RowActions({ label, actions, triggerText }: { label: string; act
 
   function close() {
     setActiveIndex(null);
-    // Wait for the dialog to unmount; focus can't leave an open modal.
-    requestAnimationFrame(() => triggerRef.current?.focus());
   }
 
   return (
@@ -89,11 +98,10 @@ export function ActionButton({ action, variant = "secondary" }: { action: PanelR
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const toast = useToast();
-  const triggerRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useFocusAfterClose(open);
 
   function close() {
     setOpen(false);
-    requestAnimationFrame(() => triggerRef.current?.focus());
   }
 
   function onClick() {
@@ -135,12 +143,10 @@ export function PanelButton({
   children: (close: () => void) => ReactNode;
 }) {
   const [open, setOpen] = useState(false);
-  const triggerRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useFocusAfterClose(open);
 
   function close() {
     setOpen(false);
-    // Wait for the dialog to unmount; focus can't leave an open modal.
-    requestAnimationFrame(() => triggerRef.current?.focus());
   }
 
   return (

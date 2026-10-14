@@ -9,7 +9,7 @@ import { startMockForm, type MockStartState } from "./actions";
 // Start mock test: disabled while starting, so a double tap can't start two tests.
 export function StartMock() {
   const [state, action, pending] = useActionState<MockStartState, FormData>(
-    async (previous) => (await reachServer(() => startMockForm(previous))) ?? { error: NOT_THROUGH_MESSAGE },
+    async () => (await reachServer(() => startMockForm())) ?? { error: NOT_THROUGH_MESSAGE },
     { error: null }
   );
   return (

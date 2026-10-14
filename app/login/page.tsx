@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
+import { useBrowserValue } from "@/components/use-browser-value";
 import { ERROR_BOX, PRIMARY_BUTTON } from "@/components/candidate/buttons";
 import { NOT_THROUGH_MESSAGE } from "@/lib/forms";
 
@@ -10,10 +11,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   // Sent here because a sign-in ended (time limit, password changed elsewhere, or a page opened signed out).
-  const [ended, setEnded] = useState(false);
-  useEffect(() => {
-    setEnded(new URLSearchParams(window.location.search).has("ended"));
-  }, []);
+  const ended = useBrowserValue(() => new URLSearchParams(window.location.search).has("ended"), false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
