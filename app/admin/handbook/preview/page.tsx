@@ -1,5 +1,7 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { requireRole } from "@/lib/auth/guard";
+import { CONTENT_EDITORS } from "@/lib/auth/content-editors";
 import { loadBookCovers, loadPreviewBook, loadPreviewOptions } from "@/lib/content/preview";
 import { isUuid } from "@/lib/ids";
 import { firstParam } from "@/lib/params";
@@ -7,8 +9,10 @@ import { PageHeader } from "@/components/admin/page-header";
 import { countOf } from "@/lib/format";
 import { PreviewControls, PreviewReader } from "./preview-client";
 
+export const metadata: Metadata = { title: "Book preview" };
+
 export default async function BookPreviewPage({ searchParams }: PageProps<"/admin/handbook/preview">) {
-  await requireRole(["superadmin"]);
+  await requireRole(CONTENT_EDITORS);
   const params = await searchParams;
   const options = await loadPreviewOptions();
   const chapterId = pick(params.chapter, options.chapters.map((chapter) => chapter.id));
@@ -30,19 +34,19 @@ export default async function BookPreviewPage({ searchParams }: PageProps<"/admi
   return (
     <>
       <nav aria-label="Breadcrumb" className="mb-2 text-sm">
-        <Link href="/admin/handbook" className="text-primary underline-offset-2 hover:underline">
+        <Link href="/admin/handbook" className="text-primary underline underline-offset-2 hover:text-ink">
           Handbook
         </Link>
         {chapter && (
           <>
             <span aria-hidden="true" className="mx-1.5 text-slate-500">/</span>
-            <Link href={`/admin/handbook/chapters/${chapter.id}`} className="text-primary underline-offset-2 hover:underline">
+            <Link href={`/admin/handbook/chapters/${chapter.id}`} className="text-primary underline underline-offset-2 hover:text-ink">
               {chapter.label}
             </Link>
           </>
         )}
         <span aria-hidden="true" className="mx-1.5 text-slate-500">/</span>
-        <span className="text-slate-700">Preview</span>
+        <span aria-current="page" className="text-slate-700">Preview</span>
       </nav>
       <PageHeader title="Book preview" description="The Handbook as candidates will read it. Only you can see this preview." />
 

@@ -10,7 +10,7 @@ import { isUuid } from "@/lib/ids";
 
 export type MockStartState = { error: string | null };
 
-export async function startMockForm(_prev: MockStartState): Promise<MockStartState> {
+export async function startMockForm(): Promise<MockStartState> {
   const session = await requireRole(["candidate"]);
   const reply = await startMock(session.sub);
   if (!reply.ok) return { error: reply.error };

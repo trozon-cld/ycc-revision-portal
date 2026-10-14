@@ -15,6 +15,8 @@ import {
   type ReactNode,
 } from "react";
 import Link from "next/link";
+import { useDeviceSwitch } from "@/components/use-browser-value";
+import { useLatest } from "@/components/use-latest";
 import { buildSheets, type BookPageData, type HandbookOutcome, type ResolvedMedia, type Sheet, type TextSize } from "@/lib/content/book";
 import type { BookCovers } from "@/lib/content/covers";
 import { PHONE_SIDEWAYS_QUERY } from "@/lib/layout";
@@ -75,6 +77,8 @@ const QUESTION_PICTURE_MIN = 80;
 const COMPACT_BELOW = 600;
 // Pages measured per step; a book this size or smaller is measured in one go, before it's shown.
 const MEASURE_BATCH = 40;
+// After that first batch, the rest goes in small steps, so page turns stay quick in a long book on a slow phone.
+const BACKGROUND_BATCH = 6;
 // A page that would spill over is fitted first: question pictures shrink (to half), text steps down
 // FIT_STEPS px (not below FIT_MIN_SIZE), then content pictures to CONTENT_PICTURE_FIT; else it continues.
 const FIT_MIN_SIZE = 14;
@@ -240,7 +244,7 @@ export function BookReader({
   const [questionStates, setQuestionStates] = useState<QuestionStates>({});
   const [panel, setPanel] = useState<ReaderPanel | null>(null);
   const [showLabels, toggleLabels] = useReaderLabels();
-  const [pageTurn, setPageTurn] = useState(true);
+  const [pageTurn, togglePageTurn] = useDeviceSwitch(PAGE_TURN_KEY);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [turn, setTurn] = useState<Turn | null>(null);
   // Touch screens (tablets, phones): swipe to turn, 56px answers, and two pages only when there's room.
@@ -250,11 +254,6 @@ export function BookReader({
   const swipe = useRef<{ id: number; x: number; y: number; t: number } | null>(null);
   const swipedAt = useRef(-Infinity);
   useEffect(() => {
-    try {
-      if (window.localStorage.getItem(PAGE_TURN_KEY) === "off") setPageTurn(false);
-    } catch {
-      // Storage can be blocked (private windows); the defaults simply stay.
-    }
     const query = window.matchMedia("(prefers-reduced-motion: reduce)");
     const coarse = window.matchMedia("(pointer: coarse)");
     const update = () => {
@@ -269,18 +268,7 @@ export function BookReader({
       coarse.removeEventListener("change", update);
     };
   }, []);
-  const togglePageTurn = useCallback(() => {
-    setPageTurn((current) => {
-      try {
-        window.localStorage.setItem(PAGE_TURN_KEY, current ? "off" : "on");
-      } catch {
-        // Not remembered, but still switched for this visit.
-      }
-      return !current;
-    });
-  }, []);
-  const questionDone = useRef(onQuestionDone);
-  questionDone.current = onQuestionDone;
+  const questionDone = useLatest(onQuestionDone);
   const questionPages = useMemo(
     () => new Map(pages.flatMap((page): [string, string][] => (page.question ? [[questionKey(page), page.id]] : []))),
     [pages]
@@ -296,7 +284,7 @@ export function BookReader({
         setQuestionStates((current) => ({ ...current, [key]: state }));
       },
     }),
-    [questionStates, questionPages]
+    [questionStates, questionPages, questionDone]
   );
 
   useEffect(() => {
@@ -334,7 +322,7 @@ export function BookReader({
   );
 
   // A new identity whenever everything must be measured again.
-  const layoutId = useMemo(() => ({}), [geometry, textSize, fontsReady, pages, media]);
+  const layoutId = useMemo(() => ({ geometry, textSize, fontsReady, pages, media }), [geometry, textSize, fontsReady, pages, media]);
   const current = counts && counts.id === layoutId ? counts : null;
   const fitList = fits && fits.id === layoutId ? fits.list : null;
   const fitFloor = Math.max(FIT_MIN_SIZE, textSize - FIT_STEPS);
@@ -357,28 +345,28 @@ export function BookReader({
       fitList?.[index]?.smallPictures && pages[index]?.question && geometry ? Math.round(geometry.contentHeight * OPTION_PICTURE_LAST) : null,
     [pages, fitList, geometry]
   );
-  const countsRef = useRef(counts);
-  countsRef.current = counts;
+  const countsRef = useLatest(counts);
   // The authored page nearest the reader (a cover counts as the first or last page) for measuring order.
   const nearestPage = Math.min(Math.max(0, position.pageIndex), Math.max(0, pages.length - 1));
-  const positionRef = useRef(nearestPage);
-  positionRef.current = nearestPage;
+  const positionRef = useLatest(nearestPage);
 
   const nextBatch = useCallback(
-    (fresh: boolean[] | null) => measureOrder(pages, positionRef.current).filter((index) => !fresh?.[index]).slice(0, MEASURE_BATCH),
-    [pages]
+    (fresh: boolean[] | null, size = MEASURE_BATCH) => measureOrder(pages, positionRef.current).filter((index) => !fresh?.[index]).slice(0, size),
+    [pages, positionRef]
   );
 
   // New layout: measure again, starting with the current chapter (before anything is painted).
-  useLayoutEffect(() => {
-    setBatch(nextBatch(null));
-  }, [layoutId, nextBatch]);
+  const [batchLayout, setBatchLayout] = useState<object | null>(null);
+  if (batchLayout !== layoutId) {
+    setBatchLayout(layoutId);
+    setBatch(measureOrder(pages, nearestPage).slice(0, MEASURE_BATCH));
+  }
 
   // Jumped to a chapter that isn't measured yet (e.g. from Contents): measure it now.
   useLayoutEffect(() => {
     const fresh = countsRef.current?.id === layoutId ? countsRef.current.fresh : null;
     if (!fresh?.[nearestPage]) setBatch(nextBatch(fresh));
-  }, [nearestPage, layoutId, nextBatch]);
+  }, [nearestPage, layoutId, nextBatch, countsRef]);
 
   // Feedback and explanations appear after Check, so a question page is measured again then.
   const previousStates = useRef(questionStates);
@@ -425,6 +413,7 @@ export function BookReader({
       }
     }
     if (caps.join() !== pictureCaps.join()) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- the room comes from measuring the laid-out pages
       setPictureCaps(caps);
       return;
     }
@@ -478,14 +467,14 @@ export function BookReader({
     if (!same) setCounts({ id: layoutId, values, fresh });
 
     // The rest of the book is measured a batch at a time, letting the reader paint in between.
-    const next = nextBatch(fresh);
+    const next = nextBatch(fresh, BACKGROUND_BATCH);
     if (next.length === 0) {
       setBatch([]);
       return;
     }
     const timer = window.setTimeout(() => setBatch(next), 0);
     return () => window.clearTimeout(timer);
-  }, [geometry, batch, pictureCaps, pages, textSize, layoutId, nextBatch, fitList, fitFloor, sizeFor]);
+  }, [geometry, batch, pictureCaps, pages, textSize, layoutId, nextBatch, fitList, fitFloor, sizeFor, countsRef]);
 
   // Short books are re-measured before anything is painted, so their numbers are never estimates.
   const counted = Boolean(counts) && (pages.length <= MEASURE_BATCH || Boolean(current?.fresh.every(Boolean)));
@@ -563,7 +552,12 @@ export function BookReader({
     const timer = window.setTimeout(() => setTurn(null), turnMs + 200);
     return () => window.clearTimeout(timer);
   }, [turn, turnMs]);
-  useEffect(() => setTurn(null), [layoutId, animate]);
+  // A new layout or animation setting ends any turn in progress.
+  const [turnSetting, setTurnSetting] = useState({ layoutId, animate });
+  if (turnSetting.layoutId !== layoutId || turnSetting.animate !== animate) {
+    setTurnSetting({ layoutId, animate });
+    setTurn(null);
+  }
 
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (panel || event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
@@ -612,8 +606,7 @@ export function BookReader({
   }, [sheets, viewStart, perView, pages, media, covers]);
 
   // A content page counts as done once its last part is on screen, measured and fitted (not an estimate).
-  const pagesDone = useRef(onPagesDone);
-  pagesDone.current = onPagesDone;
+  const pagesDone = useLatest(onPagesDone);
   const reportedDone = useRef(new Set<string>());
   useEffect(() => {
     if (!pagesDone.current || !current) return;
@@ -626,7 +619,7 @@ export function BookReader({
     if (done.length === 0) return;
     for (const id of done) reportedDone.current.add(id);
     pagesDone.current(done);
-  }, [sheets, viewStart, perView, pages, current, fitList]);
+  }, [sheets, viewStart, perView, pages, current, fitList, pagesDone]);
 
   const currentPageId = pages[position.pageIndex]?.id;
   const reportedPageId = useRef(currentPageId);
@@ -653,7 +646,8 @@ export function BookReader({
   const wide = (stageSize?.width ?? 0) >= SPREAD_MIN_WIDTH;
   // Previous/Next beside the page and the page status in the bar (laptops, desktops, sideways phones).
   const sideNav = wide || sideways;
-  const phone = Boolean(homeHref) && (compact || sideways);
+  // Without the laptop bar's logo, Help and Log out: Home goes in the bar, the rest in Settings.
+  const phone = Boolean(homeHref) && !wide;
 
   const sheetStyle = geometry
     ? ({
@@ -792,7 +786,7 @@ export function BookReader({
       aria-label={label}
       tabIndex={-1}
       onKeyDown={onKeyDown}
-      // Tells the page's CSS to hide the candidate header on phones (see app/globals.css).
+      // Tells the page's CSS to hide the candidate header (see app/globals.css).
       data-reader-owns-header={homeHref ? "" : undefined}
       className="flex h-full min-h-0 flex-col bg-slate-100 text-ink outline-none"
     >
@@ -808,7 +802,7 @@ export function BookReader({
           hasQuestions={results.length > 0}
           dense={sideNav}
           narrow={(stageSize?.width ?? 0) < ROOMY_BAR}
-          stacked={!sideNav && !compact && (stageSize?.width ?? 0) < STACKED_BAR_BELOW}
+          stacked={!sideNav && !compact && (phone || (stageSize?.width ?? 0) < STACKED_BAR_BELOW)}
           status={sideNav ? status : undefined}
           centreStatus={!sideways}
           start={wide ? barStart : undefined}
@@ -1047,7 +1041,7 @@ function SideButton({ direction, disabled, onClick }: { direction: "previous" | 
       disabled={disabled}
       title={showLabels ? undefined : isNext ? "Next page" : "Previous page"}
       className={`flex h-36 w-[72px] shrink-0 flex-col items-center justify-center gap-1 rounded-xl text-sm font-semibold transition-colors focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-40 ${
-        isNext ? "bg-primary text-white hover:bg-primary/90" : "border-2 border-ink/25 bg-white text-ink hover:bg-slate-50"
+        isNext ? "hc-edge bg-primary text-white hover:bg-primary/90" : "border-2 border-ink/25 bg-white text-ink hover:bg-slate-50"
       }`}
     >
       <svg viewBox="0 0 24 24" aria-hidden="true" className="size-8" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1073,7 +1067,7 @@ function PageButton({
   const showLabels = useContext(ReaderLabelsContext);
   const iconOnly = compact || !showLabels;
   const tone = isNext
-    ? "bg-primary text-white hover:bg-primary/90"
+    ? "hc-edge bg-primary text-white hover:bg-primary/90"
     : "border-2 border-ink/25 bg-white text-ink hover:bg-slate-50";
   const size = iconOnly ? "size-14" : "h-14 min-w-36 gap-2 px-5";
   const arrow = (
@@ -1245,7 +1239,7 @@ function SheetView({
         </span>
       )}
       <header
-        className="flex items-end justify-between gap-3 overflow-hidden border-b border-slate-200 pb-[0.35em] text-[0.72em] text-slate-700"
+        className="flex items-end justify-between gap-3 overflow-hidden border-b border-slate-200 pb-[0.35em] text-[max(14px,0.72em)] text-slate-700"
         style={{ height: geometry.headerHeight, marginLeft: geometry.padX, marginRight: geometry.padX }}
       >
         {/* Narrow sheets (phones) show only the chapter, so neither name is cut to a few letters. */}
@@ -1316,7 +1310,7 @@ function SheetView({
 
       <footer
         aria-hidden="true"
-        className="flex items-center justify-center text-[0.8em] text-slate-700"
+        className="flex items-center justify-center text-[max(14px,0.8em)] text-slate-700"
         style={{ height: geometry.footerHeight }}
       >
         {sheet.number}
@@ -1356,7 +1350,7 @@ function CoverSheet({
           actions={
             <>
               {covers.homeHref && (
-                <Link href={covers.homeHref} className={`${COVER_BUTTON} bg-primary text-white hover:bg-primary/90`}>
+                <Link href={covers.homeHref} className={`${COVER_BUTTON} hc-edge bg-primary text-white hover:bg-primary/90`}>
                   Back to home
                 </Link>
               )}

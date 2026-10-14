@@ -1,6 +1,9 @@
 import type { ClientQuestion } from "@/lib/questions/public";
 import type { Block } from "./blocks";
 
+// How long a picture link lasts (signed on the server; the reader fetches fresh ones when they run out).
+export const PICTURE_LINK_SECONDS = 2 * 60 * 60;
+
 // One page as authored in the page builder, or one question page. On screen it may take one or
 // more book sheets. A question page shows `question` instead of blocks.
 export type BookPageData = {

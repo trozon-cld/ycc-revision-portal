@@ -17,7 +17,6 @@ export type BankFilters = {
   categoryId: string | null;
   type: QuestionType | null;
   status: QuestionStatus | null;
-  page: number;
 };
 
 export type BankRow = {
@@ -30,6 +29,8 @@ export type BankRow = {
   chapterLabel: string;
   // Chapter number of the Handbook page order this question is placed in, if any.
   bookChapter: string | null;
+  inPractice: boolean;
+  inMock: boolean;
 };
 
 export type ChapterOption = { id: string; label: string };
@@ -42,9 +43,30 @@ const NUMBERED_CHAPTERS = `
     from chapters c join sections s on s.id = c.section_id
   )`;
 
-export async function listBankQuestions(filters: BankFilters): Promise<{ rows: BankRow[]; hasMore: boolean }> {
+// One filter, shared by the count and the page, so both always agree.
+const BANK_WHERE = `
+  where ($1::uuid is null or n.section_id = $1)
+    and ($2::uuid is null or q.chapter_id = $2)
+    and ($3::text is null or q.type = $3)
+    and ($4::content_status is null or q.status = $4)
+    and ($5 = '' or q.stem_text ilike '%' || $5 || '%' escape '\\' or q.ref_no = $6::int)
+    and ($7::uuid is null or exists (select 1 from category_chapters cc where cc.category_id = $7 and cc.chapter_id = q.chapter_id))`;
+
+function bankValues(filters: BankFilters) {
   const search = filters.search.trim().slice(0, 100);
-  const refNo = search ? parseQuestionRef(search) : null;
+  return [filters.sectionId, filters.chapterId, filters.type, filters.status, escapeLike(search), search ? parseQuestionRef(search) : null, filters.categoryId];
+}
+
+export async function countBankQuestions(filters: BankFilters): Promise<number> {
+  const { rows } = await pool.query<{ count: number }>(
+    `with ${NUMBERED_CHAPTERS} select count(*)::int as count from questions q join numbered n on n.id = q.chapter_id ${BANK_WHERE}`,
+    bankValues(filters)
+  );
+  return rows[0].count;
+}
+
+// One page of the bank; `page` must already be within range (see pageFromParam).
+export async function listBankQuestions(filters: BankFilters, page: number): Promise<BankRow[]> {
   const { rows } = await pool.query<{
     id: string;
     ref_no: number;
@@ -55,48 +77,34 @@ export async function listBankQuestions(filters: BankFilters): Promise<{ rows: B
     chapter_number: number;
     chapter_title: string;
     book_chapter: number | null;
+    in_practice: boolean;
+    in_mock: boolean;
   }>(
     `with ${NUMBERED_CHAPTERS}
      select q.id, q.ref_no, q.type, q.status, q.stem_text, q.stem_media_id is not null as has_picture,
-            n.number as chapter_number, n.title as chapter_title, hn.number as book_chapter
+            n.number as chapter_number, n.title as chapter_title, hn.number as book_chapter,
+            q.in_practice, q.in_mock
      from questions q
      join numbered n on n.id = q.chapter_id
      left join handbook_items hi on hi.question_id = q.id
      left join numbered hn on hn.id = hi.chapter_id
-     where ($1::uuid is null or n.section_id = $1)
-       and ($2::uuid is null or q.chapter_id = $2)
-       and ($3::text is null or q.type = $3)
-       and ($4::content_status is null or q.status = $4)
-       and ($5 = '' or q.stem_text ilike '%' || $5 || '%' escape '\\' or q.ref_no = $6::int)
-       and ($9::uuid is null or exists (select 1 from category_chapters cc where cc.category_id = $9 and cc.chapter_id = q.chapter_id))
+     ${BANK_WHERE}
      order by n.section_position, n.position, q.ref_no
-     limit $7 offset $8`,
-    [
-      filters.sectionId,
-      filters.chapterId,
-      filters.type,
-      filters.status,
-      escapeLike(search),
-      refNo,
-      BANK_PAGE_SIZE + 1,
-      (filters.page - 1) * BANK_PAGE_SIZE,
-      filters.categoryId,
-    ]
+     limit $8 offset $9`,
+    [...bankValues(filters), BANK_PAGE_SIZE, (page - 1) * BANK_PAGE_SIZE]
   );
-
-  return {
-    hasMore: rows.length > BANK_PAGE_SIZE,
-    rows: rows.slice(0, BANK_PAGE_SIZE).map((row) => ({
-      id: row.id,
-      refNo: row.ref_no,
-      type: row.type,
-      status: row.status,
-      stemText: row.stem_text,
-      hasPicture: row.has_picture,
-      chapterLabel: `${chapterNumber(row.chapter_number)} ${row.chapter_title}`,
-      bookChapter: row.book_chapter === null ? null : chapterNumber(row.book_chapter),
-    })),
-  };
+  return rows.map((row) => ({
+    id: row.id,
+    refNo: row.ref_no,
+    type: row.type,
+    status: row.status,
+    stemText: row.stem_text,
+    hasPicture: row.has_picture,
+    chapterLabel: `${chapterNumber(row.chapter_number)} ${row.chapter_title}`,
+    bookChapter: row.book_chapter === null ? null : chapterNumber(row.book_chapter),
+    inPractice: row.in_practice,
+    inMock: row.in_mock,
+  }));
 }
 
 export async function countQuestions(): Promise<number> {

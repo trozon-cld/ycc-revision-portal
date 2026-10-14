@@ -1,11 +1,12 @@
 "use client";
 
-import { useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import type { ResolvedMedia } from "@/lib/content/book";
 import { checkAnswer } from "@/lib/questions/check";
 import { getQuestionTypeDef } from "@/lib/questions/registry";
 import type { ClientQuestion } from "@/lib/questions/public";
 import type { CheckResult } from "@/lib/questions/types";
+import { NOT_THROUGH_MESSAGE } from "@/lib/forms";
 import { InlineText } from "../inline-text";
 import { MarkIcon } from "./answer-parts";
 import { BookPicture } from "../picture";
@@ -42,6 +43,7 @@ export function QuestionView({
   state: controlledState,
   onStateChange,
   retry = true,
+  review = false,
 }: {
   question: ClientQuestion;
   // e.g. "Question 3" in the book, "3 of 36" in a mock test.
@@ -62,6 +64,8 @@ export function QuestionView({
   onStateChange?: (state: QuestionViewState) => void;
   // "Try again" after Check; Practice turns it off (every question counts once).
   retry?: boolean;
+  // Reports: the question text is already in the line above, so it's kept for screen readers only.
+  review?: boolean;
 }) {
   const [ownState, setOwnState] = useState<QuestionViewState>(initialState ?? { ...FRESH_QUESTION_STATE, response: initialResponse });
   const [checking, setChecking] = useState(false);
@@ -73,6 +77,14 @@ export function QuestionView({
     if (!controlledState) setOwnState(next);
   };
   const stemId = useId();
+  // After Check or Reveal here, focus moves to the result: the button pressed has gone.
+  const resultRef = useRef<HTMLDivElement>(null);
+  const focusResult = useRef(false);
+  useEffect(() => {
+    if (!focusResult.current || phase === "answering") return;
+    focusResult.current = false;
+    resultRef.current?.focus({ preventScroll: true });
+  }, [phase]);
 
   const { mode } = question;
   const AnswerArea = QUESTION_RENDERERS[question.type];
@@ -103,11 +115,14 @@ export function QuestionView({
           : await onCheck?.(response);
       if (marked === false) return;
       if (!marked) {
-        setState({ notice: "This answer couldn’t be checked. Please try again." });
+        setState({ notice: NOT_THROUGH_MESSAGE });
         return;
       }
       const reveal = mode === "practice" && marked.answer !== undefined ? { answer: marked.answer, explanation: marked.explanation ?? null } : undefined;
+      focusResult.current = true;
       setState({ result: { answered: marked.answered, correct: marked.correct }, phase: "checked", notice: null, shown: reveal });
+    } catch {
+      setState({ notice: NOT_THROUGH_MESSAGE });
     } finally {
       setChecking(false);
     }
@@ -124,8 +139,8 @@ export function QuestionView({
   return (
     <section aria-labelledby={stemId} className="question-view">
       <fieldset className="m-0 min-w-0 border-0 p-0">
-        <legend id={stemId} data-flow-unit className="mb-[calc(0.8em*var(--q-space,1))] w-full p-0 [break-after:avoid] [break-inside:avoid]">
-          <span className="mb-[0.3em] block text-[0.8em] font-bold uppercase tracking-wide text-primary">{label}</span>
+        <legend id={stemId} data-flow-unit className={review ? "sr-only" : "mb-[calc(0.8em*var(--q-space,1))] w-full p-0 [break-after:avoid] [break-inside:avoid]"}>
+          <span className="mb-[0.3em] block text-[max(14px,0.8em)] font-bold uppercase tracking-wide text-primary">{label}</span>
           <span className="block whitespace-pre-line text-[1.25em] font-semibold leading-snug text-ink">
             <InlineText text={question.stemText} />
           </span>
@@ -160,6 +175,7 @@ export function QuestionView({
               locked={phase !== "answering"}
               showCorrect={showsAnswer}
               result={result}
+              review={review}
             />
           ) : (
             <p className="rounded-lg bg-slate-100 px-[0.9em] py-[0.7em] text-slate-700">This question can’t be shown yet.</p>
@@ -172,7 +188,13 @@ export function QuestionView({
           <FrameButton key="check" primary onClick={check} disabled={checking}>
             {checking ? "Checking…" : "Check answer"}
           </FrameButton>
-          {mode === "learn" && <FrameButton key="reveal" onClick={() => setState({ phase: "revealed", notice: null })}>Reveal answer</FrameButton>}
+          {mode === "learn" && <FrameButton
+              key="reveal"
+              onClick={() => {
+                focusResult.current = true;
+                setState({ phase: "revealed", notice: null });
+              }}
+            >Reveal answer</FrameButton>}
         </div>
       )}
 
@@ -181,13 +203,19 @@ export function QuestionView({
         data-flow-unit
         className={phase === "answering" ? "[break-inside:avoid]" : "mt-[calc(0.9em*var(--q-space,1))] flex flex-wrap items-center gap-[0.6em] [break-inside:avoid]"}
       >
-        <div role="status" aria-live="polite" className="min-w-0 flex-1 basis-[12em]">
-          {notice && <p className="mt-[calc(0.9em*var(--q-space,1))] font-semibold text-ink">{notice}</p>}
-          {phase === "checked" && result && <Feedback result={result} showsAnswer={showsAnswer} />}
-          {phase === "revealed" && (
-            <p className="rounded-lg border-l-[0.3em] border-primary bg-primary/[0.07] px-[0.9em] py-[0.6em] font-semibold text-ink">
-              The correct answer is highlighted.
-            </p>
+        <div className="min-w-0 flex-1 basis-[12em]">
+          <div role="status" aria-live="polite">
+            {notice && <p className="mt-[calc(0.9em*var(--q-space,1))] font-semibold text-ink">{notice}</p>}
+          </div>
+          {phase !== "answering" && (
+            <div ref={resultRef} tabIndex={-1} className="focus:outline-none">
+              {phase === "checked" && result && <Feedback result={result} showsAnswer={showsAnswer} />}
+              {phase === "revealed" && (
+                <p className="rounded-lg border-l-[0.3em] border-primary bg-primary/[0.07] px-[0.9em] py-[0.6em] font-semibold text-ink">
+                  The correct answer is highlighted.
+                </p>
+              )}
+            </div>
           )}
         </div>
         {canCheck && retry && AnswerArea && phase !== "answering" && (
@@ -199,7 +227,7 @@ export function QuestionView({
 
       {showExplanation && (
         <div data-flow-unit data-question-explanation className="mt-[calc(0.9em*var(--q-space,1))]">
-          <p className="mb-[0.2em] text-[0.8em] font-bold uppercase tracking-wide text-primary [break-after:avoid]">Explanation</p>
+          <p className="mb-[0.2em] text-[max(14px,0.8em)] font-bold uppercase tracking-wide text-primary [break-after:avoid]">Explanation</p>
           <p className="whitespace-pre-line [orphans:2] [widows:2]">
             <InlineText text={explanation ?? ""} />
           </p>
@@ -244,7 +272,7 @@ function FrameButton({
       onClick={onClick}
       disabled={disabled}
       className={`inline-flex min-h-[max(var(--answer-min-h,56px),var(--answer-min-em,3.5em))] items-center justify-center rounded-lg px-[1em] font-semibold transition-colors focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60 ${
-        primary ? "bg-primary text-white hover:bg-primary/90" : "border-2 border-primary bg-white text-primary hover:bg-primary/[0.06]"
+        primary ? "hc-edge bg-primary text-white hover:bg-primary/90" : "border-2 border-primary bg-white text-primary hover:bg-primary/[0.06]"
       }`}
     >
       {children}

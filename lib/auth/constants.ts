@@ -18,3 +18,9 @@ export const RENEW_AFTER_SECONDS = 15 * 60;
 // Sent to /login when a sign-in is no longer valid (account deleted, password changed elsewhere),
 // so Proxy shows the form instead of redirecting back.
 export const SESSION_ENDED_LOGIN = "/login?ended=1";
+
+// Login and log out accept only JSON: a form on another website can't send that without the browser
+// stopping it, so other sites can't sign visitors in or out.
+export function isJsonRequest(headers: Headers): boolean {
+  return headers.get("content-type")?.toLowerCase().startsWith("application/json") ?? false;
+}

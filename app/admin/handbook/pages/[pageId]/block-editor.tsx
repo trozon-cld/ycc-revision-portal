@@ -33,7 +33,7 @@ export function BlockEditor({
   return (
     <li id={`block-${block.id}`} className={`${cardClass} p-3`} aria-label={`Block ${position}: ${label}`}>
       <div className="mb-2 flex items-center justify-between gap-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+        <p className="min-w-0 truncate text-xs font-semibold uppercase tracking-wide text-slate-600">
           {position} · {label}
         </p>
         <div className="flex items-center gap-0.5">

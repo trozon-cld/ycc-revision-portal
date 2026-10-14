@@ -34,6 +34,7 @@ export function ReviewQuestion({
       media={media}
       seed={seed}
       retry={false}
+      review
       initialState={{ response, phase: "checked", result, notice: null, shown: { answer, explanation } }}
     />
   );

@@ -25,6 +25,8 @@ export function useMockSaver(attemptId: string, onReply: (reply: MockSaveReply) 
   });
 
   const idle = () => pending.current.size === 0 && position.current === null;
+  // A save that failed, or found more waiting, runs again through this (it can't name itself while it's defined).
+  const again = useRef<() => void>(() => {});
 
   const flush = useCallback(async () => {
     if (timer.current) clearTimeout(timer.current);
@@ -52,12 +54,15 @@ export function useMockSaver(attemptId: string, onReply: (reply: MockSaveReply) 
     }
     if (failed) {
       setStatus("retrying");
-      timer.current = setTimeout(flush, RETRY_AFTER_MS);
+      timer.current = setTimeout(again.current, RETRY_AFTER_MS);
     } else if (idle()) {
       setStatus("saved");
       settled.current.splice(0).forEach((done) => done());
-    } else void flush();
+    } else again.current();
   }, [attemptId]);
+  useEffect(() => {
+    again.current = () => void flush();
+  }, [flush]);
 
   const schedule = useCallback(() => {
     setStatus((current) => (current === "retrying" ? current : "saving"));

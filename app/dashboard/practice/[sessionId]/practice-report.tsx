@@ -2,14 +2,15 @@ import Link from "next/link";
 import { formatUkDate } from "@/lib/candidates/access";
 import type { PracticeReport } from "@/lib/practice/sessions";
 import { PageBody } from "@/components/candidate/page-body";
-import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { ArrivalHeading } from "@/components/candidate/arrival-heading";
 import { ChapterResults } from "@/components/candidate/chapter-results";
 import { InlineText } from "@/components/learning/inline-text";
 import { ReviewQuestion } from "@/components/learning/questions/review-question";
 import { FocusedShell } from "@/components/learning/focused-shell";
 import { practiseAgain } from "../actions";
 import { FlagButton } from "../flag-button";
-import { RetryButton } from "./retry-button";
+import { RetryForm } from "./retry-button";
 
 const MODE_NAMES: Record<PracticeReport["mode"], string> = {
   smart: "Smart practice",
@@ -21,7 +22,7 @@ const MODE_NAMES: Record<PracticeReport["mode"], string> = {
   wrong: "Questions I got wrong",
   flagged: "Flagged questions",
   unseen: "Not practised yet",
-  weak: "Weak areas",
+  weak: "Weak chapters",
 };
 
 // Encouraging, never pass/fail wording.
@@ -42,27 +43,32 @@ export function PracticeReportView({ report, againUnavailable }: { report: Pract
   const percent = report.answered ? Math.round((report.rightCount / report.answered) * 100) : 0;
   const date = formatUkDate(report.finishedAt, "long");
   const what = report.choiceNames.length ? `${MODE_NAMES[report.mode]}: ${report.choiceNames.join(", ")}` : MODE_NAMES[report.mode];
-  const endedEarly = report.answered + report.skipped < report.total;
+  const notAll = report.answered + report.skipped < report.total;
 
   return (
     <FocusedShell label="Practice tools" status="Your results">
       <PageBody>
         <div className="max-w-3xl">
-          <h1 className="text-3xl font-bold text-ink">Your practice results</h1>
+          <ArrivalHeading className="text-3xl font-bold text-ink">Your practice results</ArrivalHeading>
           <p className="mt-2 text-base text-ink/80 [overflow-wrap:anywhere]">
             {report.categoryName} · {what} · {date}
           </p>
 
-          <section aria-label="Score" className="mt-6 rounded-xl border-2 border-primary/30 bg-primary/5 p-5 sm:p-6">
-            <p className="text-ink">
+          <section aria-labelledby="score-heading" className="mt-6 rounded-xl border-2 border-primary/30 bg-primary/5 p-5 sm:p-6">
+            <h2 id="score-heading" className="text-base font-semibold text-ink/80">
+              Your score
+            </h2>
+            <p className="mt-1 text-ink">
               <span className="text-5xl font-bold">{report.rightCount}</span>
               <span className="text-2xl font-semibold"> of {report.answered} right</span>
             </p>
             {report.answered > 0 && <p className="mt-1 text-xl font-semibold text-ink">{percent}%</p>}
             <p className="mt-3 text-lg leading-relaxed text-ink">{report.answered > 0 ? encouragement(percent) : "No questions were answered."}</p>
-            {endedEarly && (
+            {notAll && (
               <p className="mt-2 text-base text-ink/80">
-                You ended this practice after answering {report.answered} of {report.total} questions.
+                {report.detailsKept
+                  ? `You ended this practice after answering ${report.answered} of ${report.total} questions.`
+                  : `You answered ${report.answered} of ${report.total} questions.`}
               </p>
             )}
             {report.skipped > 0 && (
@@ -75,17 +81,14 @@ export function PracticeReportView({ report, againUnavailable }: { report: Pract
           </section>
 
           {againUnavailable && (
-            <p role="alert" className="mt-6 rounded-xl border-2 border-red-700 bg-red-50 p-4 text-lg font-semibold text-red-800">
+            <p role="alert" className={`mt-6 ${ERROR_BOX}`}>
               These questions can’t be practised again right now. Try a new practice instead.
             </p>
           )}
 
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
             {report.canRetry && report.wrong && (
-              <form action={practiseAgain}>
-                <input type="hidden" name="sessionId" value={report.id} />
-                <RetryButton count={report.wrong.length} />
-              </form>
+              <RetryForm action={practiseAgain} field="sessionId" value={report.id} count={report.wrong.length} />
             )}
             <Link href="/dashboard/practice" className={report.canRetry ? SECONDARY_BUTTON : PRIMARY_BUTTON}>
               New practice

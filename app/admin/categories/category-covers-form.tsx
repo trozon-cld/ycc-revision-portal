@@ -44,7 +44,7 @@ export function CategoryCoversForm({
         action={saveCategoryCovers}
         hidden={{ categoryId, frontMediaId: covers.front?.id ?? "", backMediaId: covers.back?.id ?? "" }}
         submitLabel="Save covers"
-        successMessage="Covers saved."
+        successMessage="Covers updated."
         onSuccess={onClose}
         onCancel={onClose}
       >
@@ -67,6 +67,7 @@ export function CategoryCoversForm({
         <PicturePicker
           load={listPickerMedia}
           storageReady={storageReady}
+          uploadHint={`For a cover, use a portrait picture shaped like a book page (3:4), at least ${COVER_MIN_WIDTH} × ${COVER_MIN_HEIGHT} pixels.`}
           onPick={(item) => {
             setCovers((current) => ({ ...current, [picking]: item }));
             setPicking(null);

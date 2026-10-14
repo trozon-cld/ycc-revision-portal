@@ -75,7 +75,7 @@ export function FrontCoverFace({
       <div className="flex min-h-0 flex-1 flex-col justify-between gap-[1em] overflow-hidden p-[2em]">
         <Logo />
         <div className="min-w-0">
-          <p className="text-[0.85em] font-semibold uppercase tracking-[0.18em] text-white/90">Revision Portal</p>
+          <p className="text-[max(14px,0.85em)] font-semibold uppercase tracking-[0.18em] text-white/90">Revision Portal</p>
           <p className="mt-[0.2em] text-[2.6em] font-bold leading-tight">Handbook</p>
           <div aria-hidden="true" className="my-[0.9em] h-[0.3em] w-[4em] rounded-full bg-accent" />
           <p className="text-[1.5em] font-semibold leading-snug [overflow-wrap:anywhere]">{categoryName}</p>

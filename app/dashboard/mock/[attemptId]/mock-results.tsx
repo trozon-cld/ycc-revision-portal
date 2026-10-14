@@ -2,19 +2,20 @@ import Link from "next/link";
 import { countOf, formatDuration } from "@/lib/format";
 import { MOCK_KEEP_ANSWERS, READINESS_TARGET, scorePercent, type MockEnd, type MockResults } from "@/lib/mock/types";
 import { PageBody } from "@/components/candidate/page-body";
-import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { ArrivalHeading } from "@/components/candidate/arrival-heading";
 import { ChapterResults } from "@/components/candidate/chapter-results";
 import { practiseMockMisses } from "@/app/dashboard/practice/actions";
-import { RetryButton } from "@/app/dashboard/practice/[sessionId]/retry-button";
+import { RetryForm } from "@/app/dashboard/practice/[sessionId]/retry-button";
 
 const ENDINGS: Record<MockEnd, { title: string; text: string }> = {
   submitted: { title: "Test submitted", text: "Your mock test has been submitted." },
-  time_up: { title: "Time is up", text: "Time is up. Your test has been submitted automatically." },
+  time_up: { title: "Time ran out", text: "Time ran out. Your test has been submitted automatically." },
   away: { title: "Time ran out", text: "Time ran out while you were away. Your test was submitted with the answers you’d saved." },
   moved: { title: "Test ended", text: "Your category was changed, so this test was ended with the answers you’d saved." },
 };
 
-// A mock test's results: score, readiness, counts, time, the recommended next step and results by topic.
+// A mock test's results: score, readiness, counts, time, the recommended next step and results by chapter.
 export function MockResultsView({ attemptId, results, practiceUnavailable }: { attemptId: string; results: MockResults; practiceUnavailable: boolean }) {
   const ending = ENDINGS[results.how];
   const share = results.outOf > 0 ? results.rightCount / results.outOf : 0;
@@ -29,7 +30,7 @@ export function MockResultsView({ attemptId, results, practiceUnavailable }: { a
   return (
     <PageBody>
       <div className="max-w-3xl">
-        <h1 className="text-3xl font-bold text-ink">{ending.title}</h1>
+        <ArrivalHeading className="text-3xl font-bold text-ink">{ending.title}</ArrivalHeading>
         <p className="mt-3 text-lg leading-relaxed text-ink">{ending.text}</p>
 
         <section aria-labelledby="score-heading" className="mt-6 rounded-xl border-2 border-ink/15 bg-white p-5">
@@ -37,7 +38,7 @@ export function MockResultsView({ attemptId, results, practiceUnavailable }: { a
             Your score
           </h2>
           <p className="mt-1 text-4xl font-bold text-ink">
-            {results.rightCount} of {results.outOf}{" "}
+            {results.rightCount} of {results.outOf} right{" "}
             <span className="ml-2 text-2xl font-semibold text-ink/80">{scorePercent(results.rightCount, results.outOf)}%</span>
           </p>
           <p
@@ -49,8 +50,8 @@ export function MockResultsView({ attemptId, results, practiceUnavailable }: { a
           </p>
           <dl className="mt-4 grid grid-cols-3 gap-2 text-center">
             {[
-              ["Correct", results.rightCount],
-              ["Incorrect", wrong],
+              ["Right", results.rightCount],
+              ["Wrong", wrong],
               ["Not answered", unanswered],
             ].map(([label, value]) => (
               <div key={label} className="rounded-lg bg-ink/5 px-2 py-3">
@@ -70,24 +71,24 @@ export function MockResultsView({ attemptId, results, practiceUnavailable }: { a
         </section>
 
         {practiceUnavailable && (
-          <p role="alert" className="mt-4 rounded-xl border-2 border-red-700 bg-red-50 p-4 text-lg font-semibold text-red-800">
+          <p role="alert" className={`mt-4 ${ERROR_BOX}`}>
             These questions can’t be practised right now. Try a new practice instead.
           </p>
         )}
         {results.answersKept ? (
           <div className="mt-4 flex flex-col gap-3 sm:flex-row">
             <Link href={`/dashboard/mock/${attemptId}/review`} className={`${SECONDARY_BUTTON} w-full sm:w-auto`}>
-              Review your answers
+              See your answers
             </Link>
             {results.practiceCount > 0 && (
-              <form action={practiseMockMisses} className="sm:w-auto">
-                <input type="hidden" name="attemptId" value={attemptId} />
-                <RetryButton
-                  count={results.practiceCount}
-                  secondary
-                  label={`Practise the ${countOf(results.practiceCount, "question")} you missed`}
-                />
-              </form>
+              <RetryForm
+                action={practiseMockMisses}
+                field="attemptId"
+                value={attemptId}
+                count={results.practiceCount}
+                secondary
+                label={`Practise the ${countOf(results.practiceCount, "question")} you missed`}
+              />
             )}
           </div>
         ) : (
@@ -95,12 +96,12 @@ export function MockResultsView({ attemptId, results, practiceUnavailable }: { a
         )}
 
         <section aria-labelledby="next-heading" className="mt-6 rounded-xl border-2 border-primary bg-primary/5 p-5">
-          <h2 id="next-heading" className="text-xl font-bold text-ink">
+          <h2 id="next-heading" className="text-2xl font-bold text-ink">
             Recommended next step
           </h2>
           {next.kind === "chapters" ? (
             <>
-              <p className="mt-2 text-lg text-ink">Practise your weakest {results.weakest.length === 1 ? "topic" : "topics"}:</p>
+              <p className="mt-2 text-lg text-ink">Practise your weakest {results.weakest.length === 1 ? "chapter" : "chapters"}:</p>
               <ul className="mt-2 flex flex-col gap-1 text-lg text-ink">
                 {results.weakest.map((topic) => (
                   <li key={topic.id} className="[overflow-wrap:anywhere]">
@@ -137,7 +138,7 @@ export function MockResultsView({ attemptId, results, practiceUnavailable }: { a
         {results.topics.length > 0 && (
           <ChapterResults
             id="topics-heading"
-            title="Results by topic"
+            title="Results by chapter"
             showPercent
             items={results.topics.map((topic) => ({ key: topic.id, label: topic.label, right: topic.right, outOf: topic.outOf, badge: weakIds.has(topic.id) ? "Weakest" : undefined }))}
           />

@@ -116,7 +116,8 @@ export function BookPreview({
 
   const frame =
     device === "full" ? { label: "Full window", width: Math.max(320, available.width), height: Math.max(560, available.height) } : DEVICES[device];
-  const scale = device === "full" || !available.width ? 1 : Math.min(1, available.width / frame.width, available.height / frame.height);
+  // A full window narrower than the reader's 320px minimum is scaled to fit, so nothing sticks out.
+  const scale = !available.width ? 1 : device === "full" ? Math.min(1, available.width / frame.width) : Math.min(1, available.width / frame.width, available.height / frame.height);
   const sizeIndex = TEXT_SIZES.indexOf(textSize);
 
   return (
@@ -131,7 +132,7 @@ export function BookPreview({
                 aria-pressed={device === key}
                 onClick={() => setDevice(key)}
                 className={`h-9 rounded px-3 text-sm font-medium sm:h-8 ${
-                  device === key ? "bg-primary text-white" : "text-ink hover:bg-slate-100"
+                  device === key ? "hc-fill bg-primary text-white" : "text-ink hover:bg-slate-100"
                 }`}
               >
                 {key === "full" ? "Full window" : DEVICES[key].label}

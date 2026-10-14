@@ -71,9 +71,10 @@ export function MultiPickFields({ content, answer, onChange, newId }: TypeFields
             return (
               <li
                 key={option.id}
-                className={`rounded-md border p-2 ${isCorrect ? "border-green-700 bg-green-50/60" : "border-slate-200 bg-white"}`}
+                className={`rounded-md border p-2 max-md:grid max-md:grid-cols-[1.5rem_minmax(0,1fr)_auto] max-md:items-center max-md:gap-x-2 ${isCorrect ? "border-green-700 bg-green-50/60" : "border-slate-200 bg-white"}`}
               >
-                <div className="flex items-center gap-2">
+                {/* Phones: the text box gets the full width; move and remove sit on the answer line below. */}
+                <div className="flex items-center gap-2 max-md:contents">
                   <label htmlFor={`option-${option.id}`} className="w-6 shrink-0 text-center text-sm font-semibold text-slate-700">
                     <span className="sr-only">Option </span>
                     {letter}
@@ -86,9 +87,9 @@ export function MultiPickFields({ content, answer, onChange, newId }: TypeFields
                     onChange={(event) =>
                       setOptions(data.options.map((item) => (item.id === option.id ? { ...item, text: event.target.value } : item)))
                     }
-                    className={`${inputClass} min-w-0 flex-1`}
+                    className={`${inputClass} min-w-0 flex-1 max-md:col-span-2`}
                   />
-                  <div className="flex shrink-0 items-center">
+                  <div className="flex shrink-0 items-center max-md:col-start-3 max-md:row-start-2">
                     <IconButton label={`Move option ${letter} up`} disabled={index === 0} onClick={() => move(index, -1)} path="M10 15V5M5.5 9.5 10 5l4.5 4.5" />
                     <IconButton
                       label={`Move option ${letter} down`}
@@ -105,7 +106,7 @@ export function MultiPickFields({ content, answer, onChange, newId }: TypeFields
                     />
                   </div>
                 </div>
-                <label className="mt-1.5 ml-8 inline-flex min-h-9 cursor-pointer items-center gap-2 text-sm text-ink">
+                <label className="mt-1.5 ml-8 inline-flex min-h-9 cursor-pointer items-center gap-2 text-sm text-ink max-md:col-start-2 max-md:row-start-2 max-md:mt-1 max-md:ml-0">
                   <input
                     type="checkbox"
                     checked={isCorrect}

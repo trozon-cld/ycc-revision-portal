@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import Link from "next/link";
 import { requireRole } from "@/lib/auth/guard";
 import { pool } from "@/lib/db/pool";
 import { formatUkDate } from "@/lib/candidates/access";
@@ -5,6 +7,8 @@ import { PersonLabel } from "@/components/admin/person-label";
 import { PageHeader } from "@/components/admin/page-header";
 import { Cell, Row, Table } from "@/components/admin/table";
 import { AdminRowActions, NewAdminButton } from "./admin-row-actions";
+
+export const metadata: Metadata = { title: "Admins" };
 
 interface AdminRow {
   id: string;
@@ -30,7 +34,7 @@ export default async function AdminsPage() {
     <>
       <PageHeader
         title="Admins"
-        description={`${admins.length} admin${admins.length === 1 ? "" : "s"}`}
+        description={`${admins.length} Admin${admins.length === 1 ? "" : "s"}`}
         actions={<NewAdminButton />}
       />
 
@@ -40,10 +44,25 @@ export default async function AdminsPage() {
             <Cell kind="primary">
               <PersonLabel name={admin.full_name} email={admin.email} />
             </Cell>
-            <Cell label="Candidates">{admin.candidate_count}</Cell>
+            <Cell label="Candidates">
+              {admin.candidate_count > 0 ? (
+                <Link href={`/admin/candidates?admin=${admin.id}`} className="inline-flex min-h-6 min-w-6 items-center justify-center text-primary underline underline-offset-2">
+                  {admin.candidate_count}
+                  <span className="sr-only"> candidates: see them</span>
+                </Link>
+              ) : (
+                0
+              )}
+            </Cell>
             <Cell label="Created" nowrap>{formatUkDate(admin.created_at)}</Cell>
             <Cell kind="actions">
-              <AdminRowActions id={admin.id} email={admin.email} name={admin.full_name} candidateCount={admin.candidate_count} />
+              <AdminRowActions
+                id={admin.id}
+                email={admin.email}
+                name={admin.full_name}
+                candidateCount={admin.candidate_count}
+                otherAdmins={admins.filter((other) => other.id !== admin.id).map((other) => ({ id: other.id, label: other.full_name ? `${other.full_name} (${other.email})` : other.email }))}
+              />
             </Cell>
           </Row>
         ))}

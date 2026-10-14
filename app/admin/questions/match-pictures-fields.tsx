@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useLatest } from "@/components/use-latest";
 import { draftPair, MATCH_LIMITS, type MatchDraft } from "@/lib/questions/types/match-pictures";
 import { IconButton } from "@/components/admin/editor-fields";
 import { buttonClass, inputClass } from "@/components/admin/styles";
@@ -14,8 +14,7 @@ export function MatchPicturesFields({ content, answer, onChange, newId, media, t
   const data = content as MatchDraft["content"];
   const solution = answer as MatchDraft["answer"];
   // The picker answers later; read the latest values then.
-  const latest = useRef({ data, solution });
-  latest.current = { data, solution };
+  const latest = useLatest({ data, solution });
 
   // Row i: box i, the picture matched to it.
   const rowsOf = (current: MatchDraft["content"], matches: MatchDraft["answer"]["matches"]): Row[] =>

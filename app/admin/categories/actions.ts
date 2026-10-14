@@ -14,9 +14,9 @@ export type CategoryActionState = FormState;
 
 const DUPLICATE_NAME = "A category with this name already exists.";
 const MAX_LINKED_CHAPTERS = 1000;
-const GROUP_GONE = "That group no longer exists. Close this and try again.";
+const GROUP_GONE = "That group no longer exists. Close this panel and open it again.";
 const COVER_PICTURE_GONE = "That picture is no longer in the Media library. Choose another one.";
-const CHAPTERS_CHANGED = "The chapter list has changed since you opened this. Close it, reopen and try again.";
+const CHAPTERS_CHANGED = "The chapter list has changed. Close this panel and open it again.";
 
 export async function createCategory(
   _prevState: CategoryActionState,
@@ -376,5 +376,5 @@ function moveBlockedMessage(candidateCount: number) {
 function blockedMessage(candidateCount: number) {
   return `This category still has ${candidateCount} candidate${
     candidateCount === 1 ? "" : "s"
-  }. Their admins need to move them to another category before it can be deleted.`;
+  }. Their Admins need to move them to another category before it can be deleted.`;
 }

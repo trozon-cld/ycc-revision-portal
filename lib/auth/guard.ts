@@ -43,7 +43,7 @@ export async function getLiveSession(): Promise<{ session: SessionPayload; accou
 
 // Use in Server Components AND Server Actions — actions are callable endpoints, so they can't rely on
 // the page having checked already. Checked live: blocking, expiry and password changes apply at once.
-export async function requireRole(allowedRoles: UserRole[]): Promise<SessionPayload> {
+export async function requireRole(allowedRoles: readonly UserRole[]): Promise<SessionPayload> {
   const session = await getSession();
   if (!session) redirect("/login");
   const live = await getLiveSession();

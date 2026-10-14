@@ -2,12 +2,14 @@
 
 import { useActionState, useState } from "react";
 import { PRACTICE_SIZES, WEAK_BELOW, type PracticeOptions, type PracticeWay } from "@/lib/practice/types";
-import { CHOICE_INPUT, CHOICE_ROW, PRIMARY_BUTTON } from "@/components/candidate/buttons";
+import { CHOICE_INPUT, CHOICE_ROW, ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { countOf } from "@/lib/format";
+import { NOT_THROUGH_MESSAGE, reachServer } from "@/lib/forms";
+import { submitKeepingChoices } from "@/components/candidate/submit-form";
 import { startPracticeForm, type StartState } from "./actions";
 
 const WAYS: { way: PracticeWay; title: string; description: string }[] = [
-  { way: "smart", title: "Smart practice", description: "A mix chosen for you: questions you haven’t practised yet first, then ones you got wrong or flagged, and your weak areas." },
+  { way: "smart", title: "Smart practice", description: "A mix chosen for you: questions you haven’t practised yet first, then ones you got wrong or flagged, and your weak chapters." },
   { way: "chapters", title: "By chapter", description: "Choose one or more chapters." },
   { way: "types", title: "By question type", description: "Choose one or more kinds of question." },
   { way: "all", title: "All questions", description: "Questions from every chapter, in a random order." },
@@ -17,12 +19,15 @@ const FOCUS: { way: PracticeWay; title: string; description: string; none: strin
   { way: "wrong", title: "Questions I got wrong", description: "Ones you got wrong the last time you practised them.", none: "None yet: you haven’t got any wrong in Practice." },
   { way: "flagged", title: "Flagged questions", description: "Ones you flagged for review.", none: "None yet: use “Flag for review” on a question to add it here." },
   { way: "unseen", title: "Not practised yet", description: "Ones you haven’t answered in Practice.", none: "None left: you’ve practised every question." },
-  { way: "weak", title: "Weak areas", description: `Chapters where you get less than ${Math.round(WEAK_BELOW * 100)}% right.`, none: "Practise a little more to find your weak areas." },
+  { way: "weak", title: "Weak chapters", description: `Chapters where you get less than ${Math.round(WEAK_BELOW * 100)}% right.`, none: "Practise a little more to find your weak chapters." },
 ];
 
-// `initialChapters` (e.g. a mock test's weakest topics) opens "By chapter" with those ticked.
+// `initialChapters` (e.g. a mock test's weakest chapters) opens "By chapter" with those ticked.
 export function PracticeSetup({ options, hasOpen, initialChapters = [] }: { options: PracticeOptions; hasOpen: boolean; initialChapters?: string[] }) {
-  const [state, action, pending] = useActionState<StartState, FormData>(startPracticeForm, { error: null });
+  const [state, action, pending] = useActionState<StartState, FormData>(
+    async (previous, formData) => (await reachServer(() => startPracticeForm(previous, formData))) ?? { error: NOT_THROUGH_MESSAGE },
+    { error: null }
+  );
   const [way, setWay] = useState<PracticeWay>(initialChapters.length > 0 ? "chapters" : "smart");
   const [chapters, setChapters] = useState<string[]>(initialChapters);
   const [types, setTypes] = useState<string[]>([]);
@@ -43,7 +48,7 @@ export function PracticeSetup({ options, hasOpen, initialChapters = [] }: { opti
   const toggle = (list: string[], value: string) => (list.includes(value) ? list.filter((item) => item !== value) : [...list, value]);
 
   return (
-    <form action={action} className="mt-8">
+    <form method="post" onSubmit={submitKeepingChoices(action)} className="mt-8">
       <fieldset>
         <legend className="mb-3 text-xl font-bold text-ink">1. What would you like to practise?</legend>
         <div className="flex flex-col gap-3">
@@ -178,13 +183,14 @@ export function PracticeSetup({ options, hasOpen, initialChapters = [] }: { opti
 
       <div aria-live="polite" className="mt-6">
         {state.error && (
-          <p role="alert" className="rounded-xl border-2 border-red-700 bg-red-50 p-4 text-lg font-semibold text-red-800">
+          <p role="alert" className={ERROR_BOX}>
             {state.error}
           </p>
         )}
       </div>
 
-      <button type="submit" disabled={pending} className={`${PRIMARY_BUTTON} mt-2 w-full sm:w-auto`}>
+      {/* With a practice open, Continue (above) is the main button; this one starts over. */}
+      <button type="submit" disabled={pending} className={`${hasOpen ? SECONDARY_BUTTON : PRIMARY_BUTTON} mt-2 w-full sm:w-auto`}>
         {pending ? "Starting…" : hasOpen ? "Start a new practice" : "Start practice"}
       </button>
     </form>

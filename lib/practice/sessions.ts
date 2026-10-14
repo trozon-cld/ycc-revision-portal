@@ -1,4 +1,5 @@
 import type { PoolClient } from "pg";
+import { cache } from "react";
 import type { ResolvedMedia } from "@/lib/content/book";
 import { resolveMedia } from "@/lib/content/pages";
 import { pool } from "@/lib/db/pool";
@@ -168,7 +169,7 @@ export async function startPractice(userId: string, request: StartRequest): Prom
     }
     if (request.way === "weak") {
       choices = [...weak];
-      if (choices.length === 0) return { ok: false, error: "You don’t have any weak areas yet. Practise a little more to find them." };
+      if (choices.length === 0) return { ok: false, error: "You don’t have any weak chapters yet. Practise a little more to find them." };
     }
     if (questions.length === 0) return { ok: false, error: "There are no practice questions for this choice yet." };
 
@@ -249,7 +250,10 @@ const setChar = (text: string, index: number, char: string) => text.slice(0, ind
 export type PracticeView = { kind: "step"; step: PracticeStep } | { kind: "report" } | { kind: "closed" } | { kind: "missing" };
 
 // What /dashboard/practice/[id] shows. Skips questions removed since the start; finishes at the end.
-export async function loadPracticeView(userId: string, sessionId: string): Promise<PracticeView> {
+// Once per request: the page and its title both ask.
+export const loadPracticeView = cache(readPracticeView);
+
+async function readPracticeView(userId: string, sessionId: string): Promise<PracticeView> {
   const outcome = await withTransaction(async (client) => {
     const { rows } = await client.query<SessionRow & { current_category_id: string }>(
       `select s.*, u.current_category_id from practice_sessions s join users u on u.id = s.user_id
@@ -467,6 +471,8 @@ export type PracticeReport = {
   answered: number;
   rightCount: number;
   skipped: number;
+  // False once a newer run has finished: per-question details are gone, so skipped can't be told apart.
+  detailsKept: boolean;
   secondsSpent: number;
   finishedAt: string;
   chapters: { label: string; right: number; answered: number }[];
@@ -506,7 +512,9 @@ export async function loadPracticeReport(userId: string, sessionId: string): Pro
   let wrong: PracticeReport["wrong"] = null;
   let media: ResolvedMedia = {};
   if (session.question_ids && session.results) {
-    const wrongIds = session.question_ids.filter((_, index) => session.results?.[index] === "W");
+    // Only questions still in Practice: never a draft, and the same ones "Practise these again" uses.
+    const inPractice = new Set((await loadPool(pool, "practice", session.category_id)).map((question) => question.id));
+    const wrongIds = session.question_ids.filter((id, index) => session.results?.[index] === "W" && inPractice.has(id));
     const questions = await loadQuestions(pool, wrongIds);
     const list = wrongIds.flatMap((id) => {
       const question = questions.get(id);
@@ -535,6 +543,7 @@ export async function loadPracticeReport(userId: string, sessionId: string): Pro
     answered: session.answered,
     rightCount: session.right_count,
     skipped: (session.results ?? "").split("").filter((mark) => mark === "S").length,
+    detailsKept: session.results !== null,
     secondsSpent: session.seconds_spent,
     finishedAt: (session.finished_at ?? session.updated_at).toISOString(),
     chapters,
@@ -545,9 +554,9 @@ export async function loadPracticeReport(userId: string, sessionId: string): Pro
 }
 
 // Home card: the run in progress in the current category, read only.
-export async function loadPracticeInProgress(userId: string): Promise<{ position: number; total: number } | null> {
-  const { rows } = await pool.query<{ position: number; total: number }>(
-    `select s.position, s.total from practice_sessions s join users u on u.id = s.user_id
+export async function loadPracticeInProgress(userId: string): Promise<{ id: string; position: number; total: number } | null> {
+  const { rows } = await pool.query<{ id: string; position: number; total: number }>(
+    `select s.id, s.position, s.total from practice_sessions s join users u on u.id = s.user_id
      where s.user_id = $1 and s.finished_at is null and s.category_id = u.current_category_id`,
     [userId]
   );

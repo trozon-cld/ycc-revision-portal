@@ -4,7 +4,9 @@ import type { NextConfig } from "next";
 // Next.js's inline scripts need nonces for it.
 const SECURITY_HEADERS = [
   // Never shown inside another site's frame (clickjacking).
-  { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
+  // Also: no plugins, no changing the page's base address, forms only post to this site (a form
+  // posting elsewhere, e.g. a payment page, would need adding here).
+  { key: "Content-Security-Policy", value: "frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
@@ -15,12 +17,7 @@ const SECURITY_HEADERS = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
-  experimental: {
-    serverActions: {
-      // Picture uploads: up to 5 MB plus a small thumbnail (see lib/media/limits.ts).
-      bodySizeLimit: "7mb",
-    },
-  },
+  // Server actions keep Next's default 1 MB request limit; picture uploads use app/api/media/upload instead.
   async headers() {
     return [{ source: "/:path*", headers: SECURITY_HEADERS }];
   },

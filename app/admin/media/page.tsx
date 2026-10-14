@@ -1,5 +1,7 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import { requireRole } from "@/lib/auth/guard";
+import { CONTENT_EDITORS } from "@/lib/auth/content-editors";
 import { pool } from "@/lib/db/pool";
 import { getSignedUrls, isStorageConfigured } from "@/lib/storage/storage";
 import { firstParam } from "@/lib/params";
@@ -9,8 +11,12 @@ import { PageHeader } from "@/components/admin/page-header";
 import { Pagination, pageFromParam } from "@/components/admin/pagination";
 import { cardClass } from "@/components/admin/styles";
 import { formatBytes } from "@/lib/format";
+import { MEDIA_USES_SHOWN, type MediaUse } from "@/lib/media/usage";
+import { questionRef } from "@/lib/questions/labels";
 import { MediaRowActions } from "./media-row-actions";
 import { UploadMediaButton } from "./upload-media-form";
+
+export const metadata: Metadata = { title: "Media" };
 
 interface MediaRow {
   id: string;
@@ -24,6 +30,7 @@ interface MediaRow {
   used_in: number;
   used_in_questions: number;
   used_in_covers: number;
+  uses: { kind: "page" | "question" | "front" | "back"; id: string; name: string; ref_no: number | null }[];
 }
 
 const PAGE_SIZE = 60;
@@ -31,7 +38,7 @@ const THUMB_EDGE = 400;
 const LINK_LIFETIME_SECONDS = 60 * 60;
 
 export default async function MediaPage({ searchParams }: PageProps<"/admin/media">) {
-  await requireRole(["superadmin"]);
+  await requireRole(CONTENT_EDITORS);
   const params = await searchParams;
   const search = (firstParam(params.q) ?? "").trim().slice(0, 100);
   const configured = isStorageConfigured();
@@ -48,8 +55,22 @@ export default async function MediaPage({ searchParams }: PageProps<"/admin/medi
     `select id, thumb_path, original_name, mime_type, width, height, byte_size, alt_text,
             (select count(*) from content_page_media u where u.media_id = media.id)::int as used_in,
             (select count(*) from question_media u where u.media_id = media.id)::int as used_in_questions,
-            (select count(*) from categories u where u.front_cover_media_id = media.id or u.back_cover_media_id = media.id)::int
-              as used_in_covers
+            (select count(*) filter (where u.front_cover_media_id = media.id) + count(*) filter (where u.back_cover_media_id = media.id)
+               from categories u)::int as used_in_covers,
+            (select coalesce(jsonb_agg(jsonb_build_object('kind', x.kind, 'id', x.id, 'name', x.name, 'ref_no', x.ref_no) order by x.ord, x.name, x.ref_no), '[]'::jsonb)
+             from (
+               select 1 as ord, 'page' as kind, p.id, p.title as name, null::int as ref_no
+               from content_page_media u join content_pages p on p.id = u.content_page_id where u.media_id = media.id
+               union all
+               select 2, 'question', q.id, '', q.ref_no
+               from question_media u join questions q on q.id = u.question_id where u.media_id = media.id
+               union all
+               select 3, 'front', c.id, c.name, null from categories c where c.front_cover_media_id = media.id
+               union all
+               select 3, 'back', c.id, c.name, null from categories c where c.back_cover_media_id = media.id
+               order by 1, 4, 5
+               limit ${MEDIA_USES_SHOWN}
+             ) x) as uses
      from media
      where ${matches}
      order by created_at desc, id
@@ -92,7 +113,7 @@ export default async function MediaPage({ searchParams }: PageProps<"/admin/medi
       )}
 
       <FilterBar action="/admin/media" clearHref="/admin/media" isFiltered={Boolean(search)}>
-        <FilterSearch name="q" label="Search descriptions or file names" defaultValue={search} />
+        <FilterSearch name="q" label="Search descriptions or file names" defaultValue={search} wide />
       </FilterBar>
 
       {media.length === 0 ? (
@@ -100,13 +121,14 @@ export default async function MediaPage({ searchParams }: PageProps<"/admin/medi
           {search ? "No pictures match your search." : "No pictures yet. Upload the first one."}
         </p>
       ) : (
-        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {media.map((item) => {
             const thumbUrl = thumbs.get(item.thumb_path);
             const thumbSize = fitWithin(item.width, item.height, THUMB_EDGE);
+            // Phones: one picture per row, the small picture beside its details.
             return (
-              <li key={item.id} className={`${cardClass} flex min-w-0 flex-col`}>
-                <div className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-t-lg bg-slate-100">
+              <li key={item.id} className={`${cardClass} flex min-w-0 flex-col max-sm:flex-row`}>
+                <div className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-t-lg bg-slate-100 max-sm:w-28 max-sm:shrink-0 max-sm:self-start max-sm:rounded-l-lg max-sm:rounded-tr-none">
                   {thumbUrl ? (
                     // Signed links change each visit, so Next's optimiser can't cache them; files are pre-shrunk instead.
                     <Image
@@ -126,7 +148,8 @@ export default async function MediaPage({ searchParams }: PageProps<"/admin/medi
                   <div className="min-w-0 flex-1">
                     <p className="line-clamp-2 text-sm text-ink [overflow-wrap:anywhere]">{item.alt_text}</p>
                     <p className="mt-1 text-xs text-slate-600" title={item.original_name}>
-                      {item.width} × {item.height} · {formatBytes(item.byte_size)} · {formatType(item.mime_type)}
+                      <span className="whitespace-nowrap">{item.width} × {item.height}</span> ·{" "}
+                      <span className="whitespace-nowrap">{formatBytes(item.byte_size)}</span> · {formatType(item.mime_type)}
                     </p>
                     <p className="mt-0.5 text-xs text-slate-600">
                       {item.used_in === 0 && item.used_in_questions === 0 && item.used_in_covers === 0
@@ -142,6 +165,7 @@ export default async function MediaPage({ searchParams }: PageProps<"/admin/medi
                     usedIn={item.used_in}
                     usedInQuestions={item.used_in_questions}
                     usedInCovers={item.used_in_covers}
+                    uses={item.uses.map(useLink)}
                   />
                 </div>
               </li>
@@ -181,4 +205,10 @@ function usedLabel(pages: number, questions: number, covers: number): string {
   if (questions > 0) parts.push(`${questions} question${questions === 1 ? "" : "s"}`);
   if (covers > 0) parts.push(`${covers} cover${covers === 1 ? "" : "s"}`);
   return `Used in ${parts.join(" · ")}`;
+}
+
+function useLink(use: MediaRow["uses"][number]): MediaUse {
+  if (use.kind === "page") return { label: `Handbook page: ${use.name}`, href: `/admin/handbook/pages/${use.id}` };
+  if (use.kind === "question") return { label: `Question ${questionRef(use.ref_no ?? 0)}`, href: `/admin/questions/${use.id}` };
+  return { label: `${use.name}: ${use.kind} cover`, href: "/admin/categories" };
 }

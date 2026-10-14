@@ -24,7 +24,7 @@ Status: in active development.
    npm install
    ```
 
-2. Copy `.env.example` to `.env.local` and fill in `DATABASE_URL` (Supabase pooler string) and `JWT_SECRET`.
+2. Copy `.env.example` to `.env.local` and fill in `DATABASE_URL` (Supabase pooler string) and `JWT_SECRET`. `DATABASE_POOL_MAX` is optional (default 10; use 1–3 on serverless hosting).
 
 3. In the Supabase SQL editor, run `supabase/schema.sql` for a fresh database. The files in `supabase/migrations/` are changes for databases created from an earlier version of the schema, so skip them on a fresh setup.
 
@@ -45,16 +45,20 @@ Status: in active development.
    npm run dev
    ```
 
+7. Before delivering a change, `npm run lint` should report nothing (Next's lint setup, including React's hook rules).
+
 ## Project structure
 
 - `app/` — routes:
   - `/login`, `/access-expired`
   - `/admin/*` (Admin/Superadmin): `/admin/candidates` (`[id]` a candidate's progress, read only), `/admin/admins`, `/admin/categories`, `/admin/handbook` (sections and chapters; `chapters/[id]` a chapter's pages and questions; `pages/[id]` the page editor; `preview` the book as candidates see it), `/admin/questions` (bank; `new`, `[id]`), `/admin/media`, `/admin/faq` (General queries and support contact details; Superadmin only), `/admin/activity` (actions, logins and login-record archives), `/admin/account`
-  - `/dashboard` (Candidate home): `category` to switch within the group, `prepare` the Handbook, `practice` Practice setup and `practice/[id]` a run or its report, `mock` the Mock test start page and `mock/[id]` a test (its results and `review` once ended), `progress` My progress, `help`
+  - `/dashboard` (Candidate home): `category` to switch within the group, `prepare` the Handbook, `practice` Practice setup and `practice/[id]` a run or its report, `mock` the Mock test start page and `mock/[id]` a test (its results and `review` once ended), `progress` My progress, `help` (also Log out of all devices)
+  - `/api/auth/login`, `/api/auth/logout` (also "log out of all devices"), `/api/media/upload` (picture uploads: sign-in, origin and size are checked before the file is read)
 - `components/admin/` — compact admin console UI (sidebar shell, tables, row menus, slide-in panels, `ActionForm`, `Pagination`); admin pages must build from these. Candidate pages keep the large, simple style.
 - `components/candidate/` — candidate page shell (header, `PageBody`), home-screen section cards and the shared large button styles
+- `components/use-latest.ts`, `components/use-browser-value.ts` — shared client hooks: the latest value for handlers and effects; values only the browser knows (address, saved on/off choices)
 - `components/learning/` — candidate-facing renderers: blocks, questions (`questions/`), the fixed-page book reader, the reader bar/Settings, and the focused frame shared by Practice and the Mock test (`focused-shell.tsx`)
-- `lib/auth/` — JWT signing/verification, session cookie, role guard, login limits
+- `lib/auth/` — JWT signing/verification, session cookie, role guard, login and record limits, who edits content (`content-editors.ts`), small-request checks
 - `lib/audit/` — activity and login logs (every loggable action is listed in `lib/audit/actions.ts`) and login-record archiving
 - `lib/db/` — shared Postgres pool, transaction helper, LIKE escaping
 - `lib/users/` — display-name and sign-in (email/password) rules shared by account, admin and candidate forms
@@ -67,11 +71,11 @@ Status: in active development.
 - `lib/faq/` — General queries: questions in order and the support contact details (`types.ts` safe in forms)
 - `lib/progress/` — candidates' progress per category (Handbook pages done, question results), the My progress overview and the readiness score (`readiness.ts`, pure); not activity-log data
 - `lib/storage/` — the only code that talks to the storage provider (upload, delete, signed links; pictures and archive buckets)
-- `lib/media/` — image checks (real type and size from the file) and in-browser WebP conversion
+- `lib/media/` — image checks (real type and size from the file), in-browser WebP conversion, saving uploads and the storage cap (`upload.ts`)
 - `lib/ids.ts`, `lib/text.ts`, `lib/format.ts`, `lib/limits.ts`, `lib/forms.ts`, `lib/params.ts` — small shared helpers (id checks, text clean-up, display formats, length limits, form results, URL parameters)
 - `lib/brand.ts`, `lib/layout.ts` — logo and phone screen sizes
 - `proxy.ts` — route protection by role, block and expiry
-- `scripts/` — `generate-hash.js` (`npm run hash`)
+- `scripts/` — `generate-hash.mjs` (`npm run hash`)
 - `supabase/` — schema, migrations and seed
 
 This project runs Next.js 16, which differs from older versions. See `AGENTS.md` and `node_modules/next/dist/docs/` before changing routing, data fetching or config.

@@ -7,8 +7,9 @@ import { requireRole } from "@/lib/auth/guard";
 import { getErrorCode, withTransaction } from "@/lib/db/transaction";
 import { logActivity } from "@/lib/audit/log";
 import { NO_NAME, normaliseName, validateName } from "@/lib/users/name";
-import { DUPLICATE_EMAIL, EMAIL_PATTERN, MIN_PASSWORD_LENGTH } from "@/lib/users/credentials";
+import { BCRYPT_COST, DUPLICATE_EMAIL, EMAIL_PATTERN, EMAIL_TOO_LONG, isPasswordTooLong, MAX_EMAIL_LENGTH, MIN_PASSWORD_LENGTH, PASSWORD_TOO_LONG } from "@/lib/users/credentials";
 import type { FormState } from "@/lib/forms";
+import { isUuid } from "@/lib/ids";
 
 export type AdminActionState = FormState;
 
@@ -34,11 +35,17 @@ export async function createAdmin(
   if (!EMAIL_PATTERN.test(email)) {
     return { error: "Enter a valid email address." };
   }
+  if (email.length > MAX_EMAIL_LENGTH) {
+    return { error: EMAIL_TOO_LONG };
+  }
   if (password.length < MIN_PASSWORD_LENGTH) {
     return { error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` };
   }
+  if (isPasswordTooLong(password)) {
+    return { error: PASSWORD_TOO_LONG };
+  }
 
-  const passwordHash = await bcrypt.hash(password, 12);
+  const passwordHash = await bcrypt.hash(password, BCRYPT_COST);
 
   try {
     await withTransaction(async (client) => {
@@ -115,6 +122,9 @@ export async function updateAdminEmail(
   if (!EMAIL_PATTERN.test(email)) {
     return { error: "Enter a valid email address." };
   }
+  if (email.length > MAX_EMAIL_LENGTH) {
+    return { error: EMAIL_TOO_LONG };
+  }
 
   try {
     const result = await withTransaction<AdminActionState>(async (client) => {
@@ -158,11 +168,14 @@ export async function updateAdminPassword(
   if (password.length < MIN_PASSWORD_LENGTH) {
     return { error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` };
   }
+  if (isPasswordTooLong(password)) {
+    return { error: PASSWORD_TOO_LONG };
+  }
   if (password !== confirmPassword) {
     return { error: "The two passwords don't match." };
   }
 
-  const passwordHash = await bcrypt.hash(password, 12);
+  const passwordHash = await bcrypt.hash(password, BCRYPT_COST);
 
   try {
     return await withTransaction<AdminActionState>(async (client) => {
@@ -200,7 +213,7 @@ export async function deleteAdmin(
     // The row lock makes the candidate count final: new candidates for this admin must wait.
     result = await withTransaction<AdminActionState>(async (client) => {
       const admin = await lockAdmin(client, adminId);
-      if (!admin) return { error: "This admin has already been deleted." };
+      if (!admin) return { error: "This Admin has already been deleted." };
 
       const { rows } = await client.query<{ count: number }>(
         `select count(*)::int as count from users where admin_id = $1`,
@@ -227,6 +240,55 @@ export async function deleteAdmin(
   return result;
 }
 
+// Moves every candidate of one admin to another (e.g. before deleting the first), logged per candidate.
+export async function moveAllCandidates(
+  _prevState: AdminActionState,
+  formData: FormData
+): Promise<AdminActionState> {
+  const session = await requireRole(["superadmin"]);
+
+  const fromId = String(formData.get("adminId") ?? "");
+  const toId = String(formData.get("toAdminId") ?? "");
+  if (!toId) return { error: "Choose an Admin." };
+  if (!isUuid(fromId) || !isUuid(toId) || fromId === toId) return { error: NOT_FOUND };
+
+  let result: AdminActionState;
+  try {
+    result = await withTransaction<AdminActionState>(async (client) => {
+      const from = await lockAdmin(client, fromId);
+      const { rows: targets } = await client.query<{ email: string }>(
+        `select email from users where id = $1 and role = 'admin' for key share`,
+        [toId]
+      );
+      if (!from || !targets[0]) return { error: "Admin not found. The page has been refreshed." };
+      const { rows: moved } = await client.query<{ id: string; email: string }>(
+        `update users set admin_id = $2
+         where id in (select id from users where admin_id = $1 and role = 'candidate' order by id for update)
+         returning id, email`,
+        [fromId, toId]
+      );
+      for (const candidate of moved) {
+        await logActivity(
+          client,
+          session,
+          "candidate.admin_changed",
+          { type: "candidate", id: candidate.id, label: candidate.email },
+          { from: from.email, to: targets[0].email }
+        );
+      }
+      return { success: true };
+    });
+  } catch (error) {
+    // 23503: the target admin was deleted at the same moment.
+    if (getErrorCode(error) === "23503") return { error: "Admin not found. The page has been refreshed." };
+    throw error;
+  }
+
+  revalidatePath("/admin/admins");
+  revalidatePath("/admin/candidates");
+  return result;
+}
+
 async function lockAdmin(
   client: PoolClient,
   adminId: string
@@ -239,7 +301,7 @@ async function lockAdmin(
 }
 
 function blockedMessage(candidateCount: number) {
-  return `This admin still owns ${candidateCount} candidate${
+  return `This Admin still owns ${candidateCount} candidate${
     candidateCount === 1 ? "" : "s"
-  }. Move them to another admin before deleting.`;
+  }. Move them to another Admin before deleting.`;
 }

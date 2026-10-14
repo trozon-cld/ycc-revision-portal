@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Usage: npm run hash -- "YourStrongPassword"
 
-const bcrypt = require("bcryptjs");
+import bcrypt from "bcryptjs";
 
 const password = process.argv[2];
 

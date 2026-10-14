@@ -1,8 +1,10 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { requireRole } from "@/lib/auth/guard";
+import { CONTENT_EDITORS } from "@/lib/auth/content-editors";
 import { plainText } from "@/lib/content/inline";
 import { questionRef } from "@/lib/questions/labels";
-import { countQuestions, listBankQuestions, listChapterOptions, type BankFilters } from "@/lib/questions/queries";
+import { BANK_PAGE_SIZE, countBankQuestions, countQuestions, listBankQuestions, listChapterOptions, type BankFilters, type BankRow } from "@/lib/questions/queries";
 import { availableQuestionTypes, QUESTION_TYPES } from "@/lib/questions/registry";
 import { isQuestionType, QUESTION_TYPE_KEYS } from "@/lib/questions/types";
 import { loadCategoryGroups } from "@/lib/handbook/categories";
@@ -11,12 +13,15 @@ import { firstParam } from "@/lib/params";
 import { Badge } from "@/components/admin/badge";
 import { FilterBar, FilterSearch, FilterSelect } from "@/components/admin/filter-bar";
 import { PageHeader } from "@/components/admin/page-header";
-import { Pagination } from "@/components/admin/pagination";
+import { Pagination, listSearch, pageFromParam } from "@/components/admin/pagination";
+import { RememberListPlace } from "@/components/admin/list-place";
 import { Cell, Row, Table } from "@/components/admin/table";
 import { NewQuestionButton, QuestionRowActions } from "./question-row-actions";
 
+export const metadata: Metadata = { title: "Question bank" };
+
 export default async function QuestionBankPage({ searchParams }: PageProps<"/admin/questions">) {
-  await requireRole(["superadmin"]);
+  await requireRole(CONTENT_EDITORS);
   const params = await searchParams;
 
   const statusParam = firstParam(params.status) ?? "";
@@ -28,18 +33,20 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
     categoryId: uuidOrNull(firstParam(params.category)),
     type: isQuestionType(typeParam) ? typeParam : null,
     status: statusParam === "draft" || statusParam === "published" ? statusParam : null,
-    page: Math.max(1, Number.parseInt(firstParam(params.page) ?? "1", 10) || 1),
   };
   const isFiltered = Boolean(
     filters.search || filters.sectionId || filters.chapterId || filters.categoryId || filters.type || filters.status
   );
 
-  const [{ rows, hasMore }, total, sections, categoryGroups] = await Promise.all([
-    listBankQuestions(filters),
+  const [matching, total, sections, categoryGroups] = await Promise.all([
+    countBankQuestions(filters),
     countQuestions(),
     listChapterOptions(),
     loadCategoryGroups(),
   ]);
+  const totalLabel = `${total.toLocaleString("en-GB")} question${total === 1 ? "" : "s"}`;
+  const page = pageFromParam(firstParam(params.page), matching, BANK_PAGE_SIZE);
+  const rows = await listBankQuestions(filters, page);
 
   const query = {
     q: filters.search,
@@ -52,9 +59,14 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
 
   return (
     <>
+      <RememberListPlace list="questions" search={listSearch(query, page)} />
       <PageHeader
         title="Question bank"
-        description={`${total} question${total === 1 ? "" : "s"}`}
+        description={
+          isFiltered
+            ? `${matching.toLocaleString("en-GB")} of ${totalLabel} match your filters`
+            : totalLabel
+        }
         actions={
           <NewQuestionButton
             types={availableQuestionTypes().map((key) => ({ key, label: QUESTION_TYPES[key].label }))}
@@ -121,14 +133,14 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
         columns={["Question", "Chapter", "Type", "Status", "Used in", ""]}
         isEmpty={rows.length === 0}
         emptyMessage={
-          total === 0 ? "No questions yet. Add the first one with New question." : filters.page > 1 ? "No questions on this page." : "No questions match these filters."
+          total === 0 ? "No questions yet. Add the first one with New question." : "No questions match these filters."
         }
       >
         {rows.map((row) => {
           const refLabel = questionRef(row.refNo);
           return (
             <Row key={row.id}>
-              <Cell kind="primary">
+              <Cell kind="primary" wide>
                 <div className="flex gap-2">
                   <span className="shrink-0 font-mono text-slate-600 tabular-nums">{refLabel}</span>
                   <div className="min-w-0 font-normal">
@@ -147,7 +159,7 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
                 </div>
               </Cell>
               <Cell label="Chapter">{row.chapterLabel}</Cell>
-              <Cell label="Type" nowrap>
+              <Cell label="Type">
                 {QUESTION_TYPES[row.type].label}
               </Cell>
               <Cell label="Status" nowrap>
@@ -155,8 +167,17 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
                   {row.status === "published" ? "Published" : "Draft"}
                 </Badge>
               </Cell>
-              <Cell label="Used in" nowrap>
-                {row.bookChapter ? `Handbook · ${row.bookChapter}` : <span className="text-slate-600">Not used yet</span>}
+              <Cell label="Used in">
+                {usedIn(row).length > 0 ? (
+                  usedIn(row).map((use, index) => (
+                    <span key={use} className="xl:whitespace-nowrap">
+                      {use}
+                      {index < usedIn(row).length - 1 && ", "}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-slate-600">Not used</span>
+                )}
               </Cell>
               <Cell kind="actions">
                 <QuestionRowActions id={row.id} refLabel={refLabel} status={row.status} bookChapter={row.bookChapter} />
@@ -166,7 +187,14 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
         })}
       </Table>
 
-      <Pagination basePath="/admin/questions" page={filters.page} hasMore={hasMore} query={query} />
+      <Pagination
+        basePath="/admin/questions"
+        page={page}
+        hasMore={page * BANK_PAGE_SIZE < matching}
+        query={query}
+        total={matching}
+        pageSize={BANK_PAGE_SIZE}
+      />
     </>
   );
 }
@@ -193,4 +221,9 @@ function PictureIcon() {
 
 function uuidOrNull(value: string | undefined): string | null {
   return value && isUuid(value) ? value : null;
+}
+
+// Where the question is set to appear: placed in its chapter's Handbook pages, and its Practice / Mock test switches.
+function usedIn(row: BankRow): string[] {
+  return [row.bookChapter && "Handbook", row.inPractice && "Practice", row.inMock && "Mock test"].filter((use): use is string => Boolean(use));
 }

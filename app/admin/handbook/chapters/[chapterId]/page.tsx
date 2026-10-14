@@ -1,10 +1,13 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
+import { CONTENT_EDITORS } from "@/lib/auth/content-editors";
 import { pool } from "@/lib/db/pool";
 import { getChapterContext } from "@/lib/content/pages";
 import { listNames, loadCategoryGroups, loadChapterCategoryIds } from "@/lib/handbook/categories";
-import { questionLogLabel } from "@/lib/questions/labels";
+import { questionLogLabel, questionRef } from "@/lib/questions/labels";
+import { plainText } from "@/lib/content/inline";
 import { questionTypeLabel } from "@/lib/questions/registry";
 import type { QuestionType } from "@/lib/questions/types";
 import { PageHeader } from "@/components/admin/page-header";
@@ -12,7 +15,10 @@ import { buttonClass } from "@/components/admin/styles";
 import { countOf } from "@/lib/format";
 import { AddQuestionsButton, ChapterOrder, type AddableQuestion, type OrderItem } from "./chapter-order";
 import { NewPageButton } from "./page-row-actions";
-import { ChapterCategoriesButton } from "../../chapter-row-actions";
+import { ChapterCategoriesButton, ChapterStatusButton } from "../../chapter-row-actions";
+import { Badge } from "@/components/admin/badge";
+
+export const metadata: Metadata = { title: "Chapter" };
 
 interface ItemRow {
   id: string;
@@ -38,7 +44,7 @@ interface QuestionRow {
 }
 
 export default async function ChapterPagesPage({ params }: PageProps<"/admin/handbook/chapters/[chapterId]">) {
-  await requireRole(["superadmin"]);
+  await requireRole(CONTENT_EDITORS);
   const { chapterId } = await params;
   const chapter = await getChapterContext(chapterId);
   if (!chapter) notFound();
@@ -93,6 +99,7 @@ export default async function ChapterPagesPage({ params }: PageProps<"/admin/han
           position: row.position,
           questionId: row.question_id ?? "",
           label: questionLogLabel(row.ref_no ?? 0, row.stem_text ?? ""),
+          text: `${questionRef(row.ref_no ?? 0)} · ${plainText(row.stem_text ?? "").replace(/\s+/g, " ").trim()}`,
           typeLabel: questionTypeLabel(row.question_type ?? "single_text"),
           status: row.question_status ?? "draft",
         }
@@ -111,7 +118,7 @@ export default async function ChapterPagesPage({ params }: PageProps<"/admin/han
   return (
     <>
       <nav aria-label="Breadcrumb" className="mb-2 text-sm">
-        <Link href="/admin/handbook" className="text-primary underline-offset-2 hover:underline">
+        <Link href="/admin/handbook" className="text-primary underline underline-offset-2 hover:text-ink">
           Handbook
         </Link>
         <span aria-hidden="true" className="mx-1.5 text-slate-500">/</span>
@@ -119,16 +126,30 @@ export default async function ChapterPagesPage({ params }: PageProps<"/admin/han
       </nav>
       <PageHeader
         title={chapter.chapterLabel}
-        description={`${countOf(items.length, "item")} · ${countOf(pageCount, "page")} · ${countOf(questionCount, "question")} · ${published} published`}
+        description={
+          <>
+            <Badge tone={chapter.status === "published" ? "success" : "neutral"}>{chapter.status === "published" ? "Published" : "Draft"}</Badge>{" "}
+            {`${countOf(items.length, "item")} · ${countOf(pageCount, "page")} · ${countOf(questionCount, "question")} · ${published} published`}
+          </>
+        }
         actions={
-          <div className="flex flex-wrap gap-2">
+          <>
             <Link href={`/admin/handbook/preview?chapter=${chapter.id}`} className={buttonClass("secondary")}>
               Preview chapter
             </Link>
             <ChapterCategoriesButton chapterId={chapter.id} groups={categoryGroups} initialSelected={categoryIds} />
             <AddQuestionsButton chapterId={chapter.id} questions={addable} />
             <NewPageButton chapterId={chapter.id} />
-          </div>
+            <ChapterStatusButton
+              id={chapter.id}
+              number={chapter.number}
+              title={chapter.title}
+              status={chapter.status}
+              itemCount={items.length}
+              draftCount={drafts}
+              hasCategories={categoryIds.length > 0}
+            />
+          </>
         }
       />
 
@@ -139,6 +160,12 @@ export default async function ChapterPagesPage({ params }: PageProps<"/admin/han
       ) : (
         <p className="mb-3 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-600/25">
           Not in any category yet. Candidates won&apos;t see this chapter until it&apos;s added to one with Categories.
+        </p>
+      )}
+
+      {chapter.status === "draft" && (
+        <p className="mb-3 rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-700">
+          This chapter is a draft, so candidates don&apos;t see any of it yet. Publish it when its pages and questions are ready.
         </p>
       )}
 

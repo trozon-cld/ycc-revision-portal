@@ -14,7 +14,8 @@ import { buttonClass, inputClass, labelClass } from "@/components/admin/styles";
 import { useToast } from "@/components/admin/toast";
 import { PicturePicker } from "@/components/admin/picture-picker";
 import { TITLE_MAX_LENGTH } from "@/lib/limits";
-import { getPreviewMedia, listPickerMedia, savePageContent, type PickerItem } from "../actions";
+import { NOT_THROUGH_MESSAGE, reachServer } from "@/lib/forms";
+import { getPreviewMedia, listPickerMedia, savePageContent, setPageStatus, type PickerItem } from "../actions";
 import { BlockEditor } from "./block-editor";
 
 const ADD_ORDER: BlockType[] = ["heading", "paragraph", "list", "picture", "callout"];
@@ -50,6 +51,7 @@ export function PageEditor({
   const [savedSnapshot, setSavedSnapshot] = useState(() => snapshotOf(initialTitle, initialBlocks));
   const [problem, setProblem] = useState<SaveProblem>(null);
   const [isSaving, startSaving] = useTransition();
+  const [isPublishing, startPublishing] = useTransition();
   const [media, setMedia] = useState<ResolvedMedia>(initialMedia);
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
   const [pickingFor, setPickingFor] = useState<string | null>(null);
@@ -74,8 +76,10 @@ export function PageEditor({
     }
     const sentSnapshot = snapshotOf(title, blocks);
     startSaving(async () => {
-      const result = await savePageContent({ pageId, expectedVersion: version, title, blocks: savable });
-      if (result.ok) {
+      const result = await reachServer(() => savePageContent({ pageId, expectedVersion: version, title, blocks: savable }));
+      if (!result) {
+        setProblem({ message: NOT_THROUGH_MESSAGE });
+      } else if (result.ok) {
         setVersion(result.version);
         setSavedSnapshot(sentSnapshot);
         setProblem(null);
@@ -85,6 +89,14 @@ export function PageEditor({
       }
     });
   }, [blocks, dirty, isSaving, pageId, title, toast, version]);
+
+  function publish(next: "draft" | "published") {
+    startPublishing(async () => {
+      const result = (await reachServer(() => setPageStatus(pageId, next))) ?? { error: NOT_THROUGH_MESSAGE };
+      toast(result.error ?? (next === "published" ? "Page published." : "Page is a draft again."));
+      router.refresh();
+    });
+  }
 
   // Ctrl/Cmd+S saves from anywhere on the page.
   useEffect(() => {
@@ -160,7 +172,7 @@ export function PageEditor({
     setBlocks((current) => current.map((block) => (block.id === blockId && block.type === "picture" ? { ...block, mediaId: item.id } : block)));
     if (item.thumbUrl) setThumbs((current) => ({ ...current, [item.id]: item.thumbUrl as string }));
     if (!media[item.id]) {
-      getPreviewMedia([item.id]).then((found) => setMedia((current) => ({ ...current, ...found })));
+      reachServer(() => getPreviewMedia([item.id])).then((found) => found && setMedia((current) => ({ ...current, ...found })));
     }
     requestAnimationFrame(() => document.getElementById(`${blockId}-caption`)?.focus());
   }
@@ -185,19 +197,21 @@ export function PageEditor({
   return (
     <>
       <nav aria-label="Breadcrumb" className="mb-2 text-sm">
-        <Link href="/admin/handbook" className="text-primary underline-offset-2 hover:underline">
+        <Link href="/admin/handbook" className="text-primary underline underline-offset-2 hover:text-ink">
           Handbook
         </Link>
         <span aria-hidden="true" className="mx-1.5 text-slate-500">/</span>
-        <Link href={`/admin/handbook/chapters/${chapter.id}`} className="text-primary underline-offset-2 hover:underline">
+        <Link href={`/admin/handbook/chapters/${chapter.id}`} className="text-primary underline underline-offset-2 hover:text-ink">
           {chapter.chapterLabel}
         </Link>
       </nav>
 
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+      <h1 className="sr-only">Edit page: {title.trim() || "Untitled page"}</h1>
+      {/* On tablets and laptops the title, status and Save stay in view while scrolling. */}
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3 md:sticky md:top-14 md:z-10 md:[@media(max-height:500px)]:top-0 md:-mx-6 md:border-b md:border-slate-200 md:bg-slate-50/95 md:px-6 md:py-3 md:backdrop-blur lg:top-0 lg:-mx-8 lg:px-8">
         <div className="w-full min-w-0 space-y-1 sm:w-auto sm:max-w-md sm:flex-1">
           <label htmlFor="page-title" className={labelClass}>
-            Page title <span className="font-normal text-slate-600">(only admins see this)</span>
+            Page title <span className="font-normal text-slate-600">(candidates don&apos;t see this)</span>
           </label>
           <input
             id="page-title"
@@ -208,11 +222,25 @@ export function PageEditor({
             className={`${inputClass} font-medium`}
           />
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <Badge tone={status === "published" ? "success" : "neutral"}>{status === "published" ? "Published" : "Draft"}</Badge>
-          <p aria-live="polite" className={`text-sm ${dirty && !isSaving ? "font-medium text-amber-900" : "text-slate-600"}`}>
-            {saveState}
-          </p>
+        <div
+          data-editor-bar
+          className="flex flex-wrap items-center gap-3 max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-20 max-md:flex-nowrap max-md:gap-2 max-md:border-t max-md:border-slate-200 max-md:bg-white max-md:px-4 max-md:py-2.5 max-md:shadow-[0_-2px_8px_rgb(0_0_0/0.06)]"
+        >
+          <span className="flex items-center gap-3 max-md:mr-auto max-md:flex-col max-md:items-start max-md:gap-0.5 md:contents">
+            <Badge tone={status === "published" ? "success" : "neutral"}>{status === "published" ? "Published" : "Draft"}</Badge>
+            <p aria-live="polite" className={`text-sm max-md:text-xs ${dirty && !isSaving ? "font-medium text-amber-900" : "text-slate-600"}`}>
+              {saveState}
+            </p>
+          </span>
+          <button
+            type="button"
+            onClick={() => publish(status === "published" ? "draft" : "published")}
+            disabled={dirty || isSaving || isPublishing}
+            title={dirty ? "Save your changes first" : undefined}
+            className={buttonClass("secondary")}
+          >
+            {status === "published" ? (isPublishing ? "Unpublishing…" : "Unpublish") : isPublishing ? "Publishing…" : "Publish"}
+          </button>
           <button type="button" onClick={save} disabled={isSaving || !dirty} className={buttonClass("primary")}>
             {isSaving ? "Saving…" : "Save"}
           </button>
@@ -238,7 +266,7 @@ export function PageEditor({
         </div>
       )}
 
-      <div role="group" aria-label="View" className="mb-3 inline-flex rounded-md border border-slate-300 bg-white p-0.5 lg:hidden">
+      <div role="group" aria-label="View" className="mb-3 inline-flex rounded-md border border-slate-300 bg-white p-0.5 xl:hidden">
         {(["edit", "preview"] as const).map((key) => (
           <button
             key={key}
@@ -252,11 +280,11 @@ export function PageEditor({
         ))}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <section aria-label="Page content" className={`min-w-0 space-y-3 ${tab === "preview" ? "hidden lg:block" : ""}`}>
+      <div className="grid gap-6 max-md:pb-20 xl:grid-cols-[3fr_2fr]">
+        <section aria-label="Page content" className={`min-w-0 space-y-3 ${tab === "preview" ? "hidden xl:block" : ""}`}>
           {blocks.length === 0 ? (
             <p className="rounded-lg border border-dashed border-slate-300 bg-white px-4 py-6 text-center text-sm text-slate-600">
-              This page is empty. Add your first block below, e.g. a heading.
+              This page is empty. Add your first block below, for example a heading.
             </p>
           ) : (
             <ol className="space-y-3">
@@ -299,8 +327,8 @@ export function PageEditor({
           </div>
         </section>
 
-        <section aria-label="Live preview" className={`min-w-0 ${tab === "edit" ? "hidden lg:block" : ""}`}>
-          <div className="lg:sticky lg:top-4">
+        <section aria-label="Live preview" className={`min-w-0 ${tab === "edit" ? "hidden xl:block" : ""}`}>
+          <div className="xl:sticky xl:top-28">
             <BookPreview
               pages={previewPages}
               media={media}

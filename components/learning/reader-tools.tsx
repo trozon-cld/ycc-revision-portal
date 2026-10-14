@@ -1,8 +1,13 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
+import { useDeviceSwitch } from "@/components/use-browser-value";
+import { useLatest } from "@/components/use-latest";
 import { TEXT_SIZES, type BookPageData, type Sheet, type TextSize } from "@/lib/content/book";
+
+// Phase 2 (planned soon, decided 13 Oct): set to true when Listen reads pages aloud, to show its button again.
+const LISTEN_READY = false;
 
 // The reader bar and its panels. Candidate style: big targets, words next to icons,
 // high contrast. Panels cover the pages (no pop-up windows) and close with Escape.
@@ -20,25 +25,7 @@ export const ReaderLabelsContext = createContext(true);
 const LABELS_KEY = "ycc-reader-labels";
 
 export function useReaderLabels(): [showLabels: boolean, toggleLabels: () => void] {
-  const [showLabels, setShowLabels] = useState(true);
-  useEffect(() => {
-    try {
-      if (window.localStorage.getItem(LABELS_KEY) === "off") setShowLabels(false);
-    } catch {
-      // Storage can be blocked (private windows); labels simply stay on.
-    }
-  }, []);
-  const toggleLabels = useCallback(() => {
-    setShowLabels((current) => {
-      try {
-        window.localStorage.setItem(LABELS_KEY, current ? "off" : "on");
-      } catch {
-        // Not remembered, but still switched for this visit.
-      }
-      return !current;
-    });
-  }, []);
-  return [showLabels, toggleLabels];
+  return useDeviceSwitch(LABELS_KEY);
 }
 
 // Bar buttons on laptops and desktops (48px high), also used for the page's own items in the bar.
@@ -199,8 +186,8 @@ export function ReaderBar({
           </span>
         </>
       )}
-      {/* Reserved for reading aloud (phase 2); left out on phones, where there's no room for a button that does nothing yet. */}
-      {!compact && !narrow && (
+      {/* Reading aloud (phase 2, planned soon): hidden until it works (LISTEN_READY); never on phones' bars. */}
+      {LISTEN_READY && !compact && !narrow && (
         <button type="button" disabled title="Listen is coming later" className={`${barButton} ${size}`}>
           <Icon path="M5 10v4h3l4 4V6L8 10zM15.5 9a4 4 0 0 1 0 6M18 6.5a8 8 0 0 1 0 11" />
           <span className={showLabels ? undefined : "sr-only"}>Listen</span>
@@ -215,7 +202,7 @@ export function ReaderBar({
     return (
       <div ref={barRef} role="toolbar" aria-label="Reader tools" className="flex items-center gap-2 border-b border-slate-300 bg-white px-3 py-2">
         {leftTools}
-        <span aria-hidden="true" className="min-w-0 flex-1 truncate px-2 text-center text-base font-medium text-ink">
+        <span aria-hidden="true" className="min-w-0 flex-1 truncate px-2 text-center text-base font-semibold text-ink">
           {status}
         </span>
         {rightTools}
@@ -230,7 +217,7 @@ export function ReaderBar({
         className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-slate-300 bg-white px-6 py-2"
       >
         <div className="flex min-w-0 items-center gap-2">{leftTools}</div>
-        <span aria-hidden="true" className="whitespace-nowrap px-2 text-center text-base font-medium text-ink">
+        <span aria-hidden="true" className="whitespace-nowrap px-2 text-center text-base font-semibold text-ink">
           {status}
         </span>
         <div className="flex min-w-0 items-center justify-end gap-2">{rightTools}</div>
@@ -304,8 +291,7 @@ export function Panel({ title, onClose, children }: { title: string; onClose: ()
     first?.focus();
   }, []);
   // On the whole page, so Escape still works when focus was lost (e.g. A+ turned disabled at 24px).
-  const closeRef = useRef(onClose);
-  closeRef.current = onClose;
+  const closeRef = useLatest(onClose);
   useEffect(() => {
     const onKey = (event: globalThis.KeyboardEvent) => {
       if (event.key === "Escape" && !event.defaultPrevented) {
@@ -315,7 +301,7 @@ export function Panel({ title, onClose, children }: { title: string; onClose: ()
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, []);
+  }, [closeRef]);
   return (
     <div ref={ref} role="region" aria-labelledby={headingId} className="absolute inset-0 z-20 flex flex-col bg-white">
       <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
@@ -488,7 +474,7 @@ export function GoToPanel({ total, onGo, onClose }: { total: number; onGo: (numb
 export type ResultStatus = "correct" | "wrong" | "revealed" | "open";
 export type ResultEntry = { pageIndex: number; status: ResultStatus; text: string };
 
-const STATUS_TEXT: Record<ResultStatus, string> = { correct: "Correct", wrong: "Not quite", revealed: "Revealed", open: "Not tried yet" };
+const STATUS_TEXT: Record<ResultStatus, string> = { correct: "Right", wrong: "Not quite", revealed: "Revealed", open: "Not tried yet" };
 const STATUS_TONE: Record<ResultStatus, string> = {
   correct: "bg-green-50 text-green-900 ring-green-700/40",
   wrong: "bg-amber-50 text-amber-950 ring-amber-600/40",
@@ -520,7 +506,7 @@ export function ResultsPanel({
       <div className="mx-auto max-w-2xl space-y-5">
         <div aria-live="polite">
           <p className="text-2xl font-bold text-ink">
-            {correct} of {entries.length} {entries.length === 1 ? "question" : "questions"} correct
+            {correct} of {entries.length} {entries.length === 1 ? "question" : "questions"} right
           </p>
           <p className="mt-1 text-lg text-slate-700">
             {count("wrong")} not quite · {count("revealed")} revealed · {count("open")} not tried yet

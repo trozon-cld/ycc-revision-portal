@@ -11,6 +11,21 @@
 @custom-variant phone-upright (@media (max-width: 599.98px));
 @custom-variant phone-sideways (@media (max-height: 499.98px) and (orientation: landscape) and (max-width: 1023.98px));
 
+/* Windows high-contrast mode drops background colours: filled buttons keep an outline (hc-edge), and fills
+   that mean something, like progress bars and chosen answers, stay solid (hc-fill). Normal colours unchanged. */
+@utility hc-edge {
+  @media (forced-colors: active) {
+    border: 2px solid ButtonText;
+  }
+}
+@utility hc-fill {
+  @media (forced-colors: active) {
+    forced-color-adjust: none;
+    background-color: CanvasText !important; /* over the element's own bg-/text- colours */
+    color: Canvas !important;
+  }
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -35,6 +50,14 @@ body {
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
+/* Tailwind 4 gives buttons the arrow; the hand shows they can be clicked. */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+}
+
 /* Admin console motion; skipped for users who prefer reduced motion. */
 @media (prefers-reduced-motion: no-preference) {
   dialog[open].admin-panel {
@@ -46,6 +69,18 @@ body {
   dialog[open].admin-confirm,
   .admin-toast {
     animation: admin-fade-in 150ms ease-out;
+  }
+}
+
+/* Loading screens (staff and candidate pages): invisible for a moment, so quick pages don’t flash them. */
+.admin-loading,
+.candidate-loading {
+  animation: loading-fade-in 200ms ease-out 150ms both;
+}
+
+@keyframes loading-fade-in {
+  from {
+    opacity: 0;
   }
 }
 
@@ -145,10 +180,26 @@ body:has([data-focused-owns-header]) .candidate-header {
   display: none;
 }
 
-/* Handbook on phones: the reader bar takes the header's place (Home in the bar; Help and Log out in
-   Settings). Only while the reader is on the page, so an empty Handbook message keeps the header. */
-@media (max-width: 599.98px), (max-height: 499.98px) and (orientation: landscape) and (max-width: 1023.98px) {
-  body:has([data-reader-owns-header]) .candidate-header {
-    display: none;
+/* Handbook: the reader bar takes the header's place on every screen, like Practice and the Mock test
+   (laptops: logo, Help and Log out in the bar; smaller: Home in the bar, Help and Log out in Settings).
+   Only while the reader is on the page, so an empty Handbook message keeps the header. */
+body:has([data-reader-owns-header]) .candidate-header {
+  display: none;
+}
+
+/* Admin editors: a field reached with Tab scrolls clear of the fixed Save bar (bottom on phones, top from tablets). */
+@media (max-width: 767px) {
+  html:has([data-editor-bar]) {
+    scroll-padding-bottom: 5.5rem;
+  }
+}
+@media (min-width: 768px) {
+  html:has([data-editor-bar]) {
+    scroll-padding-top: 10rem;
+  }
+}
+@media (min-width: 1024px) {
+  html:has([data-editor-bar]) {
+    scroll-padding-top: 7rem;
   }
 }

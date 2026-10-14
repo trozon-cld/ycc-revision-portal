@@ -30,11 +30,11 @@ function FaqFields({ id, item }: { id: string; item?: FaqItem }) {
 
 export function NewFaqButton() {
   return (
-    <PanelButton label="Add question" title="Add question">
+    <PanelButton label="New question" title="New question">
       {(close) => (
-        <ActionForm action={createFaq} submitLabel="Add question" pendingLabel="Adding…" successMessage="Question added. It's hidden until you show it." onSuccess={close} onCancel={close}>
+        <ActionForm action={createFaq} submitLabel="Add question" pendingLabel="Adding…" successMessage="Question added. It's a draft until you publish it." onSuccess={close} onCancel={close}>
           <FaqFields id="new-faq" />
-          <p className="text-sm text-slate-600">It&apos;s added at the end and hidden from candidates until you show it.</p>
+          <p className="text-sm text-slate-600">It&apos;s added at the end as a draft. Publish it when it&apos;s ready.</p>
         </ActionForm>
       )}
     </PanelButton>
@@ -46,10 +46,10 @@ export function FaqRowActions({ item, isFirst, isLast }: { item: FaqItem; isFirs
   const shown = item.status === "published";
   const actions: RowAction[] = [
     {
-      label: "Edit",
+      label: "Edit question",
       title: "Edit question",
       render: (close) => (
-        <ActionForm action={updateFaq} hidden={hidden} submitLabel="Save changes" successMessage="Question saved." onSuccess={close} onCancel={close}>
+        <ActionForm action={updateFaq} hidden={hidden} submitLabel="Save changes" successMessage="Question updated." onSuccess={close} onCancel={close}>
           <FaqFields id={`edit-faq-${item.id}`} item={item} />
         </ActionForm>
       ),
@@ -59,8 +59,8 @@ export function FaqRowActions({ item, isFirst, isLast }: { item: FaqItem; isFirs
   if (!isLast) actions.push({ label: "Move down", run: () => moveFaq(item.id, "down"), successMessage: "Question moved down." });
   actions.push(
     shown
-      ? { label: "Hide from candidates", run: () => setFaqShown(item.id, false), successMessage: "Question hidden." }
-      : { label: "Show to candidates", run: () => setFaqShown(item.id, true), successMessage: "Question shown to candidates." }
+      ? { label: "Unpublish", run: () => setFaqShown(item.id, false), successMessage: "Question is a draft again." }
+      : { label: "Publish", run: () => setFaqShown(item.id, true), successMessage: "Question published." }
   );
   actions.push({
     label: "Delete",
@@ -93,7 +93,7 @@ export function SupportContactButton({ contact }: { contact: SupportContact }) {
   return (
     <PanelButton label="Edit contact details" title="Support contact details" variant="secondary" icon={false}>
       {(close) => (
-        <ActionForm action={saveSupportContact} submitLabel="Save details" successMessage="Contact details saved." onSuccess={close} onCancel={close}>
+        <ActionForm action={saveSupportContact} submitLabel="Save details" successMessage="Contact details updated." onSuccess={close} onCancel={close}>
           <p className="text-sm text-slate-600">All optional. Candidates see only the details filled in.</p>
           {SUPPORT_FIELDS.map((field) => {
             const id = `support-${field.key}`;

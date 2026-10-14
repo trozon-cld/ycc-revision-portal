@@ -1,6 +1,7 @@
+import type { Metadata } from "next";
 import { requireRole } from "@/lib/auth/guard";
 import { pool } from "@/lib/db/pool";
-import { customDateBounds, formatUkDate } from "@/lib/candidates/access";
+import { accessEnded, customDateBounds, formatUkDate } from "@/lib/candidates/access";
 import { isUuid } from "@/lib/ids";
 import { firstParam } from "@/lib/params";
 import { escapeLike } from "@/lib/db/like";
@@ -8,15 +9,23 @@ import { FilterBar, FilterSearch, FilterSelect } from "@/components/admin/filter
 import { Breakable } from "@/components/admin/breakable";
 import { PersonLabel } from "@/components/admin/person-label";
 import { PageHeader } from "@/components/admin/page-header";
-import { Pagination, pageFromParam } from "@/components/admin/pagination";
+import { Pagination, listSearch, pageFromParam } from "@/components/admin/pagination";
+import { RememberListPlace } from "@/components/admin/list-place";
 import { Cell, Row, Table } from "@/components/admin/table";
 import { NewCandidateButton } from "./create-candidate-form";
 import { AdminCandidateActions, SuperadminCandidateActions } from "./candidate-row-actions";
-import { CategoryOptions, type CategoryChoice } from "./category-options";
+import { CategoryOptions } from "./category-options";
+import { loadAdminOptions, loadCategoryChoices } from "./options";
+import { toRowCandidate } from "./row-candidate";
+import { FlashToast } from "@/components/admin/flash-toast";
 import { CandidateStatusBadge } from "./status-badge";
 import { candidateProgressPath } from "@/lib/candidates/paths";
 import { LAST_LOGIN_SQL } from "@/lib/candidates/detail";
 import { scoreText } from "@/lib/mock/types";
+import { STALE_MOCK_SQL, settleMocks } from "@/lib/mock/attempts";
+import { withTransaction } from "@/lib/db/transaction";
+
+export const metadata: Metadata = { title: "Candidates" };
 
 interface CandidateRow {
   id: string;
@@ -34,11 +43,7 @@ interface CandidateRow {
   mock_right: number | null;
   mock_out_of: number | null;
   last_login_at: Date | null;
-}
-
-interface Option {
-  id: string;
-  label: string;
+  stale_mock: boolean;
 }
 
 const PAGE_SIZE = 50;
@@ -70,18 +75,21 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
               or ($4::text = 'active' and not u.is_blocked
                   and (u.access_expires_at is null or u.access_expires_at > now())))`;
   const filterValues = [ownerFilter, search ? escapeLike(search) : null, categoryFilter, status];
-  const { rows: counted } = await pool.query<{ total: number }>(
-    `select count(*)::int as total from users u where ${where}`,
-    filterValues
-  );
+  const [{ rows: counted }, categories, admins] = await Promise.all([
+    pool.query<{ total: number }>(`select count(*)::int as total from users u where ${where}`, filterValues),
+    loadCategoryChoices(),
+    isSuperadmin ? loadAdminOptions() : Promise.resolve([]),
+  ]);
   const total = counted[0].total;
   const page = pageFromParam(firstParam(params.page), total, PAGE_SIZE);
 
-  const [{ rows: candidates }, { rows: categories }, { rows: admins }] = await Promise.all([
+  // A test left to run out of time shows as the last mock straight away: such tests on this page end first.
+  const loadPage = () =>
     pool.query<CandidateRow>(
       `select u.id, u.email, u.full_name, u.category_id, c.name as category_name, cc.name as current_category_name,
               u.admin_id, a.email as admin_email, a.full_name as admin_name, u.access_expires_at, u.is_blocked,
-              lm.right_count as mock_right, lm.out_of as mock_out_of, ${LAST_LOGIN_SQL} as last_login_at
+              lm.right_count as mock_right, lm.out_of as mock_out_of, ${LAST_LOGIN_SQL} as last_login_at,
+              exists (select 1 from mock_attempts a where a.user_id = u.id and ${STALE_MOCK_SQL}) as stale_mock
        from users u
        join categories c on c.id = u.category_id
        join categories cc on cc.id = u.current_category_id
@@ -95,21 +103,14 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
        order by u.created_at desc, u.id
        limit $5 offset $6`,
       [...filterValues, PAGE_SIZE, (page - 1) * PAGE_SIZE]
-    ),
-    pool.query<CategoryChoice>(
-      `select c.id, c.name, g.name as "group"
-       from categories c join category_groups g on g.id = c.group_id
-       order by g.position, c.name`
-    ),
-    isSuperadmin
-      ? pool.query<Option>(
-          `select id, coalesce(full_name || ' (' || email || ')', email) as label
-           from users where role = 'admin' order by lower(coalesce(full_name, email))`
-        )
-      : Promise.resolve({ rows: [] as Option[] }),
-  ]);
+    );
+  let { rows: candidates } = await loadPage();
+  const stale = candidates.filter((candidate) => candidate.stale_mock).map((candidate) => candidate.id);
+  if (stale.length > 0) {
+    await withTransaction((client) => settleMocks(client, stale));
+    ({ rows: candidates } = await loadPage());
+  }
 
-  const now = Date.now();
   const columns = isSuperadmin
     ? ["Candidate", "Category", "Admin", "Status", "Access until", "Recent activity", ""]
     : ["Candidate", "Category", "Status", "Access until", "Recent activity", ""];
@@ -123,6 +124,8 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
 
   return (
     <>
+      {firstParam(params.done) === "deleted" && <FlashToast message="Candidate deleted." />}
+      <RememberListPlace list="candidates" search={listSearch(query, page)} />
       <PageHeader
         title="Candidates"
         description={isFiltered ? `${countLabel} match your filters` : countLabel}
@@ -151,7 +154,7 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
         </FilterSelect>
         {isSuperadmin && (
           <FilterSelect name="admin" label="Admin" defaultValue={ownerFilter ?? ""}>
-            <option value="">All admins</option>
+            <option value="">All Admins</option>
             {admins.map((admin) => (
               <option key={admin.id} value={admin.id}>
                 {admin.label}
@@ -168,17 +171,19 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
       >
         {candidates.map((candidate) => {
           const expiresAt = candidate.access_expires_at;
-          const isExpired = expiresAt !== null && new Date(expiresAt).getTime() <= now;
+          const isExpired = accessEnded(expiresAt);
           const expiryDate = expiresAt ? formatUkDate(expiresAt) : "No expiry";
-          const rowCandidate = {
+          const rowCandidate = toRowCandidate({
             id: candidate.id,
             email: candidate.email,
             name: candidate.full_name,
             categoryId: candidate.category_id,
+            categoryName: candidate.category_name,
+            currentCategoryName: candidate.current_category_name,
             adminId: candidate.admin_id,
             isBlocked: candidate.is_blocked,
-            expiryLabel: expiresAt ? `${isExpired ? "Expired on" : "Expires"} ${expiryDate}` : "No expiry set",
-          };
+            accessExpiresAt: expiresAt,
+          });
 
           return (
             <Row key={candidate.id}>
@@ -205,9 +210,7 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
               <Cell label="Recent activity">
                 <span className="block">
                   <span className="text-slate-600">Last mock:</span>{" "}
-                  <span className="whitespace-nowrap">
-                    {candidate.mock_right !== null && candidate.mock_out_of !== null ? scoreText(candidate.mock_right, candidate.mock_out_of) : "None"}
-                  </span>
+                  <span>{candidate.mock_right !== null && candidate.mock_out_of !== null ? scoreText(candidate.mock_right, candidate.mock_out_of) : "None"}</span>
                 </span>
                 <span className="block">
                   <span className="text-slate-600">Last login:</span>{" "}

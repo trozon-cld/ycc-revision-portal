@@ -25,8 +25,10 @@ export type Readiness = { score: number; label: string; parts: ReadinessPart[] }
 export function readinessScore(input: ReadinessInput): Readiness {
   const used = READINESS_PARTS.filter((part) => input[part.key] !== null);
   const totalWeight = used.reduce((sum, part) => sum + part.weight, 0);
-  const parts = used.map((part) => ({ key: part.key, name: part.name, weight: part.weight / totalWeight, percent: Math.round((input[part.key] ?? 0) * 100) }));
-  const score = Math.round(used.reduce((sum, part) => sum + (input[part.key] ?? 0) * (part.weight / totalWeight), 0) * 100);
+  // Rounded down, so a label is only reached at its real threshold (89.6 is 89, "Almost ready").
+  const whole = (share: number) => Math.floor(share * 100 + 1e-9);
+  const parts = used.map((part) => ({ key: part.key, name: part.name, weight: part.weight / totalWeight, percent: whole(input[part.key] ?? 0) }));
+  const score = whole(used.reduce((sum, part) => sum + (input[part.key] ?? 0) * (part.weight / totalWeight), 0));
   return { score, label: readinessLabel(score), parts };
 }
 

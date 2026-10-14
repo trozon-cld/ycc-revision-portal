@@ -1,7 +1,8 @@
 "use client";
 
 import type { RefObject } from "react";
-import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { useConfirmFocus } from "@/components/candidate/use-confirm-focus";
 import { countOf } from "@/lib/format";
 
 // The review screen before submitting: every question as a numbered tile (answered, not answered,
@@ -31,6 +32,7 @@ export function MockReview({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const { heading: submitHeading, opener: submitOpener } = useConfirmFocus(confirming);
   const done = answered.filter(Boolean).length;
   const open = answered.length - done;
   const flagged = flags.filter(Boolean).length;
@@ -56,7 +58,7 @@ export function MockReview({
                 onClick={() => onOpen(index)}
                 aria-label={`Question ${index + 1}: ${state}`}
                 className={`relative flex h-14 w-full items-center justify-center rounded-lg border-2 text-lg font-bold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary ${
-                  isAnswered ? "border-primary bg-primary text-white hover:bg-primary/90" : "border-dashed border-ink/40 bg-white text-ink hover:border-primary"
+                  isAnswered ? "hc-fill border-primary bg-primary text-white hover:bg-primary/90" : "border-dashed border-ink/40 bg-white text-ink hover:border-primary"
                 }`}
               >
                 {index + 1}
@@ -88,7 +90,7 @@ export function MockReview({
       <div className="mt-8">
         {confirming ? (
           <div role="group" aria-labelledby="submit-heading" className="rounded-xl border-2 border-primary bg-primary/5 p-5">
-            <h2 id="submit-heading" className="text-xl font-bold text-ink">
+            <h2 id="submit-heading" ref={submitHeading} tabIndex={-1} className="text-xl font-bold text-ink focus:outline-none">
               Submit your test now?
             </h2>
             <p className="mt-2 text-lg leading-relaxed text-ink">
@@ -106,7 +108,7 @@ export function MockReview({
           </div>
         ) : (
           <div className="flex flex-col gap-3 sm:flex-row">
-            <button type="button" onClick={onSubmit} className={`${PRIMARY_BUTTON} w-full sm:w-auto`}>
+            <button type="button" ref={submitOpener} onClick={onSubmit} className={`${PRIMARY_BUTTON} w-full sm:w-auto`}>
               Submit test
             </button>
             <button type="button" onClick={onBack} className={`${SECONDARY_BUTTON} w-full sm:w-auto`}>
@@ -114,7 +116,7 @@ export function MockReview({
             </button>
           </div>
         )}
-        <div aria-live="polite">{problem && <p className="mt-4 text-lg font-semibold text-red-800">{problem}</p>}</div>
+        <div aria-live="polite">{problem && <p className={`mt-4 ${ERROR_BOX}`}>{problem}</p>}</div>
       </div>
     </div>
   );

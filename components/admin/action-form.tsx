@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState, type ReactNode } from "react";
-import type { FormState } from "@/lib/forms";
+import { startTransition, useActionState, useRef, type FormEvent, type ReactNode } from "react";
+import { NOT_THROUGH_MESSAGE, reachServer, type FormState } from "@/lib/forms";
 import { buttonClass, type ButtonVariant } from "./styles";
 import { useToast } from "./toast";
 
@@ -34,19 +34,31 @@ export function ActionForm({
   children?: ReactNode;
 }) {
   const toast = useToast();
+  const formRef = useRef<HTMLFormElement>(null);
   const [state, formAction, isPending] = useActionState(async (prev: FormState, formData: FormData) => {
-    const result = await action(prev, formData);
+    const result = (await reachServer(() => action(prev, formData))) ?? { error: NOT_THROUGH_MESSAGE };
     if (result.success) {
+      formRef.current?.reset();
       if (successMessage) toast(successMessage);
       onSuccess?.();
     }
     return result;
   }, initialState);
 
+  // Submitted by hand: React's own form action clears every field afterwards, even when there's an
+  // error to fix. Here fields clear only on success.
+  function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const submitter = (event.nativeEvent as SubmitEvent).submitter;
+    const data = new FormData(event.currentTarget, submitter);
+    startTransition(() => formAction(data));
+  }
+
   const isPanel = layout === "panel";
 
   return (
-    <form action={formAction} className={isPanel ? "flex h-full flex-col" : "space-y-4"}>
+    // POST, so a submit before the page is ready never puts fields (e.g. passwords) in the address.
+    <form ref={formRef} method="post" onSubmit={onSubmit} className={isPanel ? "flex h-full flex-col" : "space-y-4"}>
       {hidden &&
         Object.entries(hidden).map(([name, value]) => (
           <input key={name} type="hidden" name={name} value={value} />

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
@@ -11,6 +12,8 @@ import { FocusedShell } from "@/components/learning/focused-shell";
 import { MockHistoryList } from "./mock-history";
 import { StartMock } from "./start-mock";
 
+export const metadata: Metadata = { title: "Mock test" };
+
 // Past tests shown at first, and how many more each "Show more" adds (up to the cap).
 const HISTORY_STEP = 10;
 const HISTORY_MAX = 500;
@@ -20,7 +23,7 @@ const HOW_IT_WORKS = [
   "Flag any question you want to look at again.",
   "Your answers are saved as you go.",
   "The timer keeps running if you leave the page or close it.",
-  "When time is up, your test is submitted automatically.",
+  "When time runs out, your test is submitted automatically.",
 ];
 
 export default async function MockTestPage({ searchParams }: PageProps<"/dashboard/mock">) {
@@ -50,7 +53,7 @@ export default async function MockTestPage({ searchParams }: PageProps<"/dashboa
               <Link href={`/dashboard/mock/${home.open.id}`} className={`${PRIMARY_BUTTON} mt-4 w-full sm:w-auto`}>
                 Continue mock test
               </Link>
-              <p className="mt-3 text-base text-ink/80">The timer keeps running until you submit or the time is up.</p>
+              <p className="mt-3 text-base text-ink/80">The timer keeps running until you submit or time runs out.</p>
             </section>
           ) : home.size === 0 ? (
             <p className="mt-6 text-lg leading-relaxed text-ink">

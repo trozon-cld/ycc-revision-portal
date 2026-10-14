@@ -3,14 +3,29 @@ import bcrypt from "bcryptjs";
 import { pool } from "@/lib/db/pool";
 import type { UserRole } from "@/lib/auth/jwt";
 import { setSessionCookie } from "@/lib/auth/cookies";
-import { loginPause, pausedMessage } from "@/lib/auth/rate-limit";
+import { isJsonRequest } from "@/lib/auth/constants";
+import { SITE_WIDE_MESSAGE, loginPause, pausedMessage, shouldRecordLogin, siteWidePause } from "@/lib/auth/rate-limit";
+import { MAX_LOGIN_BODY_BYTES, readSmallJson } from "@/lib/auth/request";
+import { MAX_EMAIL_LENGTH } from "@/lib/users/credentials";
 import { ipFromHeaders, logAuthEvent } from "@/lib/audit/log";
 
 // Valid credentials always log in, even if blocked/expired — requireRole then sends that candidate
 // to /access-expired.
 
+// Checked against when the email has no account, so both kinds of failure take as long.
+const NO_ACCOUNT_HASH = "$2a$12$/SpzJMQCGqFqcSkzdEJ6POalyGLSDAH64p8sxT1sG9TBhCENLPIU6";
+// Anything longer fails without being checked (new passwords are 64 characters at most).
+const MAX_LOGIN_PASSWORD_LENGTH = 1024;
+
 export async function POST(request: NextRequest) {
-  const body = await request.json().catch(() => null);
+  if (!isJsonRequest(request.headers)) {
+    return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 415 });
+  }
+  const read = await readSmallJson(request, MAX_LOGIN_BODY_BYTES);
+  if (!read.ok && read.tooLarge) {
+    return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 413 });
+  }
+  const body = read.ok && typeof read.value === "object" ? (read.value as { email?: unknown; password?: unknown } | null) : null;
   const email =
     typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
   const password = typeof body?.password === "string" ? body.password : "";
@@ -23,6 +38,11 @@ export async function POST(request: NextRequest) {
   }
 
   const ipAddress = ipFromHeaders(request.headers);
+
+  // Under a flood from many addresses: everyone waits, nothing is checked or recorded (keeps the server and log small).
+  if ((await siteWidePause(pool)) > 0) {
+    return NextResponse.json({ error: SITE_WIDE_MESSAGE }, { status: 429 });
+  }
 
   // Paused: refused before the password is checked, and not logged again (keeps the log bounded).
   const pausedSeconds = await loginPause(pool, email, ipAddress);
@@ -52,23 +72,22 @@ export async function POST(request: NextRequest) {
   );
   const user = rows[0];
 
-  // Same generic error whether the email doesn't exist or the password is
+  // Same generic error, and the same time taken, whether the email doesn't exist or the password is
   // wrong, so a failed attempt doesn't reveal which emails are registered.
+  if (email.length > MAX_EMAIL_LENGTH || password.length > MAX_LOGIN_PASSWORD_LENGTH) {
+    return invalidCredentials(user ? { id: user.id, role: user.role } : undefined);
+  }
+  const passwordMatches = await bcrypt.compare(password, user?.password_hash ?? NO_ACCOUNT_HASH);
   if (!user) {
     return invalidCredentials();
   }
-
-  const passwordMatches = await bcrypt.compare(password, user.password_hash);
   if (!passwordMatches) {
     return invalidCredentials({ id: user.id, role: user.role });
   }
 
-  await logAuthEvent(
-    pool,
-    "login_success",
-    { id: user.id, email: user.email, role: user.role },
-    ipAddress
-  );
+  if (await shouldRecordLogin(pool, user.id)) {
+    await logAuthEvent(pool, "login_success", { id: user.id, email: user.email, role: user.role }, ipAddress);
+  }
 
   await setSessionCookie({
     sub: user.id,

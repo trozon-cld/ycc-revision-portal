@@ -90,7 +90,7 @@ export function QuestionRowActions({
   const router = useRouter();
   const actions: RowAction[] = [
     {
-      label: "Edit",
+      label: "Edit question",
       run: async () => {
         router.push(`/admin/questions/${id}`);
         return { success: true };

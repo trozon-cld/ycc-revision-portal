@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
+import { CONTENT_EDITORS } from "@/lib/auth/content-editors";
 import { pool } from "@/lib/db/pool";
 import { PICKER_LIMIT } from "@/lib/media/limits";
 import { getErrorCode, withTransaction } from "@/lib/db/transaction";
@@ -24,7 +25,7 @@ export type PickerItem = { id: string; thumbUrl: string | null; alt: string; nam
 const NOT_FOUND = "This page no longer exists.";
 
 export async function createPage(_prev: PageActionState, formData: FormData): Promise<PageActionState> {
-  const session = await requireRole(["superadmin"]);
+  const session = await requireRole(CONTENT_EDITORS);
 
   const chapterId = String(formData.get("chapterId") ?? "");
   const title = normaliseTitle(formData.get("title"));
@@ -64,7 +65,7 @@ export async function createPage(_prev: PageActionState, formData: FormData): Pr
 }
 
 export async function renamePage(_prev: PageActionState, formData: FormData): Promise<PageActionState> {
-  const session = await requireRole(["superadmin"]);
+  const session = await requireRole(CONTENT_EDITORS);
 
   const pageId = String(formData.get("pageId") ?? "");
   const title = normaliseTitle(formData.get("title"));
@@ -96,7 +97,7 @@ export async function renamePage(_prev: PageActionState, formData: FormData): Pr
 }
 
 export async function setPageStatus(id: string, status: "draft" | "published"): Promise<PageActionState> {
-  const session = await requireRole(["superadmin"]);
+  const session = await requireRole(CONTENT_EDITORS);
 
   const pageId = String(id ?? "");
   if (!isUuid(pageId) || (status !== "draft" && status !== "published")) return { error: NOT_FOUND };
@@ -132,7 +133,7 @@ export async function setPageStatus(id: string, status: "draft" | "published"): 
 }
 
 export async function deletePage(_prev: PageActionState, formData: FormData): Promise<PageActionState> {
-  const session = await requireRole(["superadmin"]);
+  const session = await requireRole(CONTENT_EDITORS);
 
   const pageId = String(formData.get("pageId") ?? "");
   if (!isUuid(pageId)) return { error: NOT_FOUND };
@@ -177,7 +178,7 @@ export async function savePageContent(input: {
   title: string;
   blocks: unknown;
 }): Promise<SaveResult> {
-  const session = await requireRole(["superadmin"]);
+  const session = await requireRole(CONTENT_EDITORS);
 
   const pageId = String(input?.pageId ?? "");
   const expectedVersion = Number(input?.expectedVersion);
@@ -262,7 +263,7 @@ export async function savePageContent(input: {
 
 // Thumbnails for the picture picker, newest first.
 export async function listPickerMedia(search: string): Promise<PickerItem[]> {
-  await requireRole(["superadmin"]);
+  await requireRole(CONTENT_EDITORS);
 
   const term = escapeLike(String(search ?? "").trim().slice(0, 100));
   const { rows } = await pool.query<{ id: string; thumb_path: string; alt_text: string; original_name: string; width: number; height: number }>(
@@ -296,7 +297,7 @@ export async function listPickerMedia(search: string): Promise<PickerItem[]> {
 
 // Full-size picture links for the live preview, after a picture is chosen in the editor.
 export async function getPreviewMedia(mediaIds: string[]): Promise<ResolvedMedia> {
-  await requireRole(["superadmin"]);
+  await requireRole(CONTENT_EDITORS);
   const ids = Array.isArray(mediaIds) ? mediaIds.map(String).slice(0, 60) : [];
   try {
     return await resolveMedia(ids);

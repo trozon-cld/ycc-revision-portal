@@ -1,21 +1,26 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
 import { SESSION_ENDED_LOGIN } from "@/lib/auth/constants";
 import { daysLeftUk, formatUkDate } from "@/lib/candidates/access";
 import { loadCandidateHome } from "@/lib/candidates/home";
-import { loadMockInProgress } from "@/lib/mock/attempts";
-import { scoreText, timeLeftText } from "@/lib/mock/types";
+import { loadMockInProgress, settleOwnMocks } from "@/lib/mock/attempts";
+import { donePercent, scoreText, timeLeftText } from "@/lib/mock/types";
 import { loadPracticeInProgress } from "@/lib/practice/sessions";
 import { loadProgress } from "@/lib/progress/overview";
+import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { PageBody } from "@/components/candidate/page-body";
 import { SectionCard, SectionIcons } from "@/components/candidate/section-card";
+
+export const metadata: Metadata = { title: "Home" };
 
 // Days left at which the access notice turns amber.
 const ACCESS_WARNING_DAYS = 7;
 
 export default async function CandidateHomePage({ searchParams }: PageProps<"/dashboard">) {
   const session = await requireRole(["candidate"]);
+  await settleOwnMocks(session.sub);
   const [home, practice, mock, progress] = await Promise.all([
     loadCandidateHome(session.sub),
     loadPracticeInProgress(session.sub),
@@ -26,6 +31,16 @@ export default async function CandidateHomePage({ searchParams }: PageProps<"/da
   const readiness = progress?.readiness;
   if (!home) redirect(SESSION_ENDED_LOGIN);
   const justSwitched = (await searchParams).switched === "1";
+  // A first visit (nothing read, practised or tested yet): point to where to begin.
+  const startHere =
+    progress && !practice && !mock && progress.handbook.done === 0 && progress.practice.tries === 0 && progress.mock.count === 0
+      ? progress.handbook.total > 0
+        ? { href: "/dashboard/prepare", text: "New here? Start by reading the Handbook in Prepare, then try Practice and a mock test.", button: "Start reading" }
+        : progress.practice.pool > 0
+          ? { href: "/dashboard/practice", text: "New here? Start with some Practice questions, then try a mock test.", button: "Start practising" }
+          : null
+      : null;
+  const handbookShare = progress && progress.handbook.done > 0 && progress.handbook.total > 0 ? donePercent(progress.handbook.done, progress.handbook.total) : null;
 
   const daysLeft = home.accessExpiresAt ? daysLeftUk(home.accessExpiresAt) : null;
   const expiryLabel = home.accessExpiresAt
@@ -68,14 +83,23 @@ export default async function CandidateHomePage({ searchParams }: PageProps<"/da
           <p className="mt-1 text-2xl font-bold text-ink [overflow-wrap:anywhere]">{home.current.name}</p>
           <p className="mt-1 text-base text-ink/80">Group: {home.current.groupName}</p>
           {home.choices > 1 && (
-            <Link
-              href="/dashboard/category"
-              className="mt-4 inline-flex min-h-14 items-center justify-center rounded-lg border-2 border-primary bg-white px-6 text-lg font-semibold text-primary hover:bg-primary/5 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary"
-            >
+            <Link href="/dashboard/category" className={`${SECONDARY_BUTTON} mt-4 w-full sm:w-auto`}>
               Change category
             </Link>
           )}
         </section>
+
+        {startHere && (
+          <section aria-labelledby="start-heading" className="rounded-xl border-2 border-primary bg-primary/5 p-5">
+            <h2 id="start-heading" className="text-xl font-bold text-ink">
+              Where to start
+            </h2>
+            <p className="mt-2 text-lg leading-relaxed text-ink">{startHere.text}</p>
+            <Link href={startHere.href} className={`${PRIMARY_BUTTON} mt-4 w-full sm:w-auto`}>
+              {startHere.button}
+            </Link>
+          </section>
+        )}
 
         <section aria-labelledby="sections-heading">
           <h2 id="sections-heading" className="mb-4 text-2xl font-bold text-ink">
@@ -84,7 +108,7 @@ export default async function CandidateHomePage({ searchParams }: PageProps<"/da
           <ul className="grid gap-4 sm:grid-cols-2">
             <li>
               <SectionCard
-                title="General queries"
+                title="Help: general queries"
                 description="Answers to common questions and how to get help."
                 icon={SectionIcons.help}
                 href="/dashboard/help"
@@ -93,7 +117,11 @@ export default async function CandidateHomePage({ searchParams }: PageProps<"/da
             <li>
               <SectionCard
                 title="Prepare"
-                description="Read the Handbook chapter by chapter, with questions along the way."
+                description={
+                  handbookShare === null
+                    ? "Read the Handbook chapter by chapter, with questions along the way."
+                    : `Continue reading: ${handbookShare}% done.`
+                }
                 icon={SectionIcons.book}
                 href="/dashboard/prepare"
               />
@@ -107,7 +135,7 @@ export default async function CandidateHomePage({ searchParams }: PageProps<"/da
                     : "Answer questions at your own pace and see the right answer each time."
                 }
                 icon={SectionIcons.practice}
-                href="/dashboard/practice"
+                href={practice ? `/dashboard/practice/${practice.id}` : "/dashboard/practice"}
               />
             </li>
             <li>
@@ -121,7 +149,7 @@ export default async function CandidateHomePage({ searchParams }: PageProps<"/da
                       : "A timed test in exam-style conditions, with your results at the end."
                 }
                 icon={SectionIcons.timer}
-                href="/dashboard/mock"
+                href={mock ? `/dashboard/mock/${mock.id}` : "/dashboard/mock"}
               />
             </li>
             <li className="sm:col-span-2">

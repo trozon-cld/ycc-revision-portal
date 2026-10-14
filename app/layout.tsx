@@ -13,7 +13,8 @@ const googleSans = Google_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "YCC Revision Portal",
+  // Each page names itself first, so screen readers announce where a link went.
+  title: { template: "%s – YCC Revision Portal", default: "YCC Revision Portal" },
   description: "YCC Revision Portal",
 };
 

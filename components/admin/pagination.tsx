@@ -1,6 +1,14 @@
 import Link from "next/link";
 import { buttonClass } from "./styles";
 
+// "?q=x&page=2" for a list's filters and page, leaving out empty values; "" when there are none.
+export function listSearch(query: Record<string, string>, page: number): string {
+  const search = new URLSearchParams(
+    Object.entries({ ...query, page: page === 1 ? "" : String(page) }).filter(([, value]) => value !== "")
+  ).toString();
+  return search ? `?${search}` : "";
+}
+
 // Previous / Next links for long admin lists. Keeps the page's other filters in the address.
 // With `total` it also says which rows show ("51–100 of 7,000").
 export function Pagination({
@@ -20,12 +28,7 @@ export function Pagination({
 }) {
   if (page === 1 && !hasMore) return null;
 
-  const hrefFor = (target: number) => {
-    const search = new URLSearchParams(
-      Object.entries({ ...query, page: target === 1 ? "" : String(target) }).filter(([, value]) => value !== "")
-    ).toString();
-    return search ? `${basePath}?${search}` : basePath;
-  };
+  const hrefFor = (target: number) => `${basePath}${listSearch(query, target)}`;
   const range =
     total !== undefined && pageSize
       ? `${((page - 1) * pageSize + 1).toLocaleString("en-GB")}–${Math.min(page * pageSize, total).toLocaleString("en-GB")} of ${total.toLocaleString("en-GB")}`

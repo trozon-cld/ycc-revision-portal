@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import Link from "next/link";
 import { requireRole } from "@/lib/auth/guard";
 import { pool } from "@/lib/db/pool";
 import { getSignedUrls, isStorageConfigured } from "@/lib/storage/storage";
@@ -10,6 +12,8 @@ import type { ChapterOutline } from "./category-chapters-form";
 import type { CoverChoice } from "./category-covers-form";
 import { CategoryRowActions, NewCategoryButton, type GroupOption } from "./category-row-actions";
 import { GroupRowActions, NewGroupButton } from "./group-row-actions";
+
+export const metadata: Metadata = { title: "Categories" };
 
 interface GroupRow {
   id: string;
@@ -121,7 +125,7 @@ export default async function CategoriesPage() {
       />
 
       <p className="mb-6 text-sm text-slate-600">
-        Candidates can switch to any category in the same group as the one their admin assigned.
+        Candidates can switch to any category in the same group as the one their Admin assigned.
       </p>
 
       <div className="space-y-8">
@@ -148,6 +152,7 @@ export default async function CategoriesPage() {
 
               <Table
                 columns={["Name", "Candidates", "Chapters", "Covers", ""]}
+                widths={["", "md:w-32", "md:w-32", "md:w-40", "md:w-14"]}
                 isEmpty={groupCategories.length === 0}
                 emptyMessage="No categories in this group yet."
               >
@@ -157,7 +162,16 @@ export default async function CategoriesPage() {
                   return (
                     <Row key={category.id}>
                       <Cell kind="primary">{category.name}</Cell>
-                      <Cell label="Candidates">{category.candidate_count}</Cell>
+                      <Cell label="Candidates">
+                        {category.candidate_count > 0 ? (
+                          <Link href={`/admin/candidates?category=${category.id}`} className="inline-flex min-h-6 min-w-6 items-center justify-center text-primary underline underline-offset-2">
+                            {category.candidate_count}
+                            <span className="sr-only"> candidates: see them</span>
+                          </Link>
+                        ) : (
+                          0
+                        )}
+                      </Cell>
                       <Cell label="Chapters" nowrap>
                         {linked.length === 0 ? (
                           <Badge tone="warning">None</Badge>

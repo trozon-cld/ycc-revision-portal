@@ -1,6 +1,8 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { randomUUID } from "node:crypto";
 import { requireRole } from "@/lib/auth/guard";
+import { CONTENT_EDITORS } from "@/lib/auth/content-editors";
 import { listChapterOptions } from "@/lib/questions/queries";
 import { getQuestionTypeDef } from "@/lib/questions/registry";
 import { isQuestionType } from "@/lib/questions/types";
@@ -10,8 +12,10 @@ import { isUuid } from "@/lib/ids";
 import { firstParam } from "@/lib/params";
 import { QuestionEditor } from "../question-editor";
 
+export const metadata: Metadata = { title: "New question" };
+
 export default async function NewQuestionPage({ searchParams }: PageProps<"/admin/questions/new">) {
-  await requireRole(["superadmin"]);
+  await requireRole(CONTENT_EDITORS);
   const params = await searchParams;
   const type = firstParam(params.type);
   if (!isQuestionType(type) || !getQuestionTypeDef(type)) notFound();

@@ -2,11 +2,9 @@ import { pool } from "@/lib/db/pool";
 import { chapterNumber, sectionLetter } from "@/lib/handbook/structure";
 import { getSignedUrls, isStorageConfigured } from "@/lib/storage/storage";
 import { isUuid } from "@/lib/ids";
-import type { ResolvedMedia } from "./book";
+import { PICTURE_LINK_SECONDS, type ResolvedMedia } from "./book";
 
 // Server-only reads for Handbook pages and their pictures (admin and candidate pages).
-
-export const PREVIEW_LINK_SECONDS = 2 * 60 * 60;
 
 export type ChapterContext = {
   id: string;
@@ -14,13 +12,14 @@ export type ChapterContext = {
   number: string;
   sectionLabel: string;
   chapterLabel: string;
+  status: "draft" | "published";
 };
 
 export async function getChapterContext(chapterId: string): Promise<ChapterContext | null> {
   if (!isUuid(chapterId)) return null;
-  const { rows } = await pool.query<{ id: string; title: string; number: number; section_position: number; section_title: string }>(
+  const { rows } = await pool.query<{ id: string; title: string; status: "draft" | "published"; number: number; section_position: number; section_title: string }>(
     `select * from (
-       select c.id, c.title, s.position as section_position, s.title as section_title,
+       select c.id, c.title, c.status, s.position as section_position, s.title as section_title,
               (row_number() over (order by s.position, c.position))::int as number
        from chapters c join sections s on s.id = c.section_id
      ) ranked
@@ -36,6 +35,7 @@ export async function getChapterContext(chapterId: string): Promise<ChapterConte
     number,
     sectionLabel: `${sectionLetter(row.section_position)} · ${row.section_title}`,
     chapterLabel: `${number} ${row.title}`,
+    status: row.status,
   };
 }
 
@@ -52,7 +52,7 @@ export async function resolveMedia(mediaIds: string[], thumbIds: string[] = []):
   const withThumb = new Set(thumbIds);
   const urls = await getSignedUrls(
     [...rows.map((row) => row.storage_path), ...rows.filter((row) => withThumb.has(row.id)).map((row) => row.thumb_path)],
-    PREVIEW_LINK_SECONDS
+    PICTURE_LINK_SECONDS
   );
   const media: ResolvedMedia = {};
   for (const row of rows) {

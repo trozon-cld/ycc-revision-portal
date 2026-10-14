@@ -73,7 +73,7 @@ function CalloutView({ block }: { block: CalloutBlock }) {
       aria-label={style.label}
       className={`mb-[0.9em] rounded-r-lg border-l-[0.3em] px-[0.9em] py-[0.7em] [break-inside:avoid] ${style.box}`}
     >
-      <p className={`mb-[0.2em] text-[0.8em] font-bold uppercase tracking-wide ${style.title}`}>{style.label}</p>
+      <p className={`mb-[0.2em] text-[max(14px,0.8em)] font-bold uppercase tracking-wide ${style.title}`}>{style.label}</p>
       <p className="whitespace-pre-line">
         <InlineText text={block.text} />
       </p>

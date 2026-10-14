@@ -1,8 +1,9 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { Children, isValidElement, type ReactNode } from "react";
+import { FilterApplyButton, FilterForm } from "./filter-form";
 import { buttonClass, inputClass } from "./styles";
 
-// Plain GET form: filters live in the URL, so they survive refreshes and can be shared.
+// Filters live in the URL, so they survive refreshes and can be shared.
 export function FilterBar({
   action,
   clearHref,
@@ -16,30 +17,31 @@ export function FilterBar({
   hidden?: Record<string, string>;
   children: ReactNode;
 }) {
+  // Phones lay filters out two per row (one below 360px; search takes a whole row); with an even number of selects
+  // Apply would sit alone.
+  const selects = Children.toArray(children).filter((child) => isValidElement(child) && child.type === FilterSelect).length;
   return (
-    <form method="get" action={action} className="mb-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
+    <FilterForm action={action} className="mb-4 grid grid-cols-2 gap-2 max-[359px]:grid-cols-1 sm:flex sm:flex-wrap sm:items-center">
       {hidden &&
         Object.entries(hidden).map(([name, value]) => (
           <input key={name} type="hidden" name={name} value={value} />
         ))}
       {children}
-      <div className="flex gap-2">
-        <button type="submit" className={`${buttonClass("secondary")} flex-1 sm:flex-none`}>
-          Apply
-        </button>
+      <div className={`flex gap-2 ${selects % 2 === 0 ? "col-span-2 max-[359px]:col-span-1" : ""}`}>
+        <FilterApplyButton className={`${buttonClass("secondary")} flex-1 sm:flex-none`} />
         {isFiltered && (
           <Link href={clearHref} className={`${buttonClass("ghost")} flex-1 sm:flex-none`}>
             Clear
           </Link>
         )}
       </div>
-    </form>
+    </FilterForm>
   );
 }
 
-export function FilterSearch({ name, label, defaultValue }: { name: string; label: string; defaultValue: string }) {
+export function FilterSearch({ name, label, defaultValue, wide = false }: { name: string; label: string; defaultValue: string; wide?: boolean }) {
   return (
-    <div className="col-span-2 sm:w-64">
+    <div className={`col-span-2 max-[359px]:col-span-1 sm:w-64 ${wide ? "md:w-80" : ""}`}>
       <label htmlFor={`filter-${name}`} className="sr-only">
         {label}
       </label>
@@ -67,7 +69,7 @@ export function FilterSelect({
   children: ReactNode;
 }) {
   return (
-    <div className="min-w-0 sm:w-48">
+    <div className="min-w-0 sm:w-48 lg:w-44">
       <label htmlFor={`filter-${name}`} className="sr-only">
         {label}
       </label>

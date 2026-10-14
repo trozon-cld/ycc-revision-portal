@@ -1,8 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { requireRole } from "@/lib/auth/guard";
 import { loadFaqItems, loadOwnAdminName, loadSupportContact } from "@/lib/faq/load";
 import { PageBody } from "@/components/candidate/page-body";
-import { PRIMARY_BUTTON } from "@/components/candidate/buttons";
+import { ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { LogoutEverywhere, type LogoutEverywhereStyles } from "@/components/logout-everywhere";
+import { loadMockInProgress } from "@/lib/mock/attempts";
+import { loadPracticeInProgress } from "@/lib/practice/sessions";
+
+export const metadata: Metadata = { title: "Help: general queries" };
 
 const LINK = "inline-flex min-h-11 items-center font-semibold text-primary underline underline-offset-4 [overflow-wrap:anywhere] hover:no-underline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary";
 
@@ -13,16 +19,38 @@ function telHref(phone: string): string {
   return `tel:${international ? "+" : ""}${digits}`;
 }
 
-// General queries: the questions the Superadmin has shown, then who to contact.
+const LOGOUT_EVERYWHERE: LogoutEverywhereStyles = {
+  button: `${SECONDARY_BUTTON} w-full sm:w-auto`,
+  yes: `${PRIMARY_BUTTON} w-full sm:w-auto`,
+  cancel: `${SECONDARY_BUTTON} w-full sm:w-auto`,
+  box: "rounded-xl border-2 border-primary bg-primary/5 p-5",
+  heading: "text-xl font-bold text-ink focus:outline-none",
+  text: "mt-2 text-lg leading-relaxed text-ink",
+  error: `${ERROR_BOX} mt-4`,
+};
+
+// Help: general queries — the questions the Superadmin has shown, then who to contact.
 export default async function CandidateHelpPage() {
   const session = await requireRole(["candidate"]);
-  const [items, contact, adminName] = await Promise.all([loadFaqItems(true), loadSupportContact(), loadOwnAdminName(session.sub)]);
+  const [items, contact, adminName, mock, practice] = await Promise.all([
+    loadFaqItems(true),
+    loadSupportContact(),
+    loadOwnAdminName(session.sub),
+    loadMockInProgress(session.sub),
+    loadPracticeInProgress(session.sub),
+  ]);
+  // Opened from a test or practice in progress: the way back to it comes first.
+  const resume = mock
+    ? { href: `/dashboard/mock/${mock.id}`, label: "Back to your mock test" }
+    : practice
+      ? { href: `/dashboard/practice/${practice.id}`, label: "Back to your practice" }
+      : null;
   const hasSupport = Boolean(contact.email || contact.phone || contact.hours || contact.note);
 
   return (
     <PageBody>
       <div className="max-w-3xl">
-        <h1 className="text-3xl font-bold text-ink">General queries</h1>
+        <h1 className="text-3xl font-bold text-ink">Help: general queries</h1>
         <p className="mt-2 text-lg text-ink">Answers to common questions about using the portal. Tap a question to see its answer.</p>
 
         {items.length === 0 ? (
@@ -104,9 +132,24 @@ export default async function CandidateHelpPage() {
           )}
         </section>
 
-        <Link href="/dashboard" className={`${PRIMARY_BUTTON} mt-8`}>
-          Back to home
-        </Link>
+        <section aria-labelledby="signins-heading" className="mt-8 rounded-xl border-2 border-ink/15 bg-white p-5">
+          <h2 id="signins-heading" className="text-2xl font-bold text-ink">
+            Your sign-ins
+          </h2>
+          <p className="mt-2 mb-4 text-lg text-ink">Logged in on a shared phone or computer, or one you’ve lost? You can log out of every device at once.</p>
+          <LogoutEverywhere styles={LOGOUT_EVERYWHERE} />
+        </section>
+
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+          {resume && (
+            <Link href={resume.href} className={`${PRIMARY_BUTTON} w-full sm:w-auto`}>
+              {resume.label}
+            </Link>
+          )}
+          <Link href="/dashboard" className={`${resume ? SECONDARY_BUTTON : PRIMARY_BUTTON} w-full sm:w-auto`}>
+            Back to home
+          </Link>
+        </div>
       </div>
     </PageBody>
   );

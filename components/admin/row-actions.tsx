@@ -1,12 +1,23 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useState, useTransition, type ReactNode } from "react";
-import type { FormState } from "@/lib/forms";
+import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
+import { NOT_THROUGH_MESSAGE, reachServer, type FormState } from "@/lib/forms";
 import { Dialog } from "./dialog";
 import { RowMenu } from "./row-menu";
 import { buttonClass, type ButtonVariant } from "./styles";
 import { useToast } from "./toast";
+
+// The button that opened a dialog gets focus back once the dialog has closed (focus can't leave an open modal).
+function useFocusAfterClose(open: boolean) {
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const wasOpen = useRef(open);
+  useEffect(() => {
+    if (wasOpen.current && !open) requestAnimationFrame(() => triggerRef.current?.focus());
+    wasOpen.current = open;
+  }, [open]);
+  return triggerRef;
+}
 
 export type PanelRowAction = {
   label: string;
@@ -23,6 +34,8 @@ export type InstantRowAction = {
   danger?: boolean;
   run: () => Promise<FormState>;
   successMessage?: string;
+  // Shown on a page-level button while it runs (e.g. "Publishing…").
+  pendingLabel?: string;
 };
 
 // Opens another page (e.g. a candidate's progress).
@@ -31,18 +44,18 @@ export type LinkRowAction = { label: string; danger?: never; href: string };
 export type RowAction = PanelRowAction | InstantRowAction | LinkRowAction;
 
 // A row's "⋯" menu; each item opens its own slide-in panel or confirmation, runs instantly, or opens a page.
-export function RowActions({ label, actions }: { label: string; actions: RowAction[] }) {
+export function RowActions({ label, actions, triggerText }: { label: string; actions: RowAction[]; triggerText?: string }) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
-  const [, startTransition] = useTransition();
+  const [isPending, startTransition] = useTransition();
   const toast = useToast();
   const router = useRouter();
-  const triggerRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useFocusAfterClose(activeIndex !== null);
   const selected = activeIndex === null ? null : actions[activeIndex];
   const active = selected && "render" in selected ? selected : null;
 
   function runInstant(action: InstantRowAction) {
     startTransition(async () => {
-      const result = await action.run();
+      const result = (await reachServer(action.run)) ?? { error: NOT_THROUGH_MESSAGE };
       const message = result.error ?? action.successMessage;
       if (message) toast(message);
       triggerRef.current?.focus();
@@ -51,8 +64,6 @@ export function RowActions({ label, actions }: { label: string; actions: RowActi
 
   function close() {
     setActiveIndex(null);
-    // Wait for the dialog to unmount; focus can't leave an open modal.
-    requestAnimationFrame(() => triggerRef.current?.focus());
   }
 
   return (
@@ -60,6 +71,8 @@ export function RowActions({ label, actions }: { label: string; actions: RowActi
       <RowMenu
         label={label}
         triggerRef={triggerRef}
+        triggerText={triggerText}
+        busy={isPending}
         items={actions.map((action, index) => ({
           label: action.label,
           danger: action.danger,
@@ -74,6 +87,40 @@ export function RowActions({ label, actions }: { label: string; actions: RowActi
           onClose={close}
         >
           {active.render(close)}
+        </Dialog>
+      )}
+    </>
+  );
+}
+
+// One row action as a page-level button (e.g. Publish on a chapter's own page): same panel or instant run as in the menu.
+export function ActionButton({ action, variant = "secondary" }: { action: PanelRowAction | InstantRowAction; variant?: ButtonVariant }) {
+  const [open, setOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const toast = useToast();
+  const triggerRef = useFocusAfterClose(open);
+
+  function close() {
+    setOpen(false);
+  }
+
+  function onClick() {
+    if ("render" in action) return setOpen(true);
+    startTransition(async () => {
+      const result = (await reachServer(action.run)) ?? { error: NOT_THROUGH_MESSAGE };
+      const message = result.error ?? action.successMessage;
+      if (message) toast(message);
+    });
+  }
+
+  return (
+    <>
+      <button ref={triggerRef} type="button" onClick={onClick} disabled={isPending} className={buttonClass(variant)}>
+        {isPending && "pendingLabel" in action && action.pendingLabel ? action.pendingLabel : action.label}
+      </button>
+      {open && "render" in action && (
+        <Dialog title={action.title} description={action.description} variant={action.variant} onClose={close}>
+          {action.render(close)}
         </Dialog>
       )}
     </>
@@ -96,12 +143,10 @@ export function PanelButton({
   children: (close: () => void) => ReactNode;
 }) {
   const [open, setOpen] = useState(false);
-  const triggerRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useFocusAfterClose(open);
 
   function close() {
     setOpen(false);
-    // Wait for the dialog to unmount; focus can't leave an open modal.
-    requestAnimationFrame(() => triggerRef.current?.focus());
   }
 
   return (

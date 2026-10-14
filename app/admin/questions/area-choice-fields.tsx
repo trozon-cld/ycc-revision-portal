@@ -1,6 +1,7 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { useId, useState } from "react";
+import { useLatest } from "@/components/use-latest";
 import { AREA_CHOICE_LIMITS, overlappingPairs, type AreaChoiceDraft } from "@/lib/questions/types/area-choice";
 import type { HotspotArea, HotspotShape } from "@/lib/questions/types/hotspot";
 import { Segmented } from "@/components/admin/editor-fields";
@@ -19,8 +20,7 @@ export function AreaChoiceFields({ content, answer, onChange, newId, media, thum
   const data = content as Content;
   const solution = answer as Answer;
   // The picker answers later; read the latest values then.
-  const latest = useRef({ data, solution });
-  latest.current = { data, solution };
+  const latest = useLatest({ data, solution });
   const [shape, setShape] = useState<HotspotShape>("rect");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const groupName = useId();

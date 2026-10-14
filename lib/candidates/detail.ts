@@ -9,7 +9,7 @@ export type CandidateDetail = {
   id: string;
   email: string;
   name: string | null;
-  admin: { name: string | null; email: string };
+  admin: { id: string; name: string | null; email: string };
   assigned: { id: string; name: string };
   current: { id: string; name: string };
   // The categories they can switch between (their group).
@@ -28,6 +28,7 @@ export async function loadCandidateDetail(candidateId: string, viewer: SessionPa
     id: string;
     email: string;
     full_name: string | null;
+    admin_id: string;
     admin_name: string | null;
     admin_email: string;
     assigned_id: string;
@@ -38,7 +39,7 @@ export async function loadCandidateDetail(candidateId: string, viewer: SessionPa
     access_expires_at: Date | null;
     last_login_at: Date | null;
   }>(
-    `select u.id, u.email, u.full_name, a.full_name as admin_name, a.email as admin_email,
+    `select u.id, u.email, u.full_name, a.id as admin_id, a.full_name as admin_name, a.email as admin_email,
             asg.id as assigned_id, asg.name as assigned_name, cur.id as current_id, cur.name as current_name,
             u.is_blocked, u.access_expires_at,
             ${LAST_LOGIN_SQL} as last_login_at
@@ -56,7 +57,7 @@ export async function loadCandidateDetail(candidateId: string, viewer: SessionPa
     id: row.id,
     email: row.email,
     name: row.full_name,
-    admin: { name: row.admin_name, email: row.admin_email },
+    admin: { id: row.admin_id, name: row.admin_name, email: row.admin_email },
     assigned: { id: row.assigned_id, name: row.assigned_name },
     current: { id: row.current_id, name: row.current_name },
     groupCategories: group,

@@ -1,12 +1,17 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { useBrowserValue } from "@/components/use-browser-value";
+import { ERROR_BOX, PRIMARY_BUTTON } from "@/components/candidate/buttons";
+import { NOT_THROUGH_MESSAGE } from "@/lib/forms";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Sent here because a sign-in ended (time limit, password changed elsewhere, or a page opened signed out).
+  const ended = useBrowserValue(() => new URLSearchParams(window.location.search).has("ended"), false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -30,21 +35,27 @@ export default function LoginPage() {
       // Full navigation so Proxy sees the cookie the browser just stored.
       window.location.href = data.redirectTo;
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError(NOT_THROUGH_MESSAGE);
       setIsSubmitting(false);
     }
   }
 
   return (
-    <div className="flex flex-1 items-center justify-center p-4">
+    <main className="flex flex-1 items-center justify-center p-4">
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-sm space-y-5 rounded-xl border border-ink/15 p-6 sm:p-8"
+        className="w-full max-w-sm space-y-5 rounded-xl border-2 border-ink/15 p-6 sm:p-8"
       >
         <div>
-          <h1 className="text-2xl font-semibold text-ink">Log in</h1>
-          <p className="mt-1 text-base text-ink/70">YCC Revision Portal</p>
+          <h1 className="text-3xl font-bold text-ink">Log in</h1>
+          <p className="mt-1 text-base text-ink/80">YCC Revision Portal</p>
         </div>
+
+        {ended && (
+          <p role="status" className="rounded-xl border-2 border-primary bg-primary/5 p-4 text-lg leading-relaxed text-ink">
+            You were logged out to keep your account safe. Log in again to carry on.
+          </p>
+        )}
 
         <div className="space-y-2">
           <label
@@ -85,7 +96,7 @@ export default function LoginPage() {
         </div>
 
         {error && (
-          <p role="alert" className="text-base text-red-700">
+          <p role="alert" className={ERROR_BOX}>
             {error}
           </p>
         )}
@@ -93,11 +104,11 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full rounded-lg bg-primary px-4 py-3 text-base font-medium text-surface transition-colors hover:bg-primary/90 disabled:opacity-60"
+          className={`${PRIMARY_BUTTON} w-full`}
         >
           {isSubmitting ? "Logging in…" : "Log in"}
         </button>
       </form>
-    </div>
+    </main>
   );
 }

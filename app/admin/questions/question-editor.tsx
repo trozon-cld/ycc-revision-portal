@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { ListBackLink } from "@/components/admin/list-place";
 import { useRouter } from "next/navigation";
 import { useCallback, useDeferredValue, useEffect, useMemo, useState, useTransition } from "react";
 import type { PictureAlign, PictureSize } from "@/lib/content/blocks";
@@ -9,6 +9,7 @@ import type { SectionOptions } from "@/lib/questions/queries";
 import { questionTypeLabel } from "@/lib/questions/registry";
 import type { QuestionType } from "@/lib/questions/types";
 import { parseQuestion, QUESTION_LIMITS } from "@/lib/questions/validate";
+import { NOT_THROUGH_MESSAGE, reachServer } from "@/lib/forms";
 import { Badge } from "@/components/admin/badge";
 import { Dialog } from "@/components/admin/dialog";
 import { BoldTextarea, Segmented } from "@/components/admin/editor-fields";
@@ -96,7 +97,11 @@ export function QuestionEditor({
     }
     const sent = JSON.stringify(draft);
     startSaving(async () => {
-      const result = await saveQuestion({ questionId, expectedVersion: version, type, ...draft });
+      const result = await reachServer(() => saveQuestion({ questionId, expectedVersion: version, type, ...draft }));
+      if (!result) {
+        setProblem({ message: NOT_THROUGH_MESSAGE });
+        return;
+      }
       if (!result.ok) {
         setProblem({ message: result.error, conflict: result.conflict });
         return;
@@ -148,13 +153,15 @@ export function QuestionEditor({
     pickFor?.(item.id);
     setPickFor(null);
     if (item.thumbUrl) setThumbs((current) => ({ ...current, [item.id]: item.thumbUrl as string }));
-    if (!media[item.id]) getPreviewMedia([item.id]).then((found) => setMedia((current) => ({ ...current, ...found })));
+    if (!media[item.id]) {
+      reachServer(() => getPreviewMedia([item.id])).then((found) => found && setMedia((current) => ({ ...current, ...found })));
+    }
   }
 
   function publish(next: "draft" | "published") {
     if (!questionId) return;
     startPublishing(async () => {
-      const result = await setQuestionStatus(questionId, next);
+      const result = (await reachServer(() => setQuestionStatus(questionId, next))) ?? { error: NOT_THROUGH_MESSAGE };
       toast(result.error ?? (next === "published" ? "Question published." : "Question is a draft again."));
       router.refresh();
     });
@@ -179,15 +186,6 @@ export function QuestionEditor({
     };
   }, [deferred, editor, pictureAlign, pictureSize, questionId, type]);
 
-  // Running header of the book preview: the chosen chapter and its section.
-  const previewChapter = useMemo(() => {
-    for (const section of chapters) {
-      const found = section.chapters.find((chapter) => chapter.id === deferred.chapterId);
-      if (found) return { id: found.id, sectionLabel: section.label, chapterLabel: found.label };
-    }
-    return { id: "no-chapter", sectionLabel: "Section", chapterLabel: "Chapter" };
-  }, [chapters, deferred.chapterId]);
-
   const saveState = isSaving ? "Saving…" : isNew ? "Not saved yet" : dirty ? "Unsaved changes" : "All changes saved";
   const pictureThumb = draft.stemMediaId ? (thumbs[draft.stemMediaId] ?? media[draft.stemMediaId]?.src) : undefined;
 
@@ -198,23 +196,29 @@ export function QuestionEditor({
   return (
     <>
       <nav aria-label="Breadcrumb" className="mb-2 text-sm">
-        <Link href="/admin/questions" className="text-primary underline-offset-2 hover:underline">
+        <ListBackLink list="questions" href="/admin/questions" className="text-primary underline underline-offset-2 hover:text-ink">
           Question bank
-        </Link>
+        </ListBackLink>
         <span aria-hidden="true" className="mx-1.5 text-slate-500">/</span>
-        <span className="text-slate-700">{refLabel ?? "New question"}</span>
+        <span aria-current="page" className="text-slate-700">{refLabel ?? "New question"}</span>
       </nav>
 
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+      {/* On tablets and laptops the title, status and Save stay in view while scrolling. */}
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3 md:sticky md:top-14 md:z-10 md:[@media(max-height:500px)]:top-0 md:-mx-6 md:border-b md:border-slate-200 md:bg-slate-50/95 md:px-6 md:py-3 md:backdrop-blur lg:top-0 lg:-mx-8 lg:px-8">
         <div className="min-w-0">
           <h1 className="text-xl font-semibold text-ink">{refLabel ? `Question ${refLabel}` : "New question"}</h1>
           <p className="mt-0.5 text-sm text-slate-600">{questionTypeLabel(type)}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          {status && <Badge tone={status === "published" ? "success" : "neutral"}>{status === "published" ? "Published" : "Draft"}</Badge>}
-          <p aria-live="polite" className={`text-sm ${dirty && !isSaving ? "font-medium text-amber-900" : "text-slate-600"}`}>
-            {saveState}
-          </p>
+        <div
+          data-editor-bar
+          className="flex flex-wrap items-center gap-3 max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-20 max-md:flex-nowrap max-md:gap-2 max-md:border-t max-md:border-slate-200 max-md:bg-white max-md:px-4 max-md:py-2.5 max-md:shadow-[0_-2px_8px_rgb(0_0_0/0.06)]"
+        >
+          <span className="flex items-center gap-3 max-md:mr-auto max-md:flex-col max-md:items-start max-md:gap-0.5 md:contents">
+            {status && <Badge tone={status === "published" ? "success" : "neutral"}>{status === "published" ? "Published" : "Draft"}</Badge>}
+            <p aria-live="polite" className={`text-sm max-md:text-xs ${dirty && !isSaving ? "font-medium text-amber-900" : "text-slate-600"}`}>
+              {saveState}
+            </p>
+          </span>
           {status && (
             <button
               type="button"
@@ -223,7 +227,7 @@ export function QuestionEditor({
               title={dirty ? "Save your changes first" : undefined}
               className={buttonClass("secondary")}
             >
-              {status === "published" ? "Unpublish" : "Publish"}
+              {status === "published" ? (isPublishing ? "Unpublishing…" : "Unpublish") : isPublishing ? "Publishing…" : "Publish"}
             </button>
           )}
           <button type="button" onClick={save} disabled={isSaving || (!dirty && !isNew)} className={buttonClass("primary")}>
@@ -254,7 +258,7 @@ export function QuestionEditor({
         </div>
       )}
 
-      <div role="group" aria-label="View" className="mb-3 inline-flex rounded-md border border-slate-300 bg-white p-0.5 lg:hidden">
+      <div role="group" aria-label="View" className="mb-3 inline-flex rounded-md border border-slate-300 bg-white p-0.5 xl:hidden">
         {(["edit", "preview"] as const).map((key) => (
           <button
             key={key}
@@ -268,8 +272,8 @@ export function QuestionEditor({
         ))}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <section aria-label="Question content" className={`min-w-0 space-y-4 ${tab === "preview" ? "hidden lg:block" : ""}`}>
+      <div className="grid gap-6 max-md:pb-20 xl:grid-cols-[3fr_2fr]">
+        <section aria-label="Question content" className={`min-w-0 space-y-4 ${tab === "preview" ? "hidden xl:block" : ""}`}>
           <div className={`${cardClass} space-y-4 p-4`}>
             <div className="space-y-1">
               <label htmlFor="question-chapter" className={labelClass}>
@@ -424,9 +428,9 @@ export function QuestionEditor({
           </fieldset>
         </section>
 
-        <section aria-label="Live preview" className={`min-w-0 ${tab === "edit" ? "hidden lg:block" : ""}`}>
-          <div className="lg:sticky lg:top-4">
-            <QuestionPreview question={preview} media={media} shuffles={editor.shuffles(deferred.content)} chapter={previewChapter} />
+        <section aria-label="Live preview" className={`min-w-0 ${tab === "edit" ? "hidden xl:block" : ""}`}>
+          <div className="xl:sticky xl:top-28">
+            <QuestionPreview question={preview} media={media} shuffles={editor.shuffles(deferred.content)} chapters={chapters} chapterId={deferred.chapterId} />
           </div>
         </section>
       </div>

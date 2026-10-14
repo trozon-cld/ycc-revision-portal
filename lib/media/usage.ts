@@ -6,3 +6,7 @@ export function describeMediaUse(pages: number, questions: number, covers = 0): 
   if (covers > 0) parts.push(`${covers} Handbook cover${covers === 1 ? "" : "s"}`);
   return parts.length > 1 ? `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}` : (parts[0] ?? "");
 }
+
+// Where a picture is used, for the "Can't delete" message: up to MEDIA_USES_SHOWN places, each linked.
+export type MediaUse = { label: string; href: string };
+export const MEDIA_USES_SHOWN = 10;

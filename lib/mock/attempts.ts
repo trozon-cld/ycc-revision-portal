@@ -1,4 +1,6 @@
 import type { PoolClient } from "pg";
+import { cache } from "react";
+import { formatUkTime } from "@/lib/candidates/access";
 import { resolveMedia } from "@/lib/content/pages";
 import { pool } from "@/lib/db/pool";
 import { withTransaction } from "@/lib/db/transaction";
@@ -10,6 +12,7 @@ import { nextStep, weakestTopics, type TopicResult } from "./results";
 import {
   MOCK_KEEP_ANSWERS,
   MOCK_QUESTIONS,
+  MOCK_STARTS_PER_HOUR,
   READINESS_TARGET,
   SAVE_GRACE_SECONDS,
   mockMinutes,
@@ -68,6 +71,22 @@ async function settleOpen(client: Db, userId: string): Promise<AttemptRow | null
   return null;
 }
 
+// Open tests that have run out of time, or whose category the candidate no longer works in.
+export const STALE_MOCK_SQL = `a.ended_at is null and (a.deadline_at < now() - make_interval(secs => ${SAVE_GRACE_SECONDS}) or a.category_id <> u.current_category_id)`;
+
+// Ends these candidates' stale tests, as their own pages would, so staff see every test. Call inside a transaction.
+export async function settleMocks(db: Db, userIds: string[]): Promise<void> {
+  if (userIds.length === 0) return;
+  const { rows } = await db.query<AttemptRow>(`${ATTEMPT} where a.user_id = any($1::uuid[]) and ${STALE_MOCK_SQL} order by a.id for update of a`, [userIds]);
+  for (const row of rows) await finish(db, row, isOverdue(row) ? "away" : "moved");
+}
+
+// The candidate's own pages (Home, My progress): a test that ran out while they were away ends first,
+// so they see the same last score and readiness as staff do.
+export async function settleOwnMocks(userId: string): Promise<void> {
+  await withTransaction((client) => settleMocks(client, [userId]));
+}
+
 const toOpen = (row: AttemptRow): OpenMock => ({ id: row.id, total: row.total, answered: countAnswered(row.responses), secondsLeft: secondsLeft(row) });
 
 // --- Start page
@@ -102,6 +121,15 @@ export async function startMock(userId: string): Promise<StartReply> {
     if (!category) return { ok: false, error: "Your account isn’t available." };
     const open = await settleOpen(client, userId);
     if (open) return { ok: true, id: open.id };
+    const { rows: recent } = await client.query<{ started_at: Date }>(
+      `select started_at from mock_attempts where user_id = $1 and started_at > now() - interval '1 hour'
+       order by started_at desc limit ${MOCK_STARTS_PER_HOUR}`,
+      [userId]
+    );
+    if (recent.length >= MOCK_STARTS_PER_HOUR) {
+      const nextAt = recent[MOCK_STARTS_PER_HOUR - 1].started_at.getTime() + 60 * 60 * 1000;
+      return { ok: false, error: `You’ve started ${MOCK_STARTS_PER_HOUR} mock tests in the last hour. You can start another at ${formatUkTime(new Date(nextAt))}.` };
+    }
     const questions = await loadPool(client, "mock", category.id);
     if (questions.length === 0) return { ok: false, error: `There are no mock test questions for ${category.name} yet.` };
     // The last test's questions come last in each chapter, so back-to-back tests differ where they can.
@@ -125,7 +153,10 @@ export async function startMock(userId: string): Promise<StartReply> {
 
 export type MockView = { kind: "running"; run: MockRun } | { kind: "ended" } | { kind: "missing" };
 
-export async function loadMockRun(userId: string, attemptId: string): Promise<MockView> {
+// Once per request: the page and its title both ask.
+export const loadMockRun = cache(readMockRun);
+
+async function readMockRun(userId: string, attemptId: string): Promise<MockView> {
   const outcome = await withTransaction(async (client) => {
     const { rows } = await client.query<AttemptRow>(`${ATTEMPT} where a.id = $1 and a.user_id = $2 for update of a`, [attemptId, userId]);
     const row = rows[0];
@@ -269,6 +300,7 @@ export async function loadMockHistory(userId: string, limit: number, options: { 
     count: count.rows[0].count,
     best: best.rows[0] ? toEntry(best.rows[0]) : null,
     items: items.rows.map(toEntry),
+    average,
     averagePercent: average === null ? null : Math.round(average * 100),
   };
 }
@@ -349,8 +381,9 @@ export async function saveMockAnswers(userId: string, attemptId: string, changes
     const row = rows[0];
     if (!row) return { ok: false, reason: "invalid" };
     if (row.ended_at) return { ok: false, reason: "ended" };
+    // Overdue means nothing reached us for a while (asleep, offline or closed): time ran out while away.
     if (isOverdue(row)) {
-      await finish(client, row, "time_up");
+      await finish(client, row, "away");
       return { ok: false, reason: "ended" };
     }
     if (row.category_id !== row.current_category_id) {
@@ -380,7 +413,7 @@ export async function submitMock(userId: string, attemptId: string): Promise<"en
     const { rows } = await client.query<AttemptRow>(`${ATTEMPT} where a.id = $1 and a.user_id = $2 for update of a`, [attemptId, userId]);
     const row = rows[0];
     if (!row) return "missing";
-    if (!row.ended_at) await finish(client, row, row.seconds_left <= TIME_UP_SECONDS ? "time_up" : "submitted");
+    if (!row.ended_at) await finish(client, row, isOverdue(row) ? "away" : row.seconds_left <= TIME_UP_SECONDS ? "time_up" : "submitted");
     return "ended";
   });
 }
@@ -411,9 +444,9 @@ async function finish(client: Db, row: AttemptRow, how: MockEnd) {
   await client.query(
     `update mock_attempts
      set ended_how = $2::varchar, marks = $3, answered = $4, right_count = $5, out_of = $6, chapter_summary = $7,
-         ended_at = case when $2::varchar = 'away' then deadline_at else now() end,
+         ended_at = case when $2::varchar = 'away' then deadline_at else least(now(), deadline_at) end,
          seconds_taken = case when $2::varchar = 'away' then duration_seconds
-                              else least(duration_seconds, greatest(0, extract(epoch from now() - started_at)))::int end
+                              else least(duration_seconds, greatest(0, extract(epoch from least(now(), deadline_at) - started_at)))::int end
      where id = $1`,
     [row.id, how, marks, count("R") + count("W"), count("R"), row.total - count("S"), JSON.stringify(summary)]
   );

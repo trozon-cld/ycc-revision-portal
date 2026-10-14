@@ -1,21 +1,30 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
-import { formatUkDate, formatUkTime } from "@/lib/candidates/access";
+import { accessEnded, customDateBounds, formatUkDate, formatUkDateTime } from "@/lib/candidates/access";
 import { loadCandidateDetail } from "@/lib/candidates/detail";
 import { candidateProgressPath } from "@/lib/candidates/paths";
 import { countOf, formatDuration } from "@/lib/format";
-import { loadMockHistory } from "@/lib/mock/attempts";
-import { READINESS_TARGET, scorePercent, scoreText, type MockEnd, type MockHistoryEntry } from "@/lib/mock/types";
+import { loadMockHistory, settleMocks } from "@/lib/mock/attempts";
+import { withTransaction } from "@/lib/db/transaction";
+import { READINESS_TARGET, donePercent, scorePercent, scoreText, type MockEnd, type MockHistoryEntry } from "@/lib/mock/types";
 import { firstParam } from "@/lib/params";
 import { loadProgress } from "@/lib/progress/overview";
 import { Badge } from "@/components/admin/badge";
+import { PersonLabel } from "@/components/admin/person-label";
 import { PageHeader } from "@/components/admin/page-header";
+import { ListBackLink } from "@/components/admin/list-place";
 import { Pagination, pageFromParam } from "@/components/admin/pagination";
 import { buttonClass, cardClass } from "@/components/admin/styles";
 import { Cell, Row, Table } from "@/components/admin/table";
 import { CandidateStatusBadge } from "../status-badge";
+import { AdminCandidateActions, SuperadminCandidateActions } from "../candidate-row-actions";
+import { loadAdminOptions, loadCategoryChoices } from "../options";
+import { toRowCandidate } from "../row-candidate";
+
+export const metadata: Metadata = { title: "Candidate" };
 
 const HISTORY_PAGE_SIZE = 10;
 
@@ -53,43 +62,77 @@ function Summary({ items }: { items: [string, ReactNode][] }) {
   );
 }
 
-// A candidate's progress for staff: Admins see their own candidates, the Superadmin everyone's. Read only.
+// A candidate's progress for staff: Admins see their own candidates, the Superadmin everyone's.
 export default async function CandidateProgressPage({ params, searchParams }: PageProps<"/admin/candidates/[id]">) {
   const session = await requireRole(["admin", "superadmin"]);
   const { id } = await params;
   const candidate = await loadCandidateDetail(id, session);
   if (!candidate) notFound();
+  // A test left to run out of time counts as soon as staff look, not only once the candidate returns.
+  await withTransaction((client) => settleMocks(client, [candidate.id]));
   const query = await searchParams;
 
   const asked = firstParam(query.category);
   const category = candidate.groupCategories.find((item) => item.id === asked) ?? candidate.groupCategories.find((item) => item.isCurrent)!;
-  const progress = await loadProgress(candidate.id, category.id);
+  const historyPage = (page: number) =>
+    loadMockHistory(candidate.id, HISTORY_PAGE_SIZE, { categoryId: category.id, offset: (page - 1) * HISTORY_PAGE_SIZE });
+  // Loaded together; the history page is loaded again only if the asked page is past the end.
+  const askedPage = pageFromParam(firstParam(query.page), Number.MAX_SAFE_INTEGER, HISTORY_PAGE_SIZE);
+  const isSuperadmin = session.role === "superadmin";
+  const [progress, askedHistory, admins, categories] = await Promise.all([
+    loadProgress(candidate.id, category.id),
+    historyPage(askedPage),
+    isSuperadmin ? loadAdminOptions() : Promise.resolve([]),
+    isSuperadmin ? Promise.resolve([]) : loadCategoryChoices(),
+  ]);
   if (!progress) notFound();
   const { handbook, practice, mock, readiness } = progress;
   const page = pageFromParam(firstParam(query.page), mock.count, HISTORY_PAGE_SIZE);
-  const history = await loadMockHistory(candidate.id, HISTORY_PAGE_SIZE, { categoryId: category.id, offset: (page - 1) * HISTORY_PAGE_SIZE });
+  const history = page === askedPage ? askedHistory : await historyPage(page);
 
-  const isExpired = candidate.accessExpiresAt !== null && candidate.accessExpiresAt.getTime() <= Date.now();
+  const isExpired = accessEnded(candidate.accessExpiresAt);
   const path = candidateProgressPath(candidate.id);
   const categoryQuery: Record<string, string> = { category: category.isCurrent ? "" : category.id };
   const last = mock.items[0];
+  const { min: minDate, max: maxDate } = customDateBounds();
+  const rowCandidate = toRowCandidate({
+    id: candidate.id,
+    email: candidate.email,
+    name: candidate.name,
+    categoryId: candidate.assigned.id,
+    categoryName: candidate.assigned.name,
+    currentCategoryName: candidate.current.name,
+    adminId: candidate.admin.id,
+    isBlocked: candidate.isBlocked,
+    accessExpiresAt: candidate.accessExpiresAt,
+  });
 
   return (
     <>
-      <Link href="/admin/candidates" className={`${buttonClass("ghost", "sm")} mb-3 -ml-2.5`}>
+      <ListBackLink list="candidates" href="/admin/candidates" className={`${buttonClass("ghost", "sm")} mb-3 -ml-2.5`}>
         ← Candidates
-      </Link>
-      <PageHeader title={candidate.name ?? candidate.email} description={candidate.name ? candidate.email : "No name yet"} />
+      </ListBackLink>
+      <PageHeader
+        title={candidate.name ?? candidate.email}
+        description={candidate.name ? candidate.email : "No name yet"}
+        actions={
+          isSuperadmin ? (
+            <SuperadminCandidateActions candidate={rowCandidate} admins={admins} onProgressPage />
+          ) : (
+            <AdminCandidateActions candidate={rowCandidate} categories={categories} minDate={minDate} maxDate={maxDate} onProgressPage />
+          )
+        }
+      />
 
       <div className="space-y-8">
         <Summary
           items={[
             ["Status", <CandidateStatusBadge key="status" isBlocked={candidate.isBlocked} isExpired={isExpired} />],
-            ["Access until", candidate.accessExpiresAt ? formatUkDate(candidate.accessExpiresAt, "long") : "No expiry"],
-            ["Last login", candidate.lastLoginAt ? `${formatUkDate(candidate.lastLoginAt, "long")} at ${formatUkTime(candidate.lastLoginAt)}` : "No logins recorded"],
+            ["Access until", candidate.accessExpiresAt ? formatUkDate(candidate.accessExpiresAt) : "No expiry"],
+            ["Last login", candidate.lastLoginAt ? formatUkDateTime(candidate.lastLoginAt) : "No logins recorded"],
             ["Assigned category", candidate.assigned.name],
             ["Current category", candidate.current.name],
-            ...(session.role === "superadmin" ? [["Admin", candidate.admin.name ? `${candidate.admin.name} (${candidate.admin.email})` : candidate.admin.email] as [string, string]] : []),
+            ...(session.role === "superadmin" ? [["Admin", <PersonLabel key="admin" name={candidate.admin.name} email={candidate.admin.email} />] as [string, ReactNode]] : []),
           ]}
         />
 
@@ -144,7 +187,7 @@ export default async function CandidateProgressPage({ params, searchParams }: Pa
           ) : (
             <>
               <p className="text-sm text-ink">
-                {scorePercent(handbook.done, handbook.total)}% done · {handbook.done} of {handbook.total} pages and questions
+                {donePercent(handbook.done, handbook.total)}% done · {handbook.done} of {handbook.total} pages and questions
               </p>
               <Table columns={["Chapter", "Done"]} isEmpty={false} emptyMessage="">
                 {handbook.chapters.map((chapter) => (
@@ -207,7 +250,7 @@ export default async function CandidateProgressPage({ params, searchParams }: Pa
                 {history.items.map((entry) => (
                   <Row key={entry.id}>
                     <Cell kind="primary">
-                      {formatUkDate(entry.endedAt, "long")} at {formatUkTime(entry.endedAt)}
+                      {formatUkDateTime(entry.endedAt)}
                     </Cell>
                     <Cell label="Score" nowrap>
                       {score(entry)}

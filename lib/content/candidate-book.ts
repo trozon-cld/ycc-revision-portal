@@ -4,6 +4,7 @@ import type { BookCovers } from "./covers";
 import { loadPreviewBook } from "./preview";
 
 export type CandidateBook = {
+  categoryId: string;
   categoryName: string;
   pages: BookPageData[];
   media: ResolvedMedia;
@@ -40,6 +41,7 @@ export async function loadCandidateBook(userId: string): Promise<CandidateBook |
     { ids: coverIds, thumbIds: coverIds }
   );
   return {
+    categoryId: row.category_id,
     categoryName: row.category_name,
     pages: book.pages,
     media: book.media,

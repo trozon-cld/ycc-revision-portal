@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useMemo, useRef, useState, useTransition, type KeyboardEvent, type PointerEvent } from "react";
+import { useId, useMemo, useRef, useState, useTransition, type KeyboardEvent, type PointerEvent } from "react";
 import { ActionForm } from "@/components/admin/action-form";
 import { Badge } from "@/components/admin/badge";
 import { PanelButton, RowActions, type RowAction } from "@/components/admin/row-actions";
 import { buttonClass, inputClass } from "@/components/admin/styles";
 import { Cell, Row, Table } from "@/components/admin/table";
 import { useToast } from "@/components/admin/toast";
+import { NOT_THROUGH_MESSAGE, reachServer } from "@/lib/forms";
 import { setQuestionStatus } from "@/app/admin/questions/actions";
 import { addQuestionsToChapter, moveHandbookItem, removeQuestionForm } from "../../order-actions";
 import { PageRowActions } from "./page-row-actions";
@@ -16,7 +17,7 @@ import { PageRowActions } from "./page-row-actions";
 type Status = "draft" | "published";
 export type OrderItem =
   | { kind: "page"; id: string; position: number; pageId: string; title: string; status: Status; summary: string }
-  | { kind: "question"; id: string; position: number; questionId: string; label: string; typeLabel: string; status: Status };
+  | { kind: "question"; id: string; position: number; questionId: string; label: string; text: string; typeLabel: string; status: Status };
 export type AddableQuestion = { id: string; label: string; typeLabel: string; status: Status };
 
 type Drag = { from: number; to: number };
@@ -34,7 +35,11 @@ export function ChapterOrder({ items }: { items: OrderItem[] }) {
   const hintId = useId();
 
   // The server's order wins whenever it arrives.
-  useEffect(() => setOrder(items), [items]);
+  const [serverItems, setServerItems] = useState(items);
+  if (serverItems !== items) {
+    setServerItems(items);
+    setOrder(items);
+  }
 
   function commit(from: number, to: number) {
     if (pending || to === from || to < 0 || to >= order.length) return;
@@ -44,7 +49,7 @@ export function ChapterOrder({ items }: { items: OrderItem[] }) {
     setOrder(next);
     setAnnouncement(`Moved to position ${to + 1} of ${order.length}.`);
     startMove(async () => {
-      const result = await moveHandbookItem(item.id, item.position, to + 1);
+      const result = (await reachServer(() => moveHandbookItem(item.id, item.position, to + 1))) ?? { error: NOT_THROUGH_MESSAGE };
       if (result.error) {
         toast(result.error);
         setOrder(items);
@@ -136,15 +141,16 @@ export function ChapterOrder({ items }: { items: OrderItem[] }) {
                       {[6, 10, 14].flatMap((y) => [7, 13].map((x) => <circle key={`${x}-${y}`} cx={x} cy={y} r="1.5" />))}
                     </svg>
                   </button>
-                  <span className="min-w-0">
+                  <span className="line-clamp-2 min-w-0">
                     <span className="mr-1 font-mono text-slate-600 tabular-nums">{index + 1}.</span>{" "}
                     {item.kind === "page" ? (
                       <Link href={`/admin/handbook/pages/${item.pageId}`} className="text-ink underline-offset-2 hover:text-primary hover:underline">
                         {item.title}
                       </Link>
                     ) : (
+                      // The whole question, cut to two lines by the space there is rather than by a letter count.
                       <Link href={`/admin/questions/${item.questionId}`} className="text-ink underline-offset-2 hover:text-primary hover:underline">
-                        {item.label}
+                        {item.text}
                       </Link>
                     )}
                   </span>
@@ -285,7 +291,7 @@ function AddQuestionsForm({ chapterId, questions, close }: { chapterId: string; 
     const ids = questions.filter((question) => chosen.has(question.id)).map((question) => question.id);
     if (ids.length === 0) return;
     startAdding(async () => {
-      const result = await addQuestionsToChapter(chapterId, ids);
+      const result = (await reachServer(() => addQuestionsToChapter(chapterId, ids))) ?? { error: NOT_THROUGH_MESSAGE };
       if (result.error) {
         setError(result.error);
         return;

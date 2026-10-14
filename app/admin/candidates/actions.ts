@@ -3,14 +3,16 @@
 import bcrypt from "bcryptjs";
 import type { PoolClient } from "pg";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
 import type { SessionPayload } from "@/lib/auth/jwt";
 import { getErrorCode, withTransaction } from "@/lib/db/transaction";
 import { logActivity } from "@/lib/audit/log";
 import { NO_NAME, normaliseName, validateName } from "@/lib/users/name";
-import { accessEndSql, formatUkDate, resolveAccessEndDate } from "@/lib/candidates/access";
+import { accessBaseDate, accessEndSql, formatUkDate, resolveAccessEndDate } from "@/lib/candidates/access";
 import { isUuid } from "@/lib/ids";
-import { DUPLICATE_EMAIL, EMAIL_PATTERN, MIN_PASSWORD_LENGTH } from "@/lib/users/credentials";
+import { settleMocks } from "@/lib/mock/attempts";
+import { BCRYPT_COST, DUPLICATE_EMAIL, EMAIL_PATTERN, EMAIL_TOO_LONG, isPasswordTooLong, MAX_EMAIL_LENGTH, MIN_PASSWORD_LENGTH, PASSWORD_TOO_LONG } from "@/lib/users/credentials";
 import type { FormState } from "@/lib/forms";
 
 export type CandidateActionState = FormState;
@@ -45,20 +47,26 @@ export async function createCandidate(
   const invalidName = validateName(name);
   if (invalidName) return { error: invalidName };
   if (!email || !password || !categoryId) {
-    return { error: "Email, password, and category are required." };
+    return { error: "Email, password and category are required." };
   }
   if (!EMAIL_PATTERN.test(email)) {
     return { error: "Enter a valid email address." };
   }
+  if (email.length > MAX_EMAIL_LENGTH) {
+    return { error: EMAIL_TOO_LONG };
+  }
   if (password.length < MIN_PASSWORD_LENGTH) {
     return { error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` };
+  }
+  if (isPasswordTooLong(password)) {
+    return { error: PASSWORD_TOO_LONG };
   }
   const access = resolveAccessEndDate(formData);
   if ("error" in access) {
     return { error: access.error };
   }
 
-  const passwordHash = await bcrypt.hash(password, 12);
+  const passwordHash = await bcrypt.hash(password, BCRYPT_COST);
 
   try {
     await withTransaction(async (client) => {
@@ -128,6 +136,9 @@ export async function updateCandidateEmail(
   if (!EMAIL_PATTERN.test(email)) {
     return { error: "Enter a valid email address." };
   }
+  if (email.length > MAX_EMAIL_LENGTH) {
+    return { error: EMAIL_TOO_LONG };
+  }
 
   return changeOwnCandidate(session, formData, async (client, id, candidate) => {
     if (candidate.email === email) return;
@@ -153,11 +164,14 @@ export async function updateCandidatePassword(
   if (password.length < MIN_PASSWORD_LENGTH) {
     return { error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` };
   }
+  if (isPasswordTooLong(password)) {
+    return { error: PASSWORD_TOO_LONG };
+  }
   if (password !== confirmPassword) {
     return { error: "The two passwords don't match." };
   }
 
-  const passwordHash = await bcrypt.hash(password, 12);
+  const passwordHash = await bcrypt.hash(password, BCRYPT_COST);
   return changeOwnCandidate(session, formData, async (client, id, candidate) => {
     // Also signs the candidate out everywhere (their sign-ins carry the old version).
     await client.query(`update users set password_hash = $2, session_version = session_version + 1 where id = $1`, [
@@ -192,6 +206,8 @@ export async function updateCandidateCategory(
       id,
       categoryId,
     ]);
+    // A test open in the old category ends now with what was saved, as agreed for mock tests.
+    await settleMocks(client, [id]);
     const details: Record<string, string> = { from: candidate.category_name, to: newName };
     if (candidate.current_category_name !== candidate.category_name) {
       details.previousCurrent = candidate.current_category_name;
@@ -215,17 +231,19 @@ export async function updateCandidateAccess(
   formData: FormData
 ): Promise<CandidateActionState> {
   const session = await requireRole(["admin"]);
-  const access = resolveAccessEndDate(formData);
-  if ("error" in access) {
-    return { error: access.error };
-  }
 
   return changeOwnCandidate(session, formData, async (client, id, candidate) => {
+    // Presets add to the current end date (or today, if it has passed), read under the row lock.
+    const access = resolveAccessEndDate(formData, accessBaseDate(candidate.access_expires_at));
+    if ("error" in access) return access.error;
+    // The same end date again changes nothing, so nothing is written or logged.
     const { rows } = await client.query<{ access_expires_at: string }>(
-      `update users set access_expires_at = ${accessEndSql("$2")} where id = $1
+      `update users set access_expires_at = ${accessEndSql("$2")}
+       where id = $1 and access_expires_at is distinct from ${accessEndSql("$2")}
        returning access_expires_at`,
       [id, access.date]
     );
+    if (!rows[0]) return;
     await logActivity(
       client,
       session,
@@ -276,6 +294,8 @@ export async function deleteCandidate(
 
   revalidatePath("/admin/categories");
   revalidatePath("/admin/admins");
+  // Deleted from their Progress page: that page is gone, so go back to the list.
+  if (result.success && formData.get("back") === "list") redirect("/admin/candidates?done=deleted");
   return result;
 }
 
@@ -289,7 +309,7 @@ export async function changeCandidateAdmin(
   const adminId = String(formData.get("adminId") ?? "");
 
   if (!candidateId || !adminId) {
-    return { error: "Choose an admin." };
+    return { error: "Choose an Admin." };
   }
 
   let result: CandidateActionState;
@@ -310,7 +330,7 @@ export async function changeCandidateAdmin(
       const candidate = candidates[0];
       const newAdmin = admins[0];
       if (!candidate || !newAdmin) {
-        return { error: "Candidate or admin not found. The page has been refreshed." };
+        return { error: "Candidate or Admin not found. The page has been refreshed." };
       }
       if (candidate.admin_email === newAdmin.email) return { success: true };
 
@@ -328,7 +348,7 @@ export async function changeCandidateAdmin(
     // 23503: the admin was deleted at the same moment.
     const code = getErrorCode(error);
     if (code === "22P02" || code === "23503") {
-      return { error: "Candidate or admin not found." };
+      return { error: "Candidate or Admin not found." };
     }
     throw error;
   }
@@ -339,11 +359,11 @@ export async function changeCandidateAdmin(
 }
 
 // Locks the row only if this admin owns the candidate — a forged candidateId matches nothing.
-// `change` returning without writing means "nothing to change", which still counts as success.
+// `change` returning without writing means "nothing to change" (success); returning a message refuses.
 async function changeOwnCandidate(
   session: SessionPayload,
   formData: FormData,
-  change: (client: PoolClient, candidateId: string, candidate: OwnedCandidate) => Promise<void>
+  change: (client: PoolClient, candidateId: string, candidate: OwnedCandidate) => Promise<void | string>
 ): Promise<CandidateActionState> {
   const candidateId = String(formData.get("candidateId") ?? "");
 
@@ -362,8 +382,8 @@ async function changeOwnCandidate(
       );
       if (!rows[0]) return { error: NOT_FOUND };
 
-      await change(client, candidateId, rows[0]);
-      return { success: true };
+      const refused = await change(client, candidateId, rows[0]);
+      return refused ? { error: refused } : { success: true };
     });
   } catch (error) {
     const code = getErrorCode(error);

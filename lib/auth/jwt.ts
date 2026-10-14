@@ -18,11 +18,18 @@ export interface SessionPayload extends JWTPayload {
 export type SessionClaims = Pick<SessionPayload, "sub" | "email" | "role" | "ver" | "loginAt">;
 
 const ALG = "HS256";
+// A shorter secret could be guessed; warned about rather than refused, so a running site never stops.
+const MIN_SECRET_LENGTH = 32;
+let warnedShortSecret = false;
 
 function getSecretKey() {
   const secret = process.env.JWT_SECRET;
   if (!secret) {
     throw new Error("JWT_SECRET is not set");
+  }
+  if (secret.length < MIN_SECRET_LENGTH && !warnedShortSecret) {
+    warnedShortSecret = true;
+    console.warn(`JWT_SECRET is shorter than ${MIN_SECRET_LENGTH} characters; use a long random value (see .env.example).`);
   }
   return new TextEncoder().encode(secret);
 }
@@ -46,7 +53,7 @@ export async function signToken(claims: SessionClaims): Promise<{ token: string;
 
 export async function verifyToken(token: string): Promise<SessionPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, getSecretKey());
+    const { payload } = await jwtVerify(token, getSecretKey(), { algorithms: [ALG] });
     const session = payload as SessionPayload;
     // Sign-ins from before live checks (no version) are treated as signed out.
     if (typeof session.ver !== "number" || typeof session.loginAt !== "number") return null;

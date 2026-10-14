@@ -5,7 +5,7 @@ import { Field } from "@/components/admin/field";
 import { PanelButton } from "@/components/admin/row-actions";
 import { inputClass } from "@/components/admin/styles";
 import { NAME_MAX_LENGTH } from "@/lib/users/name";
-import { MIN_PASSWORD_LENGTH } from "@/lib/users/credentials";
+import { MAX_EMAIL_LENGTH, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from "@/lib/users/credentials";
 import { createCandidate } from "./actions";
 import { AccessLengthField } from "./access-length-field";
 import { CategoryOptions, type CategoryChoice } from "./category-options";
@@ -39,7 +39,7 @@ export function NewCandidateButton({
             <input id="new-candidate-name" name="name" type="text" required maxLength={NAME_MAX_LENGTH} autoComplete="off" className={inputClass} />
           </Field>
           <Field id="new-candidate-email" label="Email">
-            <input id="new-candidate-email" name="email" type="email" required autoComplete="off" className={inputClass} />
+            <input id="new-candidate-email" name="email" type="email" maxLength={MAX_EMAIL_LENGTH} required autoComplete="off" className={inputClass} />
           </Field>
           <Field id="new-candidate-password" label="Password" hint={`At least ${MIN_PASSWORD_LENGTH} characters.`}>
             <input
@@ -48,6 +48,7 @@ export function NewCandidateButton({
               type="password"
               required
               minLength={MIN_PASSWORD_LENGTH}
+              maxLength={MAX_PASSWORD_LENGTH}
               autoComplete="new-password"
               className={inputClass}
             />

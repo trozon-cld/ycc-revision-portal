@@ -1,5 +1,7 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { requireRole } from "@/lib/auth/guard";
+import { CONTENT_EDITORS } from "@/lib/auth/content-editors";
 import { pool } from "@/lib/db/pool";
 import { loadCategoryGroups, loadChapterCategoryIds } from "@/lib/handbook/categories";
 import { chapterNumber, sectionLetter } from "@/lib/handbook/structure";
@@ -10,6 +12,8 @@ import { Cell, Row, Table } from "@/components/admin/table";
 import { countOf } from "@/lib/format";
 import { ChapterRowActions, NewChapterButton } from "./chapter-row-actions";
 import { NewSectionButton, SectionRowActions, type SectionOption } from "./section-row-actions";
+
+export const metadata: Metadata = { title: "Handbook" };
 
 interface SectionRow {
   id: string;
@@ -31,7 +35,7 @@ interface ChapterRow {
 }
 
 export default async function HandbookPage() {
-  await requireRole(["superadmin"]);
+  await requireRole(CONTENT_EDITORS);
 
   const [{ rows: sections }, { rows: chapters }, categoryGroups, chapterCategories] = await Promise.all([
     pool.query<SectionRow>(`select id, position, title from sections order by position`),
@@ -119,6 +123,7 @@ export default async function HandbookPage() {
 
               <Table
                 columns={["Chapter", "Pages", "Questions", "Categories", "Status", ""]}
+                widths={["", "md:w-20", "md:w-24", "md:w-28", "md:w-44", "md:w-14"]}
                 isEmpty={sectionChapters.length === 0}
                 emptyMessage="No chapters in this section yet."
               >
@@ -156,6 +161,8 @@ export default async function HandbookPage() {
                         otherSections={sectionOptions.filter((option) => option.id !== section.id)}
                         pageCount={chapter.page_count}
                         questionCount={chapter.question_count}
+                        itemCount={chapter.item_count}
+                        draftCount={chapter.draft_count}
                         status={chapter.status}
                         categoryGroups={categoryGroups}
                         categoryIds={chapterCategories.get(chapter.id) ?? []}

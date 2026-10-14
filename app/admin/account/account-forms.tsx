@@ -4,7 +4,7 @@ import { ActionForm } from "@/components/admin/action-form";
 import { Field } from "@/components/admin/field";
 import { inputClass } from "@/components/admin/styles";
 import { NAME_MAX_LENGTH } from "@/lib/users/name";
-import { MIN_PASSWORD_LENGTH } from "@/lib/users/credentials";
+import { MAX_EMAIL_LENGTH, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from "@/lib/users/credentials";
 import { updateOwnEmail, updateOwnName, updateOwnPassword } from "./actions";
 
 export function ChangeNameForm({ currentName }: { currentName: string | null }) {
@@ -38,7 +38,7 @@ export function ChangeEmailForm({ currentEmail }: { currentEmail: string }) {
         <input
           id="account-email"
           name="email"
-          type="email"
+          type="email" maxLength={MAX_EMAIL_LENGTH}
           required
           defaultValue={currentEmail}
           autoComplete="email"
@@ -84,6 +84,7 @@ export function ChangePasswordForm() {
           type="password"
           required
           minLength={MIN_PASSWORD_LENGTH}
+          maxLength={MAX_PASSWORD_LENGTH}
           autoComplete="new-password"
           className={inputClass}
         />
@@ -95,6 +96,7 @@ export function ChangePasswordForm() {
           type="password"
           required
           minLength={MIN_PASSWORD_LENGTH}
+          maxLength={MAX_PASSWORD_LENGTH}
           autoComplete="new-password"
           className={inputClass}
         />

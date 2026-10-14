@@ -5,16 +5,16 @@ import { Field } from "@/components/admin/field";
 import { PanelButton, RowActions, type RowAction } from "@/components/admin/row-actions";
 import { buttonClass, inputClass } from "@/components/admin/styles";
 import { NAME_MAX_LENGTH } from "@/lib/users/name";
-import { MIN_PASSWORD_LENGTH } from "@/lib/users/credentials";
-import { createAdmin, deleteAdmin, updateAdminEmail, updateAdminName, updateAdminPassword } from "./actions";
+import { MAX_EMAIL_LENGTH, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from "@/lib/users/credentials";
+import { createAdmin, deleteAdmin, moveAllCandidates, updateAdminEmail, updateAdminName, updateAdminPassword } from "./actions";
 
 export function NewAdminButton() {
   return (
-    <PanelButton label="New admin" title="New admin">
+    <PanelButton label="New Admin" title="New Admin">
       {(close) => (
         <ActionForm
           action={createAdmin}
-          submitLabel="Create admin"
+          submitLabel="Create Admin"
           pendingLabel="Creating…"
           successMessage="Admin created."
           onSuccess={close}
@@ -24,7 +24,7 @@ export function NewAdminButton() {
             <input id="new-admin-name" name="name" type="text" required maxLength={NAME_MAX_LENGTH} autoComplete="off" className={inputClass} />
           </Field>
           <Field id="new-admin-email" label="Email">
-            <input id="new-admin-email" name="email" type="email" required autoComplete="off" className={inputClass} />
+            <input id="new-admin-email" name="email" type="email" maxLength={MAX_EMAIL_LENGTH} required autoComplete="off" className={inputClass} />
           </Field>
           <Field id="new-admin-password" label="Password" hint={`At least ${MIN_PASSWORD_LENGTH} characters.`}>
             <input
@@ -33,6 +33,7 @@ export function NewAdminButton() {
               type="password"
               required
               minLength={MIN_PASSWORD_LENGTH}
+              maxLength={MAX_PASSWORD_LENGTH}
               autoComplete="new-password"
               className={inputClass}
             />
@@ -48,11 +49,14 @@ export function AdminRowActions({
   email,
   name,
   candidateCount,
+  otherAdmins,
 }: {
   id: string;
   email: string;
   name: string | null;
   candidateCount: number;
+  // label: "Name (email)", or the email when there is no name.
+  otherAdmins: { id: string; label: string }[];
 }) {
   const hidden = { adminId: id };
   const countLabel = `${candidateCount} candidate${candidateCount === 1 ? "" : "s"}`;
@@ -99,11 +103,11 @@ export function AdminRowActions({
           onSuccess={close}
           onCancel={close}
         >
-          <Field id={`email-${id}`} label="New email" hint="This admin will log in with this email from now on.">
+          <Field id={`email-${id}`} label="New email" hint="This Admin will log in with this email from now on.">
             <input
               id={`email-${id}`}
               name="email"
-              type="email"
+              type="email" maxLength={MAX_EMAIL_LENGTH}
               required
               defaultValue={email}
               autoComplete="off"
@@ -133,6 +137,7 @@ export function AdminRowActions({
               type="password"
               required
               minLength={MIN_PASSWORD_LENGTH}
+              maxLength={MAX_PASSWORD_LENGTH}
               autoComplete="new-password"
               className={inputClass}
             />
@@ -144,6 +149,7 @@ export function AdminRowActions({
               type="password"
               required
               minLength={MIN_PASSWORD_LENGTH}
+              maxLength={MAX_PASSWORD_LENGTH}
               autoComplete="new-password"
               className={inputClass}
             />
@@ -154,21 +160,50 @@ export function AdminRowActions({
     {
       label: "Delete",
       danger: true,
-      title: candidateCount > 0 ? "Can't delete this admin" : "Delete admin?",
+      title: candidateCount > 0 ? "Move their candidates first" : "Delete Admin?",
       variant: "confirm",
       render: (close) =>
         candidateCount > 0 ? (
-          <div>
-            <p className="px-5 py-4 text-sm">
-              <strong className="font-medium [overflow-wrap:anywhere]">{email}</strong> owns {countLabel}. Move them to
-              another admin from the Candidates page first.
-            </p>
-            <div className="flex justify-end border-t border-slate-200 px-5 py-3">
-              <button type="button" onClick={close} className={buttonClass("secondary")}>
-                Close
-              </button>
+          otherAdmins.length === 0 ? (
+            <div>
+              <p className="px-5 py-4 text-sm">
+                <strong className="font-medium [overflow-wrap:anywhere]">{email}</strong> owns {countLabel}. Add another
+                Admin first, so they can be moved there.
+              </p>
+              <div className="flex justify-end border-t border-slate-200 px-5 py-3">
+                <button type="button" onClick={close} className={buttonClass("secondary")}>
+                  Close
+                </button>
+              </div>
             </div>
-          </div>
+          ) : (
+            <ActionForm
+              action={moveAllCandidates}
+              hidden={hidden}
+              submitLabel={`Move ${countLabel}`}
+              pendingLabel="Moving…"
+              successMessage={`${candidateCount === 1 ? "Candidate" : `${candidateCount} candidates`} moved. You can delete this Admin now.`}
+              onSuccess={close}
+              onCancel={close}
+            >
+              <p className="text-sm">
+                <strong className="font-medium [overflow-wrap:anywhere]">{email}</strong> owns {countLabel}. Move{" "}
+                {candidateCount === 1 ? "them" : "them all"} to another Admin, then you can delete this Admin.
+              </p>
+              <Field id={`move-all-${id}`} label="Move to">
+                <select id={`move-all-${id}`} name="toAdminId" required defaultValue="" className={inputClass}>
+                  <option value="" disabled>
+                    Select an Admin
+                  </option>
+                  {otherAdmins.map((admin) => (
+                    <option key={admin.id} value={admin.id}>
+                      {admin.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </ActionForm>
+          )
         ) : (
           <ActionForm
             action={deleteAdmin}

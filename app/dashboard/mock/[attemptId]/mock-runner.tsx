@@ -78,6 +78,17 @@ export function MockRunner({ run, initialTextSize }: { run: MockRun; initialText
     return () => clearInterval(tick);
   }, [run.secondsLeft]);
 
+  // After sleep or a hidden tab the countdown can lag: coming back into view asks the server for the time
+  // left (a save of the question on screen), which also ends the test if time ran out meanwhile.
+  const { moveTo } = saver;
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState === "visible" && !timeUp) moveTo(position);
+    }
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [moveTo, position, timeUp]);
+
   // Sends what's waiting, then ends the test; the page then shows the result.
   async function finish() {
     await Promise.race([saver.flushAll(), new Promise((resolve) => setTimeout(resolve, LAST_SAVE_MS))]);
@@ -159,6 +170,7 @@ export function MockRunner({ run, initialTextSize }: { run: MockRun; initialText
       onTextSizeChange={changeSize}
       timer={(place) => <MockClock seconds={secondsLeft} place={place} />}
       accountInSettings
+      leaveWarning={timeUp ? undefined : "Your timer keeps running while you’re away. Your answers so far are saved."}
       scrollRef={scrollRef}
     >
       <div className="mx-auto w-full max-w-3xl px-4 pt-5 pb-12 sm:pt-8">
@@ -167,7 +179,7 @@ export function MockRunner({ run, initialTextSize }: { run: MockRun; initialText
         </p>
         {reminder && !timeUp && (
           <div role="status" className="mb-5 flex flex-col gap-3 rounded-xl border-2 border-red-700 bg-red-50 p-4 sm:flex-row sm:items-center">
-            <p className="flex-1 text-lg font-semibold text-red-800">5 minutes remaining. Please review unanswered questions.</p>
+            <p className="flex-1 text-lg font-semibold text-red-800">5 minutes left. Please check any questions you haven’t answered.</p>
             {!reviewing && (
               <button type="button" onClick={openReview} className={`${PRIMARY_BUTTON} w-full sm:w-auto`}>
                 Review answers
@@ -181,7 +193,7 @@ export function MockRunner({ run, initialTextSize }: { run: MockRun; initialText
 
         {timeUp ? (
           <p role="status" className="rounded-xl border-2 border-red-700 bg-red-50 p-5 text-lg font-semibold text-red-800">
-            Time is up. Your test is being submitted.
+            Time ran out. Your test is being submitted.
           </p>
         ) : reviewing ? (
           <MockReview
@@ -220,7 +232,7 @@ export function MockRunner({ run, initialTextSize }: { run: MockRun; initialText
 
             <div className="mt-5 grid gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-start">
               <button type="button" onClick={() => (isLast ? openReview() : goTo(position + 1))} className={`${PRIMARY_BUTTON} w-full sm:order-3 sm:w-auto sm:justify-self-end`}>
-                {isLast ? "Review answers" : "Next"}
+                {isLast ? "Review answers" : "Next question"}
                 {!isLast && (
                   <svg viewBox="0 0 24 24" aria-hidden="true" className="size-6" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M9 6l6 6-6 6" />
@@ -234,13 +246,13 @@ export function MockRunner({ run, initialTextSize }: { run: MockRun; initialText
                 <svg viewBox="0 0 24 24" aria-hidden="true" className="size-6" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M15 6l-6 6 6 6" />
                 </svg>
-                Previous
+                Previous question
               </button>
             </div>
 
             {!isLast && (
               <button type="button" onClick={openReview} className={`${SECONDARY_BUTTON} mt-3 w-full sm:w-auto`}>
-                Review all answers
+                Review answers
               </button>
             )}
             <p className={`mt-4 text-base ${saver.status === "retrying" ? "font-semibold text-amber-950" : "text-ink/80"}`}>

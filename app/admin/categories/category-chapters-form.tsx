@@ -56,7 +56,7 @@ export function CategoryChaptersForm({
       action={saveCategoryChapters}
       hidden={{ categoryId }}
       submitLabel="Save chapters"
-      successMessage="Chapters saved."
+      successMessage="Chapters updated."
       onSuccess={onClose}
       onCancel={onClose}
     >

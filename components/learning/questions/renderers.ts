@@ -33,6 +33,8 @@ export type AnswerAreaProps = {
   // True when the correct answer should be shown (after Check or Reveal in the Handbook, after Check in Practice).
   showCorrect: boolean;
   result: CheckResult | null;
+  // A finished question on a report: no how-to-answer line, nothing left to place.
+  review?: boolean;
 };
 
 // Each type step (C1–C4) adds its answer area here.

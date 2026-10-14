@@ -1,10 +1,10 @@
 // Every logged action and its display label. New loggable actions go here.
 export const ACTIVITY_ACTIONS = {
-  "admin.created": "Created admin",
-  "admin.email_changed": "Changed admin email",
-  "admin.password_changed": "Changed admin password",
-  "admin.name_changed": "Changed admin name",
-  "admin.deleted": "Deleted admin",
+  "admin.created": "Created Admin",
+  "admin.email_changed": "Changed Admin email",
+  "admin.password_changed": "Changed Admin password",
+  "admin.name_changed": "Changed Admin name",
+  "admin.deleted": "Deleted Admin",
   "candidate.created": "Created candidate",
   "candidate.email_changed": "Changed candidate email",
   "candidate.name_changed": "Changed candidate name",
@@ -14,7 +14,7 @@ export const ACTIVITY_ACTIONS = {
   "candidate.blocked": "Blocked candidate",
   "candidate.unblocked": "Unblocked candidate",
   "candidate.deleted": "Deleted candidate",
-  "candidate.admin_changed": "Moved candidate to another admin",
+  "candidate.admin_changed": "Moved candidate to another Admin",
   "candidate.category_switched": "Candidate switched category",
   "category_group.created": "Created category group",
   "category_group.renamed": "Renamed category group",
@@ -58,12 +58,12 @@ export const ACTIVITY_ACTIONS = {
   "media.uploaded": "Uploaded picture",
   "media.alt_text_changed": "Changed picture description",
   "media.deleted": "Deleted picture",
-  "faq.created": "Created FAQ question",
-  "faq.updated": "Edited FAQ question",
-  "faq.reordered": "Reordered FAQ question",
-  "faq.published": "Showed FAQ question",
-  "faq.unpublished": "Hid FAQ question",
-  "faq.deleted": "Deleted FAQ question",
+  "faq.created": "Created question in General queries",
+  "faq.updated": "Edited question in General queries",
+  "faq.reordered": "Reordered question in General queries",
+  "faq.published": "Published question in General queries",
+  "faq.unpublished": "Unpublished question in General queries",
+  "faq.deleted": "Deleted question in General queries",
   "support_contact.changed": "Changed support contact details",
   "account.email_changed": "Changed own email",
   "account.name_changed": "Changed own name",
@@ -96,6 +96,7 @@ export const AUTH_EVENTS = {
   logout: "Logged out",
   // Written once when too many failed attempts pause logins for an email or address (lib/auth/rate-limit.ts).
   login_paused: "Logins paused (too many failed attempts)",
+  password_check_failed: "Wrong current password (My account)",
 } as const;
 
 export type AuthEvent = keyof typeof AUTH_EVENTS;

@@ -16,7 +16,7 @@ import {
 } from "./actions";
 import { candidateProgressPath } from "@/lib/candidates/paths";
 import { NAME_MAX_LENGTH } from "@/lib/users/name";
-import { MIN_PASSWORD_LENGTH } from "@/lib/users/credentials";
+import { MAX_EMAIL_LENGTH, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from "@/lib/users/credentials";
 import { AccessLengthField } from "./access-length-field";
 import { CategoryOptions, type CategoryChoice } from "./category-options";
 
@@ -25,9 +25,13 @@ export interface RowCandidate {
   email: string;
   name: string | null;
   categoryId: string;
+  // "Supervisor (assigned: General Operative)" when they have switched.
+  categoryLabel: string;
   adminId: string;
   isBlocked: boolean;
   expiryLabel: string;
+  // YYYY-MM-DD that access presets add to (the current end date, or today once it has passed).
+  accessBase: string;
 }
 
 export function AdminCandidateActions({
@@ -35,17 +39,20 @@ export function AdminCandidateActions({
   categories,
   minDate,
   maxDate,
+  onProgressPage = false,
 }: {
   candidate: RowCandidate;
   categories: CategoryChoice[];
   minDate: string;
   maxDate: string;
+  // On the Progress page: no "View progress", and deleting goes back to the list.
+  onProgressPage?: boolean;
 }) {
   const { id, email } = candidate;
   const hidden = { candidateId: id };
 
   const actions: RowAction[] = [
-    { label: "View progress", href: candidateProgressPath(id) },
+    ...(onProgressPage ? [] : [{ label: "View progress", href: candidateProgressPath(id) }]),
     {
       label: "Change name",
       title: "Change name",
@@ -91,7 +98,7 @@ export function AdminCandidateActions({
             <input
               id={`email-${id}`}
               name="email"
-              type="email"
+              type="email" maxLength={MAX_EMAIL_LENGTH}
               required
               defaultValue={email}
               autoComplete="off"
@@ -131,10 +138,11 @@ export function AdminCandidateActions({
           onSuccess={close}
           onCancel={close}
         >
+          <p className="text-sm text-slate-600">Currently: {candidate.categoryLabel}</p>
           <Field
             id={`category-${id}`}
             label="Assigned category"
-            hint="The candidate is moved to this category now. They can switch to others in the same group."
+            hint="The candidate is moved to this category now. They can switch to others in the same group. If they're in a mock test, it ends now with the answers saved so far."
           >
             <select
               id={`category-${id}`}
@@ -163,7 +171,13 @@ export function AdminCandidateActions({
           onCancel={close}
         >
           <p className="text-sm text-slate-600">Currently: {candidate.expiryLabel}</p>
-          <AccessLengthField idPrefix={`access-${id}`} label="New access length" minDate={minDate} maxDate={maxDate} />
+          <AccessLengthField
+            idPrefix={`access-${id}`}
+            label="New access length"
+            minDate={minDate}
+            maxDate={maxDate}
+            base={candidate.accessBase}
+          />
         </ActionForm>
       ),
     },
@@ -220,7 +234,7 @@ export function AdminCandidateActions({
       render: (close) => (
         <ActionForm
           action={deleteCandidate}
-          hidden={hidden}
+          hidden={onProgressPage ? { ...hidden, back: "list" } : hidden}
           submitLabel="Delete"
           pendingLabel="Deleting…"
           variant="danger"
@@ -238,41 +252,43 @@ export function AdminCandidateActions({
     },
   ];
 
-  return <RowActions label={`Actions for ${email}`} actions={actions} />;
+  return <RowActions label={`Actions for ${email}`} actions={actions} triggerText={onProgressPage ? "Actions" : undefined} />;
 }
 
 export function SuperadminCandidateActions({
   candidate,
   admins,
+  onProgressPage = false,
 }: {
   candidate: RowCandidate;
   // label: "Name (email)", or the email when there is no name.
   admins: { id: string; label: string }[];
+  onProgressPage?: boolean;
 }) {
   const otherAdmins = admins.filter((admin) => admin.id !== candidate.adminId);
 
   const actions: RowAction[] = [
-    { label: "View progress", href: candidateProgressPath(candidate.id) },
+    ...(onProgressPage ? [] : [{ label: "View progress", href: candidateProgressPath(candidate.id) }]),
     {
-      label: "Change admin",
-      title: "Move to another admin",
+      label: "Change Admin",
+      title: "Change Admin",
       description: candidate.email,
       render: (close) =>
         otherAdmins.length === 0 ? (
-          <p className="px-5 py-4 text-sm">There are no other admins to move this candidate to.</p>
+          <p className="px-5 py-4 text-sm">There are no other Admins to move this candidate to.</p>
         ) : (
           <ActionForm
             action={changeCandidateAdmin}
             hidden={{ candidateId: candidate.id }}
-            submitLabel="Move candidate"
-            successMessage="Admin changed."
+            submitLabel="Save Admin"
+            successMessage="Admin updated."
             onSuccess={close}
             onCancel={close}
           >
-            <Field id={`admin-${candidate.id}`} label="New admin">
+            <Field id={`admin-${candidate.id}`} label="New Admin">
               <select id={`admin-${candidate.id}`} name="adminId" required defaultValue="" className={inputClass}>
                 <option value="" disabled>
-                  Select an admin
+                  Select an Admin
                 </option>
                 {otherAdmins.map((admin) => (
                   <option key={admin.id} value={admin.id}>
@@ -286,7 +302,7 @@ export function SuperadminCandidateActions({
     },
   ];
 
-  return <RowActions label={`Actions for ${candidate.email}`} actions={actions} />;
+  return <RowActions label={`Actions for ${candidate.email}`} actions={actions} triggerText={onProgressPage ? "Actions" : undefined} />;
 }
 
 function PasswordFields({ id }: { id: string }) {
@@ -299,6 +315,7 @@ function PasswordFields({ id }: { id: string }) {
           type="password"
           required
           minLength={MIN_PASSWORD_LENGTH}
+          maxLength={MAX_PASSWORD_LENGTH}
           autoComplete="new-password"
           className={inputClass}
         />
@@ -310,6 +327,7 @@ function PasswordFields({ id }: { id: string }) {
           type="password"
           required
           minLength={MIN_PASSWORD_LENGTH}
+          maxLength={MAX_PASSWORD_LENGTH}
           autoComplete="new-password"
           className={inputClass}
         />
