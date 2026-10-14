@@ -186,16 +186,6 @@ export function QuestionEditor({
     };
   }, [deferred, editor, pictureAlign, pictureSize, questionId, type]);
 
-  // Running header of the book preview: the chosen chapter and its section.
-  const previewChapterId = deferred.chapterId;
-  const previewChapter = useMemo(() => {
-    for (const section of chapters) {
-      const found = section.chapters.find((chapter) => chapter.id === previewChapterId);
-      if (found) return { id: found.id, sectionLabel: section.label, chapterLabel: found.label };
-    }
-    return { id: "no-chapter", sectionLabel: "Section", chapterLabel: "Chapter" };
-  }, [chapters, previewChapterId]);
-
   const saveState = isSaving ? "Saving…" : isNew ? "Not saved yet" : dirty ? "Unsaved changes" : "All changes saved";
   const pictureThumb = draft.stemMediaId ? (thumbs[draft.stemMediaId] ?? media[draft.stemMediaId]?.src) : undefined;
 
@@ -440,7 +430,7 @@ export function QuestionEditor({
 
         <section aria-label="Live preview" className={`min-w-0 ${tab === "edit" ? "hidden xl:block" : ""}`}>
           <div className="xl:sticky xl:top-28">
-            <QuestionPreview question={preview} media={media} shuffles={editor.shuffles(deferred.content)} chapter={previewChapter} />
+            <QuestionPreview question={preview} media={media} shuffles={editor.shuffles(deferred.content)} chapters={chapters} chapterId={deferred.chapterId} />
           </div>
         </section>
       </div>

@@ -301,7 +301,7 @@ export function Panel({ title, onClose, children }: { title: string; onClose: ()
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, []);
+  }, [closeRef]);
   return (
     <div ref={ref} role="region" aria-labelledby={headingId} className="absolute inset-0 z-20 flex flex-col bg-white">
       <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">

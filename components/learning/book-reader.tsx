@@ -284,7 +284,7 @@ export function BookReader({
         setQuestionStates((current) => ({ ...current, [key]: state }));
       },
     }),
-    [questionStates, questionPages]
+    [questionStates, questionPages, questionDone]
   );
 
   useEffect(() => {
@@ -352,7 +352,7 @@ export function BookReader({
 
   const nextBatch = useCallback(
     (fresh: boolean[] | null, size = MEASURE_BATCH) => measureOrder(pages, positionRef.current).filter((index) => !fresh?.[index]).slice(0, size),
-    [pages]
+    [pages, positionRef]
   );
 
   // New layout: measure again, starting with the current chapter (before anything is painted).
@@ -366,7 +366,7 @@ export function BookReader({
   useLayoutEffect(() => {
     const fresh = countsRef.current?.id === layoutId ? countsRef.current.fresh : null;
     if (!fresh?.[nearestPage]) setBatch(nextBatch(fresh));
-  }, [nearestPage, layoutId, nextBatch]);
+  }, [nearestPage, layoutId, nextBatch, countsRef]);
 
   // Feedback and explanations appear after Check, so a question page is measured again then.
   const previousStates = useRef(questionStates);
@@ -474,7 +474,7 @@ export function BookReader({
     }
     const timer = window.setTimeout(() => setBatch(next), 0);
     return () => window.clearTimeout(timer);
-  }, [geometry, batch, pictureCaps, pages, textSize, layoutId, nextBatch, fitList, fitFloor, sizeFor]);
+  }, [geometry, batch, pictureCaps, pages, textSize, layoutId, nextBatch, fitList, fitFloor, sizeFor, countsRef]);
 
   // Short books are re-measured before anything is painted, so their numbers are never estimates.
   const counted = Boolean(counts) && (pages.length <= MEASURE_BATCH || Boolean(current?.fresh.every(Boolean)));
@@ -619,7 +619,7 @@ export function BookReader({
     if (done.length === 0) return;
     for (const id of done) reportedDone.current.add(id);
     pagesDone.current(done);
-  }, [sheets, viewStart, perView, pages, current, fitList]);
+  }, [sheets, viewStart, perView, pages, current, fitList, pagesDone]);
 
   const currentPageId = pages[position.pageIndex]?.id;
   const reportedPageId = useRef(currentPageId);

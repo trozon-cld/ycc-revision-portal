@@ -5,6 +5,7 @@ import { DEFAULT_TEXT_SIZE, TEXT_SIZES, type BookPageData, type ResolvedMedia, t
 import { checkAnswer } from "@/lib/questions/check";
 import { toClientQuestion } from "@/lib/questions/public";
 import type { QuestionData, QuestionMode } from "@/lib/questions/types";
+import type { SectionOptions } from "@/lib/questions/queries";
 import { QuestionView } from "@/components/learning/questions/question-view";
 import { BookPreview, DEVICES, FitReadout, type PreviewDevice } from "./book-preview";
 import { buttonClass } from "./styles";
@@ -15,19 +16,30 @@ const MODES: { key: QuestionMode; label: string }[] = [
   { key: "exam", label: "Mock test" },
 ];
 
+// Running header of the book preview: the chosen chapter and its section.
+function chapterHeader(chapters: SectionOptions[], chapterId: string) {
+  for (const section of chapters) {
+    const found = section.chapters.find((chapter) => chapter.id === chapterId);
+    if (found) return { chapterId: found.id, sectionLabel: section.label, chapterLabel: found.label };
+  }
+  return { chapterId: "no-chapter", sectionLabel: "Section", chapterLabel: "Chapter" };
+}
+
 // Admin tool: the question as candidates will see it. Handbook shows the real book page (the same
 // reader as the page builder); Practice and Mock test show the plain question screen.
 export function QuestionPreview({
   question,
   media,
   shuffles,
-  chapter,
+  chapters,
+  chapterId,
 }: {
   question: QuestionData & { id: string };
   media: ResolvedMedia;
   // True when Practice and Mock show the options in a shuffled order.
   shuffles: boolean;
-  chapter: { id: string; sectionLabel: string; chapterLabel: string };
+  chapters: SectionOptions[];
+  chapterId: string;
 }) {
   const [device, setDevice] = useState<PreviewDevice>("phone");
   const [textSize, setTextSize] = useState<TextSize>(DEFAULT_TEXT_SIZE);
@@ -38,14 +50,12 @@ export function QuestionPreview({
     () => [
       {
         id: question.id,
-        chapterId: chapter.id,
-        sectionLabel: chapter.sectionLabel,
-        chapterLabel: chapter.chapterLabel,
+        ...chapterHeader(chapters, chapterId),
         blocks: [],
         question: { data: toClientQuestion(question, "learn"), label: "Question" },
       },
     ],
-    [chapter, question]
+    [chapters, chapterId, question]
   );
 
   return (
