@@ -17,16 +17,17 @@ export function FilterBar({
   hidden?: Record<string, string>;
   children: ReactNode;
 }) {
-  // Phones lay filters out two per row (search takes a whole row); with an even number of selects Apply would sit alone.
+  // Phones lay filters out two per row (one below 360px; search takes a whole row); with an even number of selects
+  // Apply would sit alone.
   const selects = Children.toArray(children).filter((child) => isValidElement(child) && child.type === FilterSelect).length;
   return (
-    <FilterForm action={action} className="mb-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
+    <FilterForm action={action} className="mb-4 grid grid-cols-2 gap-2 max-[359px]:grid-cols-1 sm:flex sm:flex-wrap sm:items-center">
       {hidden &&
         Object.entries(hidden).map(([name, value]) => (
           <input key={name} type="hidden" name={name} value={value} />
         ))}
       {children}
-      <div className={`flex gap-2 ${selects % 2 === 0 ? "col-span-2" : ""}`}>
+      <div className={`flex gap-2 ${selects % 2 === 0 ? "col-span-2 max-[359px]:col-span-1" : ""}`}>
         <FilterApplyButton className={`${buttonClass("secondary")} flex-1 sm:flex-none`} />
         {isFiltered && (
           <Link href={clearHref} className={`${buttonClass("ghost")} flex-1 sm:flex-none`}>
@@ -40,7 +41,7 @@ export function FilterBar({
 
 export function FilterSearch({ name, label, defaultValue, wide = false }: { name: string; label: string; defaultValue: string; wide?: boolean }) {
   return (
-    <div className={`col-span-2 sm:w-64 ${wide ? "md:w-80" : ""}`}>
+    <div className={`col-span-2 max-[359px]:col-span-1 sm:w-64 ${wide ? "md:w-80" : ""}`}>
       <label htmlFor={`filter-${name}`} className="sr-only">
         {label}
       </label>
