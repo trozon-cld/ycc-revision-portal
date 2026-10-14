@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { requireRole } from "@/lib/auth/guard";
+import { CONTENT_EDITORS } from "@/lib/auth/content-editors";
 import { countOf } from "@/lib/format";
 import { loadFaqItems, loadSupportContact } from "@/lib/faq/load";
 import { SUPPORT_FIELDS } from "@/lib/faq/types";
@@ -14,7 +15,7 @@ export const metadata: Metadata = { title: "General queries" };
 
 // General queries: the questions candidates see, and the support contact details. Superadmin only.
 export default async function FaqAdminPage() {
-  await requireRole(["superadmin"]);
+  await requireRole(CONTENT_EDITORS);
   const [items, contact] = await Promise.all([loadFaqItems(false), loadSupportContact()]);
   const published = items.filter((item) => item.status === "published").length;
 

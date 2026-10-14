@@ -4,7 +4,8 @@ import { pool } from "@/lib/db/pool";
 import type { UserRole } from "@/lib/auth/jwt";
 import { setSessionCookie } from "@/lib/auth/cookies";
 import { isJsonRequest } from "@/lib/auth/constants";
-import { loginPause, pausedMessage } from "@/lib/auth/rate-limit";
+import { SITE_WIDE_MESSAGE, loginPause, pausedMessage, shouldRecordLogin, siteWidePause } from "@/lib/auth/rate-limit";
+import { MAX_LOGIN_BODY_BYTES, readSmallJson } from "@/lib/auth/request";
 import { MAX_EMAIL_LENGTH } from "@/lib/users/credentials";
 import { ipFromHeaders, logAuthEvent } from "@/lib/audit/log";
 
@@ -20,7 +21,11 @@ export async function POST(request: NextRequest) {
   if (!isJsonRequest(request.headers)) {
     return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 415 });
   }
-  const body = await request.json().catch(() => null);
+  const read = await readSmallJson(request, MAX_LOGIN_BODY_BYTES);
+  if (!read.ok && read.tooLarge) {
+    return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 413 });
+  }
+  const body = read.ok && typeof read.value === "object" ? (read.value as { email?: unknown; password?: unknown } | null) : null;
   const email =
     typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
   const password = typeof body?.password === "string" ? body.password : "";
@@ -33,6 +38,11 @@ export async function POST(request: NextRequest) {
   }
 
   const ipAddress = ipFromHeaders(request.headers);
+
+  // Under a flood from many addresses: everyone waits, nothing is checked or recorded (keeps the server and log small).
+  if ((await siteWidePause(pool)) > 0) {
+    return NextResponse.json({ error: SITE_WIDE_MESSAGE }, { status: 429 });
+  }
 
   // Paused: refused before the password is checked, and not logged again (keeps the log bounded).
   const pausedSeconds = await loginPause(pool, email, ipAddress);
@@ -75,12 +85,9 @@ export async function POST(request: NextRequest) {
     return invalidCredentials({ id: user.id, role: user.role });
   }
 
-  await logAuthEvent(
-    pool,
-    "login_success",
-    { id: user.id, email: user.email, role: user.role },
-    ipAddress
-  );
+  if (await shouldRecordLogin(pool, user.id)) {
+    await logAuthEvent(pool, "login_success", { id: user.id, email: user.email, role: user.role }, ipAddress);
+  }
 
   await setSessionCookie({
     sub: user.id,

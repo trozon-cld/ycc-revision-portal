@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
+import { CONTENT_EDITORS } from "@/lib/auth/content-editors";
 import { pool } from "@/lib/db/pool";
 import { getChapterContext } from "@/lib/content/pages";
 import { listNames, loadCategoryGroups, loadChapterCategoryIds } from "@/lib/handbook/categories";
@@ -43,7 +44,7 @@ interface QuestionRow {
 }
 
 export default async function ChapterPagesPage({ params }: PageProps<"/admin/handbook/chapters/[chapterId]">) {
-  await requireRole(["superadmin"]);
+  await requireRole(CONTENT_EDITORS);
   const { chapterId } = await params;
   const chapter = await getChapterContext(chapterId);
   if (!chapter) notFound();

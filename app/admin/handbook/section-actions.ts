@@ -3,6 +3,7 @@
 import type { PoolClient } from "pg";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/guard";
+import { CONTENT_EDITORS } from "@/lib/auth/content-editors";
 import { getErrorCode, withTransaction } from "@/lib/db/transaction";
 import { logActivity } from "@/lib/audit/log";
 import {
@@ -21,7 +22,7 @@ export async function createSection(
   _prevState: StructureActionState,
   formData: FormData
 ): Promise<StructureActionState> {
-  const session = await requireRole(["superadmin"]);
+  const session = await requireRole(CONTENT_EDITORS);
 
   const title = normaliseTitle(formData.get("title"));
   const invalid = validateTitle(title, "Section");
@@ -57,7 +58,7 @@ export async function renameSection(
   _prevState: StructureActionState,
   formData: FormData
 ): Promise<StructureActionState> {
-  const session = await requireRole(["superadmin"]);
+  const session = await requireRole(CONTENT_EDITORS);
 
   const sectionId = String(formData.get("sectionId") ?? "");
   const title = normaliseTitle(formData.get("title"));
@@ -97,7 +98,7 @@ export async function renameSection(
 }
 
 export async function moveSection(id: string, direction: "up" | "down"): Promise<StructureActionState> {
-  const session = await requireRole(["superadmin"]);
+  const session = await requireRole(CONTENT_EDITORS);
 
   const sectionId = String(id ?? "");
   if (direction !== "up" && direction !== "down") return { error: "Unknown direction." };
@@ -150,7 +151,7 @@ export async function deleteSection(
   _prevState: StructureActionState,
   formData: FormData
 ): Promise<StructureActionState> {
-  const session = await requireRole(["superadmin"]);
+  const session = await requireRole(CONTENT_EDITORS);
 
   const sectionId = String(formData.get("sectionId") ?? "");
   if (!sectionId) return { error: NOT_FOUND };

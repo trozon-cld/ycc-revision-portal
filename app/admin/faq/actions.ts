@@ -3,6 +3,7 @@
 import type { PoolClient } from "pg";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/guard";
+import { CONTENT_EDITORS } from "@/lib/auth/content-editors";
 import { withTransaction } from "@/lib/db/transaction";
 import { logActivity } from "@/lib/audit/log";
 import { SUPPORT_FIELDS, type SupportContact } from "@/lib/faq/types";
@@ -25,7 +26,7 @@ export type FaqActionState = FormState;
 const NOT_FOUND = "This question no longer exists.";
 
 export async function createFaq(_prevState: FaqActionState, formData: FormData): Promise<FaqActionState> {
-  const session = await requireRole(["superadmin"]);
+  const session = await requireRole(CONTENT_EDITORS);
   const fields = readFaq(formData);
   if ("error" in fields) return fields;
 
@@ -49,7 +50,7 @@ export async function createFaq(_prevState: FaqActionState, formData: FormData):
 }
 
 export async function updateFaq(_prevState: FaqActionState, formData: FormData): Promise<FaqActionState> {
-  const session = await requireRole(["superadmin"]);
+  const session = await requireRole(CONTENT_EDITORS);
   const id = formData.get("faqId");
   if (!isUuid(id)) return { error: NOT_FOUND };
   const fields = readFaq(formData);
@@ -76,7 +77,7 @@ export async function updateFaq(_prevState: FaqActionState, formData: FormData):
 }
 
 export async function moveFaq(id: string, direction: "up" | "down"): Promise<FaqActionState> {
-  const session = await requireRole(["superadmin"]);
+  const session = await requireRole(CONTENT_EDITORS);
   if (!isUuid(id)) return { error: NOT_FOUND };
   if (direction !== "up" && direction !== "down") return { error: "Unknown direction." };
 
@@ -113,7 +114,7 @@ export async function moveFaq(id: string, direction: "up" | "down"): Promise<Faq
 
 // Show (published) or hide (draft) a question for candidates.
 export async function setFaqShown(id: string, shown: boolean): Promise<FaqActionState> {
-  const session = await requireRole(["superadmin"]);
+  const session = await requireRole(CONTENT_EDITORS);
   if (!isUuid(id) || typeof shown !== "boolean") return { error: NOT_FOUND };
   const status = shown ? "published" : "draft";
 
@@ -135,7 +136,7 @@ export async function setFaqShown(id: string, shown: boolean): Promise<FaqAction
 }
 
 export async function deleteFaq(_prevState: FaqActionState, formData: FormData): Promise<FaqActionState> {
-  const session = await requireRole(["superadmin"]);
+  const session = await requireRole(CONTENT_EDITORS);
   const id = formData.get("faqId");
   if (!isUuid(id)) return { error: NOT_FOUND };
 
@@ -157,7 +158,7 @@ export async function deleteFaq(_prevState: FaqActionState, formData: FormData):
 }
 
 export async function saveSupportContact(_prevState: FaqActionState, formData: FormData): Promise<FaqActionState> {
-  const session = await requireRole(["superadmin"]);
+  const session = await requireRole(CONTENT_EDITORS);
   const contact: SupportContact = {
     email: cleanLine(formData.get("email")) || null,
     phone: cleanLine(formData.get("phone")) || null,

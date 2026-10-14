@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { uploadMedia, type MediaActionState } from "@/app/admin/media/actions";
+import type { MediaUploadState } from "@/lib/media/upload";
+import { NOT_THROUGH_MESSAGE } from "@/lib/forms";
 import { prepareImage, type PreparedImage } from "@/lib/media/prepare-image";
 import { formatBytes } from "@/lib/format";
 import { ALT_TEXT_MAX_LENGTH } from "@/lib/limits";
@@ -49,13 +50,13 @@ export function MediaUploadForm({
     }
   }
 
-  async function submit(prev: MediaActionState, formData: FormData): Promise<MediaActionState> {
+  async function submit(_prev: MediaUploadState, formData: FormData): Promise<MediaUploadState> {
     if (selection.status === "preparing") return { error: "The picture is still being prepared. Try again in a moment." };
     if (selection.status !== "ready") return { error: "Choose a picture to upload." };
     formData.set("file", selection.image.main);
     formData.set("thumb", selection.image.thumb);
     formData.set("originalName", selection.originalName);
-    const result = await uploadMedia(prev, formData);
+    const result = await sendUpload(formData);
     if (result.mediaId) uploaded.current = result.mediaId;
     return result;
   }
@@ -107,3 +108,13 @@ export function MediaUploadForm({
   );
 }
 
+// Its own address (app/api/media/upload/route.ts), as pictures are bigger than other requests may be.
+async function sendUpload(formData: FormData): Promise<MediaUploadState> {
+  try {
+    const response = await fetch("/api/media/upload", { method: "POST", body: formData });
+    const result = (await response.json()) as MediaUploadState;
+    return result.error || result.success ? result : { error: NOT_THROUGH_MESSAGE };
+  } catch {
+    return { error: NOT_THROUGH_MESSAGE };
+  }
+}

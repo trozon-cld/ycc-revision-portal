@@ -3,6 +3,7 @@
 import type { PoolClient } from "pg";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/guard";
+import { CONTENT_EDITORS } from "@/lib/auth/content-editors";
 import { getErrorCode, withTransaction } from "@/lib/db/transaction";
 import { logActivity } from "@/lib/audit/log";
 import { questionLogLabel } from "@/lib/questions/labels";
@@ -40,7 +41,7 @@ const CHAPTER_GONE = "That chapter no longer exists. Choose another chapter.";
 
 // Creates the question on its first save, then updates it. Nothing is stored before a valid save.
 export async function saveQuestion(input: QuestionSaveInput): Promise<QuestionSaveResult> {
-  const session = await requireRole(["superadmin"]);
+  const session = await requireRole(CONTENT_EDITORS);
 
   const questionId = input?.questionId ?? null;
   if (questionId !== null && (!isUuid(questionId) || !Number.isInteger(input.expectedVersion))) {
@@ -184,7 +185,7 @@ export async function saveQuestion(input: QuestionSaveInput): Promise<QuestionSa
 }
 
 export async function setQuestionStatus(id: string, status: "draft" | "published"): Promise<QuestionActionState> {
-  const session = await requireRole(["superadmin"]);
+  const session = await requireRole(CONTENT_EDITORS);
 
   const questionId = String(id ?? "");
   if (!isUuid(questionId) || (status !== "draft" && status !== "published")) return { error: NOT_FOUND };
@@ -214,7 +215,7 @@ export async function setQuestionStatus(id: string, status: "draft" | "published
 }
 
 export async function deleteQuestion(_prev: QuestionActionState, formData: FormData): Promise<QuestionActionState> {
-  const session = await requireRole(["superadmin"]);
+  const session = await requireRole(CONTENT_EDITORS);
 
   const questionId = String(formData.get("questionId") ?? "");
   if (!isUuid(questionId)) return { error: NOT_FOUND };

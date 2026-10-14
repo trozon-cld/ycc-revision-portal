@@ -1,15 +1,24 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { MediaUploadForm } from "@/components/admin/media-upload-form";
 import { PanelButton } from "@/components/admin/row-actions";
 import { buttonClass } from "@/components/admin/styles";
 
 export function UploadMediaButton({ configured }: { configured: boolean }) {
+  const router = useRouter();
   return (
     <PanelButton label="Upload picture" title="Upload picture">
       {(close) =>
         configured ? (
-          <MediaUploadForm onCancel={close} onUploaded={close} />
+          <MediaUploadForm
+            onCancel={close}
+            onUploaded={() => {
+              close();
+              // The upload went to its own address, so the list is fetched again here.
+              router.refresh();
+            }}
+          />
         ) : (
           <div>
             <p className="px-5 py-4 text-sm">

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireRole } from "@/lib/auth/guard";
+import { CONTENT_EDITORS } from "@/lib/auth/content-editors";
 import { loadBookCovers, loadPreviewBook, loadPreviewOptions } from "@/lib/content/preview";
 import { isUuid } from "@/lib/ids";
 import { firstParam } from "@/lib/params";
@@ -11,7 +12,7 @@ import { PreviewControls, PreviewReader } from "./preview-client";
 export const metadata: Metadata = { title: "Book preview" };
 
 export default async function BookPreviewPage({ searchParams }: PageProps<"/admin/handbook/preview">) {
-  await requireRole(["superadmin"]);
+  await requireRole(CONTENT_EDITORS);
   const params = await searchParams;
   const options = await loadPreviewOptions();
   const chapterId = pick(params.chapter, options.chapters.map((chapter) => chapter.id));

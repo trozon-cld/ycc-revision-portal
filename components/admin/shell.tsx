@@ -5,12 +5,25 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { LogoutButton } from "@/components/logout-button";
 import { buttonClass } from "./styles";
+import { CONTENT_EDITORS } from "@/lib/auth/content-editors";
 import { ToastProvider } from "./toast";
 
 type Role = "admin" | "superadmin";
 type IconName = "admins" | "candidates" | "categories" | "handbook" | "questions" | "media" | "faq" | "activity" | "account";
 type NavItem = { href: string; label: string; icon: IconName };
 type NavGroup = { heading?: string; items: NavItem[] };
+
+// Shown to whoever CONTENT_EDITORS lists (lib/auth/content-editors.ts).
+const CONTENT: NavGroup = {
+  heading: "Content",
+  items: [
+    { href: "/admin/handbook", label: "Handbook", icon: "handbook" },
+    { href: "/admin/questions", label: "Question bank", icon: "questions" },
+    { href: "/admin/media", label: "Media", icon: "media" },
+    { href: "/admin/faq", label: "General queries", icon: "faq" },
+  ],
+};
+const contentFor = (role: Role): NavGroup[] => (CONTENT_EDITORS.includes(role) ? [CONTENT] : []);
 
 const NAV: Record<Role, NavGroup[]> = {
   superadmin: [
@@ -21,15 +34,7 @@ const NAV: Record<Role, NavGroup[]> = {
         { href: "/admin/categories", label: "Categories", icon: "categories" },
       ],
     },
-    {
-      heading: "Content",
-      items: [
-        { href: "/admin/handbook", label: "Handbook", icon: "handbook" },
-        { href: "/admin/questions", label: "Question bank", icon: "questions" },
-        { href: "/admin/media", label: "Media", icon: "media" },
-        { href: "/admin/faq", label: "General queries", icon: "faq" },
-      ],
-    },
+    ...contentFor("superadmin"),
     {
       items: [
         { href: "/admin/activity", label: "Activity", icon: "activity" },
@@ -37,15 +42,27 @@ const NAV: Record<Role, NavGroup[]> = {
       ],
     },
   ],
-  admin: [
-    {
-      items: [
-        { href: "/admin/candidates", label: "Candidates", icon: "candidates" },
-        { href: "/admin/activity", label: "My activity", icon: "activity" },
-        { href: "/admin/account", label: "My account", icon: "account" },
+  // One group today; with content access, Content sits between Candidates and the rest, as for the Superadmin.
+  admin: CONTENT_EDITORS.includes("admin")
+    ? [
+        { items: [{ href: "/admin/candidates", label: "Candidates", icon: "candidates" }] },
+        ...contentFor("admin"),
+        {
+          items: [
+            { href: "/admin/activity", label: "My activity", icon: "activity" },
+            { href: "/admin/account", label: "My account", icon: "account" },
+          ],
+        },
+      ]
+    : [
+        {
+          items: [
+            { href: "/admin/candidates", label: "Candidates", icon: "candidates" },
+            { href: "/admin/activity", label: "My activity", icon: "activity" },
+            { href: "/admin/account", label: "My account", icon: "account" },
+          ],
+        },
       ],
-    },
-  ],
 };
 
 const ROLE_LABEL: Record<Role, string> = { superadmin: "Superadmin", admin: "Admin" };

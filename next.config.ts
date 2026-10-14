@@ -17,12 +17,7 @@ const SECURITY_HEADERS = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
-  experimental: {
-    serverActions: {
-      // Picture uploads: up to 5 MB plus a small thumbnail (see lib/media/limits.ts).
-      bodySizeLimit: "7mb",
-    },
-  },
+  // Server actions keep Next's default 1 MB request limit; picture uploads use app/api/media/upload instead.
   async headers() {
     return [{ source: "/:path*", headers: SECURITY_HEADERS }];
   },

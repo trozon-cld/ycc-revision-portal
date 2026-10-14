@@ -2,81 +2,19 @@
 
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/guard";
+import { CONTENT_EDITORS } from "@/lib/auth/content-editors";
 import { getErrorCode, withTransaction } from "@/lib/db/transaction";
 import { logActivity } from "@/lib/audit/log";
-import { EXTENSION_BY_MIME, readImageInfo, type ImageInfo } from "@/lib/media/image-info";
-import { MAX_THUMB_BYTES, MAX_UPLOAD_BYTES } from "@/lib/media/limits";
-import { StorageConfigError, deleteObjects, storeObject } from "@/lib/storage/storage";
-import { ALT_TEXT_MAX_LENGTH } from "@/lib/limits";
+import { MEDIA_PAGE_PATH, deleteQuietly, validateAltText, type MediaUploadState } from "@/lib/media/upload";
 import { cleanLine } from "@/lib/text";
-import type { FormState } from "@/lib/forms";
 
-// After an upload, the new picture's id (so the picker can select it).
-export type MediaActionState = FormState & { mediaId?: string };
+// Editing and deleting pictures; uploading goes through POST /api/media/upload (it needs a larger request).
+export type MediaActionState = MediaUploadState;
 
-const MAX_NAME_LENGTH = 255;
-const PAGE_PATH = "/admin/media";
 const NOT_FOUND = "This picture no longer exists.";
-const NOT_CONFIGURED = "Image storage isn't set up yet. Add the Supabase settings to the server's environment.";
-
-export async function uploadMedia(_prevState: MediaActionState, formData: FormData): Promise<MediaActionState> {
-  const session = await requireRole(["superadmin"]);
-
-  const altText = cleanLine(formData.get("altText"));
-  const altError = validateAltText(altText);
-  if (altError) return { error: altError };
-
-  const originalName = cleanLine(formData.get("originalName")).slice(0, MAX_NAME_LENGTH) || "picture";
-  const main = await readUpload(formData.get("file"), MAX_UPLOAD_BYTES);
-  if ("error" in main) return { error: main.error };
-  const thumb = await readUpload(formData.get("thumb"), MAX_THUMB_BYTES);
-  if ("error" in thumb) return { error: "The preview image couldn't be prepared. Please choose the picture again." };
-
-  const id = crypto.randomUUID();
-  const storagePath = `media/${id}.${EXTENSION_BY_MIME[main.info.mime]}`;
-  const thumbPath = `media/${id}-thumb.${EXTENSION_BY_MIME[thumb.info.mime]}`;
-
-  try {
-    await storeObject(storagePath, main.file, main.info.mime);
-    await storeObject(thumbPath, thumb.file, thumb.info.mime);
-  } catch (error) {
-    await deleteQuietly([storagePath, thumbPath]);
-    if (error instanceof StorageConfigError) return { error: NOT_CONFIGURED };
-    console.error("Media upload failed", error);
-    return { error: "The picture couldn't be uploaded. Please try again." };
-  }
-
-  try {
-    await withTransaction(async (client) => {
-      await client.query(
-        `insert into media (id, storage_path, thumb_path, original_name, mime_type, width, height, byte_size, alt_text, uploaded_by)
-         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-        [
-          id,
-          storagePath,
-          thumbPath,
-          originalName,
-          main.info.mime,
-          main.info.width,
-          main.info.height,
-          main.file.size,
-          altText,
-          session.sub,
-        ]
-      );
-      await logActivity(client, session, "media.uploaded", { type: "media", id, label: originalName });
-    });
-  } catch (error) {
-    await deleteQuietly([storagePath, thumbPath]);
-    throw error;
-  }
-
-  revalidatePath(PAGE_PATH);
-  return { success: true, mediaId: id };
-}
 
 export async function updateAltText(_prevState: MediaActionState, formData: FormData): Promise<MediaActionState> {
-  const session = await requireRole(["superadmin"]);
+  const session = await requireRole(CONTENT_EDITORS);
 
   const mediaId = String(formData.get("mediaId") ?? "");
   const altText = cleanLine(formData.get("altText"));
@@ -108,12 +46,12 @@ export async function updateAltText(_prevState: MediaActionState, formData: Form
     throw error;
   }
 
-  revalidatePath(PAGE_PATH);
+  revalidatePath(MEDIA_PAGE_PATH);
   return result;
 }
 
 export async function deleteMedia(_prevState: MediaActionState, formData: FormData): Promise<MediaActionState> {
-  const session = await requireRole(["superadmin"]);
+  const session = await requireRole(CONTENT_EDITORS);
 
   const mediaId = String(formData.get("mediaId") ?? "");
   if (!mediaId) return { error: NOT_FOUND };
@@ -144,31 +82,6 @@ export async function deleteMedia(_prevState: MediaActionState, formData: FormDa
 
   // The row is gone either way; a leftover file is harmless and is only reported.
   await deleteQuietly(paths);
-  revalidatePath(PAGE_PATH);
+  revalidatePath(MEDIA_PAGE_PATH);
   return { success: true };
-}
-
-type ReadUpload = { file: File; info: ImageInfo } | { error: string };
-
-async function readUpload(value: FormDataEntryValue | null, maxBytes: number): Promise<ReadUpload> {
-  if (!(value instanceof File) || value.size === 0) return { error: "Choose a picture to upload." };
-  if (value.size > maxBytes) return { error: `The picture must be ${Math.round(maxBytes / 1024 / 1024)} MB or smaller.` };
-
-  const info = readImageInfo(new Uint8Array(await value.arrayBuffer()));
-  if (!info) return { error: "Only PNG, JPEG and WebP pictures can be uploaded." };
-  return { file: value, info };
-}
-
-async function deleteQuietly(paths: string[]) {
-  try {
-    await deleteObjects(paths);
-  } catch (error) {
-    if (!(error instanceof StorageConfigError)) console.error("Media file cleanup failed", paths, error);
-  }
-}
-
-function validateAltText(altText: string): string | null {
-  if (!altText) return "Describe what the picture shows.";
-  if (altText.length > ALT_TEXT_MAX_LENGTH) return `The description must be ${ALT_TEXT_MAX_LENGTH} characters or fewer.`;
-  return null;
 }

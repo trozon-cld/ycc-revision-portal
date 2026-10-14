@@ -4,6 +4,9 @@ import { createContext, useCallback, useContext, useEffect, useId, useLayoutEffe
 import Link from "next/link";
 import { TEXT_SIZES, type BookPageData, type Sheet, type TextSize } from "@/lib/content/book";
 
+// Phase 2 (planned soon, decided 13 Oct): set to true when Listen reads pages aloud, to show its button again.
+const LISTEN_READY = false;
+
 // The reader bar and its panels. Candidate style: big targets, words next to icons,
 // high contrast. Panels cover the pages (no pop-up windows) and close with Escape.
 
@@ -199,8 +202,8 @@ export function ReaderBar({
           </span>
         </>
       )}
-      {/* Reserved for reading aloud (phase 2); left out on phones, where there's no room for a button that does nothing yet. */}
-      {!compact && !narrow && (
+      {/* Reading aloud (phase 2, planned soon): hidden until it works (LISTEN_READY); never on phones' bars. */}
+      {LISTEN_READY && !compact && !narrow && (
         <button type="button" disabled title="Listen is coming later" className={`${barButton} ${size}`}>
           <Icon path="M5 10v4h3l4 4V6L8 10zM15.5 9a4 4 0 0 1 0 6M18 6.5a8 8 0 0 1 0 11" />
           <span className={showLabels ? undefined : "sr-only"}>Listen</span>

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/guard";
+import { CONTENT_EDITORS } from "@/lib/auth/content-editors";
 import { withTransaction } from "@/lib/db/transaction";
 import { logActivity } from "@/lib/audit/log";
 import { questionLogLabel, questionRef } from "@/lib/questions/labels";
@@ -19,7 +20,7 @@ const ORDER_CHANGED = "The page order changed while you were working. Check the 
 const CHAPTER_GONE = "This chapter no longer exists.";
 
 export async function addQuestionsToChapter(chapterId: string, questionIds: string[]): Promise<OrderActionState> {
-  const session = await requireRole(["superadmin"]);
+  const session = await requireRole(CONTENT_EDITORS);
 
   if (!isUuid(chapterId)) return { error: CHAPTER_GONE };
   if (!Array.isArray(questionIds) || questionIds.length === 0) return { error: "Choose at least one question." };
@@ -78,7 +79,7 @@ export async function addQuestionsToChapter(chapterId: string, questionIds: stri
 
 // Takes a question out of the book. The question itself stays in the bank.
 async function removeQuestionFromChapter(questionId: string): Promise<OrderActionState> {
-  const session = await requireRole(["superadmin"]);
+  const session = await requireRole(CONTENT_EDITORS);
   if (!isUuid(questionId)) return { error: "This question is no longer in the chapter. Reload the page." };
 
   const result = await withTransaction<OrderActionState>(async (client) => {
@@ -116,7 +117,7 @@ export async function removeQuestionForm(_prev: OrderActionState, formData: Form
 // Moves one page or question to a new place in its chapter. `from` is where the admin saw it,
 // so a move based on an out-of-date list is refused instead of landing in the wrong place.
 export async function moveHandbookItem(itemId: string, from: number, to: number): Promise<OrderActionState> {
-  const session = await requireRole(["superadmin"]);
+  const session = await requireRole(CONTENT_EDITORS);
   if (!isUuid(itemId) || !Number.isInteger(from) || !Number.isInteger(to)) return { error: ORDER_CHANGED };
 
   const result = await withTransaction<OrderActionState>(async (client) => {

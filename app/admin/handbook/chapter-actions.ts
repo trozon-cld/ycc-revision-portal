@@ -4,6 +4,7 @@ import type { PoolClient } from "pg";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
+import { CONTENT_EDITORS } from "@/lib/auth/content-editors";
 import { getErrorCode, withTransaction } from "@/lib/db/transaction";
 import { logActivity } from "@/lib/audit/log";
 import { listNames } from "@/lib/handbook/categories";
@@ -27,7 +28,7 @@ export async function createChapter(
   _prevState: StructureActionState,
   formData: FormData
 ): Promise<StructureActionState> {
-  const session = await requireRole(["superadmin"]);
+  const session = await requireRole(CONTENT_EDITORS);
 
   const sectionId = String(formData.get("sectionId") ?? "");
   const title = normaliseTitle(formData.get("title"));
@@ -90,7 +91,7 @@ export async function saveChapterCategories(
   _prevState: StructureActionState,
   formData: FormData
 ): Promise<StructureActionState> {
-  const session = await requireRole(["superadmin"]);
+  const session = await requireRole(CONTENT_EDITORS);
 
   const chapterId = String(formData.get("chapterId") ?? "");
   const categoryIds = categoryIdsFrom(formData);
@@ -150,7 +151,7 @@ export async function renameChapter(
   _prevState: StructureActionState,
   formData: FormData
 ): Promise<StructureActionState> {
-  const session = await requireRole(["superadmin"]);
+  const session = await requireRole(CONTENT_EDITORS);
 
   const chapterId = String(formData.get("chapterId") ?? "");
   const title = normaliseTitle(formData.get("title"));
@@ -191,7 +192,7 @@ export async function renameChapter(
 
 // Moves within the chapter's own section; "Move to section" crosses sections.
 export async function moveChapter(id: string, direction: "up" | "down"): Promise<StructureActionState> {
-  const session = await requireRole(["superadmin"]);
+  const session = await requireRole(CONTENT_EDITORS);
 
   const chapterId = String(id ?? "");
   if (direction !== "up" && direction !== "down") return { error: "Unknown direction." };
@@ -250,7 +251,7 @@ export async function moveChapterToSection(
   _prevState: StructureActionState,
   formData: FormData
 ): Promise<StructureActionState> {
-  const session = await requireRole(["superadmin"]);
+  const session = await requireRole(CONTENT_EDITORS);
 
   const chapterId = String(formData.get("chapterId") ?? "");
   const sectionId = String(formData.get("sectionId") ?? "");
@@ -303,7 +304,7 @@ export async function deleteChapter(
   _prevState: StructureActionState,
   formData: FormData
 ): Promise<StructureActionState> {
-  const session = await requireRole(["superadmin"]);
+  const session = await requireRole(CONTENT_EDITORS);
 
   const chapterId = String(formData.get("chapterId") ?? "");
   if (!chapterId) return { error: NOT_FOUND };
@@ -345,7 +346,7 @@ export async function deleteChapter(
 // Publish: the chapter needs at least one item, and every item must be published. Unpublish: always.
 // Later edits don't unpublish it; candidates only ever see published items in published chapters.
 export async function setChapterStatus(id: string, status: "draft" | "published"): Promise<StructureActionState> {
-  const session = await requireRole(["superadmin"]);
+  const session = await requireRole(CONTENT_EDITORS);
   const chapterId = String(id ?? "");
   if (!isUuid(chapterId) || (status !== "draft" && status !== "published")) return { error: NOT_FOUND };
 

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { randomUUID } from "node:crypto";
 import { requireRole } from "@/lib/auth/guard";
+import { CONTENT_EDITORS } from "@/lib/auth/content-editors";
 import { pool } from "@/lib/db/pool";
 import type { ResolvedMedia } from "@/lib/content/book";
 import { resolveMedia } from "@/lib/content/pages";
@@ -18,7 +19,7 @@ import { QuestionEditor } from "../question-editor";
 export const metadata: Metadata = { title: "Edit question" };
 
 export default async function EditQuestionPage({ params }: PageProps<"/admin/questions/[questionId]">) {
-  await requireRole(["superadmin"]);
+  await requireRole(CONTENT_EDITORS);
   const { questionId } = await params;
   if (!isUuid(questionId)) notFound();
 

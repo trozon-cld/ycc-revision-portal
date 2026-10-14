@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { requireRole } from "@/lib/auth/guard";
+import { CONTENT_EDITORS } from "@/lib/auth/content-editors";
 import { pool } from "@/lib/db/pool";
 import { getSignedUrls, isStorageConfigured } from "@/lib/storage/storage";
 import { firstParam } from "@/lib/params";
@@ -37,7 +38,7 @@ const THUMB_EDGE = 400;
 const LINK_LIFETIME_SECONDS = 60 * 60;
 
 export default async function MediaPage({ searchParams }: PageProps<"/admin/media">) {
-  await requireRole(["superadmin"]);
+  await requireRole(CONTENT_EDITORS);
   const params = await searchParams;
   const search = (firstParam(params.q) ?? "").trim().slice(0, 100);
   const configured = isStorageConfigured();

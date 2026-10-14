@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireRole } from "@/lib/auth/guard";
+import { CONTENT_EDITORS } from "@/lib/auth/content-editors";
 import { plainText } from "@/lib/content/inline";
 import { questionRef } from "@/lib/questions/labels";
 import { BANK_PAGE_SIZE, countBankQuestions, countQuestions, listBankQuestions, listChapterOptions, type BankFilters, type BankRow } from "@/lib/questions/queries";
@@ -20,7 +21,7 @@ import { NewQuestionButton, QuestionRowActions } from "./question-row-actions";
 export const metadata: Metadata = { title: "Question bank" };
 
 export default async function QuestionBankPage({ searchParams }: PageProps<"/admin/questions">) {
-  await requireRole(["superadmin"]);
+  await requireRole(CONTENT_EDITORS);
   const params = await searchParams;
 
   const statusParam = firstParam(params.status) ?? "";

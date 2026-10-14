@@ -4,13 +4,14 @@ import { getSession } from "@/lib/auth/session";
 import { clearAuthCookie } from "@/lib/auth/cookies";
 import { isJsonRequest } from "@/lib/auth/constants";
 import { ipFromHeaders, logAuthEvent } from "@/lib/audit/log";
+import { shouldRecordLogout } from "@/lib/auth/rate-limit";
 
 export async function POST(request: NextRequest) {
   if (!isJsonRequest(request.headers)) {
     return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 415 });
   }
   const session = await getSession();
-  if (session) {
+  if (session && (await shouldRecordLogout(pool, session.sub))) {
     await logAuthEvent(
       pool,
       "logout",

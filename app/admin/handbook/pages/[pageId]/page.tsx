@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
+import { CONTENT_EDITORS } from "@/lib/auth/content-editors";
 import { pool } from "@/lib/db/pool";
 import { collectMediaIds, parseBlocks } from "@/lib/content/blocks";
 import type { ResolvedMedia } from "@/lib/content/book";
@@ -12,7 +13,7 @@ import { PageEditor } from "./page-editor";
 export const metadata: Metadata = { title: "Edit page" };
 
 export default async function EditPagePage({ params }: PageProps<"/admin/handbook/pages/[pageId]">) {
-  await requireRole(["superadmin"]);
+  await requireRole(CONTENT_EDITORS);
   const { pageId } = await params;
   if (!isUuid(pageId)) notFound();
 

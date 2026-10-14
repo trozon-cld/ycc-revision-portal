@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireRole } from "@/lib/auth/guard";
+import { CONTENT_EDITORS } from "@/lib/auth/content-editors";
 import { pool } from "@/lib/db/pool";
 import { loadCategoryGroups, loadChapterCategoryIds } from "@/lib/handbook/categories";
 import { chapterNumber, sectionLetter } from "@/lib/handbook/structure";
@@ -34,7 +35,7 @@ interface ChapterRow {
 }
 
 export default async function HandbookPage() {
-  await requireRole(["superadmin"]);
+  await requireRole(CONTENT_EDITORS);
 
   const [{ rows: sections }, { rows: chapters }, categoryGroups, chapterCategories] = await Promise.all([
     pool.query<SectionRow>(`select id, position, title from sections order by position`),
