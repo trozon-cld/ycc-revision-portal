@@ -13,6 +13,8 @@ export const READINESS_TARGET = 0.9;
 export const MOCK_KEEP_ANSWERS = 10;
 // Answers arriving this long after the deadline still count (slow networks).
 export const SAVE_GRACE_SECONDS = 10;
+// Tests a candidate can start in any hour (a real one takes up to 45 minutes); stops scripted piles of records.
+export const MOCK_STARTS_PER_HOUR = 10;
 
 // Time for a test of `total` questions: the full test's pace, rounded up to whole minutes.
 export function mockMinutes(total: number): number {

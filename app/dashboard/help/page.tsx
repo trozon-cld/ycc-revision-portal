@@ -3,7 +3,8 @@ import Link from "next/link";
 import { requireRole } from "@/lib/auth/guard";
 import { loadFaqItems, loadOwnAdminName, loadSupportContact } from "@/lib/faq/load";
 import { PageBody } from "@/components/candidate/page-body";
-import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { LogoutEverywhere, type LogoutEverywhereStyles } from "@/components/logout-everywhere";
 import { loadMockInProgress } from "@/lib/mock/attempts";
 import { loadPracticeInProgress } from "@/lib/practice/sessions";
 
@@ -17,6 +18,16 @@ function telHref(phone: string): string {
   const digits = (international ? phone.replace(/\(0\)/g, "") : phone).replace(/[^0-9]/g, "");
   return `tel:${international ? "+" : ""}${digits}`;
 }
+
+const LOGOUT_EVERYWHERE: LogoutEverywhereStyles = {
+  button: `${SECONDARY_BUTTON} w-full sm:w-auto`,
+  yes: `${PRIMARY_BUTTON} w-full sm:w-auto`,
+  cancel: `${SECONDARY_BUTTON} w-full sm:w-auto`,
+  box: "rounded-xl border-2 border-primary bg-primary/5 p-5",
+  heading: "text-xl font-bold text-ink focus:outline-none",
+  text: "mt-2 text-lg leading-relaxed text-ink",
+  error: `${ERROR_BOX} mt-4`,
+};
 
 // Help: general queries — the questions the Superadmin has shown, then who to contact.
 export default async function CandidateHelpPage() {
@@ -119,6 +130,14 @@ export default async function CandidateHelpPage() {
           ) : (
             !adminName && <p className="mt-2 text-lg text-ink">If you need help now, please contact the person who gave you your login details.</p>
           )}
+        </section>
+
+        <section aria-labelledby="signins-heading" className="mt-8 rounded-xl border-2 border-ink/15 bg-white p-5">
+          <h2 id="signins-heading" className="text-2xl font-bold text-ink">
+            Your sign-ins
+          </h2>
+          <p className="mt-2 mb-4 text-lg text-ink">Logged in on a shared phone or computer, or one you’ve lost? You can log out of every device at once.</p>
+          <LogoutEverywhere styles={LOGOUT_EVERYWHERE} />
         </section>
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">

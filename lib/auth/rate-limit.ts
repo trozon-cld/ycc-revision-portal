@@ -27,22 +27,39 @@ export async function loginPause(db: Pool | PoolClient, email: string, ip: strin
       addressValues
     ),
   ]);
-  return Math.max(pausedFor(pair, LOGIN_LIMITS.perEmailAndAddress), pausedFor(all, LOGIN_LIMITS.perAddress));
+  return Math.max(pausedFor(pair, LOGIN_LIMITS.perEmailAndAddress, PAUSE_MS), pausedFor(all, LOGIN_LIMITS.perAddress, PAUSE_MS));
 }
 
 // Paused when the last `limit` failures all fall within the window, until the window has passed
 // since the most recent one.
-function pausedFor(rows: { created_at: Date }[], limit: number): number {
+function pausedFor(rows: { created_at: Date }[], limit: number, pauseMs: number): number {
   if (rows.length < limit) return 0;
   const newest = rows[0].created_at.getTime();
   const oldest = rows[limit - 1].created_at.getTime();
-  if (newest - oldest > PAUSE_MS) return 0;
-  return Math.max(0, Math.ceil((newest + PAUSE_MS - Date.now()) / 1000));
+  if (newest - oldest > pauseMs) return 0;
+  return Math.max(0, Math.ceil((newest + pauseMs - Date.now()) / 1000));
 }
 
-export function pausedMessage(seconds: number) {
+export function pausedMessage(seconds: number, what = "login attempts") {
   const minutes = Math.max(1, Math.ceil(seconds / 60));
-  return `Too many login attempts. Please wait ${minutes} minute${minutes === 1 ? "" : "s"} and try again.`;
+  return `Too many ${what}. Please wait ${minutes} minute${minutes === 1 ? "" : "s"} and try again.`;
+}
+
+// My account: wrong current passwords per account (a copied sign-in can't keep guessing it). Pauses only.
+export const PASSWORD_CHECK_LIMITS = { failures: 5, pauseMinutes: 15 };
+
+export const PASSWORD_PAUSED_WHAT = "wrong passwords";
+
+// Seconds until the current password can be checked again, or 0.
+export async function passwordCheckPause(db: Pool | PoolClient, userId: string): Promise<number> {
+  const { rows } = await db.query<{ created_at: Date }>(
+    `select created_at from auth_events
+     where user_id = $1 and event = 'password_check_failed'
+       and created_at > now() - interval '${2 * PASSWORD_CHECK_LIMITS.pauseMinutes} minutes'
+     order by created_at desc limit ${PASSWORD_CHECK_LIMITS.failures}`,
+    [userId]
+  );
+  return pausedFor(rows, PASSWORD_CHECK_LIMITS.failures, PASSWORD_CHECK_LIMITS.pauseMinutes * 60 * 1000);
 }
 
 // Site-wide: when this many logins fail across everyone within the window (many addresses at once), every login

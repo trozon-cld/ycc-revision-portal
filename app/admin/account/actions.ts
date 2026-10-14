@@ -2,14 +2,17 @@
 
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { pool } from "@/lib/db/pool";
 import { getErrorCode, withTransaction } from "@/lib/db/transaction";
-import { logActivity } from "@/lib/audit/log";
+import { ipFromHeaders, logActivity, logAuthEvent } from "@/lib/audit/log";
+import { PASSWORD_PAUSED_WHAT, passwordCheckPause, pausedMessage } from "@/lib/auth/rate-limit";
 import { requireRole } from "@/lib/auth/guard";
 import { setSessionCookie } from "@/lib/auth/cookies";
 import { NO_NAME, normaliseName, validateName } from "@/lib/users/name";
 import { BCRYPT_COST, DUPLICATE_EMAIL, EMAIL_PATTERN, EMAIL_TOO_LONG, isPasswordTooLong, MAX_EMAIL_LENGTH, MIN_PASSWORD_LENGTH, PASSWORD_TOO_LONG } from "@/lib/users/credentials";
 import type { FormState } from "@/lib/forms";
+import type { SessionPayload } from "@/lib/auth/jwt";
 
 export type AccountActionState = FormState;
 
@@ -62,9 +65,8 @@ export async function updateOwnEmail(
   if (email.length > MAX_EMAIL_LENGTH) {
     return { error: EMAIL_TOO_LONG };
   }
-  if (!(await currentPasswordMatches(session.sub, currentPassword))) {
-    return { error: WRONG_PASSWORD };
-  }
+  const passwordProblem = await checkCurrentPassword(session, currentPassword);
+  if (passwordProblem) return { error: passwordProblem };
 
   try {
     await withTransaction(async (client) => {
@@ -116,9 +118,8 @@ export async function updateOwnPassword(
   if (password !== confirmPassword) {
     return { error: "The two new passwords don't match." };
   }
-  if (!(await currentPasswordMatches(session.sub, currentPassword))) {
-    return { error: WRONG_PASSWORD };
-  }
+  const passwordProblem = await checkCurrentPassword(session, currentPassword);
+  if (passwordProblem) return { error: passwordProblem };
 
   const passwordHash = await bcrypt.hash(password, BCRYPT_COST);
   // A new password signs out every other device; this one gets a fresh sign-in so it stays in.
@@ -142,11 +143,16 @@ export async function updateOwnPassword(
   return { success: true };
 }
 
-async function currentPasswordMatches(userId: string, password: string): Promise<boolean> {
-  if (!password) return false;
+// The error to show, or null when the current password is right. Wrong ones are noted; 5 in 15 minutes pause the check.
+async function checkCurrentPassword(session: SessionPayload, password: string): Promise<string | null> {
+  const paused = await passwordCheckPause(pool, session.sub);
+  if (paused > 0) return pausedMessage(paused, PASSWORD_PAUSED_WHAT);
   const { rows } = await pool.query<{ password_hash: string }>(
     `select password_hash from users where id = $1 and role = 'superadmin'`,
-    [userId]
+    [session.sub]
   );
-  return rows[0] ? bcrypt.compare(password, rows[0].password_hash) : false;
+  if (password && rows[0] && (await bcrypt.compare(password, rows[0].password_hash))) return null;
+  await logAuthEvent(pool, "password_check_failed", { id: session.sub, email: session.email, role: session.role }, ipFromHeaders(await headers()));
+  const nowPaused = await passwordCheckPause(pool, session.sub);
+  return nowPaused > 0 ? pausedMessage(nowPaused, PASSWORD_PAUSED_WHAT) : WRONG_PASSWORD;
 }

@@ -1,5 +1,6 @@
 import type { PoolClient } from "pg";
 import { cache } from "react";
+import { formatUkTime } from "@/lib/candidates/access";
 import { resolveMedia } from "@/lib/content/pages";
 import { pool } from "@/lib/db/pool";
 import { withTransaction } from "@/lib/db/transaction";
@@ -11,6 +12,7 @@ import { nextStep, weakestTopics, type TopicResult } from "./results";
 import {
   MOCK_KEEP_ANSWERS,
   MOCK_QUESTIONS,
+  MOCK_STARTS_PER_HOUR,
   READINESS_TARGET,
   SAVE_GRACE_SECONDS,
   mockMinutes,
@@ -119,6 +121,15 @@ export async function startMock(userId: string): Promise<StartReply> {
     if (!category) return { ok: false, error: "Your account isn’t available." };
     const open = await settleOpen(client, userId);
     if (open) return { ok: true, id: open.id };
+    const { rows: recent } = await client.query<{ started_at: Date }>(
+      `select started_at from mock_attempts where user_id = $1 and started_at > now() - interval '1 hour'
+       order by started_at desc limit ${MOCK_STARTS_PER_HOUR}`,
+      [userId]
+    );
+    if (recent.length >= MOCK_STARTS_PER_HOUR) {
+      const nextAt = recent[MOCK_STARTS_PER_HOUR - 1].started_at.getTime() + 60 * 60 * 1000;
+      return { ok: false, error: `You’ve started ${MOCK_STARTS_PER_HOUR} mock tests in the last hour. You can start another at ${formatUkTime(new Date(nextAt))}.` };
+    }
     const questions = await loadPool(client, "mock", category.id);
     if (questions.length === 0) return { ok: false, error: `There are no mock test questions for ${category.name} yet.` };
     // The last test's questions come last in each chapter, so back-to-back tests differ where they can.

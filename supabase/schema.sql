@@ -119,7 +119,7 @@ create index activity_logs_switch_target_idx on activity_logs (target_id, create
 create table auth_events (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz not null default now(),
-  event varchar not null check (event in ('login_success', 'login_failed', 'logout', 'login_paused')),
+  event varchar not null check (event in ('login_success', 'login_failed', 'logout', 'login_paused', 'password_check_failed')),
   user_id uuid,
   email varchar not null,
   role role_type,
