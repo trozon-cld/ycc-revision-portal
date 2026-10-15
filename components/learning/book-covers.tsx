@@ -124,7 +124,9 @@ export function BackCoverFace({
 
 function Logo({ centred = false }: { centred?: boolean }) {
   return (
-    // eslint-disable-next-line @next/next/no-img-element -- small static logo, sized in em
-    <img src={LOGO.src} alt="YCC" width={LOGO.width} height={LOGO.height} className={`h-[3em] w-auto rounded-[0.4em] ring-2 ring-white/60 ${centred ? "self-center" : "self-start"}`} />
+    <span className={`inline-flex max-w-full rounded-[0.4em] bg-card p-[0.35em] ${centred ? "self-center" : "self-start"}`}>
+      {/* eslint-disable-next-line @next/next/no-img-element -- small static logo, sized in em */}
+      <img src={LOGO.src} alt="YCC" width={LOGO.width} height={LOGO.height} className="h-[2.2em] w-auto max-w-full object-contain" />
+    </span>
   );
 }

@@ -19,7 +19,7 @@ export function HomeLogo({ showName = true }: { showName?: boolean }) {
       href="/dashboard"
       className="flex min-h-12 items-center gap-2 rounded-lg text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary"
     >
-      <Image src={LOGO.src} width={LOGO.width} height={LOGO.height} alt="YCC" unoptimized className="h-10 w-auto" />
+      <Image src={LOGO.src} width={LOGO.width} height={LOGO.height} alt="YCC" unoptimized className="h-8 w-auto max-w-[157px] object-contain object-left" />
       {showName ? (
         <>
           <span className="hidden text-base font-semibold min-[420px]:inline">Revision Portal</span>
