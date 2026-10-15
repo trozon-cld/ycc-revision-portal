@@ -280,7 +280,7 @@ export function Panel({ title, onClose, children }: { title: string; onClose: ()
     const first = ref.current?.querySelector<HTMLElement>("[data-autofocus]") ?? ref.current?.querySelector<HTMLElement>("button");
     first?.focus();
   }, []);
-  // On the whole page, so Escape still works when focus was lost (e.g. A+ turned disabled at 24px).
+  // On the whole page, so Escape still works when focus was lost (e.g. A+ turned disabled at the largest size).
   const closeRef = useLatest(onClose);
   useEffect(() => {
     const onKey = (event: globalThis.KeyboardEvent) => {

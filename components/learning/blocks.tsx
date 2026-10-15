@@ -20,11 +20,11 @@ function BlockView({ block, media }: { block: Block; media: ResolvedMedia }) {
   switch (block.type) {
     case "heading":
       return block.level === 1 ? (
-        <h2 className="mb-[0.5em] mt-[0.9em] text-[1.45em] font-bold leading-tight text-primary [break-after:avoid] [break-inside:avoid] first:mt-0">
+        <h2 className="mb-[0.5em] mt-[0.9em] text-[1.3em] font-bold leading-tight text-primary [break-after:avoid] [break-inside:avoid] first:mt-0">
           <InlineText text={block.text} />
         </h2>
       ) : (
-        <h3 className="mb-[0.4em] mt-[0.8em] text-[1.2em] font-bold leading-snug text-ink [break-after:avoid] [break-inside:avoid] first:mt-0">
+        <h3 className="mb-[0.4em] mt-[0.8em] text-[1.15em] font-bold leading-snug text-ink [break-after:avoid] [break-inside:avoid] first:mt-0">
           <InlineText text={block.text} />
         </h3>
       );

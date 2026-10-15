@@ -24,12 +24,14 @@ export type ResolvedMedia = Record<string, { src: string; width: number; height:
 // What the reader reports when a Handbook question is answered; the server marks the response itself.
 export type HandbookOutcome = { kind: "check"; response: unknown } | { kind: "reveal" };
 
-export const TEXT_SIZES = [14, 16, 18, 20, 22, 24] as const;
+export const TEXT_SIZES = [14, 16, 18, 20, 22] as const;
 export type TextSize = (typeof TEXT_SIZES)[number];
 export const DEFAULT_TEXT_SIZE: TextSize = 16;
 
-// A saved setting back to a valid size; empty or out-of-date values give the default.
+// A saved setting back to a valid size: larger than the range (24 before 15 Oct) → the largest; empty or unknown → the default.
 export function toTextSize(value: number | null | undefined): TextSize {
+  const largest = TEXT_SIZES[TEXT_SIZES.length - 1];
+  if (typeof value === "number" && value > largest) return largest;
   return TEXT_SIZES.find((size) => size === value) ?? DEFAULT_TEXT_SIZE;
 }
 

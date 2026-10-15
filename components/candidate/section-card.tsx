@@ -18,29 +18,28 @@ export function SectionCard({
     <>
       <span
         aria-hidden="true"
-        className={`flex size-12 shrink-0 items-center justify-center rounded-xl sm:size-14 ${href ? "bg-primary text-white" : "bg-ink/5 text-muted"}`}
+        className={`flex size-11 shrink-0 items-center justify-center rounded-xl sm:row-span-2 sm:size-14 ${href ? "bg-primary text-white" : "bg-ink/5 text-muted"}`}
       >
         {icon}
       </span>
-      <span className="flex min-w-0 flex-1 flex-col gap-1">
-        <span className="text-lg font-bold text-ink sm:text-xl">{title}</span>
-        <span className="text-base leading-snug text-muted">{description}</span>
-        {!href && (
-          <span className="mt-2 self-start rounded-full bg-ink/10 px-3 py-1 text-sm font-semibold text-ink">
-            Coming soon
-          </span>
-        )}
-      </span>
+      <span className="min-w-0 text-lg font-bold text-ink [overflow-wrap:anywhere] sm:text-xl">{title}</span>
+      <span className="col-span-2 text-base leading-snug text-muted max-[359px]:col-span-1 sm:col-span-1 sm:col-start-2">{description}</span>
+      {!href && (
+        <span className="col-span-2 self-start justify-self-start max-[359px]:col-span-1 rounded-full bg-ink/10 px-3 py-1 text-sm font-semibold text-ink sm:col-span-1 sm:col-start-2">
+          Coming soon
+        </span>
+      )}
       {href && (
-        <span aria-hidden="true" className="hidden self-center text-3xl leading-none text-primary sm:block">
+        <span aria-hidden="true" className="hidden self-center text-3xl leading-none text-primary sm:col-start-3 sm:row-span-2 sm:row-start-1 sm:block">
           ›
         </span>
       )}
     </>
   );
 
-  // Phones: a tile with the icon on top (two per row); from 640px: icon, text and arrow in a row.
-  const shared = "flex h-full flex-col gap-3 rounded-2xl border-2 bg-card p-4 sm:min-h-28 sm:flex-row sm:items-start sm:gap-4 sm:p-5";
+  // Phones: icon beside the title (above it under 360px), the description below, two tiles per row; from 640px: one row with an arrow.
+  const shared =
+    "grid h-full grid-cols-[auto_minmax(0,1fr)] content-start items-center gap-x-3 gap-y-2 rounded-2xl border-2 bg-card p-4 max-[359px]:grid-cols-1 sm:min-h-28 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-start sm:gap-x-4 sm:gap-y-1 sm:p-5";
   if (!href) {
     return <div className={`${shared} border-line-soft`}>{body}</div>;
   }

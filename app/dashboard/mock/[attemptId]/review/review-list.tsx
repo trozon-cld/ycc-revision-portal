@@ -15,7 +15,7 @@ const MARKS = {
 // One row per question; opening it shows the question with both answers and the explanation.
 export function ReviewList({ attemptId, total, items, media }: { attemptId: string; total: number; items: MockReviewItem[]; media: ResolvedMedia }) {
   return (
-    <ul className="mt-6 flex flex-col gap-3">
+    <ul className="mt-5 lg:mt-6 flex flex-col gap-3">
       {items.map((item) => {
         const mark = MARKS[item.mark];
         return (
@@ -34,7 +34,7 @@ export function ReviewList({ attemptId, total, items, media }: { attemptId: stri
                     {item.flaggedInTest && <span className={`${BADGE} border-warn bg-warn-bg text-warn-strong`}>Flagged</span>}
                   </span>
                   <span className="mt-1 block text-base text-muted [overflow-wrap:anywhere]">{item.chapterLabel}</span>
-                  <span className="block text-lg font-semibold text-ink [overflow-wrap:anywhere]">
+                  <span className="block text-base font-semibold text-ink [overflow-wrap:anywhere]">
                     <InlineText text={item.question.stemText} />
                   </span>
                 </span>

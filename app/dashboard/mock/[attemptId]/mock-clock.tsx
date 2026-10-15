@@ -9,10 +9,10 @@ export function MockClock({ seconds, place }: { seconds: number; place: "bar" | 
   return (
     <div
       role="timer"
-      className={`inline-flex items-center gap-2 rounded-full border-2 font-semibold ${tone} ${place === "bar" ? "h-12 px-3 text-lg" : "min-h-11 px-4 text-xl"}`}
+      className={`inline-flex items-center gap-2 rounded-full border-2 font-semibold ${tone} ${place === "bar" ? "h-12 px-3 text-base" : "min-h-11 px-4 text-xl"}`}
     >
       <Icon name="timer" />
-      <span className={place === "bar" ? "sr-only" : "text-lg font-medium"}>Time left</span>
+      <span className={place === "bar" ? "sr-only" : "text-base font-medium"}>Time left</span>
       <span className="tabular-nums font-bold">{time}</span>
     </div>
   );

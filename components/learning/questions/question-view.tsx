@@ -144,7 +144,7 @@ export function QuestionView({
       <fieldset className="m-0 min-w-0 border-0 p-0">
         <legend id={stemId} data-flow-unit className={review ? "sr-only" : "mb-[calc(0.8em*var(--q-space,1))] w-full p-0 [break-after:avoid] [break-inside:avoid]"}>
           <span className="mb-[0.3em] block text-[max(14px,0.8em)] font-bold uppercase tracking-wide text-primary">{label}</span>
-          <span className="block whitespace-pre-line text-[1.25em] font-semibold leading-snug text-ink">
+          <span className="block whitespace-pre-line text-[1.125em] font-semibold leading-snug text-ink">
             <InlineText text={question.stemText} />
           </span>
         </legend>

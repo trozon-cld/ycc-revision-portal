@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { CARD, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { CARD, PAGE_TITLE, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { LogoutButton } from "@/components/logout-button";
 import { SESSION_ENDED_LOGIN } from "@/lib/auth/constants";
 import { getLiveSession, hasAccess } from "@/lib/auth/guard";
@@ -19,10 +19,10 @@ export default async function AccessExpiredPage() {
   return (
     <main className="flex flex-1 items-center justify-center bg-page p-4">
       <div className={`${CARD} flex w-full max-w-md flex-col items-center gap-4 p-6 text-center sm:p-8`}>
-        <h1 className="text-3xl font-bold text-ink">
+        <h1 className={`${PAGE_TITLE}`}>
           Your access has ended
         </h1>
-        <p className="text-lg text-muted">
+        <p className="text-base text-muted">
           Your revision access is no longer active. Please contact your Admin
           to extend or reactivate it.
         </p>

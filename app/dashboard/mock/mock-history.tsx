@@ -2,7 +2,7 @@ import Link from "next/link";
 import { formatUkDate, formatUkTime } from "@/lib/candidates/access";
 import { formatDuration } from "@/lib/format";
 import { READINESS_TARGET, scoreText, type MockEnd, type MockHistory, type MockHistoryEntry } from "@/lib/mock/types";
-import { CARD, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { CARD, SECONDARY_BUTTON, SECTION_TITLE } from "@/components/candidate/buttons";
 
 // How a test ended, where it wasn't simply submitted.
 const ENDED: Partial<Record<MockEnd, string>> = {
@@ -37,15 +37,15 @@ export function MockHistoryList({
     ["Best score", history.best ? score(history.best) : "–"],
   ];
   return (
-    <section aria-labelledby="history-heading" className={level === 2 ? "mt-10" : "mt-4"}>
-      <Heading id="history-heading" className={level === 2 ? "text-2xl font-bold text-ink" : "text-xl font-bold text-ink"}>
+    <section aria-labelledby="history-heading" className={level === 2 ? "mt-5 lg:mt-6 lg:mt-8" : "mt-4"}>
+      <Heading id="history-heading" className={level === 2 ? SECTION_TITLE : "text-xl font-bold text-ink"}>
         {title}
       </Heading>
       <dl className={`mt-4 grid gap-3 ${showAverage ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
         {tiles.map(([label, value]) => (
           <div key={label} className={`${CARD} p-4`}>
             <dt className="text-base text-muted">{label}</dt>
-            <dd className="text-2xl font-bold text-ink">{value}</dd>
+            <dd className={SECTION_TITLE}>{value}</dd>
           </div>
         ))}
       </dl>
@@ -61,7 +61,7 @@ export function MockHistoryList({
                 {/* Phones: the score sits under the date, so neither is squeezed. */}
                 <span className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
                   <span className="min-w-0 flex-1">
-                    <span className="block text-lg font-semibold text-ink">
+                    <span className="block text-base font-semibold text-ink">
                       {formatUkDate(entry.endedAt, "long")} at {formatUkTime(entry.endedAt)}
                     </span>
                     <span className="block text-base text-muted">
@@ -69,7 +69,7 @@ export function MockHistoryList({
                     </span>
                   </span>
                   <span className="flex flex-col sm:shrink-0 sm:items-end sm:text-right">
-                    <span className="text-lg font-bold text-ink">{score(entry)}</span>
+                    <span className="text-base font-bold text-ink">{score(entry)}</span>
                     {reached && <span className="text-sm font-semibold text-ok-strong">Readiness target reached</span>}
                   </span>
                 </span>

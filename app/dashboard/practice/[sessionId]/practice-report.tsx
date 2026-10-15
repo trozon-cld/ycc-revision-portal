@@ -2,7 +2,7 @@ import Link from "next/link";
 import { formatUkDate } from "@/lib/candidates/access";
 import type { PracticeReport } from "@/lib/practice/sessions";
 import { PageBody } from "@/components/candidate/page-body";
-import { BAR_FILL, BAR_TRACK, CARD, ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { BAR_FILL, BAR_TRACK, CARD, ERROR_BOX, PAGE_TITLE, PRIMARY_BUTTON, SECONDARY_BUTTON, SECTION_TITLE } from "@/components/candidate/buttons";
 import { Icon } from "@/components/icons";
 import { ArrivalHeading } from "@/components/candidate/arrival-heading";
 import { ChapterResults } from "@/components/candidate/chapter-results";
@@ -50,12 +50,12 @@ export function PracticeReportView({ report, againUnavailable }: { report: Pract
     <FocusedShell label="Practice tools" status="Your results">
       <PageBody>
         <div className="max-w-3xl">
-          <ArrivalHeading className="text-3xl font-bold text-ink">Your practice results</ArrivalHeading>
+          <ArrivalHeading className={`${PAGE_TITLE}`}>Your practice results</ArrivalHeading>
           <p className="mt-2 text-base text-muted [overflow-wrap:anywhere]">
             {report.categoryName} · {what} · {date}
           </p>
 
-          <section aria-labelledby="score-heading" className={`mt-6 ${CARD} p-5 sm:p-6`}>
+          <section aria-labelledby="score-heading" className={`mt-5 lg:mt-6 ${CARD} p-4 lg:p-5 lg:p-6`}>
             <div className="flex items-center gap-3">
               {report.answered > 0 && (
                 <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full bg-ok-bg text-ok">
@@ -67,7 +67,7 @@ export function PracticeReportView({ report, againUnavailable }: { report: Pract
               </h2>
             </div>
             <p className="mt-1 text-ink">
-              <span className="text-5xl font-bold">{report.rightCount}</span>
+              <span className="text-4xl font-bold">{report.rightCount}</span>
               <span className="text-2xl font-semibold"> of {report.answered} right</span>
             </p>
             {report.answered > 0 && (
@@ -78,7 +78,7 @@ export function PracticeReportView({ report, againUnavailable }: { report: Pract
                 </div>
               </>
             )}
-            <p className="mt-3 text-lg leading-relaxed text-ink">{report.answered > 0 ? encouragement(percent) : "No questions were answered."}</p>
+            <p className="mt-3 text-base leading-relaxed text-ink">{report.answered > 0 ? encouragement(percent) : "No questions were answered."}</p>
             {notAll && (
               <p className="mt-2 text-base text-muted">
                 {report.detailsKept
@@ -96,12 +96,12 @@ export function PracticeReportView({ report, againUnavailable }: { report: Pract
           </section>
 
           {againUnavailable && (
-            <p role="alert" className={`mt-6 ${ERROR_BOX}`}>
+            <p role="alert" className={`mt-5 lg:mt-6 ${ERROR_BOX}`}>
               These questions can’t be practised again right now. Try a new practice instead.
             </p>
           )}
 
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+          <div className="mt-5 lg:mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
             {report.canRetry && report.wrong && (
               <RetryForm action={practiseAgain} field="sessionId" value={report.id} count={report.wrong.length} />
             )}
@@ -122,12 +122,12 @@ export function PracticeReportView({ report, againUnavailable }: { report: Pract
           )}
 
           {report.wrong && report.answered > 0 && (
-            <section aria-labelledby="review-heading" className="mt-10">
-              <h2 id="review-heading" className="text-2xl font-bold text-ink">
+            <section aria-labelledby="review-heading" className="mt-5 lg:mt-6 lg:mt-8">
+              <h2 id="review-heading" className={`${SECTION_TITLE}`}>
                 Questions to look at again
               </h2>
               {report.wrong.length === 0 ? (
-                <p className="mt-3 text-lg text-ink">You got every question right. Well done.</p>
+                <p className="mt-3 text-base text-ink">You got every question right. Well done.</p>
               ) : (
                 <ul className="mt-4 flex flex-col gap-3">
                   {report.wrong.map((item, index) => (
@@ -136,7 +136,7 @@ export function PracticeReportView({ report, againUnavailable }: { report: Pract
                         <summary className="flex min-h-16 cursor-pointer list-none items-center gap-3 rounded-xl px-4 py-3 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary [&::-webkit-details-marker]:hidden">
                           <span className="min-w-0 flex-1">
                             <span className="block text-base text-muted [overflow-wrap:anywhere]">{item.chapterLabel}</span>
-                            <span className="block text-lg font-semibold text-ink [overflow-wrap:anywhere]">
+                            <span className="block text-base font-semibold text-ink [overflow-wrap:anywhere]">
                               <InlineText text={item.question.stemText} />
                             </span>
                           </span>

@@ -180,7 +180,7 @@ export function MockRunner({ run, initialTextSize }: { run: MockRun; initialText
         </p>
         {reminder && !timeUp && (
           <div role="status" className="mb-5 flex flex-col gap-3 rounded-2xl border-2 border-danger bg-danger-bg p-4 sm:flex-row sm:items-center">
-            <p className="flex-1 text-lg font-semibold text-danger-strong">5 minutes left. Please check any questions you haven’t answered.</p>
+            <p className="flex-1 text-base font-semibold text-danger-strong">5 minutes left. Please check any questions you haven’t answered.</p>
             {!reviewing && (
               <button type="button" onClick={openReview} className={`${PRIMARY_BUTTON} w-full sm:w-auto`}>
                 Review answers
@@ -193,7 +193,7 @@ export function MockRunner({ run, initialTextSize }: { run: MockRun; initialText
         )}
 
         {timeUp ? (
-          <p role="status" className="rounded-2xl border-2 border-danger bg-danger-bg p-5 text-lg font-semibold text-danger-strong">
+          <p role="status" className="rounded-2xl border-2 border-danger bg-danger-bg p-4 lg:p-5 text-base font-semibold text-danger-strong">
             Time ran out. Your test is being submitted.
           </p>
         ) : reviewing ? (
@@ -227,7 +227,7 @@ export function MockRunner({ run, initialTextSize }: { run: MockRun; initialText
                   onResponseChange={answer}
                 />
               ) : (
-                <p className="text-lg text-ink">This question is no longer available. It won’t count towards your score.</p>
+                <p className="text-base text-ink">This question is no longer available. It won’t count towards your score.</p>
               )}
             </div>
 

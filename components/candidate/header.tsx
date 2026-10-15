@@ -22,7 +22,7 @@ export function HomeLogo({ showName = true }: { showName?: boolean }) {
       <Image src={LOGO.src} width={LOGO.width} height={LOGO.height} alt="YCC" unoptimized className="h-10 w-auto" />
       {showName ? (
         <>
-          <span className="hidden text-lg font-semibold min-[420px]:inline">Revision Portal</span>
+          <span className="hidden text-base font-semibold min-[420px]:inline">Revision Portal</span>
           <span className="sr-only min-[420px]:hidden">Revision Portal, home</span>
         </>
       ) : (

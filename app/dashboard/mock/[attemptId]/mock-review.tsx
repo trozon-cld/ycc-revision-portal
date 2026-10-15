@@ -1,7 +1,7 @@
 "use client";
 
 import type { RefObject } from "react";
-import { ERROR_BOX, NOTE_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { ERROR_BOX, NOTE_BOX, PAGE_TITLE, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { useConfirmFocus } from "@/components/candidate/use-confirm-focus";
 import { countOf } from "@/lib/format";
 import { Icon } from "@/components/icons";
@@ -40,10 +40,10 @@ export function MockReview({
 
   return (
     <div>
-      <h1 ref={headingRef} tabIndex={-1} className="text-3xl font-bold text-ink focus:outline-none">
+      <h1 ref={headingRef} tabIndex={-1} className={`${PAGE_TITLE} focus:outline-none`}>
         Review your answers
       </h1>
-      <p className="mt-2 text-lg text-ink">
+      <p className="mt-2 text-base text-ink">
         {done} answered · {open} not answered · {flagged} flagged
       </p>
       <p className="mt-1 text-base text-muted">Choose a number to go to that question.</p>
@@ -58,7 +58,7 @@ export function MockReview({
                 type="button"
                 onClick={() => onOpen(index)}
                 aria-label={`Question ${index + 1}: ${state}`}
-                className={`relative flex h-14 w-full items-center justify-center rounded-xl border-2 text-lg font-bold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+                className={`relative flex h-14 w-full items-center justify-center rounded-xl border-2 text-base font-bold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary ${
                   isAnswered ? "hc-fill border-primary bg-primary text-white hover:bg-primary/90" : "border-dashed border-ink/40 bg-card text-ink hover:border-primary"
                 }`}
               >
@@ -86,13 +86,13 @@ export function MockReview({
         </li>
       </ul>
 
-      <div className="mt-8">
+      <div className="mt-5 lg:mt-6">
         {confirming ? (
-          <div role="group" aria-labelledby="submit-heading" className={`${NOTE_BOX} p-5`}>
+          <div role="group" aria-labelledby="submit-heading" className={`${NOTE_BOX} p-4 lg:p-5`}>
             <h2 id="submit-heading" ref={submitHeading} tabIndex={-1} className="text-xl font-bold text-ink focus:outline-none">
               Submit your test now?
             </h2>
-            <p className="mt-2 text-lg leading-relaxed text-ink">
+            <p className="mt-2 text-base leading-relaxed text-ink">
               {open > 0 ? `You have ${countOf(open, "question")} not answered. ` : "You have answered every question. "}
               You can’t change your answers after submitting.
             </p>

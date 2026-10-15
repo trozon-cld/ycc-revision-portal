@@ -101,11 +101,11 @@ export function PracticeRunner({ initialStep, initialTextSize }: { initialStep: 
 
   const { heading: endHeading, opener: endOpener } = useConfirmFocus(confirmEnd);
   const endControls = confirmEnd ? (
-    <div role="group" aria-labelledby="end-heading" className={`${NOTE_BOX} p-5`}>
+    <div role="group" aria-labelledby="end-heading" className={`${NOTE_BOX} p-4 lg:p-5`}>
       <h3 id="end-heading" ref={endHeading} tabIndex={-1} className="text-xl font-bold text-ink focus:outline-none">
         End practice now?
       </h3>
-      <p className="mt-2 text-lg leading-relaxed text-ink">
+      <p className="mt-2 text-base leading-relaxed text-ink">
         {step.answered > 0
           ? `You’ll see your results for the ${step.answered} question${step.answered === 1 ? "" : "s"} you answered.`
           : "You haven’t answered any questions yet, so there are no results to show."}
@@ -194,7 +194,7 @@ export function PracticeRunner({ initialStep, initialTextSize }: { initialStep: 
         </div>
 
         <div aria-live="polite">
-          {message && <p className="mt-4 text-lg font-semibold text-ink">{message}</p>}
+          {message && <p className="mt-4 text-base font-semibold text-ink">{message}</p>}
           {problem && <p className={`mt-4 ${ERROR_BOX}`}>{problem}</p>}
         </div>
 

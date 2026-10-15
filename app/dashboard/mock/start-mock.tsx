@@ -13,7 +13,7 @@ export function StartMock() {
     { error: null }
   );
   return (
-    <form method="post" onSubmit={submitKeepingChoices(action)} className="mt-8">
+    <form method="post" onSubmit={submitKeepingChoices(action)} className="mt-5 lg:mt-6">
       <div aria-live="polite">
         {state.error && (
           <p role="alert" className={`mb-4 ${ERROR_BOX}`}>

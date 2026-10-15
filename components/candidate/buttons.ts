@@ -28,3 +28,7 @@ export const NOTE_BOX = "rounded-2xl border-2 border-primary bg-primary/5";
 export const INFO_BOX = "rounded-2xl border-2 border-primary/30 bg-primary/5";
 export const WARN_BOX = "rounded-2xl border-2 border-warn bg-warn-bg text-warn-strong";
 export const OK_BOX = "rounded-2xl border-2 border-ok bg-ok-bg text-ok-strong";
+
+// Headings on candidate pages: page title 24px (28px on laptops), section title 20px (22px on laptops).
+export const PAGE_TITLE = "text-2xl font-bold text-ink lg:text-[1.75rem]";
+export const SECTION_TITLE = "text-xl font-bold text-ink lg:text-[1.375rem]";

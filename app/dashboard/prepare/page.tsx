@@ -5,7 +5,7 @@ import { preload } from "react-dom";
 import { requireRole } from "@/lib/auth/guard";
 import { SESSION_ENDED_LOGIN } from "@/lib/auth/constants";
 import { coverPreloads, loadCandidateBook } from "@/lib/content/candidate-book";
-import { PRIMARY_BUTTON } from "@/components/candidate/buttons";
+import { PAGE_TITLE, PRIMARY_BUTTON } from "@/components/candidate/buttons";
 import { PageBody } from "@/components/candidate/page-body";
 import { PrepareReader } from "./prepare-reader";
 
@@ -20,11 +20,11 @@ export default async function PreparePage() {
     return (
       <PageBody>
         <div className="max-w-3xl">
-          <h1 className="text-3xl font-bold text-ink">Prepare</h1>
-          <p className="mt-4 text-lg leading-relaxed text-ink">
+          <h1 className={`${PAGE_TITLE}`}>Prepare</h1>
+          <p className="mt-4 text-base leading-relaxed text-ink">
             There’s no Handbook for {book.categoryName} yet. Please check back soon.
           </p>
-          <Link href="/dashboard" className={`${PRIMARY_BUTTON} mt-8 w-full sm:w-auto`}>
+          <Link href="/dashboard" className={`${PRIMARY_BUTTON} mt-5 lg:mt-6 w-full sm:w-auto`}>
             Back to home
           </Link>
         </div>

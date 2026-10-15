@@ -3,7 +3,7 @@ import Link from "next/link";
 import { requireRole } from "@/lib/auth/guard";
 import { loadFaqItems, loadOwnAdminName, loadSupportContact } from "@/lib/faq/load";
 import { PageBody } from "@/components/candidate/page-body";
-import { CARD, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { CARD, PAGE_TITLE, PRIMARY_BUTTON, SECONDARY_BUTTON, SECTION_TITLE } from "@/components/candidate/buttons";
 import { loadMockInProgress } from "@/lib/mock/attempts";
 import { loadPracticeInProgress } from "@/lib/practice/sessions";
 import { Icon } from "@/components/icons";
@@ -40,21 +40,21 @@ export default async function CandidateHelpPage() {
   return (
     <PageBody>
       <div className="max-w-3xl">
-        <h1 className="text-3xl font-bold text-ink">Help: general queries</h1>
-        <p className="mt-2 text-lg text-ink">Answers to common questions about using the portal. Tap a question to see its answer.</p>
+        <h1 className={`${PAGE_TITLE}`}>Help: general queries</h1>
+        <p className="mt-2 text-base text-ink">Answers to common questions about using the portal. Tap a question to see its answer.</p>
 
         {items.length === 0 ? (
-          <p className={`mt-6 ${CARD} p-5 text-lg text-ink`}>There are no questions here yet.</p>
+          <p className={`mt-5 lg:mt-6 ${CARD} p-4 lg:p-5 text-base text-ink`}>There are no questions here yet.</p>
         ) : (
-          <ul className="mt-6 space-y-3">
+          <ul className="mt-5 lg:mt-6 space-y-3">
             {items.map((item) => (
               <li key={item.id}>
                 <details className={`group ${CARD} open:border-primary/50`}>
-                  <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-4 rounded-xl px-5 py-3 text-lg font-semibold text-ink hover:bg-primary/5 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary [&::-webkit-details-marker]:hidden">
+                  <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between gap-4 rounded-xl px-5 py-3 text-base font-semibold text-ink hover:bg-primary/5 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary [&::-webkit-details-marker]:hidden">
                     <span className="[overflow-wrap:anywhere]">{item.question}</span>
                     <Icon name="expand" className="text-primary transition-transform group-open:rotate-180 motion-reduce:transition-none" />
                   </summary>
-                  <div className="space-y-3 px-5 pb-5 text-lg leading-relaxed text-ink">
+                  <div className="space-y-3 px-5 pb-5 text-base leading-relaxed text-ink">
                     {item.answer.split("\n\n").map((paragraph, index) => (
                       <p key={index} className="whitespace-pre-line [overflow-wrap:anywhere]">
                         {paragraph}
@@ -67,11 +67,11 @@ export default async function CandidateHelpPage() {
           </ul>
         )}
 
-        <section aria-labelledby="contact-heading" className={`mt-8 ${CARD} p-5`}>
-          <h2 id="contact-heading" className="text-2xl font-bold text-ink">
+        <section aria-labelledby="contact-heading" className={`mt-5 lg:mt-6 ${CARD} p-4 lg:p-5`}>
+          <h2 id="contact-heading" className={`${SECTION_TITLE}`}>
             Need more help?
           </h2>
-          <p className="mt-2 text-lg text-ink">
+          <p className="mt-2 text-base text-ink">
             {adminName ? (
               <>
                 Your Admin is <strong className="[overflow-wrap:anywhere]">{adminName}</strong>. They can help with your login, your access dates and your category.
@@ -81,7 +81,7 @@ export default async function CandidateHelpPage() {
             )}
           </p>
           {hasSupport ? (
-            <dl className="mt-4 divide-y divide-ink/10 border-t border-ink/10 text-lg text-ink">
+            <dl className="mt-4 divide-y divide-ink/10 border-t border-ink/10 text-base text-ink">
               {contact.email && (
                 <div className="py-3">
                   <dt className="text-base text-muted">Email</dt>
@@ -116,11 +116,11 @@ export default async function CandidateHelpPage() {
               )}
             </dl>
           ) : (
-            !adminName && <p className="mt-2 text-lg text-ink">If you need help now, please contact the person who gave you your login details.</p>
+            !adminName && <p className="mt-2 text-base text-ink">If you need help now, please contact the person who gave you your login details.</p>
           )}
         </section>
 
-        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+        <div className="mt-5 lg:mt-6 flex flex-col gap-3 sm:flex-row">
           {resume && (
             <Link href={resume.href} className={`${PRIMARY_BUTTON} w-full sm:w-auto`}>
               {resume.label}

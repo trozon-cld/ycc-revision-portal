@@ -6,7 +6,7 @@ import { SESSION_ENDED_LOGIN } from "@/lib/auth/constants";
 import { formatUkDate } from "@/lib/candidates/access";
 import { loadCandidateHome } from "@/lib/candidates/home";
 import { PageBody } from "@/components/candidate/page-body";
-import { CARD, ERROR_BOX, NOTE_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { CARD, ERROR_BOX, NOTE_BOX, PAGE_TITLE, PRIMARY_BUTTON, SECONDARY_BUTTON, SECTION_TITLE } from "@/components/candidate/buttons";
 import { LogoutButton } from "@/components/logout-button";
 import { LogoutEverywhere, type LogoutEverywhereStyles } from "@/components/logout-everywhere";
 
@@ -16,15 +16,15 @@ const LOGOUT_EVERYWHERE: LogoutEverywhereStyles = {
   button: `${SECONDARY_BUTTON} w-full sm:w-auto`,
   yes: `${PRIMARY_BUTTON} w-full sm:w-auto`,
   cancel: `${SECONDARY_BUTTON} w-full sm:w-auto`,
-  box: `${NOTE_BOX} p-5`,
+  box: `${NOTE_BOX} p-4 lg:p-5`,
   heading: "text-xl font-bold text-ink focus:outline-none",
-  text: "mt-2 text-lg leading-relaxed text-ink",
+  text: "mt-2 text-base leading-relaxed text-ink",
   error: `${ERROR_BOX} mt-4`,
 };
 
 const ROW = "flex flex-col gap-0.5 py-3 first:pt-0 last:pb-0";
 const LABEL = "text-base font-semibold text-muted";
-const VALUE = "text-lg text-ink [overflow-wrap:anywhere]";
+const VALUE = "text-base text-ink [overflow-wrap:anywhere]";
 
 // Account: who you are, what you're studying, until when, and signing out (read only; nothing here is logged).
 export default async function AccountPage() {
@@ -35,10 +35,10 @@ export default async function AccountPage() {
   return (
     <PageBody>
       <div className="flex max-w-3xl flex-col gap-6">
-        <h1 className="text-3xl font-bold text-ink">Account</h1>
+        <h1 className={`${PAGE_TITLE}`}>Account</h1>
 
-        <section aria-labelledby="details-heading" className={`${CARD} p-5`}>
-          <h2 id="details-heading" className="mb-3 text-2xl font-bold text-ink">
+        <section aria-labelledby="details-heading" className={`${CARD} p-4 lg:p-5`}>
+          <h2 id="details-heading" className={`mb-3 ${SECTION_TITLE}`}>
             Your details
           </h2>
           <dl className="divide-y divide-line-soft">
@@ -58,8 +58,8 @@ export default async function AccountPage() {
           <p className="mt-4 text-base text-muted">To change these, please contact your Admin.</p>
         </section>
 
-        <section aria-labelledby="category-heading" className={`${CARD} p-5`}>
-          <h2 id="category-heading" className="text-2xl font-bold text-ink">
+        <section aria-labelledby="category-heading" className={`${CARD} p-4 lg:p-5`}>
+          <h2 id="category-heading" className={`${SECTION_TITLE}`}>
             Your category
           </h2>
           <p className="mt-2 text-xl font-bold text-ink [overflow-wrap:anywhere]">{home.current.name}</p>
@@ -71,14 +71,14 @@ export default async function AccountPage() {
           )}
         </section>
 
-        <section aria-labelledby="signins-heading" className={`${CARD} p-5`}>
-          <h2 id="signins-heading" className="text-2xl font-bold text-ink">
+        <section aria-labelledby="signins-heading" className={`${CARD} p-4 lg:p-5`}>
+          <h2 id="signins-heading" className={`${SECTION_TITLE}`}>
             Your sign-ins
           </h2>
           <div className="mt-4">
             <LogoutButton className={`${PRIMARY_BUTTON} w-full sm:w-auto`} />
           </div>
-          <p className="mt-6 mb-4 text-lg text-ink">Logged in on a shared phone or computer, or one you’ve lost? You can log out of every device at once.</p>
+          <p className="mt-5 lg:mt-6 mb-4 text-base text-ink">Logged in on a shared phone or computer, or one you’ve lost? You can log out of every device at once.</p>
           <LogoutEverywhere styles={LOGOUT_EVERYWHERE} />
         </section>
 
