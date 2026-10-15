@@ -10,7 +10,7 @@ export function FlagToggle({ flagged, onClick, disabled = false }: { flagged: bo
       onClick={onClick}
       disabled={disabled}
       className={`${BUTTON_BASE} w-full sm:w-auto ${
-        flagged ? "border-warn border-b-warn-strong bg-warn-bg text-warn-strong" : "border-line border-b-edge bg-card text-primary hover:bg-fill-soft"
+        flagged ? "border-warn border-b-warn-strong [--btn-edge:var(--ycc-warn-strong)] bg-warn-bg text-warn-strong" : "border-line border-b-edge [--btn-edge:var(--ycc-edge)] bg-card text-primary hover:bg-fill-soft"
       }`}
     >
       <Icon name="flag" weight={flagged ? "fill" : "bold"} />

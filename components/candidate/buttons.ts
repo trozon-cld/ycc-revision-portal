@@ -1,9 +1,9 @@
-// Shared candidate styles: pressable buttons (48px, a darker bottom edge that flattens when pressed), cards, choice rows.
+// Shared candidate styles: pressable buttons (48px; the darker bottom edge thins and the label drops 2px when pressed, inside the button), cards, choice rows.
 export const BUTTON_BASE =
-  "inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border-2 border-b-4 px-5 py-1 text-base font-semibold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-default disabled:opacity-60 not-disabled:active:mb-0.5 not-disabled:active:translate-y-0.5 not-disabled:active:border-b-2";
+  "inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border-2 px-5 pt-1 pb-1.5 text-base font-semibold shadow-[inset_0_-2px_0_var(--btn-edge)] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-default disabled:opacity-60 not-disabled:active:pt-1.5 not-disabled:active:pb-1 not-disabled:active:shadow-none";
 
-export const PRIMARY_BUTTON = `${BUTTON_BASE} hc-edge border-primary border-b-ink bg-primary text-white hover:bg-primary/90`;
-export const SECONDARY_BUTTON = `${BUTTON_BASE} border-line border-b-edge bg-card text-primary hover:bg-fill-soft`;
+export const PRIMARY_BUTTON = `${BUTTON_BASE} hc-edge border-primary border-b-ink [--btn-edge:var(--ycc-ink)] bg-primary text-white hover:bg-primary/90`;
+export const SECONDARY_BUTTON = `${BUTTON_BASE} border-line border-b-edge [--btn-edge:var(--ycc-edge)] bg-card text-primary hover:bg-fill-soft`;
 
 // A white card on the page tint.
 export const CARD = "rounded-2xl border-2 border-line bg-card";
