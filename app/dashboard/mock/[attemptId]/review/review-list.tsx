@@ -38,7 +38,7 @@ export function ReviewList({ attemptId, total, items, media }: { attemptId: stri
                     <InlineText text={item.question.stemText} />
                   </span>
                 </span>
-                <span className="shrink-0 rounded-lg border-2 border-primary px-3 py-2 text-base font-semibold text-primary">
+                <span className="shrink-0 rounded-xl border-2 border-primary px-3 py-2 text-base font-semibold text-primary">
                   <span className="group-open:hidden">See answer</span>
                   <span className="hidden group-open:inline">Hide</span>
                 </span>

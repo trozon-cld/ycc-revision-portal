@@ -101,7 +101,7 @@ export function PracticeRunner({ initialStep, initialTextSize }: { initialStep: 
 
   const { heading: endHeading, opener: endOpener } = useConfirmFocus(confirmEnd);
   const endControls = confirmEnd ? (
-    <div role="group" aria-labelledby="end-heading" className="rounded-xl border-2 border-primary bg-primary/5 p-5">
+    <div role="group" aria-labelledby="end-heading" className="rounded-2xl border-2 border-primary bg-primary/5 p-5">
       <h3 id="end-heading" ref={endHeading} tabIndex={-1} className="text-xl font-bold text-ink focus:outline-none">
         End practice now?
       </h3>
@@ -138,6 +138,8 @@ export function PracticeRunner({ initialStep, initialTextSize }: { initialStep: 
     </button>
   );
 
+  const nextLabel = busy ? "Loading…" : isLast ? "See your results" : "Next question";
+
   return (
     <FocusedShell label="Practice tools"
       status={`Question ${step.position + 1} of ${step.total}`}
@@ -148,7 +150,7 @@ export function PracticeRunner({ initialStep, initialTextSize }: { initialStep: 
       actions={endControls}
       scrollRef={scrollRef}
     >
-      <div className="mx-auto w-full max-w-3xl px-4 pt-5 pb-12 sm:pt-8">
+      <div className={`mx-auto w-full max-w-3xl px-4 pt-5 pb-12 sm:pt-8 ${checked ? "max-lg:pb-56" : ""}`}>
         <h1 ref={headingRef} tabIndex={-1} className="sr-only">
           Question {step.position + 1} of {step.total}
         </h1>
@@ -161,6 +163,11 @@ export function PracticeRunner({ initialStep, initialTextSize }: { initialStep: 
             seed={`${step.sessionId}:${step.question.id}`}
             initialState={initialState}
             retry={false}
+            panel={
+              <button type="button" onClick={goNext} disabled={busy} className={`${PRIMARY_BUTTON} w-full`}>
+                {nextLabel}
+              </button>
+            }
             onStateChange={(state) => setChecked(state.phase === "checked")}
             onCheck={async (response) => {
               const reply = await reachServer(() => checkPracticeAnswer(step.sessionId, step.position, response));
@@ -193,9 +200,11 @@ export function PracticeRunner({ initialStep, initialTextSize }: { initialStep: 
 
         <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-start">
           {checked && (
-            <button type="button" onClick={goNext} disabled={busy} className={`${PRIMARY_BUTTON} w-full sm:w-auto`}>
-              {busy ? "Loading…" : isLast ? "See your results" : "Next question"}
-            </button>
+            <div className="max-lg:hidden">
+              <button type="button" onClick={goNext} disabled={busy} className={PRIMARY_BUTTON}>
+                {nextLabel}
+              </button>
+            </div>
           )}
           <FlagButton key={`${step.sessionId}:${step.position}`} questionId={step.question.id} initialFlagged={step.flagged} />
         </div>

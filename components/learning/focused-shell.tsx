@@ -183,7 +183,7 @@ export function FocusedShell({
         </div>
         {timer && <div className="flex justify-center border-b border-line bg-card px-3 py-1.5 min-[840px]:hidden">{timer("strip")}</div>}
         <div className="relative min-h-0 flex-1">
-          <div ref={scrollRef} className="absolute inset-0 overflow-y-auto" style={PICTURE_LIMITS}>
+          <div ref={scrollRef} className="focused-scroll absolute inset-0 overflow-y-auto" style={PICTURE_LIMITS}>
             {children}
           </div>
           {settings && (

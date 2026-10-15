@@ -2,7 +2,8 @@ import Link from "next/link";
 import { formatUkDate } from "@/lib/candidates/access";
 import type { PracticeReport } from "@/lib/practice/sessions";
 import { PageBody } from "@/components/candidate/page-body";
-import { CARD, ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { BAR_FILL, BAR_TRACK, CARD, ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { Icon } from "@/components/icons";
 import { ArrivalHeading } from "@/components/candidate/arrival-heading";
 import { ChapterResults } from "@/components/candidate/chapter-results";
 import { InlineText } from "@/components/learning/inline-text";
@@ -54,15 +55,29 @@ export function PracticeReportView({ report, againUnavailable }: { report: Pract
             {report.categoryName} · {what} · {date}
           </p>
 
-          <section aria-labelledby="score-heading" className="mt-6 rounded-xl border-2 border-primary/30 bg-primary/5 p-5 sm:p-6">
-            <h2 id="score-heading" className="text-base font-semibold text-muted">
-              Your score
-            </h2>
+          <section aria-labelledby="score-heading" className={`mt-6 ${CARD} p-5 sm:p-6`}>
+            <div className="flex items-center gap-3">
+              {report.answered > 0 && (
+                <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full bg-ok-bg text-ok">
+                  <Icon name="tick" />
+                </span>
+              )}
+              <h2 id="score-heading" className="text-base font-semibold text-muted">
+                Your score
+              </h2>
+            </div>
             <p className="mt-1 text-ink">
               <span className="text-5xl font-bold">{report.rightCount}</span>
               <span className="text-2xl font-semibold"> of {report.answered} right</span>
             </p>
-            {report.answered > 0 && <p className="mt-1 text-xl font-semibold text-ink">{percent}%</p>}
+            {report.answered > 0 && (
+              <>
+                <p className="mt-1 text-xl font-semibold text-ink">{percent}%</p>
+                <div aria-hidden="true" className={`${BAR_TRACK} mt-3 h-4`}>
+                  <div className={BAR_FILL} style={{ width: `${percent}%` }} />
+                </div>
+              </>
+            )}
             <p className="mt-3 text-lg leading-relaxed text-ink">{report.answered > 0 ? encouragement(percent) : "No questions were answered."}</p>
             {notAll && (
               <p className="mt-2 text-base text-muted">
@@ -125,7 +140,7 @@ export function PracticeReportView({ report, againUnavailable }: { report: Pract
                               <InlineText text={item.question.stemText} />
                             </span>
                           </span>
-                          <span className="shrink-0 rounded-lg border-2 border-primary px-3 py-2 text-base font-semibold text-primary">
+                          <span className="shrink-0 rounded-xl border-2 border-primary px-3 py-2 text-base font-semibold text-primary">
                             <span className="group-open:hidden">See answer</span>
                             <span className="hidden group-open:inline">Hide</span>
                           </span>

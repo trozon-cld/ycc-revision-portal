@@ -58,7 +58,7 @@ export function MockReview({
                 type="button"
                 onClick={() => onOpen(index)}
                 aria-label={`Question ${index + 1}: ${state}`}
-                className={`relative flex h-14 w-full items-center justify-center rounded-lg border-2 text-lg font-bold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+                className={`relative flex h-14 w-full items-center justify-center rounded-xl border-2 text-lg font-bold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary ${
                   isAnswered ? "hc-fill border-primary bg-primary text-white hover:bg-primary/90" : "border-dashed border-ink/40 bg-card text-ink hover:border-primary"
                 }`}
               >
@@ -76,10 +76,10 @@ export function MockReview({
 
       <ul className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-base text-ink" aria-label="Key">
         <li className="flex items-center gap-2">
-          <span aria-hidden="true" className="size-5 rounded border-2 border-primary bg-primary" /> Answered
+          <span aria-hidden="true" className="size-5 rounded-md border-2 border-primary bg-primary" /> Answered
         </li>
         <li className="flex items-center gap-2">
-          <span aria-hidden="true" className="size-5 rounded border-2 border-dashed border-ink/40 bg-card" /> Not answered
+          <span aria-hidden="true" className="size-5 rounded-md border-2 border-dashed border-ink/40 bg-card" /> Not answered
         </li>
         <li className="flex items-center gap-2">
           <span aria-hidden="true" className="size-5 rounded-full bg-warn" /> Flagged
@@ -88,7 +88,7 @@ export function MockReview({
 
       <div className="mt-8">
         {confirming ? (
-          <div role="group" aria-labelledby="submit-heading" className="rounded-xl border-2 border-primary bg-primary/5 p-5">
+          <div role="group" aria-labelledby="submit-heading" className="rounded-2xl border-2 border-primary bg-primary/5 p-5">
             <h2 id="submit-heading" ref={submitHeading} tabIndex={-1} className="text-xl font-bold text-ink focus:outline-none">
               Submit your test now?
             </h2>

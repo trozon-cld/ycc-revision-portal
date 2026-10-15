@@ -179,7 +179,7 @@ export function MockRunner({ run, initialTextSize }: { run: MockRun; initialText
           {announcement}
         </p>
         {reminder && !timeUp && (
-          <div role="status" className="mb-5 flex flex-col gap-3 rounded-xl border-2 border-danger bg-danger-bg p-4 sm:flex-row sm:items-center">
+          <div role="status" className="mb-5 flex flex-col gap-3 rounded-2xl border-2 border-danger bg-danger-bg p-4 sm:flex-row sm:items-center">
             <p className="flex-1 text-lg font-semibold text-danger-strong">5 minutes left. Please check any questions you haven’t answered.</p>
             {!reviewing && (
               <button type="button" onClick={openReview} className={`${PRIMARY_BUTTON} w-full sm:w-auto`}>
@@ -193,7 +193,7 @@ export function MockRunner({ run, initialTextSize }: { run: MockRun; initialText
         )}
 
         {timeUp ? (
-          <p role="status" className="rounded-xl border-2 border-danger bg-danger-bg p-5 text-lg font-semibold text-danger-strong">
+          <p role="status" className="rounded-2xl border-2 border-danger bg-danger-bg p-5 text-lg font-semibold text-danger-strong">
             Time ran out. Your test is being submitted.
           </p>
         ) : reviewing ? (

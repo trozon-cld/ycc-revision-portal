@@ -5,7 +5,7 @@ import { seededShuffle } from "@/lib/questions/shuffle";
 import { choosePrompt, type MultiPickAnswer as Answer, type MultiPickContent } from "@/lib/questions/types/multi-pick";
 import { optionLetter } from "@/lib/questions/types/single-text";
 import { InlineText } from "../inline-text";
-import { MarkIcon, OptionStatus } from "./answer-parts";
+import { MarkIcon, OptionStatus, optionLook } from "./answer-parts";
 import type { AnswerAreaProps } from "./renderers";
 
 // "Multiple answers": choose exactly N (more is blocked with a note), real checkboxes under square badges.
@@ -85,17 +85,14 @@ export function MultiPickAnswer({ mode, seed, content, answer, response, onRespo
           const isWrongChoice = showCorrect && selected && !isCorrect;
           const inputId = `${name}-${option.id}`;
 
-          let tone = "border-line bg-card";
-          if (isCorrect) tone = "border-ok bg-ok-bg";
-          else if (isWrongChoice) tone = "border-warn bg-warn-bg";
-          else if (selected) tone = "border-primary bg-primary/[0.06]";
+          const tone = optionLook(mode, isCorrect ? "correct" : isWrongChoice ? "wrong" : selected ? "selected" : "plain", locked);
 
           return (
             <li key={option.id} data-flow-unit className="[break-inside:avoid]">
               <label
                 htmlFor={inputId}
                 data-option={option.id}
-                className={`relative flex min-h-[max(var(--answer-min-h,56px),var(--answer-min-em,3.5em))] items-center gap-[0.75em] rounded-lg border-2 px-[0.9em] py-[calc(0.55em*var(--q-space,1))] leading-snug text-ink has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary ${tone} ${
+                className={`relative flex min-h-[max(var(--answer-min-h,56px),var(--answer-min-em,3.5em))] items-center gap-[0.75em] border-2 px-[0.9em] py-[calc(0.55em*var(--q-space,1))] leading-snug text-ink has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary ${tone} ${
                   locked ? "cursor-default" : "cursor-pointer hover:border-primary"
                 }`}
               >

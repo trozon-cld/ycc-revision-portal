@@ -44,6 +44,7 @@ export function QuestionView({
   onStateChange,
   retry = true,
   review = false,
+  panel,
 }: {
   question: ClientQuestion;
   // e.g. "Question 3" in the book, "3 of 36" in a mock test.
@@ -66,6 +67,8 @@ export function QuestionView({
   retry?: boolean;
   // Reports: the question text is already in the line above, so it's kept for screen readers only.
   review?: boolean;
+  // Practice: below laptop width the result shows in a panel along the bottom, with these controls (e.g. Next question).
+  panel?: ReactNode;
 }) {
   const [ownState, setOwnState] = useState<QuestionViewState>(initialState ?? { ...FRESH_QUESTION_STATE, response: initialResponse });
   const [checking, setChecking] = useState(false);
@@ -185,7 +188,7 @@ export function QuestionView({
 
       {canCheck && AnswerArea && phase === "answering" && (
         <div data-flow-unit className="mt-[calc(0.9em*var(--q-space,1))] flex flex-wrap gap-[0.6em] [break-inside:avoid]">
-          <FrameButton key="check" primary onClick={check} disabled={checking}>
+          <FrameButton key="check" primary fresh={mode !== "learn"} onClick={check} disabled={checking}>
             {checking ? "Checking…" : "Check answer"}
           </FrameButton>
           {mode === "learn" && <FrameButton
@@ -201,15 +204,22 @@ export function QuestionView({
       {/* After Check or Reveal, the message and "Try again" share one row, so the question stays compact. */}
       <div
         data-flow-unit
-        className={phase === "answering" ? "[break-inside:avoid]" : "mt-[calc(0.9em*var(--q-space,1))] flex flex-wrap items-center gap-[0.6em] [break-inside:avoid]"}
+        data-feedback-panel={panel && phase !== "answering" ? "" : undefined}
+        className={
+          phase === "answering"
+            ? "[break-inside:avoid]"
+            : panel
+              ? `mt-[calc(0.9em*var(--q-space,1))] [break-inside:avoid] ${PANEL}`
+              : "mt-[calc(0.9em*var(--q-space,1))] flex flex-wrap items-center gap-[0.6em] [break-inside:avoid]"
+        }
       >
-        <div className="min-w-0 flex-1 basis-[12em]">
+        <div className={panel && phase !== "answering" ? "mx-auto w-full max-w-3xl" : "min-w-0 flex-1 basis-[12em]"}>
           <div role="status" aria-live="polite">
             {notice && <p className="mt-[calc(0.9em*var(--q-space,1))] font-semibold text-ink">{notice}</p>}
           </div>
           {phase !== "answering" && (
             <div ref={resultRef} tabIndex={-1} className="focus:outline-none">
-              {phase === "checked" && result && <Feedback result={result} showsAnswer={showsAnswer} />}
+              {phase === "checked" && result && <Feedback result={result} showsAnswer={showsAnswer} fresh={mode !== "learn"} />}
               {phase === "revealed" && (
                 <p className="rounded-lg border-l-[0.3em] border-primary bg-primary/[0.07] px-[0.9em] py-[0.6em] font-semibold text-ink">
                   The correct answer is highlighted.
@@ -217,6 +227,7 @@ export function QuestionView({
               )}
             </div>
           )}
+          {panel && phase !== "answering" && <div className="mt-4 lg:hidden">{panel}</div>}
         </div>
         {canCheck && retry && AnswerArea && phase !== "answering" && (
           <FrameButton key="again" onClick={reset}>
@@ -237,12 +248,16 @@ export function QuestionView({
   );
 }
 
+// Below laptop width: fixed along the bottom of the screen (slides up unless motion is reduced); from 1024px in the card.
+const PANEL =
+  "max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-10 max-lg:mt-0 max-lg:border-t-2 max-lg:border-line max-lg:bg-card max-lg:px-4 max-lg:pt-4 max-lg:pb-[calc(1rem+env(safe-area-inset-bottom))] max-lg:shadow-[0_-4px_16px_rgb(30_41_59/0.12)] max-lg:motion-safe:animate-[panel-up_200ms_ease-out]";
+
 // "Not answered" only comes up when reviewing a mock test; a check always has an answer.
-function Feedback({ result, showsAnswer }: { result: CheckResult; showsAnswer: boolean }) {
+function Feedback({ result, showsAnswer, fresh }: { result: CheckResult; showsAnswer: boolean; fresh: boolean }) {
   const { correct } = result;
   return (
     <p
-      className={`flex items-start gap-[0.5em] rounded-lg border-l-[0.3em] px-[0.9em] py-[0.6em] font-semibold ${
+      className={`flex items-start gap-[0.5em] ${fresh ? "rounded-xl" : "rounded-lg"} border-l-[0.3em] px-[0.9em] py-[0.6em] font-semibold ${
         correct ? "border-ok bg-ok-bg text-ok-strong" : "border-warn bg-warn-bg text-warn-strong"
       }`}
     >
@@ -257,11 +272,14 @@ function Feedback({ result, showsAnswer }: { result: CheckResult; showsAnswer: b
 
 function FrameButton({
   primary = false,
+  fresh = false,
   disabled = false,
   onClick,
   children,
 }: {
   primary?: boolean;
+  // Practice and Mock: the pressable look of the candidate buttons (same size as before).
+  fresh?: boolean;
   disabled?: boolean;
   onClick: () => void;
   children: ReactNode;
@@ -271,7 +289,9 @@ function FrameButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`inline-flex min-h-[max(var(--answer-min-h,56px),var(--answer-min-em,3.5em))] items-center justify-center rounded-lg px-[1em] font-semibold transition-colors focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60 ${
+      className={`inline-flex min-h-[max(var(--answer-min-h,56px),var(--answer-min-em,3.5em))] items-center justify-center px-[1em] font-semibold transition-colors focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60 ${
+        fresh ? "rounded-xl shadow-[inset_0_-4px_0_var(--ycc-ink)] not-disabled:active:shadow-[inset_0_-2px_0_var(--ycc-ink)]" : "rounded-lg"
+      } ${
         primary ? "hc-edge bg-primary text-white hover:bg-primary/90" : "border-2 border-primary bg-card text-primary hover:bg-primary/[0.06]"
       }`}
     >

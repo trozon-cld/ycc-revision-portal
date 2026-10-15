@@ -5,7 +5,7 @@ import { seededShuffle } from "@/lib/questions/shuffle";
 import type { SinglePictureAnswer as Answer, SinglePictureContent } from "@/lib/questions/types/single-picture";
 import { optionLetter } from "@/lib/questions/types/single-text";
 import { InlineText } from "../inline-text";
-import { MarkIcon, type Mark } from "./answer-parts";
+import { MarkIcon, optionLook, type Mark } from "./answer-parts";
 import type { AnswerAreaProps } from "./renderers";
 import { MeasuringContext } from "../measuring";
 
@@ -32,17 +32,14 @@ export function SinglePictureAnswer({ mode, seed, content, media, answer, respon
         const inputId = `${name}-${option.id}`;
         const picture = media[option.mediaId];
 
-        let tone = "border-line bg-card";
-        if (isCorrect) tone = "border-ok bg-ok-bg";
-        else if (isWrongChoice) tone = "border-warn bg-warn-bg";
-        else if (selected) tone = "border-primary bg-primary/[0.06]";
+        const tone = optionLook(mode, isCorrect ? "correct" : isWrongChoice ? "wrong" : selected ? "selected" : "plain", locked);
 
         return (
           <li key={option.id} data-flow-unit className="min-w-0 [break-inside:avoid]">
             <label
               htmlFor={inputId}
               data-option={option.id}
-              className={`flex h-full flex-col gap-[0.4em] rounded-lg border-2 p-[0.4em] text-ink has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary ${tone} ${
+              className={`flex h-full flex-col gap-[0.4em] border-2 p-[0.4em] text-ink has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary ${tone} ${
                 locked ? "cursor-default" : "cursor-pointer hover:border-primary"
               }`}
             >

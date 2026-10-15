@@ -2,7 +2,7 @@ import Link from "next/link";
 import { countOf, formatDuration } from "@/lib/format";
 import { MOCK_KEEP_ANSWERS, READINESS_TARGET, scorePercent, type MockEnd, type MockResults } from "@/lib/mock/types";
 import { PageBody } from "@/components/candidate/page-body";
-import { CARD, ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { BAR_FILL, BAR_TRACK, CARD, ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { ArrivalHeading } from "@/components/candidate/arrival-heading";
 import { ChapterResults } from "@/components/candidate/chapter-results";
 import { practiseMockMisses } from "@/app/dashboard/practice/actions";
@@ -41,8 +41,11 @@ export function MockResultsView({ attemptId, results, practiceUnavailable }: { a
             {results.rightCount} of {results.outOf} right{" "}
             <span className="ml-2 text-2xl font-semibold text-muted">{scorePercent(results.rightCount, results.outOf)}%</span>
           </p>
+          <div aria-hidden="true" className={`${BAR_TRACK} mt-4 h-4`}>
+            <div className={BAR_FILL} style={{ width: `${share * 100}%` }} />
+          </div>
           <p
-            className={`mt-4 rounded-lg border-l-4 px-4 py-3 text-lg font-semibold ${
+            className={`mt-4 rounded-xl border-l-4 px-4 py-3 text-lg font-semibold ${
               ready ? "border-ok bg-ok-bg text-ok-strong" : "border-primary bg-primary/5 text-ink"
             }`}
           >
@@ -54,7 +57,7 @@ export function MockResultsView({ attemptId, results, practiceUnavailable }: { a
               ["Wrong", wrong],
               ["Not answered", unanswered],
             ].map(([label, value]) => (
-              <div key={label} className="rounded-lg bg-ink/5 px-2 py-3">
+              <div key={label} className="rounded-xl bg-fill px-2 py-3">
                 <dt className="text-base text-muted">{label}</dt>
                 <dd className="text-2xl font-bold text-ink">{value}</dd>
               </div>
@@ -95,7 +98,7 @@ export function MockResultsView({ attemptId, results, practiceUnavailable }: { a
           <p className="mt-4 text-base text-muted">Answers are kept for your {MOCK_KEEP_ANSWERS} newest mock tests, so this one can’t be reviewed question by question.</p>
         )}
 
-        <section aria-labelledby="next-heading" className="mt-6 rounded-xl border-2 border-primary bg-primary/5 p-5">
+        <section aria-labelledby="next-heading" className="mt-6 rounded-2xl border-2 border-primary bg-primary/5 p-5">
           <h2 id="next-heading" className="text-2xl font-bold text-ink">
             Recommended next step
           </h2>

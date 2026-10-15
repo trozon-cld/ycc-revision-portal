@@ -118,6 +118,18 @@ body {
   animation: loading-fade-in 200ms ease-out 150ms both;
 }
 
+/* Practice result panel on phones and tablets (only without reduced motion). */
+@keyframes panel-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+/* The page under that panel scrolls clear of it (Tab-key focus too). */
+.focused-scroll:has([data-feedback-panel]) {
+  scroll-padding-bottom: 14rem;
+}
+
 @keyframes loading-fade-in {
   from {
     opacity: 0;
