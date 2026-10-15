@@ -9,7 +9,8 @@ import { loadMockInProgress, settleOwnMocks } from "@/lib/mock/attempts";
 import { donePercent, scoreText, timeLeftText } from "@/lib/mock/types";
 import { loadPracticeInProgress } from "@/lib/practice/sessions";
 import { loadProgress } from "@/lib/progress/overview";
-import { CARD, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { firstName } from "@/lib/text";
+import { BAR_FILL, BAR_TRACK, CARD, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { PageBody } from "@/components/candidate/page-body";
 import { SectionCard, SectionIcons } from "@/components/candidate/section-card";
 
@@ -47,13 +48,13 @@ export default async function CandidateHomePage({ searchParams }: PageProps<"/da
     ? formatUkDate(home.accessExpiresAt, "long")
     : null;
   const warn = daysLeft !== null && daysLeft <= ACCESS_WARNING_DAYS;
+  const greetingName = firstName(home.name);
 
   return (
     <PageBody>
       <div className="flex flex-col gap-8">
         <div>
-          <h1 className="text-3xl font-bold text-ink [overflow-wrap:anywhere]">{home.name ? `Welcome, ${home.name}` : "Welcome"}</h1>
-          <p className="mt-1 text-lg text-muted [overflow-wrap:anywhere]">{home.email}</p>
+          <h1 className="text-3xl font-bold text-ink [overflow-wrap:anywhere]">{greetingName ? `Welcome, ${greetingName}` : "Welcome"}</h1>
         </div>
 
         {justSwitched && (
@@ -101,19 +102,27 @@ export default async function CandidateHomePage({ searchParams }: PageProps<"/da
           </section>
         )}
 
+        {readiness && (
+          <Link
+            href="/dashboard/progress"
+            className={`${CARD} block p-5 hover:border-primary focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary`}
+          >
+            <span className="block text-base font-semibold text-muted">Your readiness</span>
+            <span className="mt-1 block text-2xl font-bold text-ink">
+              {readiness.score}% · {readiness.label}
+            </span>
+            <span aria-hidden="true" className={`${BAR_TRACK} mt-3 block h-3.5`}>
+              <span className={`${BAR_FILL} block`} style={{ width: `${Math.min(100, readiness.score)}%` }} />
+            </span>
+            <span className="mt-3 block text-base font-semibold text-primary underline underline-offset-4">See My progress</span>
+          </Link>
+        )}
+
         <section aria-labelledby="sections-heading">
           <h2 id="sections-heading" className="mb-4 text-2xl font-bold text-ink">
             What would you like to do?
           </h2>
-          <ul className="grid gap-4 sm:grid-cols-2">
-            <li>
-              <SectionCard
-                title="Help: general queries"
-                description="Answers to common questions and how to get help."
-                icon={SectionIcons.help}
-                href="/dashboard/help"
-              />
-            </li>
+          <ul className="grid grid-cols-2 gap-3 sm:gap-4">
             <li>
               <SectionCard
                 title="Prepare"
@@ -152,10 +161,10 @@ export default async function CandidateHomePage({ searchParams }: PageProps<"/da
                 href={mock ? `/dashboard/mock/${mock.id}` : "/dashboard/mock"}
               />
             </li>
-            <li className="sm:col-span-2">
+            <li>
               <SectionCard
                 title="My progress"
-                description={readiness ? `Readiness: ${readiness.score}% · ${readiness.label}` : "Your results from every section in one place."}
+                description="Your results from every section in one place."
                 icon={SectionIcons.progress}
                 href="/dashboard/progress"
               />

@@ -28,7 +28,8 @@
 
 :root {
   /* Candidate header height; the book reader fills the rest of the screen. */
-  --candidate-header: 4.5rem;
+  --candidate-header: 3.5rem;
+  --candidate-tabs: 4rem;
 }
 
 /* Phones, for the Handbook reader page. Keep in step with lib/layout.ts. */
@@ -224,6 +225,18 @@ body:has([data-focused-owns-header]) .candidate-header {
    Only while the reader is on the page, so an empty Handbook message keeps the header. */
 body:has([data-reader-owns-header]) .candidate-header {
   display: none;
+}
+
+/* The bottom tab bar (and the room kept for it) shows wherever the header does, below laptop width. */
+body:has([data-focused-owns-header]) .candidate-tabs,
+body:has([data-reader-owns-header]) .candidate-tabs {
+  display: none;
+}
+/* A field reached with Tab scrolls clear of the tab bar. */
+@media (max-width: 1023.98px) {
+  html:has(.candidate-tabs):not(:has([data-focused-owns-header], [data-reader-owns-header])) {
+    scroll-padding-bottom: calc(var(--candidate-tabs) + env(safe-area-inset-bottom) + 0.5rem);
+  }
 }
 
 /* Admin editors: a field reached with Tab scrolls clear of the fixed Save bar (bottom on phones, top from tablets). */

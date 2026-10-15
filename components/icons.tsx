@@ -30,6 +30,7 @@ import { SpeakerHighIcon } from "@phosphor-icons/react/dist/ssr/SpeakerHigh";
 import { TagIcon } from "@phosphor-icons/react/dist/ssr/Tag";
 import { TimerIcon } from "@phosphor-icons/react/dist/ssr/Timer";
 import { TrashIcon } from "@phosphor-icons/react/dist/ssr/Trash";
+import { UserCircleIcon } from "@phosphor-icons/react/dist/ssr/UserCircle";
 import { UserGearIcon } from "@phosphor-icons/react/dist/ssr/UserGear";
 import { UsersIcon } from "@phosphor-icons/react/dist/ssr/Users";
 import { XIcon } from "@phosphor-icons/react/dist/ssr/X";
@@ -42,6 +43,7 @@ const ICONS = {
   timer: TimerIcon,
   progress: ChartBarIcon,
   help: QuestionIcon,
+  person: UserCircleIcon,
   settings: SlidersHorizontalIcon,
   contents: ListBulletsIcon,
   page: FileTextIcon,

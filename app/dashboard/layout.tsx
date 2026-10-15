@@ -1,4 +1,5 @@
 import { CandidateHeader } from "@/components/candidate/header";
+import { CandidateTabBar } from "@/components/candidate/tab-bar";
 
 // Every page below calls requireRole itself; a layout doesn't re-run on every navigation.
 // Pages add their own padding (PageBody), so the book reader can use the whole width.
@@ -7,6 +8,7 @@ export default function CandidateLayout({ children }: LayoutProps<"/dashboard">)
     <>
       <CandidateHeader />
       <main className="flex flex-1 flex-col">{children}</main>
+      <CandidateTabBar />
     </>
   );
 }
