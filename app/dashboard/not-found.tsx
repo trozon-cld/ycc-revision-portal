@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { PageBody } from "@/components/candidate/page-body";
-import { PRIMARY_BUTTON } from "@/components/candidate/buttons";
+import { CARD, PRIMARY_BUTTON } from "@/components/candidate/buttons";
 
 // A removed test or practice, or a mistyped address; shown under the usual header.
 export default function CandidateNotFound() {
   return (
     <PageBody>
-      <div className="max-w-xl">
+      <div className={`${CARD} max-w-xl p-6`}>
         <h1 className="text-3xl font-bold text-ink">We can’t find that page</h1>
         <p className="mt-3 text-lg leading-relaxed text-ink">It may have been removed, or the link may be wrong.</p>
         <Link href="/dashboard" className={`${PRIMARY_BUTTON} mt-6 w-full sm:w-auto`}>

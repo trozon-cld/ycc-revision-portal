@@ -7,7 +7,7 @@ import { loadMockHistory, loadMockHome } from "@/lib/mock/attempts";
 import { firstParam } from "@/lib/params";
 import { MOCK_QUESTIONS, timeLeftText } from "@/lib/mock/types";
 import { PageBody } from "@/components/candidate/page-body";
-import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { INFO_BOX, NOTE_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { FocusedShell } from "@/components/learning/focused-shell";
 import { MockHistoryList } from "./mock-history";
 import { StartMock } from "./start-mock";
@@ -38,12 +38,12 @@ export default async function MockTestPage({ searchParams }: PageProps<"/dashboa
   return (
     <FocusedShell label="Mock test tools" status="Mock test">
       <PageBody>
-        <div className="max-w-2xl">
+        <div className="max-w-3xl">
           <h1 className="text-3xl font-bold text-ink">Mock test</h1>
           <p className="mt-1 text-base text-muted [overflow-wrap:anywhere]">Questions for {home.categoryName}</p>
 
           {home.open ? (
-            <section aria-labelledby="open-heading" className="mt-6 rounded-xl border-2 border-primary bg-primary/5 p-5">
+            <section aria-labelledby="open-heading" className={`mt-6 ${NOTE_BOX} p-5`}>
               <h2 id="open-heading" className="text-xl font-bold text-ink">
                 Mock test in progress
               </h2>
@@ -61,7 +61,7 @@ export default async function MockTestPage({ searchParams }: PageProps<"/dashboa
             </p>
           ) : (
             <>
-              <p className="mt-6 rounded-xl border-2 border-primary/30 bg-primary/5 p-5 text-lg leading-relaxed text-ink">
+              <p className={`mt-6 ${INFO_BOX} p-5 text-lg leading-relaxed text-ink`}>
                 This mock test is timed to help you practise under exam-style conditions. You will have {home.minutes} minutes to
                 complete {home.size} questions.
               </p>

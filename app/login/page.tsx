@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useBrowserValue } from "@/components/use-browser-value";
-import { CARD, ERROR_BOX, PRIMARY_BUTTON } from "@/components/candidate/buttons";
+import { CARD, ERROR_BOX, NOTE_BOX, PRIMARY_BUTTON } from "@/components/candidate/buttons";
 import { NOT_THROUGH_MESSAGE } from "@/lib/forms";
 
 export default function LoginPage() {
@@ -52,7 +52,7 @@ export default function LoginPage() {
         </div>
 
         {ended && (
-          <p role="status" className="rounded-xl border-2 border-primary bg-primary/5 p-4 text-lg leading-relaxed text-ink">
+          <p role="status" className={`${NOTE_BOX} p-4 text-lg leading-relaxed text-ink`}>
             You were logged out to keep your account safe. Log in again to carry on.
           </p>
         )}

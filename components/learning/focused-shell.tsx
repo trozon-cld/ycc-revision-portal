@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DEFAULT_TEXT_SIZE, type TextSize } from "@/lib/content/book";
-import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { NOTE_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { AccountLinks, HomeLogo } from "@/components/candidate/header";
 import { Icon } from "@/components/icons";
 import { logOut } from "@/components/logout-button";
@@ -213,7 +213,7 @@ export function FocusedShell({
                 aria-labelledby="leave-heading"
                 aria-describedby="leave-text"
                 onKeyDown={(event) => event.key === "Escape" && setLeaving(null)}
-                className="mx-auto max-w-xl rounded-xl border-2 border-primary bg-primary/5 p-5"
+                className={`mx-auto max-w-xl ${NOTE_BOX} p-5`}
               >
                 <h2 id="leave-heading" className="text-xl font-bold text-ink">
                   Leave the test?

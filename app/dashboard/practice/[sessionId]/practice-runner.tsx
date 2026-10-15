@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import type { TextSize } from "@/lib/content/book";
 import type { PracticeStep } from "@/lib/practice/types";
 import { QuestionView, type QuestionViewState } from "@/components/learning/questions/question-view";
-import { CARD, ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { CARD, ERROR_BOX, NOTE_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { useConfirmFocus } from "@/components/candidate/use-confirm-focus";
 import { NOT_THROUGH_MESSAGE, reachServer } from "@/lib/forms";
 import { FocusedShell } from "@/components/learning/focused-shell";
@@ -101,7 +101,7 @@ export function PracticeRunner({ initialStep, initialTextSize }: { initialStep: 
 
   const { heading: endHeading, opener: endOpener } = useConfirmFocus(confirmEnd);
   const endControls = confirmEnd ? (
-    <div role="group" aria-labelledby="end-heading" className="rounded-2xl border-2 border-primary bg-primary/5 p-5">
+    <div role="group" aria-labelledby="end-heading" className={`${NOTE_BOX} p-5`}>
       <h3 id="end-heading" ref={endHeading} tabIndex={-1} className="text-xl font-bold text-ink focus:outline-none">
         End practice now?
       </h3>

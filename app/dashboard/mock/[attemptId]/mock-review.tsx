@@ -1,7 +1,7 @@
 "use client";
 
 import type { RefObject } from "react";
-import { ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { ERROR_BOX, NOTE_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { useConfirmFocus } from "@/components/candidate/use-confirm-focus";
 import { countOf } from "@/lib/format";
 import { Icon } from "@/components/icons";
@@ -88,7 +88,7 @@ export function MockReview({
 
       <div className="mt-8">
         {confirming ? (
-          <div role="group" aria-labelledby="submit-heading" className="rounded-2xl border-2 border-primary bg-primary/5 p-5">
+          <div role="group" aria-labelledby="submit-heading" className={`${NOTE_BOX} p-5`}>
             <h2 id="submit-heading" ref={submitHeading} tabIndex={-1} className="text-xl font-bold text-ink focus:outline-none">
               Submit your test now?
             </h2>

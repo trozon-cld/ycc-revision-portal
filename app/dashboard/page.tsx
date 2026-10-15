@@ -10,7 +10,7 @@ import { donePercent, scoreText, timeLeftText } from "@/lib/mock/types";
 import { loadPracticeInProgress } from "@/lib/practice/sessions";
 import { loadProgress } from "@/lib/progress/overview";
 import { firstName } from "@/lib/text";
-import { BAR_FILL, BAR_TRACK, CARD, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { BAR_FILL, BAR_TRACK, CARD, INFO_BOX, NOTE_BOX, OK_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON, WARN_BOX } from "@/components/candidate/buttons";
 import { PageBody } from "@/components/candidate/page-body";
 import { SectionCard, SectionIcons } from "@/components/candidate/section-card";
 
@@ -58,16 +58,14 @@ export default async function CandidateHomePage({ searchParams }: PageProps<"/da
         </div>
 
         {justSwitched && (
-          <p role="status" className="rounded-xl border-2 border-ok bg-ok-bg p-4 text-lg font-semibold text-ok-strong">
+          <p role="status" className={`${OK_BOX} p-4 text-lg font-semibold`}>
             You’re now studying {home.current.name}.
           </p>
         )}
 
         {expiryLabel && daysLeft !== null && (
           <div
-            className={`rounded-xl border-2 p-5 text-lg leading-relaxed ${
-              warn ? "border-warn bg-warn-bg text-warn-strong" : "border-primary/30 bg-primary/5 text-ink"
-            }`}
+            className={`p-5 text-lg leading-relaxed ${warn ? WARN_BOX : `${INFO_BOX} text-ink`}`}
           >
             <p className="font-bold">{daysLeftText(daysLeft)}</p>
             <p className="mt-1">
@@ -91,7 +89,7 @@ export default async function CandidateHomePage({ searchParams }: PageProps<"/da
         </section>
 
         {startHere && (
-          <section aria-labelledby="start-heading" className="rounded-xl border-2 border-primary bg-primary/5 p-5">
+          <section aria-labelledby="start-heading" className={`${NOTE_BOX} p-5`}>
             <h2 id="start-heading" className="text-xl font-bold text-ink">
               Where to start
             </h2>

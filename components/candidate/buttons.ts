@@ -14,7 +14,7 @@ export const CHOICE_ROW =
 export const CHOICE_INPUT = "size-6 shrink-0 accent-primary focus-visible:outline-none";
 
 // Something went wrong or can't be done: one red box everywhere on candidate pages.
-export const ERROR_BOX = "rounded-xl border-2 border-danger bg-danger-bg p-4 text-base font-semibold text-danger-strong";
+export const ERROR_BOX = "rounded-2xl border-2 border-danger bg-danger-bg p-4 text-base font-semibold text-danger-strong";
 
 // A small label such as "Weak" or "Flagged"; add a tone (border, background and text colour).
 export const BADGE = "inline-flex items-center gap-1 rounded-full border-2 px-2 text-sm font-semibold";
@@ -22,3 +22,9 @@ export const BADGE = "inline-flex items-center gap-1 rounded-full border-2 px-2 
 // Progress bars: the track and its filled part (set the height on the track).
 export const BAR_TRACK = "overflow-hidden rounded-full bg-line-soft";
 export const BAR_FILL = "hc-fill h-full rounded-full bg-primary";
+
+// Boxes that stand out from the cards: a note or question (Cobalt), information, attention (orange), done (green).
+export const NOTE_BOX = "rounded-2xl border-2 border-primary bg-primary/5";
+export const INFO_BOX = "rounded-2xl border-2 border-primary/30 bg-primary/5";
+export const WARN_BOX = "rounded-2xl border-2 border-warn bg-warn-bg text-warn-strong";
+export const OK_BOX = "rounded-2xl border-2 border-ok bg-ok-bg text-ok-strong";

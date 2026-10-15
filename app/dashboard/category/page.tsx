@@ -7,7 +7,7 @@ import { PageBody } from "@/components/candidate/page-body";
 import { loadSwitchableCategories } from "@/lib/candidates/categories";
 import { loadMockInProgress } from "@/lib/mock/attempts";
 import { loadPracticeInProgress } from "@/lib/practice/sessions";
-import { ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON, WARN_BOX } from "@/components/candidate/buttons";
 import { CategoryForm } from "./category-form";
 
 export const metadata: Metadata = { title: "Change category" };
@@ -33,7 +33,7 @@ export default async function ChangeCategoryPage({ searchParams }: PageProps<"/d
 
   return (
     <PageBody>
-      <div className="max-w-2xl">
+      <div className="max-w-3xl">
         <h1 className="text-3xl font-bold text-ink">Change category</h1>
         <p className="mt-3 text-lg leading-relaxed text-ink">
           Your Handbook, Practice questions and mock tests follow the category you choose. You can change it again at
@@ -42,7 +42,7 @@ export default async function ChangeCategoryPage({ searchParams }: PageProps<"/d
 
         {mock ? (
           <div className="mt-6">
-            <p role="status" className="rounded-xl border-2 border-warn bg-warn-bg p-4 text-lg leading-relaxed text-warn-strong">
+            <p role="status" className={`${WARN_BOX} p-4 text-lg leading-relaxed`}>
               <span className="font-bold">You have a mock test in progress.</span> Please finish it before changing category.
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
@@ -62,7 +62,7 @@ export default async function ChangeCategoryPage({ searchParams }: PageProps<"/d
               </p>
             )}
             {practice && (
-              <p className="mt-6 rounded-xl border-2 border-warn bg-warn-bg p-4 text-lg leading-relaxed text-warn-strong">
+              <p className={`mt-6 ${WARN_BOX} p-4 text-lg leading-relaxed`}>
                 <span className="font-bold">
                   You have a practice in progress (question {Math.min(practice.position + 1, practice.total)} of {practice.total}).
                 </span>{" "}

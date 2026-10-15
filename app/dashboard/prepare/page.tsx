@@ -19,7 +19,7 @@ export default async function PreparePage() {
   if (book.pages.length === 0) {
     return (
       <PageBody>
-        <div className="max-w-2xl">
+        <div className="max-w-3xl">
           <h1 className="text-3xl font-bold text-ink">Prepare</h1>
           <p className="mt-4 text-lg leading-relaxed text-ink">
             There’s no Handbook for {book.categoryName} yet. Please check back soon.

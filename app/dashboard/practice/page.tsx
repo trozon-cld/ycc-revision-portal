@@ -5,7 +5,7 @@ import { requireRole } from "@/lib/auth/guard";
 import { SESSION_ENDED_LOGIN } from "@/lib/auth/constants";
 import { loadOpenPractice, loadPracticeOptions } from "@/lib/practice/sessions";
 import { PageBody } from "@/components/candidate/page-body";
-import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { NOTE_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON, WARN_BOX } from "@/components/candidate/buttons";
 import { FocusedShell } from "@/components/learning/focused-shell";
 import { PracticeSetup } from "./practice-setup";
 
@@ -33,7 +33,7 @@ export default async function PracticePage({ searchParams }: PageProps<"/dashboa
   return (
     <FocusedShell label="Practice tools" status="Practice">
       <PageBody>
-        <div className="max-w-2xl">
+        <div className="max-w-3xl">
           <h1 className="text-3xl font-bold text-ink">Practice</h1>
           <p className="mt-3 text-lg leading-relaxed text-ink">
             Answer questions at your own pace. After each one you’ll see the right answer and why.
@@ -41,13 +41,13 @@ export default async function PracticePage({ searchParams }: PageProps<"/dashboa
           <p className="mt-1 text-base text-muted [overflow-wrap:anywhere]">Questions for {options.categoryName}</p>
 
           {ended && (
-            <p role="status" className="mt-6 rounded-xl border-2 border-warn bg-warn-bg p-4 text-lg leading-relaxed text-warn-strong">
+            <p role="status" className={`mt-6 ${WARN_BOX} p-4 text-lg leading-relaxed`}>
               {ended}
             </p>
           )}
 
           {open && (
-            <section aria-labelledby="open-heading" className="mt-6 rounded-xl border-2 border-primary bg-primary/5 p-5">
+            <section aria-labelledby="open-heading" className={`mt-6 ${NOTE_BOX} p-5`}>
               <h2 id="open-heading" className="text-xl font-bold text-ink">
                 Practice in progress
               </h2>

@@ -6,7 +6,7 @@ import { SESSION_ENDED_LOGIN } from "@/lib/auth/constants";
 import { formatUkDate } from "@/lib/candidates/access";
 import { loadCandidateHome } from "@/lib/candidates/home";
 import { PageBody } from "@/components/candidate/page-body";
-import { CARD, ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { CARD, ERROR_BOX, NOTE_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { LogoutButton } from "@/components/logout-button";
 import { LogoutEverywhere, type LogoutEverywhereStyles } from "@/components/logout-everywhere";
 
@@ -16,7 +16,7 @@ const LOGOUT_EVERYWHERE: LogoutEverywhereStyles = {
   button: `${SECONDARY_BUTTON} w-full sm:w-auto`,
   yes: `${PRIMARY_BUTTON} w-full sm:w-auto`,
   cancel: `${SECONDARY_BUTTON} w-full sm:w-auto`,
-  box: "rounded-xl border-2 border-primary bg-primary/5 p-5",
+  box: `${NOTE_BOX} p-5`,
   heading: "text-xl font-bold text-ink focus:outline-none",
   text: "mt-2 text-lg leading-relaxed text-ink",
   error: `${ERROR_BOX} mt-4`,
