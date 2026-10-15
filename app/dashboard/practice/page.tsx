@@ -38,10 +38,10 @@ export default async function PracticePage({ searchParams }: PageProps<"/dashboa
           <p className="mt-3 text-lg leading-relaxed text-ink">
             Answer questions at your own pace. After each one you’ll see the right answer and why.
           </p>
-          <p className="mt-1 text-base text-ink/80 [overflow-wrap:anywhere]">Questions for {options.categoryName}</p>
+          <p className="mt-1 text-base text-muted [overflow-wrap:anywhere]">Questions for {options.categoryName}</p>
 
           {ended && (
-            <p role="status" className="mt-6 rounded-xl border-2 border-amber-500 bg-amber-50 p-4 text-lg leading-relaxed text-amber-950">
+            <p role="status" className="mt-6 rounded-xl border-2 border-warn bg-warn-bg p-4 text-lg leading-relaxed text-warn-strong">
               {ended}
             </p>
           )}
@@ -57,7 +57,7 @@ export default async function PracticePage({ searchParams }: PageProps<"/dashboa
               <Link href={`/dashboard/practice/${open.id}`} className={`${PRIMARY_BUTTON} mt-4 w-full sm:w-auto`}>
                 Continue practice
               </Link>
-              <p className="mt-3 text-base text-ink/80">Starting a new practice below ends this one and keeps your results so far.</p>
+              <p className="mt-3 text-base text-muted">Starting a new practice below ends this one and keeps your results so far.</p>
             </section>
           )}
 

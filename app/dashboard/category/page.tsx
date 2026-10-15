@@ -42,7 +42,7 @@ export default async function ChangeCategoryPage({ searchParams }: PageProps<"/d
 
         {mock ? (
           <div className="mt-6">
-            <p role="status" className="rounded-xl border-2 border-amber-500 bg-amber-50 p-4 text-lg leading-relaxed text-amber-950">
+            <p role="status" className="rounded-xl border-2 border-warn bg-warn-bg p-4 text-lg leading-relaxed text-warn-strong">
               <span className="font-bold">You have a mock test in progress.</span> Please finish it before changing category.
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
@@ -62,7 +62,7 @@ export default async function ChangeCategoryPage({ searchParams }: PageProps<"/d
               </p>
             )}
             {practice && (
-              <p className="mt-6 rounded-xl border-2 border-amber-500 bg-amber-50 p-4 text-lg leading-relaxed text-amber-950">
+              <p className="mt-6 rounded-xl border-2 border-warn bg-warn-bg p-4 text-lg leading-relaxed text-warn-strong">
                 <span className="font-bold">
                   You have a practice in progress (question {Math.min(practice.position + 1, practice.total)} of {practice.total}).
                 </span>{" "}

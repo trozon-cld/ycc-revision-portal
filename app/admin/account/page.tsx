@@ -15,7 +15,7 @@ const LOGOUT_EVERYWHERE: LogoutEverywhereStyles = {
   box: "rounded-md border border-primary/40 bg-primary/5 p-4",
   heading: "text-sm font-semibold text-ink focus:outline-none",
   text: "mt-1 text-sm text-slate-700",
-  error: "mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-800",
+  error: "mt-3 rounded-md bg-danger-bg px-3 py-2 text-sm text-danger-strong",
 };
 
 // Admins can set their own name here; their email and password are managed by the Superadmin.

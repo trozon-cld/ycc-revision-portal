@@ -17,11 +17,11 @@ export default async function AccessExpiredPage() {
   if (hasAccess(live.account)) redirect("/dashboard");
 
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-4 p-4 text-center">
+    <main className="flex flex-1 flex-col items-center justify-center gap-4 bg-page p-4 text-center">
       <h1 className="text-3xl font-bold text-ink">
         Your access has ended
       </h1>
-      <p className="max-w-sm text-lg text-ink/80">
+      <p className="max-w-sm text-lg text-muted">
         Your revision access is no longer active. Please contact your Admin
         to extend or reactivate it.
       </p>

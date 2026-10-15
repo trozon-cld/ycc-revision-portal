@@ -28,9 +28,9 @@ export function SingleTextAnswer({ mode, seed, content, answer, response, onResp
         const isWrongChoice = correctId !== null && selected && !isCorrect;
         const inputId = `${name}-${option.id}`;
 
-        let tone = "border-slate-300 bg-white";
-        if (isCorrect) tone = "border-green-700 bg-green-50";
-        else if (isWrongChoice) tone = "border-amber-600 bg-amber-50";
+        let tone = "border-line bg-card";
+        if (isCorrect) tone = "border-ok bg-ok-bg";
+        else if (isWrongChoice) tone = "border-warn bg-warn-bg";
         else if (selected) tone = "border-primary bg-primary/[0.06]";
 
         return (
@@ -55,7 +55,7 @@ export function SingleTextAnswer({ mode, seed, content, answer, response, onResp
               <span
                 aria-hidden="true"
                 className={`grid size-[2em] shrink-0 place-items-center rounded-full border-2 text-[0.9em] font-bold ${
-                  selected ? "hc-fill border-primary bg-primary text-white" : "border-slate-400 text-slate-700"
+                  selected ? "hc-fill border-primary bg-primary text-white" : "border-edge text-ink"
                 }`}
               >
                 {optionLetter(index)}
@@ -68,8 +68,8 @@ export function SingleTextAnswer({ mode, seed, content, answer, response, onResp
               </span>
               {selected && !isCorrect && !isWrongChoice && <MarkIcon name="tick" className="size-[1.2em] shrink-0 text-primary" />}
               {/* Results sit on the border, so an option never grows after Check and never moves page. */}
-              {isCorrect && <OptionStatus tone="bg-green-700" icon="tick" label="Correct answer" />}
-              {isWrongChoice && <OptionStatus tone="bg-amber-800" icon="cross" label="Your answer" />}
+              {isCorrect && <OptionStatus tone="bg-ok" icon="tick" label="Correct answer" />}
+              {isWrongChoice && <OptionStatus tone="bg-warn-strong" icon="cross" label="Your answer" />}
             </label>
           </li>
         );

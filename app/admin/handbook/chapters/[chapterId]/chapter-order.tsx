@@ -1,5 +1,6 @@
 "use client";
 
+import { Icon } from "@/components/icons";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useId, useMemo, useRef, useState, useTransition, type KeyboardEvent, type PointerEvent } from "react";
@@ -137,9 +138,7 @@ export function ChapterOrder({ items }: { items: OrderItem[] }) {
                     data-grip
                     className="-my-1 grid size-8 shrink-0 cursor-grab touch-none place-items-center rounded text-slate-500 hover:bg-slate-100 hover:text-ink focus-visible:outline-2 focus-visible:outline-primary active:cursor-grabbing aria-disabled:cursor-wait"
                   >
-                    <svg viewBox="0 0 20 20" aria-hidden="true" className="size-4" fill="currentColor">
-                      {[6, 10, 14].flatMap((y) => [7, 13].map((x) => <circle key={`${x}-${y}`} cx={x} cy={y} r="1.5" />))}
-                    </svg>
+                    <Icon name="drag" size={16} weight="bold" />
                   </button>
                   <span className="line-clamp-2 min-w-0">
                     <span className="mr-1 font-mono text-slate-600 tabular-nums">{index + 1}.</span>{" "}
@@ -328,7 +327,7 @@ function AddQuestionsForm({ chapterId, questions, close }: { chapterId: string; 
           />
         </div>
         {error && (
-          <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-800">
+          <p role="alert" className="rounded-md bg-danger-bg px-3 py-2 text-sm text-danger-strong">
             {error}
           </p>
         )}

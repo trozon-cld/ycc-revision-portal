@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 
 const tones = {
-  success: "bg-green-50 text-green-800 ring-green-600/20",
-  danger: "bg-red-50 text-red-800 ring-red-600/20",
-  warning: "bg-amber-50 text-amber-900 ring-amber-600/25",
+  success: "bg-ok-bg text-ok-strong ring-ok/20",
+  danger: "bg-danger-bg text-danger-strong ring-danger/20",
+  warning: "bg-warn-bg text-warn-strong ring-warn/25",
   neutral: "bg-slate-100 text-slate-700 ring-slate-500/20",
   info: "bg-primary/10 text-primary ring-primary/20",
 } as const;

@@ -37,7 +37,7 @@ export function CategoryForm({ categories }: { categories: SwitchableCategory[] 
               <span className="flex min-w-0 flex-col">
                 <span className="text-lg font-semibold text-ink [overflow-wrap:anywhere]">{category.name}</span>
                 {(category.isCurrent || category.isAssigned) && (
-                  <span className="text-base text-ink/80">
+                  <span className="text-base text-muted">
                     {[category.isCurrent && "Studying now", category.isAssigned && "Your starting category"].filter(Boolean).join(" · ")}
                   </span>
                 )}

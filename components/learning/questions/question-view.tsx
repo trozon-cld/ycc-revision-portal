@@ -178,7 +178,7 @@ export function QuestionView({
               review={review}
             />
           ) : (
-            <p className="rounded-lg bg-slate-100 px-[0.9em] py-[0.7em] text-slate-700">This question can’t be shown yet.</p>
+            <p className="rounded-lg bg-fill px-[0.9em] py-[0.7em] text-ink">This question can’t be shown yet.</p>
           )}
         </div>
       </fieldset>
@@ -243,7 +243,7 @@ function Feedback({ result, showsAnswer }: { result: CheckResult; showsAnswer: b
   return (
     <p
       className={`flex items-start gap-[0.5em] rounded-lg border-l-[0.3em] px-[0.9em] py-[0.6em] font-semibold ${
-        correct ? "border-green-700 bg-green-50 text-green-900" : "border-amber-600 bg-amber-50 text-amber-950"
+        correct ? "border-ok bg-ok-bg text-ok-strong" : "border-warn bg-warn-bg text-warn-strong"
       }`}
     >
       <MarkIcon name={correct ? "tick" : "cross"} className="mt-[0.15em] size-[1.1em] shrink-0" />
@@ -272,7 +272,7 @@ function FrameButton({
       onClick={onClick}
       disabled={disabled}
       className={`inline-flex min-h-[max(var(--answer-min-h,56px),var(--answer-min-em,3.5em))] items-center justify-center rounded-lg px-[1em] font-semibold transition-colors focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60 ${
-        primary ? "hc-edge bg-primary text-white hover:bg-primary/90" : "border-2 border-primary bg-white text-primary hover:bg-primary/[0.06]"
+        primary ? "hc-edge bg-primary text-white hover:bg-primary/90" : "border-2 border-primary bg-card text-primary hover:bg-primary/[0.06]"
       }`}
     >
       {children}

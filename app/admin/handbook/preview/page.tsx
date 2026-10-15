@@ -59,7 +59,7 @@ export default async function BookPreviewPage({ searchParams }: PageProps<"/admi
       />
 
       {book.leftOut.length > 0 && (
-        <div role="note" className="mb-3 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-600/25">
+        <div role="note" className="mb-3 rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25">
           <p className="font-medium">
             {book.leftOut.length === 1 ? "1 item is" : `${book.leftOut.length} items are`} left out because {book.leftOut.length === 1 ? "it doesn't" : "they don't"} pass the checks yet:
           </p>

@@ -104,7 +104,7 @@ export default async function HandbookPage() {
                     {/* A section is in the book once one of its chapters is published. */}
                     {!sectionChapters.some((chapter) => chapter.status === "published") && " · Not in the book yet"}
                     {uncategorised > 0 && (
-                      <span className="font-medium text-amber-900">
+                      <span className="font-medium text-warn-strong">
                         {" · "}
                         {uncategorised === 1 ? "1 chapter isn't" : `${uncategorised} chapters aren't`} in any category
                       </span>
@@ -188,11 +188,11 @@ function CategoryCount({ linked, total }: { linked: number; total: number }) {
 function Readiness({ status, items, drafts }: { status: "draft" | "published"; items: number; drafts: number }) {
   const itemsWord = (n: number) => (n === 1 ? "1 item is a draft" : `${n} items are drafts`);
   if (status === "published") {
-    if (items === 0) return <span className="text-sm font-medium text-amber-900">No pages or questions</span>;
-    if (drafts > 0) return <span className="text-sm font-medium text-amber-900">{itemsWord(drafts)}</span>;
+    if (items === 0) return <span className="text-sm font-medium text-warn-strong">No pages or questions</span>;
+    if (drafts > 0) return <span className="text-sm font-medium text-warn-strong">{itemsWord(drafts)}</span>;
     return null;
   }
   if (items === 0) return <span className="text-sm text-slate-600">Empty</span>;
   if (drafts > 0) return <span className="text-sm text-slate-600">{drafts} of {items} items are drafts</span>;
-  return <span className="text-sm font-medium text-green-800">Ready to publish</span>;
+  return <span className="text-sm font-medium text-ok-strong">Ready to publish</span>;
 }

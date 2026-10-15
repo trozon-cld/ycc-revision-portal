@@ -2,7 +2,7 @@ import Link from "next/link";
 import { countOf, formatDuration } from "@/lib/format";
 import { MOCK_KEEP_ANSWERS, READINESS_TARGET, scorePercent, type MockEnd, type MockResults } from "@/lib/mock/types";
 import { PageBody } from "@/components/candidate/page-body";
-import { ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { CARD, ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { ArrivalHeading } from "@/components/candidate/arrival-heading";
 import { ChapterResults } from "@/components/candidate/chapter-results";
 import { practiseMockMisses } from "@/app/dashboard/practice/actions";
@@ -33,17 +33,17 @@ export function MockResultsView({ attemptId, results, practiceUnavailable }: { a
         <ArrivalHeading className="text-3xl font-bold text-ink">{ending.title}</ArrivalHeading>
         <p className="mt-3 text-lg leading-relaxed text-ink">{ending.text}</p>
 
-        <section aria-labelledby="score-heading" className="mt-6 rounded-xl border-2 border-ink/15 bg-white p-5">
-          <h2 id="score-heading" className="text-base font-semibold text-ink/80">
+        <section aria-labelledby="score-heading" className={`mt-6 ${CARD} p-5`}>
+          <h2 id="score-heading" className="text-base font-semibold text-muted">
             Your score
           </h2>
           <p className="mt-1 text-4xl font-bold text-ink">
             {results.rightCount} of {results.outOf} right{" "}
-            <span className="ml-2 text-2xl font-semibold text-ink/80">{scorePercent(results.rightCount, results.outOf)}%</span>
+            <span className="ml-2 text-2xl font-semibold text-muted">{scorePercent(results.rightCount, results.outOf)}%</span>
           </p>
           <p
             className={`mt-4 rounded-lg border-l-4 px-4 py-3 text-lg font-semibold ${
-              ready ? "border-green-700 bg-green-50 text-green-900" : "border-primary bg-primary/5 text-ink"
+              ready ? "border-ok bg-ok-bg text-ok-strong" : "border-primary bg-primary/5 text-ink"
             }`}
           >
             {ready ? `You reached the ${target}% readiness target.` : `Not yet at the ${target}% readiness target.`}
@@ -55,7 +55,7 @@ export function MockResultsView({ attemptId, results, practiceUnavailable }: { a
               ["Not answered", unanswered],
             ].map(([label, value]) => (
               <div key={label} className="rounded-lg bg-ink/5 px-2 py-3">
-                <dt className="text-base text-ink/80">{label}</dt>
+                <dt className="text-base text-muted">{label}</dt>
                 <dd className="text-2xl font-bold text-ink">{value}</dd>
               </div>
             ))}
@@ -64,7 +64,7 @@ export function MockResultsView({ attemptId, results, practiceUnavailable }: { a
             <span className="font-semibold">Time taken:</span> {formatDuration(results.secondsTaken)}
           </p>
           {removed > 0 && (
-            <p className="mt-3 text-base text-ink/80">
+            <p className="mt-3 text-base text-muted">
               {countOf(removed, "question was", "questions were")} removed during the test, so {removed === 1 ? "it doesn’t" : "they don’t"} count.
             </p>
           )}
@@ -92,7 +92,7 @@ export function MockResultsView({ attemptId, results, practiceUnavailable }: { a
             )}
           </div>
         ) : (
-          <p className="mt-4 text-base text-ink/80">Answers are kept for your {MOCK_KEEP_ANSWERS} newest mock tests, so this one can’t be reviewed question by question.</p>
+          <p className="mt-4 text-base text-muted">Answers are kept for your {MOCK_KEEP_ANSWERS} newest mock tests, so this one can’t be reviewed question by question.</p>
         )}
 
         <section aria-labelledby="next-heading" className="mt-6 rounded-xl border-2 border-primary bg-primary/5 p-5">
@@ -144,7 +144,7 @@ export function MockResultsView({ attemptId, results, practiceUnavailable }: { a
           />
         )}
 
-        <p className="mt-8 text-base text-ink/80">Mock test results are for practice and aren’t an official CITB result.</p>
+        <p className="mt-8 text-base text-muted">Mock test results are for practice and aren’t an official CITB result.</p>
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
           <Link href="/dashboard" className={SECONDARY_BUTTON}>

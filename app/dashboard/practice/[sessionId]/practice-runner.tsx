@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import type { TextSize } from "@/lib/content/book";
 import type { PracticeStep } from "@/lib/practice/types";
 import { QuestionView, type QuestionViewState } from "@/components/learning/questions/question-view";
-import { ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { CARD, ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { useConfirmFocus } from "@/components/candidate/use-confirm-focus";
 import { NOT_THROUGH_MESSAGE, reachServer } from "@/lib/forms";
 import { FocusedShell } from "@/components/learning/focused-shell";
@@ -152,7 +152,7 @@ export function PracticeRunner({ initialStep, initialTextSize }: { initialStep: 
         <h1 ref={headingRef} tabIndex={-1} className="sr-only">
           Question {step.position + 1} of {step.total}
         </h1>
-        <div className="rounded-xl border-2 border-ink/15 bg-white px-4 py-5 text-ink sm:px-6" style={{ fontSize: textSize }}>
+        <div className={`${CARD} px-4 py-5 text-ink sm:px-6`} style={{ fontSize: textSize }}>
           <QuestionView
             key={`${step.sessionId}:${step.position}:${reloads}`}
             question={step.question}

@@ -100,7 +100,7 @@ export function BackCoverFace({
   actions: ReactNode;
 }) {
   return (
-    <div className="flex size-full flex-col bg-white">
+    <div className="flex size-full flex-col bg-card">
       <div className="min-h-0 flex-1">
         {picture ? (
           <CoverPicture picture={picture} blur={blur} decorative={decorative} />

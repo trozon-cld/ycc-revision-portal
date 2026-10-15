@@ -37,10 +37,10 @@ export function BlockEditor({
           {position} · {label}
         </p>
         <div className="flex items-center gap-0.5">
-          <IconButton label={`Move block ${position} up`} disabled={index === 0} onClick={() => onMove(-1)} path="M10 15V5M5.5 9.5 10 5l4.5 4.5" />
-          <IconButton label={`Move block ${position} down`} disabled={index === total - 1} onClick={() => onMove(1)} path="M10 5v10M5.5 10.5 10 15l4.5-4.5" />
-          <IconButton label={`Duplicate block ${position}`} onClick={onDuplicate} path="M7 7h8v8H7zM5 13V5h8" />
-          <IconButton label={`Delete block ${position}`} onClick={onRemove} path="M5 6h10M8 6V4.5h4V6M6.5 6l.7 9.5h5.6l.7-9.5" danger />
+          <IconButton label={`Move block ${position} up`} disabled={index === 0} onClick={() => onMove(-1)} icon="move-up" />
+          <IconButton label={`Move block ${position} down`} disabled={index === total - 1} onClick={() => onMove(1)} icon="move-down" />
+          <IconButton label={`Duplicate block ${position}`} onClick={onDuplicate} icon="duplicate" />
+          <IconButton label={`Delete block ${position}`} onClick={onRemove} icon="delete" danger />
         </div>
       </div>
       <BlockFields block={block} onChange={onChange} onChoosePicture={onChoosePicture} picture={picture} />

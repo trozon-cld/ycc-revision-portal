@@ -9,7 +9,7 @@ import { loadMockInProgress, settleOwnMocks } from "@/lib/mock/attempts";
 import { donePercent, scoreText, timeLeftText } from "@/lib/mock/types";
 import { loadPracticeInProgress } from "@/lib/practice/sessions";
 import { loadProgress } from "@/lib/progress/overview";
-import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { CARD, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { PageBody } from "@/components/candidate/page-body";
 import { SectionCard, SectionIcons } from "@/components/candidate/section-card";
 
@@ -53,11 +53,11 @@ export default async function CandidateHomePage({ searchParams }: PageProps<"/da
       <div className="flex flex-col gap-8">
         <div>
           <h1 className="text-3xl font-bold text-ink [overflow-wrap:anywhere]">{home.name ? `Welcome, ${home.name}` : "Welcome"}</h1>
-          <p className="mt-1 text-lg text-ink/80 [overflow-wrap:anywhere]">{home.email}</p>
+          <p className="mt-1 text-lg text-muted [overflow-wrap:anywhere]">{home.email}</p>
         </div>
 
         {justSwitched && (
-          <p role="status" className="rounded-xl border-2 border-green-700 bg-green-50 p-4 text-lg font-semibold text-green-900">
+          <p role="status" className="rounded-xl border-2 border-ok bg-ok-bg p-4 text-lg font-semibold text-ok-strong">
             You’re now studying {home.current.name}.
           </p>
         )}
@@ -65,7 +65,7 @@ export default async function CandidateHomePage({ searchParams }: PageProps<"/da
         {expiryLabel && daysLeft !== null && (
           <div
             className={`rounded-xl border-2 p-5 text-lg leading-relaxed ${
-              warn ? "border-amber-500 bg-amber-50 text-amber-950" : "border-primary/30 bg-primary/5 text-ink"
+              warn ? "border-warn bg-warn-bg text-warn-strong" : "border-primary/30 bg-primary/5 text-ink"
             }`}
           >
             <p className="font-bold">{daysLeftText(daysLeft)}</p>
@@ -76,12 +76,12 @@ export default async function CandidateHomePage({ searchParams }: PageProps<"/da
           </div>
         )}
 
-        <section aria-labelledby="studying-heading" className="rounded-xl border-2 border-ink/15 bg-white p-5">
-          <h2 id="studying-heading" className="text-base font-semibold text-ink/80">
+        <section aria-labelledby="studying-heading" className={`${CARD} p-5`}>
+          <h2 id="studying-heading" className="text-base font-semibold text-muted">
             You’re studying
           </h2>
           <p className="mt-1 text-2xl font-bold text-ink [overflow-wrap:anywhere]">{home.current.name}</p>
-          <p className="mt-1 text-base text-ink/80">Group: {home.current.groupName}</p>
+          <p className="mt-1 text-base text-muted">Group: {home.current.groupName}</p>
           {home.choices > 1 && (
             <Link href="/dashboard/category" className={`${SECONDARY_BUTTON} mt-4 w-full sm:w-auto`}>
               Change category
@@ -163,7 +163,7 @@ export default async function CandidateHomePage({ searchParams }: PageProps<"/da
           </ul>
         </section>
 
-        <p className="text-base text-ink/80">Designed to help you prepare with confidence.</p>
+        <p className="text-base text-muted">Designed to help you prepare with confidence.</p>
       </div>
     </PageBody>
   );

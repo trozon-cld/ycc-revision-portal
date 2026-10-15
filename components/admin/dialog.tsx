@@ -1,5 +1,6 @@
 "use client";
 
+import { Icon } from "@/components/icons";
 import { useEffect, useId, useRef, type ReactNode } from "react";
 import { buttonClass } from "./styles";
 
@@ -62,14 +63,7 @@ export function Dialog({
             {description && <div className="mt-0.5 break-words text-sm text-slate-600">{description}</div>}
           </div>
           <button type="button" onClick={onClose} aria-label="Close" className={buttonClass("ghost", "icon")}>
-            <svg viewBox="0 0 20 20" aria-hidden="true" className="size-5">
-              <path
-                d="M5 5l10 10M15 5L5 15"
-                stroke="currentColor"
-                strokeWidth="1.75"
-                strokeLinecap="round"
-              />
-            </svg>
+            <Icon name="close" size={20} weight="regular" />
           </button>
         </div>
         <div data-dialog-body className="min-h-0 flex-1 overflow-y-auto">

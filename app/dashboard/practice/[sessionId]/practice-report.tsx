@@ -2,7 +2,7 @@ import Link from "next/link";
 import { formatUkDate } from "@/lib/candidates/access";
 import type { PracticeReport } from "@/lib/practice/sessions";
 import { PageBody } from "@/components/candidate/page-body";
-import { ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { CARD, ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { ArrivalHeading } from "@/components/candidate/arrival-heading";
 import { ChapterResults } from "@/components/candidate/chapter-results";
 import { InlineText } from "@/components/learning/inline-text";
@@ -50,12 +50,12 @@ export function PracticeReportView({ report, againUnavailable }: { report: Pract
       <PageBody>
         <div className="max-w-3xl">
           <ArrivalHeading className="text-3xl font-bold text-ink">Your practice results</ArrivalHeading>
-          <p className="mt-2 text-base text-ink/80 [overflow-wrap:anywhere]">
+          <p className="mt-2 text-base text-muted [overflow-wrap:anywhere]">
             {report.categoryName} · {what} · {date}
           </p>
 
           <section aria-labelledby="score-heading" className="mt-6 rounded-xl border-2 border-primary/30 bg-primary/5 p-5 sm:p-6">
-            <h2 id="score-heading" className="text-base font-semibold text-ink/80">
+            <h2 id="score-heading" className="text-base font-semibold text-muted">
               Your score
             </h2>
             <p className="mt-1 text-ink">
@@ -65,19 +65,19 @@ export function PracticeReportView({ report, againUnavailable }: { report: Pract
             {report.answered > 0 && <p className="mt-1 text-xl font-semibold text-ink">{percent}%</p>}
             <p className="mt-3 text-lg leading-relaxed text-ink">{report.answered > 0 ? encouragement(percent) : "No questions were answered."}</p>
             {notAll && (
-              <p className="mt-2 text-base text-ink/80">
+              <p className="mt-2 text-base text-muted">
                 {report.detailsKept
                   ? `You ended this practice after answering ${report.answered} of ${report.total} questions.`
                   : `You answered ${report.answered} of ${report.total} questions.`}
               </p>
             )}
             {report.skipped > 0 && (
-              <p className="mt-2 text-base text-ink/80">
+              <p className="mt-2 text-base text-muted">
                 {report.skipped === 1 ? "1 question was" : `${report.skipped} questions were`} taken out of Practice while you were answering, so not
                 counted.
               </p>
             )}
-            <p className="mt-2 text-base text-ink/80">Time spent: {timeText(report.secondsSpent)}</p>
+            <p className="mt-2 text-base text-muted">Time spent: {timeText(report.secondsSpent)}</p>
           </section>
 
           {againUnavailable && (
@@ -117,10 +117,10 @@ export function PracticeReportView({ report, againUnavailable }: { report: Pract
                 <ul className="mt-4 flex flex-col gap-3">
                   {report.wrong.map((item, index) => (
                     <li key={`${item.question.id}:${index}`}>
-                      <details className="group rounded-xl border-2 border-ink/15 bg-white open:border-primary/40">
+                      <details className={`group ${CARD} open:border-primary/40`}>
                         <summary className="flex min-h-16 cursor-pointer list-none items-center gap-3 rounded-xl px-4 py-3 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary [&::-webkit-details-marker]:hidden">
                           <span className="min-w-0 flex-1">
-                            <span className="block text-base text-ink/80 [overflow-wrap:anywhere]">{item.chapterLabel}</span>
+                            <span className="block text-base text-muted [overflow-wrap:anywhere]">{item.chapterLabel}</span>
                             <span className="block text-lg font-semibold text-ink [overflow-wrap:anywhere]">
                               <InlineText text={item.question.stemText} />
                             </span>

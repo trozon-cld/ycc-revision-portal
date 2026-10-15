@@ -158,7 +158,7 @@ export default async function ChapterPagesPage({ params }: PageProps<"/admin/han
           <span className="font-medium text-ink">In categories:</span> {listNames(categoryNames, 12)}
         </p>
       ) : (
-        <p className="mb-3 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-600/25">
+        <p className="mb-3 rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25">
           Not in any category yet. Candidates won&apos;t see this chapter until it&apos;s added to one with Categories.
         </p>
       )}
@@ -170,7 +170,7 @@ export default async function ChapterPagesPage({ params }: PageProps<"/admin/han
       )}
 
       {drafts > 0 && (
-        <p className="mb-3 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-600/25">
+        <p className="mb-3 rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25">
           {drafts === 1 ? "1 item is a draft. Candidates won't see it" : `${drafts} items are drafts. Candidates won't see them`} until
           {drafts === 1 ? " it's" : " they're"} published.
         </p>

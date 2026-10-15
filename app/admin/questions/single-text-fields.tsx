@@ -54,7 +54,7 @@ export function SingleTextFields({ content, answer, onChange, newId }: TypeField
             return (
               <li
                 key={option.id}
-                className={`rounded-md border p-2 max-md:grid max-md:grid-cols-[1.5rem_minmax(0,1fr)_auto] max-md:items-center max-md:gap-x-2 ${isCorrect ? "border-green-700 bg-green-50/60" : "border-slate-200 bg-white"}`}
+                className={`rounded-md border p-2 max-md:grid max-md:grid-cols-[1.5rem_minmax(0,1fr)_auto] max-md:items-center max-md:gap-x-2 ${isCorrect ? "border-ok bg-ok-bg/60" : "border-slate-200 bg-white"}`}
               >
                 {/* Phones: the text box gets the full width; move and remove sit on the answer line below. */}
                 <div className="flex items-center gap-2 max-md:contents">
@@ -71,18 +71,18 @@ export function SingleTextFields({ content, answer, onChange, newId }: TypeField
                     className={`${inputClass} min-w-0 flex-1 max-md:col-span-2`}
                   />
                   <div className="flex shrink-0 items-center max-md:col-start-3 max-md:row-start-2">
-                    <IconButton label={`Move option ${letter} up`} disabled={index === 0} onClick={() => move(index, -1)} path="M10 15V5M5.5 9.5 10 5l4.5 4.5" />
+                    <IconButton label={`Move option ${letter} up`} disabled={index === 0} onClick={() => move(index, -1)} icon="move-up" />
                     <IconButton
                       label={`Move option ${letter} down`}
                       disabled={index === data.options.length - 1}
                       onClick={() => move(index, 1)}
-                      path="M10 5v10M5.5 10.5 10 15l4.5-4.5"
+                      icon="move-down"
                     />
                     <IconButton
                       label={`Remove option ${letter}`}
                       disabled={!canRemove}
                       onClick={() => setOptions(data.options.filter((item) => item.id !== option.id))}
-                      path="M5 6h10M8 6V4.5h4V6M6.5 6l.7 9.5h5.6l.7-9.5"
+                      icon="delete"
                       danger
                     />
                   </div>
@@ -93,9 +93,9 @@ export function SingleTextFields({ content, answer, onChange, newId }: TypeField
                     name={groupName}
                     checked={isCorrect}
                     onChange={() => onChange(data, { correctOptionId: option.id })}
-                    className="size-4 accent-green-700"
+                    className="size-4 accent-ok"
                   />
-                  <span className={isCorrect ? "font-semibold text-green-900" : ""}>
+                  <span className={isCorrect ? "font-semibold text-ok-strong" : ""}>
                     {isCorrect ? "Correct answer" : "Mark as correct"}
                     <span className="sr-only"> (option {letter})</span>
                   </span>

@@ -63,7 +63,7 @@ function PictureView({ block, media }: { block: PictureBlock; media: ResolvedMed
 
 const CALLOUT_STYLE = {
   "key-point": { label: "Key point", box: "border-primary bg-primary/[0.07]", title: "text-primary" },
-  remember: { label: "Remember", box: "border-amber-600 bg-amber-50", title: "text-amber-900" },
+  remember: { label: "Remember", box: "border-warn bg-warn-bg", title: "text-warn-strong" },
 } as const;
 
 function CalloutView({ block }: { block: CalloutBlock }) {

@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useDeviceSwitch } from "@/components/use-browser-value";
+import { Icon, type IconName } from "@/components/icons";
 import { useLatest } from "@/components/use-latest";
 import { TEXT_SIZES, type BookPageData, type Sheet, type TextSize } from "@/lib/content/book";
 
@@ -13,7 +14,7 @@ const LISTEN_READY = false;
 // high contrast. Panels cover the pages (no pop-up windows) and close with Escape.
 
 export const barButton =
-  "inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border-2 border-ink/25 bg-white font-semibold text-ink hover:bg-slate-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-45 aria-pressed:border-primary aria-pressed:bg-primary/[0.08]";
+  "inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border-2 border-ink/25 bg-card font-semibold text-ink hover:bg-fill-soft focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-45 aria-pressed:border-primary aria-pressed:bg-primary/[0.08]";
 
 export type ReaderPanel = "contents" | "goto" | "results" | "settings";
 
@@ -130,7 +131,7 @@ export function ReaderBar({
         ? "h-14 min-w-14 flex-col gap-0 px-2.5 text-sm leading-tight"
         : size;
   const toggle = (key: ReaderPanel) => onPanel(panel === key ? null : key);
-  const panelButton = (key: ReaderPanel, icon: string, label: string, short: string, always = false) => (
+  const panelButton = (key: ReaderPanel, icon: IconName, label: string, short: string, always = false) => (
     <button
       ref={refs[key]}
       type="button"
@@ -140,7 +141,7 @@ export function ReaderBar({
       title={labelled ? undefined : label}
       className={`${barButton} ${panelSize}`}
     >
-      <Icon path={icon} />
+      <Icon name={icon} />
       {iconsOnly || !showLabels ? <span className="sr-only">{label}</span> : (dense && narrow) || stacked ? (
         short !== label ? (
           <>
@@ -165,18 +166,18 @@ export function ReaderBar({
       {start && <div className="mr-2 flex shrink-0 items-center">{start}</div>}
       {home && (
         <Link href={home} title={labelled ? undefined : "Home"} className={`${barButton} ${panelSize}`}>
-          <Icon path={HOME_ICON} />
+          <Icon name="home" />
           <span className={iconsOnly || !showLabels ? "sr-only" : undefined}>Home</span>
         </Link>
       )}
-      {panelButton("contents", "M4 6h16M4 12h16M4 18h10", "Contents", "Contents")}
-      {panelButton("goto", "M6 3h9l4 4v14H6zM14 3v5h5", "Go to page", "Page")}
-      {hasQuestions && panelButton("results", "M5 13l4 4L19 7", "Results", "Results")}
+      {panelButton("contents", "contents", "Contents", "Contents")}
+      {panelButton("goto", "page", "Go to page", "Page")}
+      {hasQuestions && panelButton("results", "results", "Results", "Results")}
     </>
   );
   const rightTools = (
     <>
-      {panelButton("settings", SETTINGS_ICON, "Settings", "Settings", true)}
+      {panelButton("settings", "settings", "Settings", "Settings", true)}
       {onTextSizeChange && textSizeInBar && (
         <>
           <TextSizeStep step={-1} textSize={textSize} onChange={onTextSizeChange} className={`${barButton} ${size}`} />
@@ -189,18 +190,18 @@ export function ReaderBar({
       {/* Reading aloud (phase 2, planned soon): hidden until it works (LISTEN_READY); never on phones' bars. */}
       {LISTEN_READY && !compact && !narrow && (
         <button type="button" disabled title="Listen is coming later" className={`${barButton} ${size}`}>
-          <Icon path="M5 10v4h3l4 4V6L8 10zM15.5 9a4 4 0 0 1 0 6M18 6.5a8 8 0 0 1 0 11" />
+          <Icon name="listen" />
           <span className={showLabels ? undefined : "sr-only"}>Listen</span>
           <span className="sr-only"> (coming later)</span>
         </button>
       )}
-      {end && <div className="ml-2 flex shrink-0 items-center gap-2 border-l border-slate-200 pl-4">{end}</div>}
+      {end && <div className="ml-2 flex shrink-0 items-center gap-2 border-l border-line-soft pl-4">{end}</div>}
     </>
   );
   // Dense bar: three columns, so the page status stays exactly in the middle whatever the buttons show.
   if (status && !centreStatus) {
     return (
-      <div ref={barRef} role="toolbar" aria-label="Reader tools" className="flex items-center gap-2 border-b border-slate-300 bg-white px-3 py-2">
+      <div ref={barRef} role="toolbar" aria-label="Reader tools" className="flex items-center gap-2 border-b border-line bg-card px-3 py-2">
         {leftTools}
         <span aria-hidden="true" className="min-w-0 flex-1 truncate px-2 text-center text-base font-semibold text-ink">
           {status}
@@ -214,7 +215,7 @@ export function ReaderBar({
       <div
         role="toolbar"
         aria-label="Reader tools"
-        className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-slate-300 bg-white px-6 py-2"
+        className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-line bg-card px-6 py-2"
       >
         <div className="flex min-w-0 items-center gap-2">{leftTools}</div>
         <span aria-hidden="true" className="whitespace-nowrap px-2 text-center text-base font-semibold text-ink">
@@ -229,7 +230,7 @@ export function ReaderBar({
       ref={barRef}
       role="toolbar"
       aria-label="Reader tools"
-      className={`flex items-center border-b border-slate-300 bg-white py-2 ${iconsOnly ? "gap-1.5 px-2" : compact ? (home ? "gap-1.5 px-3" : "gap-2 px-3") : "gap-2 px-6"}`}
+      className={`flex items-center border-b border-line bg-card py-2 ${iconsOnly ? "gap-1.5 px-2" : compact ? (home ? "gap-1.5 px-3" : "gap-2 px-3") : "gap-2 px-6"}`}
     >
       {leftTools}
       <span className="flex-1" />
@@ -270,17 +271,6 @@ export function TextSizeStep({
   );
 }
 
-export const HOME_ICON = "M3 11l9-7 9 7M5 10v10h5v-6h4v6h5V10";
-export const SETTINGS_ICON = "M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1M15 4v4M9 10v4M17 16v4";
-
-export function Icon({ path }: { path: string }) {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-6 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-      <path d={path} />
-    </svg>
-  );
-}
-
 // Covers the pages; focus moves in on open and Escape closes it.
 export function Panel({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
   const showLabels = useContext(ReaderLabelsContext);
@@ -303,13 +293,13 @@ export function Panel({ title, onClose, children }: { title: string; onClose: ()
     return () => document.removeEventListener("keydown", onKey);
   }, [closeRef]);
   return (
-    <div ref={ref} role="region" aria-labelledby={headingId} className="absolute inset-0 z-20 flex flex-col bg-white">
-      <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
+    <div ref={ref} role="region" aria-labelledby={headingId} className="absolute inset-0 z-20 flex flex-col bg-card">
+      <div className="flex items-center justify-between gap-3 border-b border-line-soft px-4 py-3">
         <h2 id={headingId} className="text-xl font-bold text-ink">
           {title}
         </h2>
         <button type="button" onClick={onClose} title={showLabels ? undefined : "Close"} className={`${barButton} h-12 min-w-12 px-3 text-base`}>
-          <Icon path="M6 6l12 12M18 6L6 18" />
+          <Icon name="close" />
           <span className={showLabels ? "pr-1" : "sr-only"}>Close</span>
         </button>
       </div>
@@ -373,7 +363,7 @@ export function ContentsPanel({
             data-autofocus={currentPageIndex < 0 ? "" : undefined}
             onClick={() => onGo(frontCover)}
             className={`flex min-h-14 w-full items-center gap-4 rounded-lg border-2 px-4 py-2 text-left text-lg text-ink hover:border-primary focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary ${
-              currentPageIndex < 0 ? "border-primary bg-primary/[0.06]" : "border-slate-300 bg-white"
+              currentPageIndex < 0 ? "border-primary bg-primary/[0.06]" : "border-line bg-card"
             }`}
           >
             <span>
@@ -396,14 +386,14 @@ export function ContentsPanel({
                       data-autofocus={here ? "" : undefined}
                       onClick={() => onGo(chapter.sheetIndex)}
                       className={`flex min-h-14 w-full items-center justify-between gap-4 rounded-lg border-2 px-4 py-2 text-left text-lg text-ink hover:border-primary focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary ${
-                        here ? "border-primary bg-primary/[0.06]" : "border-slate-300 bg-white"
+                        here ? "border-primary bg-primary/[0.06]" : "border-line bg-card"
                       }`}
                     >
                       <span className="min-w-0 [overflow-wrap:anywhere]">
                         <span className="font-semibold">{chapter.chapterLabel}</span>
                         {here && <span className="block text-base font-normal text-primary">You are here</span>}
                       </span>
-                      <span className="shrink-0 whitespace-nowrap text-base text-slate-700">
+                      <span className="shrink-0 whitespace-nowrap text-base text-ink">
                         {chapter.exact ? `Page ${chapter.number}` : `About page ${chapter.number}`}
                       </span>
                     </button>
@@ -438,7 +428,7 @@ export function GoToPanel({ total, onGo, onClose }: { total: number; onGo: (numb
         }}
       >
         <label htmlFor={inputId} className="block text-lg font-semibold text-ink">
-          Page number <span className="font-normal text-slate-700">(1 to {total})</span>
+          Page number <span className="font-normal text-ink">(1 to {total})</span>
         </label>
         <div className="flex gap-3">
           <input
@@ -462,7 +452,7 @@ export function GoToPanel({ total, onGo, onClose }: { total: number; onGo: (numb
           </button>
         </div>
         {error && (
-          <p id={errorId} role="alert" className="text-lg font-semibold text-amber-900">
+          <p id={errorId} role="alert" className="text-lg font-semibold text-warn-strong">
             {error}
           </p>
         )}
@@ -476,10 +466,10 @@ export type ResultEntry = { pageIndex: number; status: ResultStatus; text: strin
 
 const STATUS_TEXT: Record<ResultStatus, string> = { correct: "Right", wrong: "Not quite", revealed: "Revealed", open: "Not tried yet" };
 const STATUS_TONE: Record<ResultStatus, string> = {
-  correct: "bg-green-50 text-green-900 ring-green-700/40",
-  wrong: "bg-amber-50 text-amber-950 ring-amber-600/40",
+  correct: "bg-ok-bg text-ok-strong ring-ok/40",
+  wrong: "bg-warn-bg text-warn-strong ring-warn/40",
   revealed: "bg-primary/[0.07] text-ink ring-primary/40",
-  open: "bg-slate-100 text-slate-800 ring-slate-400/50",
+  open: "bg-fill text-ink ring-edge/50",
 };
 
 // Results: how the questions went, with a way back to each one and a clean start.
@@ -508,10 +498,10 @@ export function ResultsPanel({
           <p className="text-2xl font-bold text-ink">
             {correct} of {entries.length} {entries.length === 1 ? "question" : "questions"} right
           </p>
-          <p className="mt-1 text-lg text-slate-700">
+          <p className="mt-1 text-lg text-ink">
             {count("wrong")} not quite · {count("revealed")} revealed · {count("open")} not tried yet
           </p>
-          {note && <p className="mt-2 text-base text-slate-700">{note}</p>}
+          {note && <p className="mt-2 text-base text-ink">{note}</p>}
         </div>
         <ul className="space-y-2">
           {entries.map((entry, number) => {
@@ -522,12 +512,12 @@ export function ResultsPanel({
                 <button
                   type="button"
                   onClick={() => onGo(sheetIndex)}
-                  className="flex min-h-14 w-full items-center gap-3 rounded-lg border-2 border-slate-300 bg-white px-4 py-2 text-left text-lg text-ink hover:border-primary focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  className="flex min-h-14 w-full items-center gap-3 rounded-lg border-2 border-line bg-card px-4 py-2 text-left text-lg text-ink hover:border-primary focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 >
                   <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
                     <span className="font-semibold">Question {number + 1}</span>
-                    {sheet?.kind === "page" && <span className="text-base text-slate-700"> · page {sheet.number}</span>}
-                    <span className="block text-base text-slate-700">{entry.text}</span>
+                    {sheet?.kind === "page" && <span className="text-base text-ink"> · page {sheet.number}</span>}
+                    <span className="block text-base text-ink">{entry.text}</span>
                   </span>
                   <span className={`shrink-0 rounded-full px-3 py-1 text-base font-semibold ring-1 ${STATUS_TONE[entry.status]}`}>
                     {STATUS_TEXT[entry.status]}
@@ -542,7 +532,7 @@ export function ResultsPanel({
             type="button"
             aria-disabled={tried === 0 || undefined}
             onClick={() => tried > 0 && onReset()}
-            className="inline-flex h-14 items-center justify-center rounded-lg border-2 border-ink/25 bg-white px-5 text-lg font-semibold text-ink hover:bg-slate-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary aria-disabled:cursor-not-allowed aria-disabled:opacity-45"
+            className="inline-flex h-14 items-center justify-center rounded-lg border-2 border-ink/25 bg-card px-5 text-lg font-semibold text-ink hover:bg-fill-soft focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary aria-disabled:cursor-not-allowed aria-disabled:opacity-45"
           >
             Clear all answers
           </button>
@@ -585,7 +575,7 @@ export function SettingsPanel({
     <Panel title="Settings" onClose={onClose}>
       <div className="mx-auto max-w-xl space-y-4">
         {onTextSizeChange && (
-          <div role="group" aria-labelledby="reader-text-size" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border-2 border-slate-300 px-4 py-3">
+          <div role="group" aria-labelledby="reader-text-size" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border-2 border-line px-4 py-3">
             <span id="reader-text-size" className="text-lg font-semibold text-ink">
               Text size
             </span>
@@ -618,11 +608,11 @@ export function SettingsPanel({
             onChange={onTogglePageTurn}
           />
         )}
-        <p className="text-base text-slate-700">
+        <p className="text-base text-ink">
           {onTogglePageTurn ? "Button labels and page turn are remembered on this device." : "Button labels are remembered on this device."}
         </p>
         {actions}
-        {links && <div className="grid gap-3 border-t-2 border-slate-200 pt-4 min-[400px]:grid-cols-3">{links}</div>}
+        {links && <div className="grid gap-3 border-t-2 border-line-soft pt-4 min-[400px]:grid-cols-3">{links}</div>}
       </div>
     </Panel>
   );
@@ -650,11 +640,11 @@ function SettingSwitch({
       aria-describedby={descriptionId}
       disabled={disabled}
       onClick={onChange}
-      className="flex min-h-16 w-full items-center justify-between gap-4 rounded-lg border-2 border-slate-300 bg-white px-4 py-3 text-left hover:border-primary focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:hover:border-slate-300"
+      className="flex min-h-16 w-full items-center justify-between gap-4 rounded-lg border-2 border-line bg-card px-4 py-3 text-left hover:border-primary focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:hover:border-line"
     >
       <span className="min-w-0">
         <span className="block text-lg font-semibold text-ink">{label}</span>
-        <span id={descriptionId} className="block text-base text-slate-700">
+        <span id={descriptionId} className="block text-base text-ink">
           {description}
         </span>
       </span>
@@ -664,9 +654,9 @@ function SettingSwitch({
         </span>
         <span
           aria-hidden="true"
-          className={`relative h-8 w-14 rounded-full transition-colors motion-reduce:transition-none ${checked ? "bg-primary" : "bg-slate-500"} ${disabled ? "opacity-50" : ""}`}
+          className={`relative h-8 w-14 rounded-full transition-colors motion-reduce:transition-none ${checked ? "bg-primary" : "bg-muted"} ${disabled ? "opacity-50" : ""}`}
         >
-          <span className={`absolute top-1 size-6 rounded-full bg-white shadow transition-[left] motion-reduce:transition-none ${checked ? "left-7" : "left-1"}`} />
+          <span className={`absolute top-1 size-6 rounded-full bg-card shadow transition-[left] motion-reduce:transition-none ${checked ? "left-7" : "left-1"}`} />
         </span>
       </span>
     </button>

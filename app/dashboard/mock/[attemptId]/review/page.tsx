@@ -59,7 +59,7 @@ export default async function MockReviewPage({ params, searchParams }: PageProps
                       href={`/dashboard/mock/${attemptId}/review?show=${item.key}`}
                       aria-current={current ? "page" : undefined}
                       className={`inline-flex min-h-12 items-center rounded-full border-2 px-4 text-lg font-semibold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary ${
-                        current ? "hc-fill border-primary bg-primary text-white" : "border-ink/25 bg-white text-ink hover:border-primary hover:text-primary"
+                        current ? "hc-fill border-primary bg-primary text-white" : "border-ink/25 bg-card text-ink hover:border-primary hover:text-primary"
                       }`}
                     >
                       {item.label} ({counts.get(item.key)})
@@ -68,7 +68,7 @@ export default async function MockReviewPage({ params, searchParams }: PageProps
                 })}
               </nav>
               {review.items.some((item) => item.practiceFlag !== null) && (
-                <p className="mt-4 text-base text-ink/80">Flag a question to practise it later. You’ll find it in Practice, under Flagged questions.</p>
+                <p className="mt-4 text-base text-muted">Flag a question to practise it later. You’ll find it in Practice, under Flagged questions.</p>
               )}
               {items.length === 0 ? (
                 <p className="mt-6 text-lg text-ink">{filter.none}</p>

@@ -201,7 +201,7 @@ export function AreaRow({
         <p className="text-sm font-semibold text-slate-700">{title}</p>
         <div className="flex items-center gap-2">
           <Segmented label="Shape" value={area.shape} options={SHAPES} onChange={(value) => onChange({ shape: value as HotspotShape })} />
-          <IconButton label={`Remove area ${number}`} onClick={onRemove} path="M5 6h10M8 6V4.5h4V6M6.5 6l.7 9.5h5.6l.7-9.5" danger />
+          <IconButton label={`Remove area ${number}`} onClick={onRemove} icon="delete" danger />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -233,7 +233,7 @@ export function AreaRow({
       </div>
       {children}
       {(tooSmall || outside || problem) && (
-        <p className="text-sm font-medium text-amber-900">
+        <p className="text-sm font-medium text-warn-strong">
           {tooSmall
             ? `Too small for a finger. Make it at least ${HOTSPOT_LIMITS.minSize}% wide and ${HOTSPOT_LIMITS.minSize}% tall.`
             : outside

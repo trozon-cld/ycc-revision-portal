@@ -26,7 +26,7 @@ export default function CandidateError({ error, retry }: { error: Error & { dige
             Back to home
           </Link>
         </div>
-        {error.digest && <p className="mt-6 text-base text-ink/80">Reference: {error.digest}</p>}
+        {error.digest && <p className="mt-6 text-base text-muted">Reference: {error.digest}</p>}
       </div>
     </PageBody>
   );

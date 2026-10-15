@@ -8,7 +8,7 @@ import { settleOwnMocks } from "@/lib/mock/attempts";
 import { donePercent, scorePercent } from "@/lib/mock/types";
 import { loadProgress } from "@/lib/progress/overview";
 import { PageBody } from "@/components/candidate/page-body";
-import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { BAR_FILL, BAR_TRACK, CARD, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { ChapterResults } from "@/components/candidate/chapter-results";
 import { MockHistoryList } from "@/app/dashboard/mock/mock-history";
 
@@ -17,8 +17,8 @@ export const metadata: Metadata = { title: "My progress" };
 // A thick bar for a section's overall figure (the share is also written out next to it).
 function Bar({ share }: { share: number }) {
   return (
-    <div aria-hidden="true" className="mt-3 h-4 overflow-hidden rounded-full bg-ink/10">
-      <div className="hc-fill h-full rounded-full bg-primary" style={{ width: `${Math.min(100, share * 100)}%` }} />
+    <div aria-hidden="true" className={`${BAR_TRACK} mt-3 h-4`}>
+      <div className={BAR_FILL} style={{ width: `${Math.min(100, share * 100)}%` }} />
     </div>
   );
 }
@@ -38,7 +38,7 @@ export default async function ProgressPage() {
         <h1 className="text-3xl font-bold text-ink">My progress</h1>
         <p className="mt-2 text-lg text-ink [overflow-wrap:anywhere]">Your Handbook, Practice and mock tests for {progress.categoryName}.</p>
 
-        <section aria-labelledby="readiness-heading" className="mt-8 rounded-xl border-2 border-primary/40 bg-white p-5">
+        <section aria-labelledby="readiness-heading" className="mt-8 rounded-xl border-2 border-primary/40 bg-card p-5">
           <h2 id="readiness-heading" className="text-2xl font-bold text-ink">
             Readiness
           </h2>
@@ -53,13 +53,13 @@ export default async function ProgressPage() {
                 {readiness.parts.map((part) => (
                   <li key={part.key} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3 text-lg text-ink">
                     <span>
-                      {part.name} <span className="text-base text-ink/80">(counts for {Math.round(part.weight * 100)}%)</span>
+                      {part.name} <span className="text-base text-muted">(counts for {Math.round(part.weight * 100)}%)</span>
                     </span>
                     <span className="font-bold">{part.percent}%</span>
                   </li>
                 ))}
               </ul>
-              <p className="mt-3 text-base text-ink/80">This is a guide to help you prepare, not a prediction of your official result.</p>
+              <p className="mt-3 text-base text-muted">This is a guide to help you prepare, not a prediction of your official result.</p>
             </>
           ) : (
             <>
@@ -71,7 +71,7 @@ export default async function ProgressPage() {
           )}
         </section>
 
-        <section aria-labelledby="handbook-heading" className="mt-6 rounded-xl border-2 border-ink/15 bg-white p-5">
+        <section aria-labelledby="handbook-heading" className={`mt-6 ${CARD} p-5`}>
           <h2 id="handbook-heading" className="text-2xl font-bold text-ink">
             Handbook
           </h2>
@@ -98,7 +98,7 @@ export default async function ProgressPage() {
           )}
         </section>
 
-        <section aria-labelledby="practice-heading" className="mt-6 rounded-xl border-2 border-ink/15 bg-white p-5">
+        <section aria-labelledby="practice-heading" className={`mt-6 ${CARD} p-5`}>
           <h2 id="practice-heading" className="text-2xl font-bold text-ink">
             Practice
           </h2>
@@ -150,7 +150,7 @@ export default async function ProgressPage() {
           )}
         </section>
 
-        <section aria-labelledby="mock-heading" className="mt-6 rounded-xl border-2 border-ink/15 bg-white p-5">
+        <section aria-labelledby="mock-heading" className={`mt-6 ${CARD} p-5`}>
           <h2 id="mock-heading" className="text-2xl font-bold text-ink">
             Mock tests
           </h2>
@@ -180,7 +180,7 @@ export default async function ProgressPage() {
           Back to home
         </Link>
 
-        <p className="mt-8 text-base text-ink/80">Designed to help you prepare with confidence.</p>
+        <p className="mt-8 text-base text-muted">Designed to help you prepare with confidence.</p>
       </div>
     </PageBody>
   );

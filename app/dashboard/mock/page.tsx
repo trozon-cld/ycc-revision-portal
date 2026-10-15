@@ -40,7 +40,7 @@ export default async function MockTestPage({ searchParams }: PageProps<"/dashboa
       <PageBody>
         <div className="max-w-2xl">
           <h1 className="text-3xl font-bold text-ink">Mock test</h1>
-          <p className="mt-1 text-base text-ink/80 [overflow-wrap:anywhere]">Questions for {home.categoryName}</p>
+          <p className="mt-1 text-base text-muted [overflow-wrap:anywhere]">Questions for {home.categoryName}</p>
 
           {home.open ? (
             <section aria-labelledby="open-heading" className="mt-6 rounded-xl border-2 border-primary bg-primary/5 p-5">
@@ -53,7 +53,7 @@ export default async function MockTestPage({ searchParams }: PageProps<"/dashboa
               <Link href={`/dashboard/mock/${home.open.id}`} className={`${PRIMARY_BUTTON} mt-4 w-full sm:w-auto`}>
                 Continue mock test
               </Link>
-              <p className="mt-3 text-base text-ink/80">The timer keeps running until you submit or time runs out.</p>
+              <p className="mt-3 text-base text-muted">The timer keeps running until you submit or time runs out.</p>
             </section>
           ) : home.size === 0 ? (
             <p className="mt-6 text-lg leading-relaxed text-ink">
@@ -66,7 +66,7 @@ export default async function MockTestPage({ searchParams }: PageProps<"/dashboa
                 complete {home.size} questions.
               </p>
               {home.size < MOCK_QUESTIONS && (
-                <p className="mt-3 text-base leading-relaxed text-ink/80">
+                <p className="mt-3 text-base leading-relaxed text-muted">
                   A full mock test has {MOCK_QUESTIONS} questions. This one is shorter because there are only {home.size} mock test
                   questions for {home.categoryName} so far.
                 </p>

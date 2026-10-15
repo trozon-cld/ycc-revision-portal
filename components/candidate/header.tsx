@@ -7,7 +7,7 @@ import { LogoutButton } from "@/components/logout-button";
 import { LOGO } from "@/lib/brand";
 
 const NAV_BUTTON =
-  "inline-flex min-h-12 items-center justify-center rounded-lg border-2 border-ink/25 bg-white px-4 text-base font-semibold text-ink hover:border-primary hover:text-primary focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary";
+  "inline-flex min-h-12 items-center justify-center rounded-lg border-2 border-ink/25 bg-card px-4 text-base font-semibold text-ink hover:border-primary hover:text-primary focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary";
 
 // Pages whose content puts these items in its own bar on laptops and desktops (the Handbook).
 const OWN_BAR_PATHS = ["/dashboard/prepare"];
@@ -47,7 +47,7 @@ export function CandidateHeader() {
   const pathname = usePathname();
   const ownBar = OWN_BAR_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
   return (
-    <header className={`candidate-header h-(--candidate-header) shrink-0 border-b border-ink/15 bg-white ${ownBar ? "lg:hidden" : ""}`}>
+    <header className={`candidate-header h-(--candidate-header) shrink-0 border-b border-ink/15 bg-card ${ownBar ? "lg:hidden" : ""}`}>
       <div className="mx-auto flex h-full w-full max-w-5xl items-center justify-between gap-3 px-4">
         <HomeLogo />
         <nav aria-label="Account" className="flex items-center gap-2">

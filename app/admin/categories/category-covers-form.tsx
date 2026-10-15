@@ -145,7 +145,7 @@ function CoverSlot({
       </div>
 
       {advice.map((line) => (
-        <p key={line} className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-600/25">
+        <p key={line} className="rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25">
           {line}
         </p>
       ))}

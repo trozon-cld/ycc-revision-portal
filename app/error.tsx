@@ -13,7 +13,7 @@ export default function SiteError({ error, retry }: { error: Error & { digest?: 
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-4 p-4 text-center">
       <h1 className="text-3xl font-bold text-ink">This page couldn’t load</h1>
-      <p role="alert" className="max-w-sm text-lg text-ink/80">
+      <p role="alert" className="max-w-sm text-lg text-muted">
         Something went wrong on our side, or the connection dropped. Please try again.
       </p>
       <div className="flex flex-col gap-3 sm:flex-row">
@@ -24,7 +24,7 @@ export default function SiteError({ error, retry }: { error: Error & { digest?: 
           Go to the start page
         </Link>
       </div>
-      {error.digest && <p className="text-base text-ink/80">Reference: {error.digest}</p>}
+      {error.digest && <p className="text-base text-muted">Reference: {error.digest}</p>}
     </main>
   );
 }

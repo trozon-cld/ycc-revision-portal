@@ -55,7 +55,8 @@ Status: in active development.
   - `/dashboard` (Candidate home): `category` to switch within the group, `prepare` the Handbook, `practice` Practice setup and `practice/[id]` a run or its report, `mock` the Mock test start page and `mock/[id]` a test (its results and `review` once ended), `progress` My progress, `help` (also Log out of all devices)
   - `/api/auth/login`, `/api/auth/logout` (also "log out of all devices"), `/api/media/upload` (picture uploads: sign-in, origin and size are checked before the file is read)
 - `components/admin/` — compact admin console UI (sidebar shell, tables, row menus, slide-in panels, `ActionForm`, `Pagination`); admin pages must build from these. Candidate pages keep the large, simple style.
-- `components/candidate/` — candidate page shell (header, `PageBody`), home-screen section cards and the shared large button styles
+- `components/candidate/` — candidate page shell (header, `PageBody`), home-screen section cards and the shared candidate styles (`buttons.ts`: buttons, cards, choice rows, badges, bars, error box)
+- `components/icons.tsx` — every icon in the app (Phosphor Icons, MIT licence), used as `<Icon name="…" />`; colours are the named set in `app/globals.css`
 - `components/use-latest.ts`, `components/use-browser-value.ts` — shared client hooks: the latest value for handlers and effects; values only the browser knows (address, saved on/off choices)
 - `components/learning/` — candidate-facing renderers: blocks, questions (`questions/`), the fixed-page book reader, the reader bar/Settings, and the focused frame shared by Practice and the Mock test (`focused-shell.tsx`)
 - `lib/auth/` — JWT signing/verification, session cookie, role guard, login and record limits, who edits content (`content-editors.ts`), small-request checks

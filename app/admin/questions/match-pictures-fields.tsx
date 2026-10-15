@@ -78,18 +78,18 @@ export function MatchPicturesFields({ content, answer, onChange, newId, media, t
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-sm font-semibold text-slate-700">Pair {number}</p>
                   <div className="flex shrink-0 items-center">
-                    <IconButton label={`Move pair ${number} up`} disabled={index === 0} onClick={() => move(index, -1)} path="M10 15V5M5.5 9.5 10 5l4.5 4.5" />
+                    <IconButton label={`Move pair ${number} up`} disabled={index === 0} onClick={() => move(index, -1)} icon="move-up" />
                     <IconButton
                       label={`Move pair ${number} down`}
                       disabled={index === rows.length - 1}
                       onClick={() => move(index, 1)}
-                      path="M10 5v10M5.5 10.5 10 15l4.5-4.5"
+                      icon="move-down"
                     />
                     <IconButton
                       label={`Remove pair ${number}`}
                       disabled={rows.length <= MATCH_LIMITS.minPairs}
                       onClick={() => setRows(current().filter((item) => item.target.id !== row.target.id))}
-                      path="M5 6h10M8 6V4.5h4V6M6.5 6l.7 9.5h5.6l.7-9.5"
+                      icon="delete"
                       danger
                     />
                   </div>

@@ -57,7 +57,7 @@ export function PracticeSetup({ options, hasOpen, initialChapters = [] }: { opti
               <input type="radio" name="way" value={item.way} checked={way === item.way} onChange={() => setWay(item.way)} className={CHOICE_INPUT} />
               <span className="flex min-w-0 flex-col">
                 <span className="text-lg font-semibold text-ink">{item.title}</span>
-                <span className="text-base text-ink/80">
+                <span className="text-base text-muted">
                   {item.description}
                   {item.way === "all" && ` ${countOf(options.total, "question")}.`}
                 </span>
@@ -83,7 +83,7 @@ export function PracticeSetup({ options, hasOpen, initialChapters = [] }: { opti
                 />
                 <span className="flex min-w-0 flex-col">
                   <span className="text-lg font-semibold">{item.title}</span>
-                  <span className="text-base text-ink/80 [overflow-wrap:anywhere]">
+                  <span className="text-base text-muted [overflow-wrap:anywhere]">
                     {count === 0 ? item.none : weak ? `${item.description} ${countOf(count, "question")} from:` : `${item.description} ${countOf(count, "question")}.`}
                   </span>
                   {weak && (
@@ -108,7 +108,7 @@ export function PracticeSetup({ options, hasOpen, initialChapters = [] }: { opti
           <div className="flex flex-col gap-5">
             {options.sections.map((section) => (
               <div key={section.label}>
-                <p className="mb-2 text-base font-semibold text-ink/80 [overflow-wrap:anywhere]">{section.label}</p>
+                <p className="mb-2 text-base font-semibold text-muted [overflow-wrap:anywhere]">{section.label}</p>
                 <div className="flex flex-col gap-3">
                   {section.chapters.map((chapter) => (
                     <label key={chapter.id} className={CHOICE_ROW}>
@@ -122,7 +122,7 @@ export function PracticeSetup({ options, hasOpen, initialChapters = [] }: { opti
                       />
                       <span className="flex min-w-0 flex-col">
                         <span className="text-lg font-semibold text-ink [overflow-wrap:anywhere]">{chapter.label}</span>
-                        <span className="text-base text-ink/80">{countOf(chapter.count, "question")}</span>
+                        <span className="text-base text-muted">{countOf(chapter.count, "question")}</span>
                       </span>
                     </label>
                   ))}
@@ -149,7 +149,7 @@ export function PracticeSetup({ options, hasOpen, initialChapters = [] }: { opti
                 />
                 <span className="flex min-w-0 flex-col">
                   <span className="text-lg font-semibold text-ink">{item.name}</span>
-                  <span className="text-base text-ink/80">{countOf(item.count, "question")}</span>
+                  <span className="text-base text-muted">{countOf(item.count, "question")}</span>
                 </span>
               </label>
             ))}

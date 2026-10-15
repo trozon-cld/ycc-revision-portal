@@ -40,7 +40,7 @@ export function MultiPickAnswer({ mode, seed, content, answer, response, onRespo
       {!review && (
         <p data-flow-unit className="mb-[calc(0.6em*var(--q-space,1))] font-semibold text-ink [break-after:avoid] [break-inside:avoid]">
           {choosePrompt(data.pick)}
-          <span className="font-normal text-slate-700"> · {chosen.length} of {data.pick} chosen</span>
+          <span className="font-normal text-ink"> · {chosen.length} of {data.pick} chosen</span>
         </p>
       )}
 
@@ -69,7 +69,7 @@ export function MultiPickAnswer({ mode, seed, content, answer, response, onRespo
             ) : (
               <div
                 key={slot}
-                className="flex min-h-[max(var(--answer-min-h,56px),var(--answer-min-em,3.5em))] items-center justify-center rounded-lg border-2 border-dashed border-slate-400 px-[0.7em] text-slate-700"
+                className="flex min-h-[max(var(--answer-min-h,56px),var(--answer-min-em,3.5em))] items-center justify-center rounded-lg border-2 border-dashed border-edge px-[0.7em] text-ink"
               >
                 Answer {slot + 1}
               </div>
@@ -85,9 +85,9 @@ export function MultiPickAnswer({ mode, seed, content, answer, response, onRespo
           const isWrongChoice = showCorrect && selected && !isCorrect;
           const inputId = `${name}-${option.id}`;
 
-          let tone = "border-slate-300 bg-white";
-          if (isCorrect) tone = "border-green-700 bg-green-50";
-          else if (isWrongChoice) tone = "border-amber-600 bg-amber-50";
+          let tone = "border-line bg-card";
+          if (isCorrect) tone = "border-ok bg-ok-bg";
+          else if (isWrongChoice) tone = "border-warn bg-warn-bg";
           else if (selected) tone = "border-primary bg-primary/[0.06]";
 
           return (
@@ -112,7 +112,7 @@ export function MultiPickAnswer({ mode, seed, content, answer, response, onRespo
                 <span
                   aria-hidden="true"
                   className={`grid size-[2em] shrink-0 place-items-center rounded-md border-2 text-[0.9em] font-bold ${
-                    selected ? "hc-fill border-primary bg-primary text-white" : "border-slate-400 text-slate-700"
+                    selected ? "hc-fill border-primary bg-primary text-white" : "border-edge text-ink"
                   }`}
                 >
                   {optionLetter(index)}
@@ -125,8 +125,8 @@ export function MultiPickAnswer({ mode, seed, content, answer, response, onRespo
                 </span>
                 {selected && !showCorrect && <MarkIcon name="tick" className="size-[1.2em] shrink-0 text-primary" />}
                 {/* Results sit on the border, so an option never grows after Check and never moves page. */}
-                {isCorrect && <OptionStatus tone="bg-green-700" icon="tick" label="Correct answer" />}
-                {isWrongChoice && <OptionStatus tone="bg-amber-800" icon="cross" label="Your answer" />}
+                {isCorrect && <OptionStatus tone="bg-ok" icon="tick" label="Correct answer" />}
+                {isWrongChoice && <OptionStatus tone="bg-warn-strong" icon="cross" label="Your answer" />}
               </label>
             </li>
           );

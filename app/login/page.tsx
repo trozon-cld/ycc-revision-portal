@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useBrowserValue } from "@/components/use-browser-value";
-import { ERROR_BOX, PRIMARY_BUTTON } from "@/components/candidate/buttons";
+import { CARD, ERROR_BOX, PRIMARY_BUTTON } from "@/components/candidate/buttons";
 import { NOT_THROUGH_MESSAGE } from "@/lib/forms";
 
 export default function LoginPage() {
@@ -41,14 +41,14 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex flex-1 items-center justify-center p-4">
+    <main className="flex flex-1 items-center justify-center bg-page p-4">
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-sm space-y-5 rounded-xl border-2 border-ink/15 p-6 sm:p-8"
+        className={`${CARD} w-full max-w-sm space-y-5 p-6 sm:p-8`}
       >
         <div>
           <h1 className="text-3xl font-bold text-ink">Log in</h1>
-          <p className="mt-1 text-base text-ink/80">YCC Revision Portal</p>
+          <p className="mt-1 text-base text-muted">YCC Revision Portal</p>
         </div>
 
         {ended && (
@@ -72,7 +72,7 @@ export default function LoginPage() {
             required
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            className="w-full rounded-lg border border-ink/25 px-4 py-3 text-base text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
+            className="min-h-12 w-full rounded-xl border-2 border-ink/50 bg-card px-4 py-2 text-base text-ink focus:border-primary focus:outline-none focus:ring-3 focus:ring-primary/30"
           />
         </div>
 
@@ -91,7 +91,7 @@ export default function LoginPage() {
             required
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            className="w-full rounded-lg border border-ink/25 px-4 py-3 text-base text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
+            className="min-h-12 w-full rounded-xl border-2 border-ink/50 bg-card px-4 py-2 text-base text-ink focus:border-primary focus:outline-none focus:ring-3 focus:ring-primary/30"
           />
         </div>
 

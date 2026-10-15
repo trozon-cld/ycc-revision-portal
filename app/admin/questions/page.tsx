@@ -1,3 +1,4 @@
+import { Icon } from "@/components/icons";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireRole } from "@/lib/auth/guard";
@@ -200,24 +201,8 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
 }
 
 function PictureIcon() {
-  return (
-    <svg
-      viewBox="0 0 20 20"
-      aria-hidden="true"
-      className="mr-0.5 inline size-3.5 align-[-2px]"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="3" y="4" width="14" height="12" rx="1.5" />
-      <circle cx="7.5" cy="8.5" r="1.25" />
-      <path d="M3.5 14.5l4-4 3 3 2-2 4 4" />
-    </svg>
-  );
+  return <Icon name="picture" size={14} weight="regular" className="mr-0.5 inline align-[-2px]" />;
 }
-
 
 function uuidOrNull(value: string | undefined): string | null {
   return value && isUuid(value) ? value : null;

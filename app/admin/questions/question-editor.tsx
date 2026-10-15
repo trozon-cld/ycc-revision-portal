@@ -190,7 +190,7 @@ export function QuestionEditor({
   const pictureThumb = draft.stemMediaId ? (thumbs[draft.stemMediaId] ?? media[draft.stemMediaId]?.src) : undefined;
 
   if (!editor) {
-    return <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">This question type can&apos;t be edited yet.</p>;
+    return <p className="rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong">This question type can&apos;t be edited yet.</p>;
   }
 
   return (
@@ -215,7 +215,7 @@ export function QuestionEditor({
         >
           <span className="flex items-center gap-3 max-md:mr-auto max-md:flex-col max-md:items-start max-md:gap-0.5 md:contents">
             {status && <Badge tone={status === "published" ? "success" : "neutral"}>{status === "published" ? "Published" : "Draft"}</Badge>}
-            <p aria-live="polite" className={`text-sm max-md:text-xs ${dirty && !isSaving ? "font-medium text-amber-900" : "text-slate-600"}`}>
+            <p aria-live="polite" className={`text-sm max-md:text-xs ${dirty && !isSaving ? "font-medium text-warn-strong" : "text-slate-600"}`}>
               {saveState}
             </p>
           </span>
@@ -243,12 +243,12 @@ export function QuestionEditor({
         <p className="mb-3 text-sm text-slate-700">The question is added to the bank when you first save it. New questions start as drafts.</p>
       )}
       {loadProblem && (
-        <p role="alert" className="mb-3 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-600/25">
+        <p role="alert" className="mb-3 rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25">
           This question no longer passes the checks: {loadProblem} Fix it and save.
         </p>
       )}
       {problem && (
-        <div role="alert" className="mb-3 flex flex-wrap items-center gap-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-800">
+        <div role="alert" className="mb-3 flex flex-wrap items-center gap-3 rounded-md bg-danger-bg px-3 py-2 text-sm text-danger-strong">
           <p className="min-w-0 flex-1">{problem.message}</p>
           {problem.conflict && (
             <button type="button" onClick={() => window.location.reload()} className={buttonClass("secondary", "sm")}>

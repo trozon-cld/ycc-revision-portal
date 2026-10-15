@@ -8,7 +8,7 @@ const buttonBase = `inline-flex shrink-0 items-center justify-center gap-1.5 whi
 const buttonVariants = {
   primary: "hc-edge bg-primary text-white hover:bg-primary/90 active:bg-primary/80",
   secondary: "border border-slate-300 bg-white text-ink hover:border-slate-400 hover:bg-slate-100 active:bg-slate-200",
-  danger: "bg-red-700 text-white hover:bg-red-800 active:bg-red-900",
+  danger: "bg-danger text-white hover:bg-danger-strong active:bg-danger-strong",
   ghost: "text-ink hover:bg-slate-100 active:bg-slate-200",
 } as const;
 

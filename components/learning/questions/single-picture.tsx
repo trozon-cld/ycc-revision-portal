@@ -32,9 +32,9 @@ export function SinglePictureAnswer({ mode, seed, content, media, answer, respon
         const inputId = `${name}-${option.id}`;
         const picture = media[option.mediaId];
 
-        let tone = "border-slate-300 bg-white";
-        if (isCorrect) tone = "border-green-700 bg-green-50";
-        else if (isWrongChoice) tone = "border-amber-600 bg-amber-50";
+        let tone = "border-line bg-card";
+        if (isCorrect) tone = "border-ok bg-ok-bg";
+        else if (isWrongChoice) tone = "border-warn bg-warn-bg";
         else if (selected) tone = "border-primary bg-primary/[0.06]";
 
         return (
@@ -58,18 +58,18 @@ export function SinglePictureAnswer({ mode, seed, content, media, answer, respon
               />
               {/* Screen readers hear: "A: picture description, label, result". */}
               <span className="sr-only">{optionLetter(index)}: </span>
-              <span className="relative block aspect-[4/3] max-h-(--book-option-picture-max) w-full overflow-hidden rounded-md bg-slate-100">
+              <span className="relative block aspect-[4/3] max-h-(--book-option-picture-max) w-full overflow-hidden rounded-md bg-fill">
                 {picture ? (
                   // eslint-disable-next-line @next/next/no-img-element -- short-lived signed link; files are pre-shrunk WebP
                   <img src={measuring ? undefined : picture.src} alt={picture.alt} loading="lazy" decoding="async" className="absolute inset-0 size-full object-contain" />
                 ) : (
-                  <span className="absolute inset-0 grid place-items-center p-[0.4em] text-center text-[max(14px,0.8em)] text-slate-700">
+                  <span className="absolute inset-0 grid place-items-center p-[0.4em] text-center text-[max(14px,0.8em)] text-ink">
                     Picture unavailable
                   </span>
                 )}
                 {/* Results sit on the picture, so a card never grows after Check and options never move pages. */}
-                {isCorrect && <Status tone="bg-green-700" icon="tick" label="Correct answer" />}
-                {isWrongChoice && <Status tone="bg-amber-800" icon="cross" label="Your answer" />}
+                {isCorrect && <Status tone="bg-ok" icon="tick" label="Correct answer" />}
+                {isWrongChoice && <Status tone="bg-warn-strong" icon="cross" label="Your answer" />}
                 {selected && !correctId && (
                   <span aria-hidden="true" className="absolute right-[0.3em] top-[0.3em] grid size-[1.6em] place-items-center rounded-full bg-primary text-white">
                     <MarkIcon name="tick" className="size-[1.1em] shrink-0" />
@@ -80,7 +80,7 @@ export function SinglePictureAnswer({ mode, seed, content, media, answer, respon
                 <span
                   aria-hidden="true"
                   className={`grid size-[1.8em] shrink-0 place-items-center rounded-full border-2 text-[0.85em] font-bold ${
-                    selected ? "hc-fill border-primary bg-primary text-white" : "border-slate-400 text-slate-700"
+                    selected ? "hc-fill border-primary bg-primary text-white" : "border-edge text-ink"
                   }`}
                 >
                   {optionLetter(index)}
