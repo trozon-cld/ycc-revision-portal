@@ -1042,7 +1042,7 @@ function SideButton({ direction, disabled, onClick }: { direction: "previous" | 
       disabled={disabled}
       title={showLabels ? undefined : isNext ? "Next page" : "Previous page"}
       className={`flex h-36 w-[72px] shrink-0 flex-col items-center justify-center gap-1 rounded-xl text-sm font-semibold transition-colors focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-40 ${
-        isNext ? "hc-edge bg-primary text-white hover:bg-primary/90" : "border-2 border-ink/25 bg-card text-ink hover:bg-fill-soft"
+        isNext ? "hc-edge bg-primary text-white hover:bg-primary/90 shadow-[inset_0_-4px_0_var(--ycc-ink)]" : "border-2 border-line border-b-edge bg-card text-ink hover:bg-fill-soft"
       }`}
     >
       <Icon name={isNext ? "next" : "previous"} className="size-8" />
@@ -1066,8 +1066,8 @@ function PageButton({
   const showLabels = useContext(ReaderLabelsContext);
   const iconOnly = compact || !showLabels;
   const tone = isNext
-    ? "hc-edge bg-primary text-white hover:bg-primary/90"
-    : "border-2 border-ink/25 bg-card text-ink hover:bg-fill-soft";
+    ? "hc-edge bg-primary text-white hover:bg-primary/90 shadow-[inset_0_-4px_0_var(--ycc-ink)]"
+    : "border-2 border-line border-b-edge bg-card text-ink hover:bg-fill-soft";
   const size = iconOnly ? "size-14" : "h-14 min-w-36 gap-2 px-5";
   const arrow = (
     <Icon name={isNext ? "next" : "previous"} className={iconOnly ? "size-7" : "size-5"} />
@@ -1285,10 +1285,10 @@ function SheetView({
           />
         </div>
         {moreBelow && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex h-[4em] items-end justify-center bg-gradient-to-t from-white via-white/90 to-transparent">
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex h-[4em] items-end justify-center bg-gradient-to-t from-card via-card/90 to-transparent">
             <button
               type="button"
-              className="pointer-events-auto mb-[0.2em] inline-flex min-h-10 items-center gap-2 rounded-full border-2 border-primary bg-card px-4 text-[0.9em] font-semibold text-primary shadow-sm hover:bg-primary/[0.06] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              className="pointer-events-auto mb-[0.2em] inline-flex min-h-11 items-center gap-2 rounded-full border-2 border-primary bg-card px-4 text-[0.9em] font-semibold text-primary shadow-sm hover:bg-primary/[0.06] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary"
               onClick={() =>
                 boxRef.current?.scrollBy({
                   top: Math.round(geometry.contentHeight * 0.7),
@@ -1345,11 +1345,11 @@ function CoverSheet({
           actions={
             <>
               {covers.homeHref && (
-                <Link href={covers.homeHref} className={`${COVER_BUTTON} hc-edge bg-primary text-white hover:bg-primary/90`}>
+                <Link href={covers.homeHref} className={`${COVER_BUTTON} hc-edge bg-primary text-white hover:bg-primary/90 shadow-[inset_0_-4px_0_var(--ycc-ink)]`}>
                   Back to home
                 </Link>
               )}
-              <button type="button" onClick={onStart} className={`${COVER_BUTTON} border-2 border-ink/25 bg-card text-ink hover:bg-fill-soft`}>
+              <button type="button" onClick={onStart} className={`${COVER_BUTTON} border-2 border-line border-b-edge bg-card text-ink hover:bg-fill-soft`}>
                 Start from the beginning
               </button>
             </>

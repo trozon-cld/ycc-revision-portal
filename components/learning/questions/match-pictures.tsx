@@ -139,7 +139,7 @@ export function MatchPicturesAnswer({
             data-flow-unit
             data-match-pictures
             aria-label="Pictures to place"
-            className={`m-0 mb-[0.8em] flex list-none flex-wrap gap-[0.5em] rounded-lg p-[0.3em] [break-inside:avoid] @2xl:flex-col ${
+            className={`m-0 mb-[0.8em] flex list-none flex-wrap gap-[0.5em] rounded-xl p-[0.3em] [break-inside:avoid] @2xl:flex-col ${
               over === "pictures" ? "bg-primary/[0.08] ring-2 ring-primary" : ""
             }`}
           >
@@ -191,7 +191,7 @@ export function MatchPicturesAnswer({
             else if (over === target.id) tone = "border-primary bg-primary/[0.08]";
             return (
               <li key={target.id} data-flow-unit className="[break-inside:avoid]">
-                <div className={`relative flex items-center gap-[0.75em] rounded-lg border-2 p-[0.35em] ${tone}`}>
+                <div className={`relative flex items-center gap-[0.75em] rounded-xl border-2 p-[0.35em] ${tone}`}>
                   <button
                     type="button"
                     data-match-box={target.id}

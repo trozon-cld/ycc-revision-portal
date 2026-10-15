@@ -32,7 +32,7 @@ export function SinglePictureAnswer({ mode, seed, content, media, answer, respon
         const inputId = `${name}-${option.id}`;
         const picture = media[option.mediaId];
 
-        const tone = optionLook(mode, isCorrect ? "correct" : isWrongChoice ? "wrong" : selected ? "selected" : "plain", locked);
+        const tone = optionLook(isCorrect ? "correct" : isWrongChoice ? "wrong" : selected ? "selected" : "plain", locked);
 
         return (
           <li key={option.id} data-flow-unit className="min-w-0 [break-inside:avoid]">

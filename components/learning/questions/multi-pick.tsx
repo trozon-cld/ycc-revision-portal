@@ -56,7 +56,7 @@ export function MultiPickAnswer({ mode, seed, content, answer, response, onRespo
                 type="button"
                 onClick={() => toggle(option.id)}
                 disabled={locked}
-                className="flex min-h-[max(var(--answer-min-h,56px),var(--answer-min-em,3.5em))] items-center gap-[0.5em] rounded-lg border-2 border-primary bg-primary/[0.06] px-[0.7em] py-[0.4em] text-left text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-default"
+                className="flex min-h-[max(var(--answer-min-h,56px),var(--answer-min-em,3.5em))] items-center gap-[0.5em] rounded-xl border-2 border-primary bg-primary/[0.06] px-[0.7em] py-[0.4em] text-left text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-default"
               >
                 <span aria-hidden="true" className="grid size-[1.8em] shrink-0 place-items-center rounded-md bg-primary text-[max(14px,0.85em)] font-bold text-white">
                   {letterOf(option.id)}
@@ -69,7 +69,7 @@ export function MultiPickAnswer({ mode, seed, content, answer, response, onRespo
             ) : (
               <div
                 key={slot}
-                className="flex min-h-[max(var(--answer-min-h,56px),var(--answer-min-em,3.5em))] items-center justify-center rounded-lg border-2 border-dashed border-edge px-[0.7em] text-ink"
+                className="flex min-h-[max(var(--answer-min-h,56px),var(--answer-min-em,3.5em))] items-center justify-center rounded-xl border-2 border-dashed border-edge px-[0.7em] text-ink"
               >
                 Answer {slot + 1}
               </div>
@@ -85,7 +85,7 @@ export function MultiPickAnswer({ mode, seed, content, answer, response, onRespo
           const isWrongChoice = showCorrect && selected && !isCorrect;
           const inputId = `${name}-${option.id}`;
 
-          const tone = optionLook(mode, isCorrect ? "correct" : isWrongChoice ? "wrong" : selected ? "selected" : "plain", locked);
+          const tone = optionLook(isCorrect ? "correct" : isWrongChoice ? "wrong" : selected ? "selected" : "plain", locked);
 
           return (
             <li key={option.id} data-flow-unit className="[break-inside:avoid]">

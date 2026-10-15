@@ -28,7 +28,7 @@ export function SingleTextAnswer({ mode, seed, content, answer, response, onResp
         const isWrongChoice = correctId !== null && selected && !isCorrect;
         const inputId = `${name}-${option.id}`;
 
-        const tone = optionLook(mode, isCorrect ? "correct" : isWrongChoice ? "wrong" : selected ? "selected" : "plain", locked);
+        const tone = optionLook(isCorrect ? "correct" : isWrongChoice ? "wrong" : selected ? "selected" : "plain", locked);
 
         return (
           <li key={option.id} data-flow-unit className="[break-inside:avoid]">

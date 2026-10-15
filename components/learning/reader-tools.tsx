@@ -14,7 +14,7 @@ const LISTEN_READY = false;
 // high contrast. Panels cover the pages (no pop-up windows) and close with Escape.
 
 export const barButton =
-  "inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border-2 border-ink/25 bg-card font-semibold text-ink hover:bg-fill-soft focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-45 aria-pressed:border-primary aria-pressed:bg-primary/[0.08]";
+  "inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border-2 border-line border-b-edge bg-card font-semibold text-ink hover:bg-fill-soft focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-45 aria-pressed:border-primary aria-pressed:bg-primary/[0.08]";
 
 export type ReaderPanel = "contents" | "goto" | "results" | "settings";
 
@@ -362,7 +362,7 @@ export function ContentsPanel({
             aria-current={currentPageIndex < 0 ? "true" : undefined}
             data-autofocus={currentPageIndex < 0 ? "" : undefined}
             onClick={() => onGo(frontCover)}
-            className={`flex min-h-14 w-full items-center gap-4 rounded-lg border-2 px-4 py-2 text-left text-lg text-ink hover:border-primary focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+            className={`flex min-h-14 w-full items-center gap-4 rounded-xl border-2 px-4 py-2 text-left text-lg text-ink hover:border-primary focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary ${
               currentPageIndex < 0 ? "border-primary bg-primary/[0.06]" : "border-line bg-card"
             }`}
           >
@@ -385,7 +385,7 @@ export function ContentsPanel({
                       aria-current={here ? "true" : undefined}
                       data-autofocus={here ? "" : undefined}
                       onClick={() => onGo(chapter.sheetIndex)}
-                      className={`flex min-h-14 w-full items-center justify-between gap-4 rounded-lg border-2 px-4 py-2 text-left text-lg text-ink hover:border-primary focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+                      className={`flex min-h-14 w-full items-center justify-between gap-4 rounded-xl border-2 px-4 py-2 text-left text-lg text-ink hover:border-primary focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary ${
                         here ? "border-primary bg-primary/[0.06]" : "border-line bg-card"
                       }`}
                     >
@@ -445,9 +445,9 @@ export function GoToPanel({ total, onGo, onClose }: { total: number; onGo: (numb
               setValue(event.target.value.replace(/[^0-9]/g, "").slice(0, 5));
               setError(null);
             }}
-            className="h-14 w-32 rounded-lg border-2 border-ink/40 px-4 text-center text-2xl text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="h-14 w-32 rounded-xl border-2 border-ink/50 px-4 text-center text-2xl text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary"
           />
-          <button type="submit" className="inline-flex h-14 min-w-24 items-center justify-center rounded-lg bg-primary px-6 text-lg font-semibold text-white hover:bg-primary/90 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary">
+          <button type="submit" className="inline-flex h-14 min-w-24 items-center justify-center rounded-xl bg-primary shadow-[inset_0_-4px_0_var(--ycc-ink)] px-6 text-lg font-semibold text-white hover:bg-primary/90 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary">
             Go
           </button>
         </div>
@@ -512,7 +512,7 @@ export function ResultsPanel({
                 <button
                   type="button"
                   onClick={() => onGo(sheetIndex)}
-                  className="flex min-h-14 w-full items-center gap-3 rounded-lg border-2 border-line bg-card px-4 py-2 text-left text-lg text-ink hover:border-primary focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  className="flex min-h-14 w-full items-center gap-3 rounded-xl border-2 border-line bg-card px-4 py-2 text-left text-lg text-ink hover:border-primary focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 >
                   <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
                     <span className="font-semibold">Question {number + 1}</span>
@@ -532,7 +532,7 @@ export function ResultsPanel({
             type="button"
             aria-disabled={tried === 0 || undefined}
             onClick={() => tried > 0 && onReset()}
-            className="inline-flex h-14 items-center justify-center rounded-lg border-2 border-ink/25 bg-card px-5 text-lg font-semibold text-ink hover:bg-fill-soft focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary aria-disabled:cursor-not-allowed aria-disabled:opacity-45"
+            className="inline-flex h-14 items-center justify-center rounded-xl border-2 border-line border-b-edge bg-card px-5 text-lg font-semibold text-ink hover:bg-fill-soft focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary aria-disabled:cursor-not-allowed aria-disabled:opacity-45"
           >
             Clear all answers
           </button>
@@ -575,7 +575,7 @@ export function SettingsPanel({
     <Panel title="Settings" onClose={onClose}>
       <div className="mx-auto max-w-xl space-y-4">
         {onTextSizeChange && (
-          <div role="group" aria-labelledby="reader-text-size" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border-2 border-line px-4 py-3">
+          <div role="group" aria-labelledby="reader-text-size" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border-2 border-line px-4 py-3">
             <span id="reader-text-size" className="text-lg font-semibold text-ink">
               Text size
             </span>
@@ -640,7 +640,7 @@ function SettingSwitch({
       aria-describedby={descriptionId}
       disabled={disabled}
       onClick={onChange}
-      className="flex min-h-16 w-full items-center justify-between gap-4 rounded-lg border-2 border-line bg-card px-4 py-3 text-left hover:border-primary focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:hover:border-line"
+      className="flex min-h-16 w-full items-center justify-between gap-4 rounded-xl border-2 border-line bg-card px-4 py-3 text-left hover:border-primary focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:hover:border-line"
     >
       <span className="min-w-0">
         <span className="block text-lg font-semibold text-ink">{label}</span>

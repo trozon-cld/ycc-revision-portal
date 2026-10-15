@@ -181,14 +181,14 @@ export function QuestionView({
               review={review}
             />
           ) : (
-            <p className="rounded-lg bg-fill px-[0.9em] py-[0.7em] text-ink">This question can’t be shown yet.</p>
+            <p className="rounded-xl bg-fill px-[0.9em] py-[0.7em] text-ink">This question can’t be shown yet.</p>
           )}
         </div>
       </fieldset>
 
       {canCheck && AnswerArea && phase === "answering" && (
         <div data-flow-unit className="mt-[calc(0.9em*var(--q-space,1))] flex flex-wrap gap-[0.6em] [break-inside:avoid]">
-          <FrameButton key="check" primary fresh={mode !== "learn"} onClick={check} disabled={checking}>
+          <FrameButton key="check" primary onClick={check} disabled={checking}>
             {checking ? "Checking…" : "Check answer"}
           </FrameButton>
           {mode === "learn" && <FrameButton
@@ -219,9 +219,9 @@ export function QuestionView({
           </div>
           {phase !== "answering" && (
             <div ref={resultRef} tabIndex={-1} className="focus:outline-none">
-              {phase === "checked" && result && <Feedback result={result} showsAnswer={showsAnswer} fresh={mode !== "learn"} />}
+              {phase === "checked" && result && <Feedback result={result} showsAnswer={showsAnswer} />}
               {phase === "revealed" && (
-                <p className="rounded-lg border-l-[0.3em] border-primary bg-primary/[0.07] px-[0.9em] py-[0.6em] font-semibold text-ink">
+                <p className="rounded-xl border-l-[0.3em] border-primary bg-primary/[0.07] px-[0.9em] py-[0.6em] font-semibold text-ink">
                   The correct answer is highlighted.
                 </p>
               )}
@@ -253,11 +253,11 @@ const PANEL =
   "max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-10 max-lg:mt-0 max-lg:border-t-2 max-lg:border-line max-lg:bg-card max-lg:px-4 max-lg:pt-4 max-lg:pb-[calc(1rem+env(safe-area-inset-bottom))] max-lg:shadow-[0_-4px_16px_rgb(30_41_59/0.12)] max-lg:motion-safe:animate-[panel-up_200ms_ease-out]";
 
 // "Not answered" only comes up when reviewing a mock test; a check always has an answer.
-function Feedback({ result, showsAnswer, fresh }: { result: CheckResult; showsAnswer: boolean; fresh: boolean }) {
+function Feedback({ result, showsAnswer }: { result: CheckResult; showsAnswer: boolean }) {
   const { correct } = result;
   return (
     <p
-      className={`flex items-start gap-[0.5em] ${fresh ? "rounded-xl" : "rounded-lg"} border-l-[0.3em] px-[0.9em] py-[0.6em] font-semibold ${
+      className={`flex items-start gap-[0.5em] rounded-xl border-l-[0.3em] px-[0.9em] py-[0.6em] font-semibold ${
         correct ? "border-ok bg-ok-bg text-ok-strong" : "border-warn bg-warn-bg text-warn-strong"
       }`}
     >
@@ -272,14 +272,11 @@ function Feedback({ result, showsAnswer, fresh }: { result: CheckResult; showsAn
 
 function FrameButton({
   primary = false,
-  fresh = false,
   disabled = false,
   onClick,
   children,
 }: {
   primary?: boolean;
-  // Practice and Mock: the pressable look of the candidate buttons (same size as before).
-  fresh?: boolean;
   disabled?: boolean;
   onClick: () => void;
   children: ReactNode;
@@ -289,8 +286,8 @@ function FrameButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`inline-flex min-h-[max(var(--answer-min-h,56px),var(--answer-min-em,3.5em))] items-center justify-center px-[1em] font-semibold transition-colors focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60 ${
-        fresh ? "rounded-xl shadow-[inset_0_-4px_0_var(--ycc-ink)] not-disabled:active:shadow-[inset_0_-2px_0_var(--ycc-ink)]" : "rounded-lg"
+      className={`inline-flex min-h-[max(var(--answer-min-h,56px),var(--answer-min-em,3.5em))] items-center justify-center rounded-xl px-[1em] font-semibold transition-colors focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60 ${
+        primary ? "shadow-[inset_0_-4px_0_var(--ycc-ink)] not-disabled:active:shadow-[inset_0_-2px_0_var(--ycc-ink)]" : "shadow-[inset_0_-2px_0_var(--ycc-primary)]"
       } ${
         primary ? "hc-edge bg-primary text-white hover:bg-primary/90" : "border-2 border-primary bg-card text-primary hover:bg-primary/[0.06]"
       }`}
