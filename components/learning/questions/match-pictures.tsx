@@ -128,7 +128,7 @@ export function MatchPicturesAnswer({
       {!review && (
         <p data-flow-unit className="mb-[0.6em] font-semibold text-ink [break-after:avoid] [break-inside:avoid]">
           Put each picture in the box it belongs to.
-          <span className="block font-normal text-slate-700">Drag it, or tap a picture and then a box.</span>
+          <span className="block font-normal text-ink">Drag it, or tap a picture and then a box.</span>
         </p>
       )}
 
@@ -139,7 +139,7 @@ export function MatchPicturesAnswer({
             data-flow-unit
             data-match-pictures
             aria-label="Pictures to place"
-            className={`m-0 mb-[0.8em] flex list-none flex-wrap gap-[0.5em] rounded-lg p-[0.3em] [break-inside:avoid] @2xl:flex-col ${
+            className={`m-0 mb-[0.8em] flex list-none flex-wrap gap-[0.5em] rounded-xl p-[0.3em] [break-inside:avoid] @2xl:flex-col ${
               over === "pictures" ? "bg-primary/[0.08] ring-2 ring-primary" : ""
             }`}
           >
@@ -149,7 +149,7 @@ export function MatchPicturesAnswer({
                 <li key={item.id} className="size-[max(64px,4.5em)] shrink-0 [break-inside:avoid]">
                   {/* inline-block: never split across book pages, like the button it stands in for. */}
                   {inBox ? (
-                    <span aria-hidden="true" className="inline-block size-full rounded-md border-2 border-dashed border-slate-300 align-top" />
+                    <span aria-hidden="true" className="inline-block size-full rounded-md border-2 border-dashed border-line align-top" />
                   ) : (
                     <button
                       type="button"
@@ -166,8 +166,8 @@ export function MatchPicturesAnswer({
                         onKeyDownAny();
                         if (event.key === "Escape") setSelected(null);
                       }}
-                      className={`relative block size-full touch-none rounded-md border-2 bg-white p-[0.2em] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-default ${
-                        selected === item.id ? "border-primary ring-4 ring-primary/40" : "border-slate-300 hover:border-primary"
+                      className={`relative block size-full touch-none rounded-md border-2 bg-card p-[0.2em] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-default ${
+                        selected === item.id ? "border-primary ring-4 ring-primary/40" : "border-line hover:border-primary"
                       } ${drag?.moved && drag.itemId === item.id ? "opacity-40" : ""} ${locked ? "" : "cursor-grab"}`}
                     >
                       <Picture media={media} item={item} />
@@ -185,13 +185,13 @@ export function MatchPicturesAnswer({
             const right = rightFor(target.id);
             const isRight = Boolean(solution && inside && inside.id === right);
             const isWrong = Boolean(solution && inside && inside.id !== right);
-            let tone = "border-slate-300 bg-white";
-            if (isRight) tone = "border-green-700 bg-green-50";
-            else if (isWrong) tone = "border-amber-600 bg-amber-50";
+            let tone = "border-line bg-card";
+            if (isRight) tone = "border-ok bg-ok-bg";
+            else if (isWrong) tone = "border-warn bg-warn-bg";
             else if (over === target.id) tone = "border-primary bg-primary/[0.08]";
             return (
               <li key={target.id} data-flow-unit className="[break-inside:avoid]">
-                <div className={`relative flex items-center gap-[0.75em] rounded-lg border-2 p-[0.35em] ${tone}`}>
+                <div className={`relative flex items-center gap-[0.75em] rounded-xl border-2 p-[0.35em] ${tone}`}>
                   <button
                     type="button"
                     data-match-box={target.id}
@@ -206,7 +206,7 @@ export function MatchPicturesAnswer({
                     onClick={onClickGuard(() => tapBox(target.id))}
                     onKeyDown={onKeyDownAny}
                     className={`relative grid size-[max(64px,4.5em)] shrink-0 touch-none place-items-center rounded-md border-2 p-[0.2em] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-default ${
-                      inside ? "border-slate-300 bg-white" : "border-dashed border-slate-400 bg-slate-100"
+                      inside ? "border-line bg-card" : "border-dashed border-edge bg-fill"
                     } ${selected && !locked ? "border-primary" : ""}`}
                   >
                     {inside && <Picture media={media} item={inside} />}
@@ -216,10 +216,10 @@ export function MatchPicturesAnswer({
                   {mode === "learn" || showCorrect ? (
                     <span className="grid size-[max(40px,2.6em)] shrink-0 place-items-center">
                       {right && right !== inside?.id && (
-                        <span className="relative block size-full rounded-md border-2 border-green-700 bg-white p-[0.1em]" title="Right picture">
+                        <span className="relative block size-full rounded-md border-2 border-ok bg-card p-[0.1em]" title="Right picture">
                           <Picture media={media} item={itemById(right)} />
                           <span className="sr-only">Right picture: {alt(itemById(right))}</span>
-                          <span aria-hidden="true" className="absolute -right-[0.4em] -top-[0.4em] grid size-[1.3em] place-items-center rounded-full bg-green-700 text-[0.8em] text-white">
+                          <span aria-hidden="true" className="absolute -right-[0.4em] -top-[0.4em] grid size-[1.3em] place-items-center rounded-full bg-ok text-[0.8em] text-white">
                             <Icon name="tick" />
                           </span>
                         </span>
@@ -230,7 +230,7 @@ export function MatchPicturesAnswer({
                     <span
                       aria-hidden="true"
                       className={`absolute -top-[0.65em] right-[0.75em] flex items-center gap-[0.25em] rounded-full px-[0.55em] py-[0.08em] text-[max(14px,0.8em)] font-semibold leading-tight text-white ${
-                        isRight ? "bg-green-700" : "bg-amber-800"
+                        isRight ? "bg-ok" : "bg-warn-strong"
                       }`}
                     >
                       <Icon name={isRight ? "tick" : "cross"} />
@@ -249,7 +249,7 @@ export function MatchPicturesAnswer({
         createPortal(
           <div
             aria-hidden="true"
-            className="pointer-events-none fixed z-50 size-20 -translate-x-1/2 -translate-y-1/2 rounded-md border-2 border-primary bg-white p-1 opacity-90 shadow-lg"
+            className="pointer-events-none fixed z-50 size-20 -translate-x-1/2 -translate-y-1/2 rounded-md border-2 border-primary bg-card p-1 opacity-90 shadow-lg"
             style={{ left: drag.x, top: drag.y }}
           >
             <Picture media={media} item={dragged} />
@@ -271,7 +271,7 @@ function dropTargetAt(x: number, y: number): string | null {
 function Picture({ media, item }: { media: ResolvedMedia; item: MatchItem | undefined }) {
   const picture = item ? media[item.mediaId] : undefined;
   const src = usePictureSrc(picture?.src);
-  if (!picture) return <span className="text-[max(14px,0.7em)] text-slate-700">Picture unavailable</span>;
+  if (!picture) return <span className="text-[max(14px,0.7em)] text-ink">Picture unavailable</span>;
   return (
     // eslint-disable-next-line @next/next/no-img-element -- short-lived signed link; files are pre-shrunk WebP
     <img src={src} alt="" draggable={false} loading="lazy" decoding="async" className="pointer-events-none size-full object-contain" />

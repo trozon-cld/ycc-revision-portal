@@ -44,6 +44,7 @@ export function QuestionView({
   onStateChange,
   retry = true,
   review = false,
+  panel,
 }: {
   question: ClientQuestion;
   // e.g. "Question 3" in the book, "3 of 36" in a mock test.
@@ -66,6 +67,8 @@ export function QuestionView({
   retry?: boolean;
   // Reports: the question text is already in the line above, so it's kept for screen readers only.
   review?: boolean;
+  // Practice: below laptop width the result shows in a panel along the bottom, with these controls (e.g. Next question).
+  panel?: ReactNode;
 }) {
   const [ownState, setOwnState] = useState<QuestionViewState>(initialState ?? { ...FRESH_QUESTION_STATE, response: initialResponse });
   const [checking, setChecking] = useState(false);
@@ -141,7 +144,7 @@ export function QuestionView({
       <fieldset className="m-0 min-w-0 border-0 p-0">
         <legend id={stemId} data-flow-unit className={review ? "sr-only" : "mb-[calc(0.8em*var(--q-space,1))] w-full p-0 [break-after:avoid] [break-inside:avoid]"}>
           <span className="mb-[0.3em] block text-[max(14px,0.8em)] font-bold uppercase tracking-wide text-primary">{label}</span>
-          <span className="block whitespace-pre-line text-[1.25em] font-semibold leading-snug text-ink">
+          <span className="block whitespace-pre-line text-[1.125em] font-semibold leading-snug text-ink">
             <InlineText text={question.stemText} />
           </span>
         </legend>
@@ -178,7 +181,7 @@ export function QuestionView({
               review={review}
             />
           ) : (
-            <p className="rounded-lg bg-slate-100 px-[0.9em] py-[0.7em] text-slate-700">This question can’t be shown yet.</p>
+            <p className="rounded-xl bg-fill px-[0.9em] py-[0.7em] text-ink">This question can’t be shown yet.</p>
           )}
         </div>
       </fieldset>
@@ -201,9 +204,16 @@ export function QuestionView({
       {/* After Check or Reveal, the message and "Try again" share one row, so the question stays compact. */}
       <div
         data-flow-unit
-        className={phase === "answering" ? "[break-inside:avoid]" : "mt-[calc(0.9em*var(--q-space,1))] flex flex-wrap items-center gap-[0.6em] [break-inside:avoid]"}
+        data-feedback-panel={panel && phase !== "answering" ? "" : undefined}
+        className={
+          phase === "answering"
+            ? "[break-inside:avoid]"
+            : panel
+              ? `mt-[calc(0.9em*var(--q-space,1))] [break-inside:avoid] ${PANEL}`
+              : "mt-[calc(0.9em*var(--q-space,1))] flex flex-wrap items-center gap-[0.6em] [break-inside:avoid]"
+        }
       >
-        <div className="min-w-0 flex-1 basis-[12em]">
+        <div className={panel && phase !== "answering" ? "mx-auto w-full max-w-3xl" : "min-w-0 flex-1 basis-[12em]"}>
           <div role="status" aria-live="polite">
             {notice && <p className="mt-[calc(0.9em*var(--q-space,1))] font-semibold text-ink">{notice}</p>}
           </div>
@@ -211,12 +221,13 @@ export function QuestionView({
             <div ref={resultRef} tabIndex={-1} className="focus:outline-none">
               {phase === "checked" && result && <Feedback result={result} showsAnswer={showsAnswer} />}
               {phase === "revealed" && (
-                <p className="rounded-lg border-l-[0.3em] border-primary bg-primary/[0.07] px-[0.9em] py-[0.6em] font-semibold text-ink">
+                <p className="rounded-xl border-l-[0.3em] border-primary bg-primary/[0.07] px-[0.9em] py-[0.6em] font-semibold text-ink">
                   The correct answer is highlighted.
                 </p>
               )}
             </div>
           )}
+          {panel && phase !== "answering" && <div className="mt-4 lg:hidden">{panel}</div>}
         </div>
         {canCheck && retry && AnswerArea && phase !== "answering" && (
           <FrameButton key="again" onClick={reset}>
@@ -237,13 +248,17 @@ export function QuestionView({
   );
 }
 
+// Below laptop width: fixed along the bottom of the screen (slides up unless motion is reduced); from 1024px in the card.
+const PANEL =
+  "max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-10 max-lg:mt-0 max-lg:border-t-2 max-lg:border-line max-lg:bg-card max-lg:px-4 max-lg:pt-4 max-lg:pb-[calc(1rem+env(safe-area-inset-bottom))] max-lg:shadow-[0_-4px_16px_rgb(30_41_59/0.12)] max-lg:motion-safe:animate-[panel-up_200ms_ease-out]";
+
 // "Not answered" only comes up when reviewing a mock test; a check always has an answer.
 function Feedback({ result, showsAnswer }: { result: CheckResult; showsAnswer: boolean }) {
   const { correct } = result;
   return (
     <p
-      className={`flex items-start gap-[0.5em] rounded-lg border-l-[0.3em] px-[0.9em] py-[0.6em] font-semibold ${
-        correct ? "border-green-700 bg-green-50 text-green-900" : "border-amber-600 bg-amber-50 text-amber-950"
+      className={`flex items-start gap-[0.5em] rounded-xl border-l-[0.3em] px-[0.9em] py-[0.6em] font-semibold ${
+        correct ? "border-ok bg-ok-bg text-ok-strong" : "border-warn bg-warn-bg text-warn-strong"
       }`}
     >
       <MarkIcon name={correct ? "tick" : "cross"} className="mt-[0.15em] size-[1.1em] shrink-0" />
@@ -271,8 +286,10 @@ function FrameButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`inline-flex min-h-[max(var(--answer-min-h,56px),var(--answer-min-em,3.5em))] items-center justify-center rounded-lg px-[1em] font-semibold transition-colors focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60 ${
-        primary ? "hc-edge bg-primary text-white hover:bg-primary/90" : "border-2 border-primary bg-white text-primary hover:bg-primary/[0.06]"
+      className={`inline-flex min-h-[max(var(--answer-min-h,56px),var(--answer-min-em,3.5em))] items-center justify-center rounded-xl px-[1em] font-semibold transition-colors focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60 ${
+        primary ? "shadow-[inset_0_-4px_0_var(--ycc-ink)] not-disabled:active:shadow-[inset_0_-2px_0_var(--ycc-ink)]" : "shadow-[inset_0_-2px_0_var(--ycc-primary)]"
+      } ${
+        primary ? "hc-edge bg-primary text-white hover:bg-primary/90" : "border-2 border-primary bg-card text-primary hover:bg-primary/[0.06]"
       }`}
     >
       {children}

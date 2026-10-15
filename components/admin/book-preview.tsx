@@ -35,7 +35,7 @@ export function FitReadout({ info, noun, hint }: { info: ReadoutInfo; noun: "pag
   }
   if (tooLong) {
     return (
-      <p className="font-medium text-amber-900">
+      <p className="font-medium text-warn-strong">
         {noun === "question"
           ? `Too long for one ${screen} page once the answer is checked: candidates scroll within the page to see all of it. `
           : `Too long for one ${screen} page at the standard text size (${pages} pages). `}

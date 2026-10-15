@@ -101,13 +101,13 @@ export default async function MediaPage({ searchParams }: PageProps<"/admin/medi
       />
 
       {!configured && (
-        <p role="status" className="mb-4 rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-amber-600/25">
+        <p role="status" className="mb-4 rounded-md bg-warn-bg px-4 py-3 text-sm text-warn-strong ring-1 ring-warn/25">
           Image storage isn&apos;t set up yet. Add <code>SUPABASE_URL</code> and <code>SUPABASE_SERVICE_ROLE_KEY</code> to
           the server&apos;s environment and restart it.
         </p>
       )}
       {linksFailed && (
-        <p role="alert" className="mb-4 rounded-md bg-red-50 px-4 py-3 text-sm text-red-800">
+        <p role="alert" className="mb-4 rounded-md bg-danger-bg px-4 py-3 text-sm text-danger-strong">
           The pictures couldn&apos;t be loaded from storage. Check the storage settings and try again.
         </p>
       )}

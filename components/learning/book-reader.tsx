@@ -1,5 +1,6 @@
 "use client";
 
+import { Icon } from "@/components/icons";
 import {
   useCallback,
   useContext,
@@ -694,7 +695,7 @@ export function BookReader({
       return <CoverSheet key={`cover-${sheet.side}`} side={sheet.side} covers={covers} style={sheetStyle} spread={geometry.spread} onStart={startAgain} />;
     }
     if (sheet.kind === "none" || sheet.kind === "cover") {
-      return <div key={`none-${slot}`} aria-hidden="true" className={`shrink-0 ${still ? "bg-slate-100" : ""}`} style={{ width: geometry.sheetWidth, height: geometry.sheetHeight }} />;
+      return <div key={`none-${slot}`} aria-hidden="true" className={`shrink-0 ${still ? "bg-fill" : ""}`} style={{ width: geometry.sheetWidth, height: geometry.sheetHeight }} />;
     }
     const page = sheet.kind === "page" ? sheet.pageIndex : null;
     return (
@@ -788,7 +789,7 @@ export function BookReader({
       onKeyDown={onKeyDown}
       // Tells the page's CSS to hide the candidate header (see app/globals.css).
       data-reader-owns-header={homeHref ? "" : undefined}
-      className="flex h-full min-h-0 flex-col bg-slate-100 text-ink outline-none"
+      className="flex h-full min-h-0 flex-col bg-fill text-ink outline-none"
     >
       {tools && (
         <ReaderBar
@@ -1007,7 +1008,7 @@ export function BookReader({
       ) : (
         <nav
           aria-label="Page controls"
-          className={`flex items-center justify-between gap-3 border-t border-slate-300 bg-white py-3 ${compact ? "px-3" : "px-6"}`}
+          className={`flex items-center justify-between gap-3 border-t border-line bg-card py-3 ${compact ? "px-3" : "px-6"}`}
         >
           <PageButton direction="previous" compact={compact} disabled={!canGoBack} onClick={previous} />
           <p className="min-w-0 whitespace-nowrap text-center text-lg font-medium text-ink">
@@ -1041,12 +1042,10 @@ function SideButton({ direction, disabled, onClick }: { direction: "previous" | 
       disabled={disabled}
       title={showLabels ? undefined : isNext ? "Next page" : "Previous page"}
       className={`flex h-36 w-[72px] shrink-0 flex-col items-center justify-center gap-1 rounded-xl text-sm font-semibold transition-colors focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-40 ${
-        isNext ? "hc-edge bg-primary text-white hover:bg-primary/90" : "border-2 border-ink/25 bg-white text-ink hover:bg-slate-50"
+        isNext ? "hc-edge bg-primary text-white hover:bg-primary/90 shadow-[inset_0_-4px_0_var(--ycc-ink)]" : "border-2 border-line border-b-edge bg-card text-ink hover:bg-fill-soft"
       }`}
     >
-      <svg viewBox="0 0 24 24" aria-hidden="true" className="size-8" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d={isNext ? "M9 5l7 7-7 7" : "M15 5l-7 7 7 7"} />
-      </svg>
+      <Icon name={isNext ? "next" : "previous"} className="size-8" />
       <span className={showLabels ? undefined : "sr-only"}>{isNext ? "Next" : "Previous"}</span>
     </button>
   );
@@ -1067,13 +1066,11 @@ function PageButton({
   const showLabels = useContext(ReaderLabelsContext);
   const iconOnly = compact || !showLabels;
   const tone = isNext
-    ? "hc-edge bg-primary text-white hover:bg-primary/90"
-    : "border-2 border-ink/25 bg-white text-ink hover:bg-slate-50";
+    ? "hc-edge bg-primary text-white hover:bg-primary/90 shadow-[inset_0_-4px_0_var(--ycc-ink)]"
+    : "border-2 border-line border-b-edge bg-card text-ink hover:bg-fill-soft";
   const size = iconOnly ? "size-14" : "h-14 min-w-36 gap-2 px-5";
   const arrow = (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className={iconOnly ? "size-7" : "size-5"} fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d={isNext ? "M9 5l7 7-7 7" : "M15 5l-7 7 7 7"} />
-    </svg>
+    <Icon name={isNext ? "next" : "previous"} className={iconOnly ? "size-7" : "size-5"} />
   );
   return (
     <button
@@ -1218,10 +1215,10 @@ function SheetView({
   });
   const edge =
     side === "left"
-      ? "bg-gradient-to-l from-slate-200/70 via-white via-[3%] to-white"
+      ? "bg-gradient-to-l from-line-soft/70 via-white via-[3%] to-white"
       : side === "right"
-        ? "bg-gradient-to-r from-slate-200/70 via-white via-[3%] to-white"
-        : "bg-white rounded-sm";
+        ? "bg-gradient-to-r from-line-soft/70 via-white via-[3%] to-white"
+        : "bg-card rounded-sm";
 
   if (sheet.kind !== "page") {
     return <div aria-hidden="true" className={`shrink-0 ${edge}`} style={style} />;
@@ -1234,12 +1231,12 @@ function SheetView({
   return (
     <article aria-label={`Page ${sheet.number}`} className={`relative flex shrink-0 flex-col ${edge}`} style={style}>
       {page.badge && sheet.part === 0 && (
-        <span className="absolute right-1.5 top-1.5 rounded bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-900 ring-1 ring-amber-600/30">
+        <span className="absolute right-1.5 top-1.5 rounded bg-warn-bg px-1.5 py-0.5 text-xs font-semibold text-warn-strong ring-1 ring-warn/30">
           {page.badge}
         </span>
       )}
       <header
-        className="flex items-end justify-between gap-3 overflow-hidden border-b border-slate-200 pb-[0.35em] text-[max(14px,0.72em)] text-slate-700"
+        className="flex items-end justify-between gap-3 overflow-hidden border-b border-line-soft pb-[0.35em] text-[max(14px,0.72em)] text-ink"
         style={{ height: geometry.headerHeight, marginLeft: geometry.padX, marginRight: geometry.padX }}
       >
         {/* Narrow sheets (phones) show only the chapter, so neither name is cut to a few letters. */}
@@ -1288,10 +1285,10 @@ function SheetView({
           />
         </div>
         {moreBelow && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex h-[4em] items-end justify-center bg-gradient-to-t from-white via-white/90 to-transparent">
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex h-[4em] items-end justify-center bg-gradient-to-t from-card via-card/90 to-transparent">
             <button
               type="button"
-              className="pointer-events-auto mb-[0.2em] inline-flex min-h-10 items-center gap-2 rounded-full border-2 border-primary bg-white px-4 text-[0.9em] font-semibold text-primary shadow-sm hover:bg-primary/[0.06] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              className="pointer-events-auto mb-[0.2em] inline-flex min-h-11 items-center gap-2 rounded-full border-2 border-primary bg-card px-4 text-[0.9em] font-semibold text-primary shadow-sm hover:bg-primary/[0.06] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary"
               onClick={() =>
                 boxRef.current?.scrollBy({
                   top: Math.round(geometry.contentHeight * 0.7),
@@ -1300,9 +1297,7 @@ function SheetView({
               }
             >
               More below
-              <svg viewBox="0 0 20 20" aria-hidden="true" className="size-[1em]" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M5 8l5 5 5-5" />
-              </svg>
+              <Icon name="more-below" className="size-[1em]" />
             </button>
           </div>
         )}
@@ -1310,7 +1305,7 @@ function SheetView({
 
       <footer
         aria-hidden="true"
-        className="flex items-center justify-center text-[max(14px,0.8em)] text-slate-700"
+        className="flex items-center justify-center text-[max(14px,0.8em)] text-ink"
         style={{ height: geometry.footerHeight }}
       >
         {sheet.number}
@@ -1350,11 +1345,11 @@ function CoverSheet({
           actions={
             <>
               {covers.homeHref && (
-                <Link href={covers.homeHref} className={`${COVER_BUTTON} hc-edge bg-primary text-white hover:bg-primary/90`}>
+                <Link href={covers.homeHref} className={`${COVER_BUTTON} hc-edge bg-primary text-white hover:bg-primary/90 shadow-[inset_0_-4px_0_var(--ycc-ink)]`}>
                   Back to home
                 </Link>
               )}
-              <button type="button" onClick={onStart} className={`${COVER_BUTTON} border-2 border-ink/25 bg-white text-ink hover:bg-slate-50`}>
+              <button type="button" onClick={onStart} className={`${COVER_BUTTON} border-2 border-line border-b-edge bg-card text-ink hover:bg-fill-soft`}>
                 Start from the beginning
               </button>
             </>

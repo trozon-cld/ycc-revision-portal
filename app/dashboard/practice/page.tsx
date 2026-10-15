@@ -5,7 +5,7 @@ import { requireRole } from "@/lib/auth/guard";
 import { SESSION_ENDED_LOGIN } from "@/lib/auth/constants";
 import { loadOpenPractice, loadPracticeOptions } from "@/lib/practice/sessions";
 import { PageBody } from "@/components/candidate/page-body";
-import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { NOTE_BOX, PAGE_TITLE, PRIMARY_BUTTON, SECONDARY_BUTTON, WARN_BOX } from "@/components/candidate/buttons";
 import { FocusedShell } from "@/components/learning/focused-shell";
 import { PracticeSetup } from "./practice-setup";
 
@@ -33,38 +33,38 @@ export default async function PracticePage({ searchParams }: PageProps<"/dashboa
   return (
     <FocusedShell label="Practice tools" status="Practice">
       <PageBody>
-        <div className="max-w-2xl">
-          <h1 className="text-3xl font-bold text-ink">Practice</h1>
-          <p className="mt-3 text-lg leading-relaxed text-ink">
+        <div className="max-w-3xl">
+          <h1 className={`${PAGE_TITLE}`}>Practice</h1>
+          <p className="mt-3 text-base leading-relaxed text-ink">
             Answer questions at your own pace. After each one you’ll see the right answer and why.
           </p>
-          <p className="mt-1 text-base text-ink/80 [overflow-wrap:anywhere]">Questions for {options.categoryName}</p>
+          <p className="mt-1 text-base text-muted [overflow-wrap:anywhere]">Questions for {options.categoryName}</p>
 
           {ended && (
-            <p role="status" className="mt-6 rounded-xl border-2 border-amber-500 bg-amber-50 p-4 text-lg leading-relaxed text-amber-950">
+            <p role="status" className={`mt-5 lg:mt-6 ${WARN_BOX} p-4 text-base leading-relaxed`}>
               {ended}
             </p>
           )}
 
           {open && (
-            <section aria-labelledby="open-heading" className="mt-6 rounded-xl border-2 border-primary bg-primary/5 p-5">
+            <section aria-labelledby="open-heading" className={`mt-5 lg:mt-6 ${NOTE_BOX} p-4 lg:p-5`}>
               <h2 id="open-heading" className="text-xl font-bold text-ink">
                 Practice in progress
               </h2>
-              <p className="mt-1 text-lg text-ink">
+              <p className="mt-1 text-base text-ink">
                 Question {Math.min(open.position + 1, open.total)} of {open.total} · {open.answered} answered
               </p>
               <Link href={`/dashboard/practice/${open.id}`} className={`${PRIMARY_BUTTON} mt-4 w-full sm:w-auto`}>
                 Continue practice
               </Link>
-              <p className="mt-3 text-base text-ink/80">Starting a new practice below ends this one and keeps your results so far.</p>
+              <p className="mt-3 text-base text-muted">Starting a new practice below ends this one and keeps your results so far.</p>
             </section>
           )}
 
           {options.total === 0 ? (
-            <div className="mt-8">
-              <p className="text-lg leading-relaxed text-ink">There are no practice questions for {options.categoryName} yet. Please check back soon.</p>
-              <Link href="/dashboard" className={`${PRIMARY_BUTTON} mt-6 w-full sm:w-auto`}>
+            <div className="mt-5 lg:mt-6">
+              <p className="text-base leading-relaxed text-ink">There are no practice questions for {options.categoryName} yet. Please check back soon.</p>
+              <Link href="/dashboard" className={`${PRIMARY_BUTTON} mt-5 lg:mt-6 w-full sm:w-auto`}>
                 Back to home
               </Link>
             </div>

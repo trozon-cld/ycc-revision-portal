@@ -1,5 +1,6 @@
 "use client";
 
+import { Icon } from "@/components/icons";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { NOT_THROUGH_MESSAGE, reachServer, type FormState } from "@/lib/forms";
@@ -158,9 +159,7 @@ export function PanelButton({
         className={buttonClass(variant)}
       >
         {icon && (
-          <svg viewBox="0 0 20 20" aria-hidden="true" className="size-4">
-            <path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          </svg>
+          <Icon name="add" size={16} weight="regular" />
         )}
         {label}
       </button>

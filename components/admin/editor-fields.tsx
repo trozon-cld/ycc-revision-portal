@@ -3,6 +3,7 @@
 import { useRef, type ReactNode } from "react";
 import { applyBold } from "@/lib/content/editor";
 import { buttonClass, labelClass, textareaClass } from "./styles";
+import { Icon, type IconName } from "@/components/icons";
 
 // Editor controls shared by the page editor and the question editor.
 
@@ -77,13 +78,13 @@ export function BoldTextarea({
 
 export function IconButton({
   label,
-  path,
+  icon,
   onClick,
   disabled,
   danger,
 }: {
   label: string;
-  path: string;
+  icon: IconName;
   onClick: () => void;
   disabled?: boolean;
   danger?: boolean;
@@ -95,11 +96,9 @@ export function IconButton({
       title={label}
       onClick={onClick}
       disabled={disabled}
-      className={`${buttonClass("ghost", "icon")} ${danger ? "text-red-700 hover:bg-red-50" : ""}`}
+      className={`${buttonClass("ghost", "icon")} ${danger ? "text-danger hover:bg-danger-bg" : ""}`}
     >
-      <svg viewBox="0 0 20 20" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-        <path d={path} />
-      </svg>
+      <Icon name={icon} size={16} weight="regular" />
     </button>
   );
 }

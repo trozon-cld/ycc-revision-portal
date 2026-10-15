@@ -7,10 +7,11 @@ import { LogoutButton } from "@/components/logout-button";
 import { buttonClass } from "./styles";
 import { CONTENT_EDITORS } from "@/lib/auth/content-editors";
 import { ToastProvider } from "./toast";
+import { Icon, type IconName } from "@/components/icons";
 
 type Role = "admin" | "superadmin";
-type IconName = "admins" | "candidates" | "categories" | "handbook" | "questions" | "media" | "faq" | "activity" | "account";
-type NavItem = { href: string; label: string; icon: IconName };
+type NavIconName = "admins" | "candidates" | "categories" | "handbook" | "questions" | "media" | "faq" | "activity" | "account";
+type NavItem = { href: string; label: string; icon: NavIconName };
 type NavGroup = { heading?: string; items: NavItem[] };
 
 // Shown to whoever CONTENT_EDITORS lists (lib/auth/content-editors.ts).
@@ -92,9 +93,7 @@ export function AdminShell({ role, email, name, children }: { role: Role; email:
             aria-expanded={menuOpen}
             className={buttonClass("ghost", "icon")}
           >
-            <svg viewBox="0 0 20 20" aria-hidden="true" className="size-5">
-              <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
-            </svg>
+            <Icon name="menu" size={20} weight="regular" />
           </button>
         </header>
 
@@ -207,9 +206,7 @@ function MobileDrawer({ onClose, children }: { onClose: () => void; children: Re
           aria-label="Close menu"
           className={`${buttonClass("ghost", "icon")} absolute right-2 top-2`}
         >
-          <svg viewBox="0 0 20 20" aria-hidden="true" className="size-5">
-            <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
-          </svg>
+          <Icon name="close" size={20} weight="regular" />
         </button>
         {children}
       </div>
@@ -217,80 +214,19 @@ function MobileDrawer({ onClose, children }: { onClose: () => void; children: Re
   );
 }
 
-function NavIcon({ name }: { name: IconName }) {
-  const paths: Record<IconName, ReactNode> = {
-    admins: (
-      <>
-        <circle cx="7.5" cy="7" r="2.75" />
-        <path d="M2.5 16c.6-2.6 2.5-4 5-4s4.4 1.4 5 4" />
-        <path d="M13 4.5a2.5 2.5 0 010 5M14.5 12.2c1.5.5 2.5 1.8 3 3.8" />
-      </>
-    ),
-    candidates: (
-      <>
-        <circle cx="10" cy="7" r="3" />
-        <path d="M4 17c.7-3 3-4.5 6-4.5s5.3 1.5 6 4.5" />
-      </>
-    ),
-    categories: (
-      <>
-        <path d="M3.5 3.5h6l7 7-6 6-7-7z" />
-        <circle cx="7" cy="7" r="1" />
-      </>
-    ),
-    handbook: (
-      <>
-        <path d="M10 5.5C8.5 4.3 6.3 3.75 3 3.75v11.5c3.3 0 5.5.55 7 1.75 1.5-1.2 3.7-1.75 7-1.75V3.75c-3.3 0-5.5.55-7 1.75z" />
-        <path d="M10 5.5V17" />
-      </>
-    ),
-    questions: (
-      <>
-        <circle cx="10" cy="10" r="7" />
-        <path d="M7.75 8a2.25 2.25 0 114 1.4c-.8.6-1.75 1.1-1.75 2.1" />
-        <path d="M10 14.25v.01" />
-      </>
-    ),
-    media: (
-      <>
-        <rect x="3" y="4" width="14" height="12" rx="1.5" />
-        <circle cx="7.5" cy="8.5" r="1.25" />
-        <path d="M3.5 14.5l4-4 3 3 2-2 4 4" />
-      </>
-    ),
-    faq: (
-      <>
-        <path d="M3.5 4.5h13v9h-7l-3.5 3v-3h-2.5z" />
-        <path d="M8.25 7.75a1.75 1.75 0 113 1.2c-.6.45-1.25.8-1.25 1.55" />
-        <path d="M10 12.25v.01" />
-      </>
-    ),
-    activity: (
-      <>
-        <circle cx="10" cy="10" r="7" />
-        <path d="M10 6v4l2.5 2" />
-      </>
-    ),
-    account: (
-      <>
-        <circle cx="10" cy="10" r="2.5" />
-        <path d="M10 2.5v2M10 15.5v2M2.5 10h2M15.5 10h2M4.7 4.7l1.4 1.4M13.9 13.9l1.4 1.4M4.7 15.3l1.4-1.4M13.9 6.1l1.4-1.4" />
-      </>
-    ),
-  };
+// Staff nav names mapped onto the shared icon set.
+const NAV_ICONS: Record<NavIconName, IconName> = {
+  admins: "admins",
+  candidates: "candidates",
+  categories: "categories",
+  handbook: "book",
+  questions: "help",
+  media: "picture",
+  faq: "faq",
+  activity: "activity",
+  account: "account",
+};
 
-  return (
-    <svg
-      viewBox="0 0 20 20"
-      aria-hidden="true"
-      className="size-4 shrink-0"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      {paths[name]}
-    </svg>
-  );
+function NavIcon({ name }: { name: NavIconName }) {
+  return <Icon name={NAV_ICONS[name]} size={16} weight="regular" />;
 }

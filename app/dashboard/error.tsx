@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { PageBody } from "@/components/candidate/page-body";
-import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { CARD, PAGE_TITLE, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 
 // A candidate page that failed to load (e.g. the database couldn't be reached); the header stays.
 export default function CandidateError({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
@@ -13,12 +13,12 @@ export default function CandidateError({ error, retry }: { error: Error & { dige
 
   return (
     <PageBody>
-      <div className="max-w-xl">
-        <h1 className="text-3xl font-bold text-ink">This page couldn’t load</h1>
-        <p role="alert" className="mt-3 text-lg leading-relaxed text-ink">
+      <div className={`${CARD} max-w-xl p-6`}>
+        <h1 className={`${PAGE_TITLE}`}>This page couldn’t load</h1>
+        <p role="alert" className="mt-3 text-base leading-relaxed text-ink">
           Something went wrong on our side, or the connection dropped. Anything already saved is safe.
         </p>
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+        <div className="mt-5 lg:mt-6 flex flex-col gap-3 sm:flex-row">
           <button type="button" onClick={() => retry()} className={PRIMARY_BUTTON}>
             Try again
           </button>
@@ -26,7 +26,7 @@ export default function CandidateError({ error, retry }: { error: Error & { dige
             Back to home
           </Link>
         </div>
-        {error.digest && <p className="mt-6 text-base text-ink/80">Reference: {error.digest}</p>}
+        {error.digest && <p className="mt-5 lg:mt-6 text-base text-muted">Reference: {error.digest}</p>}
       </div>
     </PageBody>
   );

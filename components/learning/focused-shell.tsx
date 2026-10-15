@@ -4,17 +4,15 @@ import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DEFAULT_TEXT_SIZE, type TextSize } from "@/lib/content/book";
-import { PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { NOTE_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { AccountLinks, HomeLogo } from "@/components/candidate/header";
+import { Icon } from "@/components/icons";
 import { logOut } from "@/components/logout-button";
 import {
   BAR_BUTTON_DENSE,
-  HOME_ICON,
-  Icon,
   PANEL_LINK,
   ReaderLabelsContext,
   useReaderLabels,
-  SETTINGS_ICON,
   SettingsPanel,
   TextSizeStep,
   barButton,
@@ -129,14 +127,14 @@ export function FocusedShell({
         <div
           role="toolbar"
           aria-label={label}
-          className="relative grid grid-cols-[minmax(max-content,1fr)_minmax(0,auto)_minmax(max-content,1fr)] items-center gap-2 border-b border-slate-300 bg-white px-3 py-2 lg:px-6"
+          className="relative grid grid-cols-[minmax(max-content,1fr)_minmax(0,auto)_minmax(max-content,1fr)] items-center gap-2 border-b border-line bg-card px-3 py-2 lg:px-6"
         >
           <div className="flex min-w-0 items-center">
             <div className="hidden shrink-0 lg:flex">
               <HomeLogo showName={false} />
             </div>
             <Link href="/dashboard" title={showLabels ? undefined : "Home"} className={`${barButton} ${size} lg:hidden`}>
-              <Icon path={HOME_ICON} />
+              <Icon name="home" />
               {word("Home")}
             </Link>
           </div>
@@ -168,11 +166,11 @@ export function FocusedShell({
               title={showLabels ? undefined : "Settings"}
               className={`${barButton} ${size}`}
             >
-              <Icon path={SETTINGS_ICON} />
+              <Icon name="settings" />
               {word("Settings")}
             </button>
             {!accountInSettings && (
-              <div className="ml-2 hidden shrink-0 items-center gap-2 border-l border-slate-200 pl-4 lg:flex">
+              <div className="ml-2 hidden shrink-0 items-center gap-2 border-l border-line-soft pl-4 lg:flex">
                 <AccountLinks buttonClass={`${barButton} ${BAR_BUTTON_DENSE}`} />
               </div>
             )}
@@ -183,9 +181,9 @@ export function FocusedShell({
             </div>
           )}
         </div>
-        {timer && <div className="flex justify-center border-b border-slate-300 bg-white px-3 py-1.5 min-[840px]:hidden">{timer("strip")}</div>}
+        {timer && <div className="flex justify-center border-b border-line bg-card px-3 py-1.5 min-[840px]:hidden">{timer("strip")}</div>}
         <div className="relative min-h-0 flex-1">
-          <div ref={scrollRef} className="absolute inset-0 overflow-y-auto" style={PICTURE_LIMITS}>
+          <div ref={scrollRef} className="focused-scroll absolute inset-0 overflow-y-auto" style={PICTURE_LIMITS}>
             {children}
           </div>
           {settings && (
@@ -209,13 +207,13 @@ export function FocusedShell({
             />
           )}
           {leaving && leaveWarning && (
-            <div className="absolute inset-0 z-20 overflow-y-auto bg-white px-4 py-8">
+            <div className="absolute inset-0 z-20 overflow-y-auto bg-card px-4 py-8">
               <div
                 role="alertdialog"
                 aria-labelledby="leave-heading"
                 aria-describedby="leave-text"
                 onKeyDown={(event) => event.key === "Escape" && setLeaving(null)}
-                className="mx-auto max-w-xl rounded-xl border-2 border-primary bg-primary/5 p-5"
+                className={`mx-auto max-w-xl ${NOTE_BOX} p-5`}
               >
                 <h2 id="leave-heading" className="text-xl font-bold text-ink">
                   Leave the test?

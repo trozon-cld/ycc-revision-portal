@@ -66,7 +66,7 @@ export function ActionForm({
       <div className={isPanel ? "flex-1 space-y-4 px-5 py-4" : "space-y-4"}>
         {children}
         {state.error && (
-          <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-800">
+          <p role="alert" className="rounded-md bg-danger-bg px-3 py-2 text-sm text-danger-strong">
             {state.error}
           </p>
         )}

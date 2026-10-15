@@ -48,7 +48,7 @@ export function PracticeSetup({ options, hasOpen, initialChapters = [] }: { opti
   const toggle = (list: string[], value: string) => (list.includes(value) ? list.filter((item) => item !== value) : [...list, value]);
 
   return (
-    <form method="post" onSubmit={submitKeepingChoices(action)} className="mt-8">
+    <form method="post" onSubmit={submitKeepingChoices(action)} className="mt-5 lg:mt-6">
       <fieldset>
         <legend className="mb-3 text-xl font-bold text-ink">1. What would you like to practise?</legend>
         <div className="flex flex-col gap-3">
@@ -56,8 +56,8 @@ export function PracticeSetup({ options, hasOpen, initialChapters = [] }: { opti
             <label key={item.way} className={CHOICE_ROW}>
               <input type="radio" name="way" value={item.way} checked={way === item.way} onChange={() => setWay(item.way)} className={CHOICE_INPUT} />
               <span className="flex min-w-0 flex-col">
-                <span className="text-lg font-semibold text-ink">{item.title}</span>
-                <span className="text-base text-ink/80">
+                <span className="text-base font-semibold text-ink">{item.title}</span>
+                <span className="text-base text-muted">
                   {item.description}
                   {item.way === "all" && ` ${countOf(options.total, "question")}.`}
                 </span>
@@ -65,7 +65,7 @@ export function PracticeSetup({ options, hasOpen, initialChapters = [] }: { opti
             </label>
           ))}
         </div>
-        <p className="mt-6 mb-3 text-lg font-bold text-ink">Or focus on…</p>
+        <p className="mt-5 lg:mt-6 mb-3 text-base font-bold text-ink">Or focus on…</p>
         <div className="flex flex-col gap-3">
           {FOCUS.map((item) => {
             const count = options.focus[item.way as keyof PracticeOptions["focus"]];
@@ -82,8 +82,8 @@ export function PracticeSetup({ options, hasOpen, initialChapters = [] }: { opti
                   className={CHOICE_INPUT}
                 />
                 <span className="flex min-w-0 flex-col">
-                  <span className="text-lg font-semibold">{item.title}</span>
-                  <span className="text-base text-ink/80 [overflow-wrap:anywhere]">
+                  <span className="text-base font-semibold">{item.title}</span>
+                  <span className="text-base text-muted [overflow-wrap:anywhere]">
                     {count === 0 ? item.none : weak ? `${item.description} ${countOf(count, "question")} from:` : `${item.description} ${countOf(count, "question")}.`}
                   </span>
                   {weak && (
@@ -103,12 +103,12 @@ export function PracticeSetup({ options, hasOpen, initialChapters = [] }: { opti
       </fieldset>
 
       {way === "chapters" && (
-        <fieldset className="mt-6">
+        <fieldset className="mt-5 lg:mt-6">
           <legend className="mb-3 text-xl font-bold text-ink">Choose chapters</legend>
           <div className="flex flex-col gap-5">
             {options.sections.map((section) => (
               <div key={section.label}>
-                <p className="mb-2 text-base font-semibold text-ink/80 [overflow-wrap:anywhere]">{section.label}</p>
+                <p className="mb-2 text-base font-semibold text-muted [overflow-wrap:anywhere]">{section.label}</p>
                 <div className="flex flex-col gap-3">
                   {section.chapters.map((chapter) => (
                     <label key={chapter.id} className={CHOICE_ROW}>
@@ -121,8 +121,8 @@ export function PracticeSetup({ options, hasOpen, initialChapters = [] }: { opti
                         className={CHOICE_INPUT}
                       />
                       <span className="flex min-w-0 flex-col">
-                        <span className="text-lg font-semibold text-ink [overflow-wrap:anywhere]">{chapter.label}</span>
-                        <span className="text-base text-ink/80">{countOf(chapter.count, "question")}</span>
+                        <span className="text-base font-semibold text-ink [overflow-wrap:anywhere]">{chapter.label}</span>
+                        <span className="text-base text-muted">{countOf(chapter.count, "question")}</span>
                       </span>
                     </label>
                   ))}
@@ -134,7 +134,7 @@ export function PracticeSetup({ options, hasOpen, initialChapters = [] }: { opti
       )}
 
       {way === "types" && (
-        <fieldset className="mt-6">
+        <fieldset className="mt-5 lg:mt-6">
           <legend className="mb-3 text-xl font-bold text-ink">Choose types of question</legend>
           <div className="flex flex-col gap-3">
             {options.types.map((item) => (
@@ -148,8 +148,8 @@ export function PracticeSetup({ options, hasOpen, initialChapters = [] }: { opti
                   className={CHOICE_INPUT}
                 />
                 <span className="flex min-w-0 flex-col">
-                  <span className="text-lg font-semibold text-ink">{item.name}</span>
-                  <span className="text-base text-ink/80">{countOf(item.count, "question")}</span>
+                  <span className="text-base font-semibold text-ink">{item.name}</span>
+                  <span className="text-base text-muted">{countOf(item.count, "question")}</span>
                 </span>
               </label>
             ))}
@@ -157,7 +157,7 @@ export function PracticeSetup({ options, hasOpen, initialChapters = [] }: { opti
         </fieldset>
       )}
 
-      <fieldset className="mt-8">
+      <fieldset className="mt-5 lg:mt-6">
         <legend className="mb-3 text-xl font-bold text-ink">2. How many questions?</legend>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {PRACTICE_SIZES.map((value) => (
@@ -171,17 +171,17 @@ export function PracticeSetup({ options, hasOpen, initialChapters = [] }: { opti
                 onChange={() => setSize(String(value))}
                 className={CHOICE_INPUT}
               />
-              <span className="text-lg font-semibold">{value}</span>
+              <span className="text-base font-semibold">{value}</span>
             </label>
           ))}
           <label className={`${CHOICE_ROW} justify-center`}>
             <input type="radio" name="size" value="all" checked={chosenSize === "all"} onChange={() => setSize("all")} className={CHOICE_INPUT} />
-            <span className="text-lg font-semibold">All{available > 0 ? ` (${available})` : ""}</span>
+            <span className="text-base font-semibold">All{available > 0 ? ` (${available})` : ""}</span>
           </label>
         </div>
       </fieldset>
 
-      <div aria-live="polite" className="mt-6">
+      <div aria-live="polite" className="mt-5 lg:mt-6">
         {state.error && (
           <p role="alert" className={ERROR_BOX}>
             {state.error}

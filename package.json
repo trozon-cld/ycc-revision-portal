@@ -10,6 +10,7 @@
     "hash": "node scripts/generate-hash.mjs"
   },
   "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
     "bcryptjs": "^2.4.3",
     "jose": "^5.9.6",
     "next": "16.3.5",

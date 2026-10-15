@@ -31,7 +31,7 @@ export function NewCandidateButton({
           onCancel={close}
         >
           {categories.length === 0 && (
-            <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            <p className="rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong">
               No categories are available yet. A category is needed before a candidate can be created.
             </p>
           )}

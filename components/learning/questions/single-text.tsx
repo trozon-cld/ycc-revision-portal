@@ -4,7 +4,7 @@ import { useId, useMemo } from "react";
 import { seededShuffle } from "@/lib/questions/shuffle";
 import { optionLetter, type SingleTextAnswer as Answer, type SingleTextContent } from "@/lib/questions/types/single-text";
 import { InlineText } from "../inline-text";
-import { MarkIcon, OptionStatus } from "./answer-parts";
+import { MarkIcon, OptionStatus, optionLook } from "./answer-parts";
 import type { AnswerAreaProps } from "./renderers";
 
 // Candidate answer area for "Single answer, text options". Real radio buttons underneath, so arrow
@@ -28,17 +28,14 @@ export function SingleTextAnswer({ mode, seed, content, answer, response, onResp
         const isWrongChoice = correctId !== null && selected && !isCorrect;
         const inputId = `${name}-${option.id}`;
 
-        let tone = "border-slate-300 bg-white";
-        if (isCorrect) tone = "border-green-700 bg-green-50";
-        else if (isWrongChoice) tone = "border-amber-600 bg-amber-50";
-        else if (selected) tone = "border-primary bg-primary/[0.06]";
+        const tone = optionLook(isCorrect ? "correct" : isWrongChoice ? "wrong" : selected ? "selected" : "plain", locked);
 
         return (
           <li key={option.id} data-flow-unit className="[break-inside:avoid]">
             <label
               htmlFor={inputId}
               data-option={option.id}
-              className={`relative flex min-h-[max(var(--answer-min-h,56px),var(--answer-min-em,3.5em))] items-center gap-[0.75em] rounded-lg border-2 px-[0.9em] py-[calc(0.55em*var(--q-space,1))] leading-snug text-ink has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary ${tone} ${
+              className={`relative flex min-h-[max(var(--answer-min-h,56px),var(--answer-min-em,3.5em))] items-center gap-[0.75em] border-2 px-[0.9em] py-[calc(0.55em*var(--q-space,1))] leading-snug text-ink has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary ${tone} ${
                 locked ? "cursor-default" : "cursor-pointer hover:border-primary"
               }`}
             >
@@ -55,7 +52,7 @@ export function SingleTextAnswer({ mode, seed, content, answer, response, onResp
               <span
                 aria-hidden="true"
                 className={`grid size-[2em] shrink-0 place-items-center rounded-full border-2 text-[0.9em] font-bold ${
-                  selected ? "hc-fill border-primary bg-primary text-white" : "border-slate-400 text-slate-700"
+                  selected ? "hc-fill border-primary bg-primary text-white" : "border-edge text-ink"
                 }`}
               >
                 {optionLetter(index)}
@@ -68,8 +65,8 @@ export function SingleTextAnswer({ mode, seed, content, answer, response, onResp
               </span>
               {selected && !isCorrect && !isWrongChoice && <MarkIcon name="tick" className="size-[1.2em] shrink-0 text-primary" />}
               {/* Results sit on the border, so an option never grows after Check and never moves page. */}
-              {isCorrect && <OptionStatus tone="bg-green-700" icon="tick" label="Correct answer" />}
-              {isWrongChoice && <OptionStatus tone="bg-amber-800" icon="cross" label="Your answer" />}
+              {isCorrect && <OptionStatus tone="bg-ok" icon="tick" label="Correct answer" />}
+              {isWrongChoice && <OptionStatus tone="bg-warn-strong" icon="cross" label="Your answer" />}
             </label>
           </li>
         );

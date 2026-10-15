@@ -124,7 +124,7 @@ export function AreaChoiceFields({ content, answer, onChange, newId, media, thum
             {rightIndex >= 0 ? (
               `Right answer: area ${rightIndex + 1}`
             ) : (
-              <span className="font-medium text-amber-900">Mark which area is the right answer.</span>
+              <span className="font-medium text-warn-strong">Mark which area is the right answer.</span>
             )}
             {full && " · Remove an area to draw another."}
           </p>
@@ -164,9 +164,9 @@ export function AreaChoiceFields({ content, answer, onChange, newId, media, thum
                         name={groupName}
                         checked={area.id === solution.correctAreaId}
                         onChange={() => onChange(latest.current.data, { ...latest.current.solution, correctAreaId: area.id })}
-                        className="size-4 accent-green-700"
+                        className="size-4 accent-ok"
                       />
-                      <span className={area.id === solution.correctAreaId ? "font-semibold text-green-900" : ""}>
+                      <span className={area.id === solution.correctAreaId ? "font-semibold text-ok-strong" : ""}>
                         Right answer<span className="sr-only"> (area {index + 1})</span>
                       </span>
                     </label>

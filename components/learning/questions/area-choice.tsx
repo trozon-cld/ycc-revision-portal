@@ -38,7 +38,7 @@ export function AreaChoiceAnswer({ content, media, answer, response, onResponse,
           aria-label={`${picture?.alt || "Picture"}. Choose one of ${data.areas.length} areas.`}
           onKeyDown={onKeyDown}
           data-area-choice
-          className="relative w-full select-none rounded-md bg-slate-100 [-webkit-touch-callout:none]"
+          className="relative w-full select-none rounded-md bg-fill [-webkit-touch-callout:none]"
         >
           <TapPicture picture={picture} ratio={ratio} measuring={measuring} />
           {data.areas.map((area, index) => (
@@ -82,12 +82,12 @@ function Choice({
 }) {
   const wrongChoice = correct === false && selected;
   let tone: string;
-  if (correct === true) tone = "border-[3px] border-green-700 bg-green-600/20 shadow-[0_0_0_2px_white]";
-  else if (wrongChoice) tone = "border-[3px] border-amber-700 bg-amber-400/25 shadow-[0_0_0_2px_white]";
+  if (correct === true) tone = "border-[3px] border-ok bg-ok/20 shadow-[0_0_0_2px_white]";
+  else if (wrongChoice) tone = "border-[3px] border-warn bg-warn/25 shadow-[0_0_0_2px_white]";
   else if (selected) tone = "border-[3px] border-primary bg-primary/20 shadow-[0_0_0_2px_white]";
   else
     tone = `border-2 border-transparent [@media(hover:none)]:border-dashed [@media(hover:none)]:border-white [@media(hover:none)]:shadow-[0_0_0_1px_rgba(15,23,42,0.6)] ${
-      locked ? "" : "hover:border-amber-500 hover:bg-amber-300/35"
+      locked ? "" : "hover:border-warn hover:bg-warn/35"
     }`;
   const spoken = area.name || `Area ${index + 1}`;
   const centre = area.x + area.w / 2;
@@ -99,7 +99,7 @@ function Choice({
       data-choice-area={area.id}
       className={`absolute ${area.shape === "ellipse" ? "rounded-[50%]" : "rounded-sm"} ${tone} ${
         locked ? "cursor-default" : "cursor-pointer"
-      } has-[:focus-visible]:bg-amber-300/35 has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary`}
+      } has-[:focus-visible]:bg-warn/35 has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary`}
       style={{ left: `${area.x}%`, top: `${area.y}%`, width: `${area.w}%`, height: `${area.h}%` }}
     >
       <input type="radio" name={name} value={area.id} checked={selected} disabled={locked} onChange={onChoose} className="sr-only" />
@@ -121,7 +121,7 @@ function Choice({
         <span
           aria-hidden="true"
           className={`absolute ${vertical} ${horizontal} flex max-w-[14em] items-center gap-[0.25em] whitespace-nowrap rounded-full px-[0.55em] py-[0.08em] text-[max(14px,0.8em)] font-semibold leading-tight text-white shadow-[0_0_0_2px_white] ${
-            correct ? "bg-green-700" : "bg-amber-800"
+            correct ? "bg-ok" : "bg-warn-strong"
           }`}
         >
           <Icon name={correct ? "tick" : "cross"} />

@@ -7,7 +7,7 @@ import { MOCK_KEEP_ANSWERS, type MockReviewItem } from "@/lib/mock/types";
 import { isUuid } from "@/lib/ids";
 import { firstParam } from "@/lib/params";
 import { PageBody } from "@/components/candidate/page-body";
-import { SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { PAGE_TITLE, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { FocusedShell } from "@/components/learning/focused-shell";
 import { ReviewList } from "./review-list";
 
@@ -41,15 +41,15 @@ export default async function MockReviewPage({ params, searchParams }: PageProps
     <FocusedShell label="Mock test tools" status="Your answers">
       <PageBody>
         <div className="max-w-3xl">
-          <h1 className="text-3xl font-bold text-ink">Your answers</h1>
+          <h1 className={`${PAGE_TITLE}`}>Your answers</h1>
           {!review.kept ? (
-            <p className="mt-4 text-lg leading-relaxed text-ink">
+            <p className="mt-4 text-base leading-relaxed text-ink">
               Answers are kept for your {MOCK_KEEP_ANSWERS} newest mock tests, so this test’s answers are no longer available. Its score and
               results by chapter are still on its results page.
             </p>
           ) : (
             <>
-              <p className="mt-2 text-lg text-ink">See your answer, the correct answer and why, for each question.</p>
+              <p className="mt-2 text-base text-ink">See your answer, the correct answer and why, for each question.</p>
               <nav aria-label="Show questions" className="mt-5 flex flex-wrap gap-2">
                 {FILTERS.map((item) => {
                   const current = item.key === filter.key;
@@ -58,8 +58,8 @@ export default async function MockReviewPage({ params, searchParams }: PageProps
                       key={item.key}
                       href={`/dashboard/mock/${attemptId}/review?show=${item.key}`}
                       aria-current={current ? "page" : undefined}
-                      className={`inline-flex min-h-12 items-center rounded-full border-2 px-4 text-lg font-semibold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary ${
-                        current ? "hc-fill border-primary bg-primary text-white" : "border-ink/25 bg-white text-ink hover:border-primary hover:text-primary"
+                      className={`inline-flex min-h-12 items-center rounded-full border-2 px-4 text-base font-semibold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+                        current ? "hc-fill border-primary bg-primary text-white" : "border-ink/25 bg-card text-ink hover:border-primary hover:text-primary"
                       }`}
                     >
                       {item.label} ({counts.get(item.key)})
@@ -68,16 +68,16 @@ export default async function MockReviewPage({ params, searchParams }: PageProps
                 })}
               </nav>
               {review.items.some((item) => item.practiceFlag !== null) && (
-                <p className="mt-4 text-base text-ink/80">Flag a question to practise it later. You’ll find it in Practice, under Flagged questions.</p>
+                <p className="mt-4 text-base text-muted">Flag a question to practise it later. You’ll find it in Practice, under Flagged questions.</p>
               )}
               {items.length === 0 ? (
-                <p className="mt-6 text-lg text-ink">{filter.none}</p>
+                <p className="mt-5 lg:mt-6 text-base text-ink">{filter.none}</p>
               ) : (
                 <ReviewList attemptId={attemptId} total={review.total} items={items} media={review.media} />
               )}
             </>
           )}
-          <Link href={resultsHref} className={`${SECONDARY_BUTTON} mt-8 w-full sm:w-auto`}>
+          <Link href={resultsHref} className={`${SECONDARY_BUTTON} mt-5 lg:mt-6 w-full sm:w-auto`}>
             Back to your results
           </Link>
         </div>

@@ -1,9 +1,10 @@
 "use client";
 
 import type { RefObject } from "react";
-import { ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { ERROR_BOX, NOTE_BOX, PAGE_TITLE, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { useConfirmFocus } from "@/components/candidate/use-confirm-focus";
 import { countOf } from "@/lib/format";
+import { Icon } from "@/components/icons";
 
 // The review screen before submitting: every question as a numbered tile (answered, not answered,
 // flagged); a tile opens that question. Submit asks once, in the page.
@@ -39,13 +40,13 @@ export function MockReview({
 
   return (
     <div>
-      <h1 ref={headingRef} tabIndex={-1} className="text-3xl font-bold text-ink focus:outline-none">
+      <h1 ref={headingRef} tabIndex={-1} className={`${PAGE_TITLE} focus:outline-none`}>
         Review your answers
       </h1>
-      <p className="mt-2 text-lg text-ink">
+      <p className="mt-2 text-base text-ink">
         {done} answered · {open} not answered · {flagged} flagged
       </p>
-      <p className="mt-1 text-base text-ink/80">Choose a number to go to that question.</p>
+      <p className="mt-1 text-base text-muted">Choose a number to go to that question.</p>
 
       <ol className="mt-5 grid grid-cols-[repeat(auto-fill,minmax(3.75rem,1fr))] gap-2">
         {answered.map((isAnswered, index) => {
@@ -57,16 +58,14 @@ export function MockReview({
                 type="button"
                 onClick={() => onOpen(index)}
                 aria-label={`Question ${index + 1}: ${state}`}
-                className={`relative flex h-14 w-full items-center justify-center rounded-lg border-2 text-lg font-bold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary ${
-                  isAnswered ? "hc-fill border-primary bg-primary text-white hover:bg-primary/90" : "border-dashed border-ink/40 bg-white text-ink hover:border-primary"
+                className={`relative flex h-14 w-full items-center justify-center rounded-xl border-2 text-base font-bold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+                  isAnswered ? "hc-fill border-primary bg-primary text-white hover:bg-primary/90" : "border-dashed border-ink/40 bg-card text-ink hover:border-primary"
                 }`}
               >
                 {index + 1}
                 {isFlagged && (
-                  <span className="absolute -top-2 -right-2 grid size-6 place-items-center rounded-full border-2 border-white bg-amber-500 text-amber-950">
-                    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-3.5" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
-                      <path d="M5 21V4m0 0h11l-2 4 2 4H5" />
-                    </svg>
+                  <span className="absolute -top-2 -right-2 grid size-6 place-items-center rounded-full border-2 border-card bg-warn text-white">
+                    <Icon name="flag" weight="fill" size={14} />
                   </span>
                 )}
               </button>
@@ -77,23 +76,23 @@ export function MockReview({
 
       <ul className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-base text-ink" aria-label="Key">
         <li className="flex items-center gap-2">
-          <span aria-hidden="true" className="size-5 rounded border-2 border-primary bg-primary" /> Answered
+          <span aria-hidden="true" className="size-5 rounded-md border-2 border-primary bg-primary" /> Answered
         </li>
         <li className="flex items-center gap-2">
-          <span aria-hidden="true" className="size-5 rounded border-2 border-dashed border-ink/40 bg-white" /> Not answered
+          <span aria-hidden="true" className="size-5 rounded-md border-2 border-dashed border-ink/40 bg-card" /> Not answered
         </li>
         <li className="flex items-center gap-2">
-          <span aria-hidden="true" className="size-5 rounded-full bg-amber-500" /> Flagged
+          <span aria-hidden="true" className="size-5 rounded-full bg-warn" /> Flagged
         </li>
       </ul>
 
-      <div className="mt-8">
+      <div className="mt-5 lg:mt-6">
         {confirming ? (
-          <div role="group" aria-labelledby="submit-heading" className="rounded-xl border-2 border-primary bg-primary/5 p-5">
+          <div role="group" aria-labelledby="submit-heading" className={`${NOTE_BOX} p-4 lg:p-5`}>
             <h2 id="submit-heading" ref={submitHeading} tabIndex={-1} className="text-xl font-bold text-ink focus:outline-none">
               Submit your test now?
             </h2>
-            <p className="mt-2 text-lg leading-relaxed text-ink">
+            <p className="mt-2 text-base leading-relaxed text-ink">
               {open > 0 ? `You have ${countOf(open, "question")} not answered. ` : "You have answered every question. "}
               You can’t change your answers after submitting.
             </p>

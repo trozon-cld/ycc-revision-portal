@@ -1,5 +1,6 @@
 "use client";
 
+import { Icon } from "@/components/icons";
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type RefObject } from "react";
 import { buttonClass } from "./styles";
 
@@ -93,16 +94,10 @@ export function RowMenu({
         ) : triggerText ? (
           <>
             {triggerText}
-            <svg viewBox="0 0 20 20" aria-hidden="true" className="size-4 fill-current">
-              <path d="M5.5 7.5 10 12l4.5-4.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            <Icon name="expand" size={16} weight="regular" />
           </>
         ) : (
-          <svg viewBox="0 0 20 20" aria-hidden="true" className="size-5 fill-current">
-            <circle cx="4" cy="10" r="1.6" />
-            <circle cx="10" cy="10" r="1.6" />
-            <circle cx="16" cy="10" r="1.6" />
-          </svg>
+          <Icon name="more" size={20} weight="bold" />
         )}
       </button>
       <span role="status" className="sr-only">
@@ -130,7 +125,7 @@ export function RowMenu({
               }}
               className={`flex h-10 w-full items-center rounded px-3 text-left text-sm focus:outline-none sm:h-9 ${
                 item.danger
-                  ? "text-red-700 hover:bg-red-50 focus:bg-red-50"
+                  ? "text-danger hover:bg-danger-bg focus:bg-danger-bg"
                   : "text-ink hover:bg-slate-100 focus:bg-slate-100"
               }`}
             >

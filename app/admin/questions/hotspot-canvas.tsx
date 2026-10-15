@@ -135,12 +135,12 @@ export function HotspotCanvas({
               onKeyDown={(event) => onAreaKey(event, area)}
               className={`absolute cursor-move border-2 shadow-[0_0_0_1px_white] outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary ${
                 area.shape === "ellipse" ? "rounded-[50%]" : ""
-              } ${selected ? "z-10 border-primary bg-primary/20" : isCorrect(area) ? "border-green-700 bg-green-600/20" : "border-slate-700 bg-slate-500/15"}`}
+              } ${selected ? "z-10 border-primary bg-primary/20" : isCorrect(area) ? "border-ok bg-ok/20" : "border-slate-700 bg-slate-500/15"}`}
               style={{ left: `${area.x}%`, top: `${area.y}%`, width: `${area.w}%`, height: `${area.h}%` }}
             >
               <span
                 className={`pointer-events-none absolute left-1/2 top-1/2 grid size-6 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full text-xs font-bold text-white ${
-                  selected ? "bg-primary" : isCorrect(area) ? "bg-green-700" : "bg-slate-700"
+                  selected ? "bg-primary" : isCorrect(area) ? "bg-ok" : "bg-slate-700"
                 }`}
               >
                 {index + 1}

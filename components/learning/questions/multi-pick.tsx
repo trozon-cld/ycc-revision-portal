@@ -5,7 +5,7 @@ import { seededShuffle } from "@/lib/questions/shuffle";
 import { choosePrompt, type MultiPickAnswer as Answer, type MultiPickContent } from "@/lib/questions/types/multi-pick";
 import { optionLetter } from "@/lib/questions/types/single-text";
 import { InlineText } from "../inline-text";
-import { MarkIcon, OptionStatus } from "./answer-parts";
+import { MarkIcon, OptionStatus, optionLook } from "./answer-parts";
 import type { AnswerAreaProps } from "./renderers";
 
 // "Multiple answers": choose exactly N (more is blocked with a note), real checkboxes under square badges.
@@ -40,7 +40,7 @@ export function MultiPickAnswer({ mode, seed, content, answer, response, onRespo
       {!review && (
         <p data-flow-unit className="mb-[calc(0.6em*var(--q-space,1))] font-semibold text-ink [break-after:avoid] [break-inside:avoid]">
           {choosePrompt(data.pick)}
-          <span className="font-normal text-slate-700"> · {chosen.length} of {data.pick} chosen</span>
+          <span className="font-normal text-ink"> · {chosen.length} of {data.pick} chosen</span>
         </p>
       )}
 
@@ -56,7 +56,7 @@ export function MultiPickAnswer({ mode, seed, content, answer, response, onRespo
                 type="button"
                 onClick={() => toggle(option.id)}
                 disabled={locked}
-                className="flex min-h-[max(var(--answer-min-h,56px),var(--answer-min-em,3.5em))] items-center gap-[0.5em] rounded-lg border-2 border-primary bg-primary/[0.06] px-[0.7em] py-[0.4em] text-left text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-default"
+                className="flex min-h-[max(var(--answer-min-h,56px),var(--answer-min-em,3.5em))] items-center gap-[0.5em] rounded-xl border-2 border-primary bg-primary/[0.06] px-[0.7em] py-[0.4em] text-left text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-default"
               >
                 <span aria-hidden="true" className="grid size-[1.8em] shrink-0 place-items-center rounded-md bg-primary text-[max(14px,0.85em)] font-bold text-white">
                   {letterOf(option.id)}
@@ -69,7 +69,7 @@ export function MultiPickAnswer({ mode, seed, content, answer, response, onRespo
             ) : (
               <div
                 key={slot}
-                className="flex min-h-[max(var(--answer-min-h,56px),var(--answer-min-em,3.5em))] items-center justify-center rounded-lg border-2 border-dashed border-slate-400 px-[0.7em] text-slate-700"
+                className="flex min-h-[max(var(--answer-min-h,56px),var(--answer-min-em,3.5em))] items-center justify-center rounded-xl border-2 border-dashed border-edge px-[0.7em] text-ink"
               >
                 Answer {slot + 1}
               </div>
@@ -85,17 +85,14 @@ export function MultiPickAnswer({ mode, seed, content, answer, response, onRespo
           const isWrongChoice = showCorrect && selected && !isCorrect;
           const inputId = `${name}-${option.id}`;
 
-          let tone = "border-slate-300 bg-white";
-          if (isCorrect) tone = "border-green-700 bg-green-50";
-          else if (isWrongChoice) tone = "border-amber-600 bg-amber-50";
-          else if (selected) tone = "border-primary bg-primary/[0.06]";
+          const tone = optionLook(isCorrect ? "correct" : isWrongChoice ? "wrong" : selected ? "selected" : "plain", locked);
 
           return (
             <li key={option.id} data-flow-unit className="[break-inside:avoid]">
               <label
                 htmlFor={inputId}
                 data-option={option.id}
-                className={`relative flex min-h-[max(var(--answer-min-h,56px),var(--answer-min-em,3.5em))] items-center gap-[0.75em] rounded-lg border-2 px-[0.9em] py-[calc(0.55em*var(--q-space,1))] leading-snug text-ink has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary ${tone} ${
+                className={`relative flex min-h-[max(var(--answer-min-h,56px),var(--answer-min-em,3.5em))] items-center gap-[0.75em] border-2 px-[0.9em] py-[calc(0.55em*var(--q-space,1))] leading-snug text-ink has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary ${tone} ${
                   locked ? "cursor-default" : "cursor-pointer hover:border-primary"
                 }`}
               >
@@ -112,7 +109,7 @@ export function MultiPickAnswer({ mode, seed, content, answer, response, onRespo
                 <span
                   aria-hidden="true"
                   className={`grid size-[2em] shrink-0 place-items-center rounded-md border-2 text-[0.9em] font-bold ${
-                    selected ? "hc-fill border-primary bg-primary text-white" : "border-slate-400 text-slate-700"
+                    selected ? "hc-fill border-primary bg-primary text-white" : "border-edge text-ink"
                   }`}
                 >
                   {optionLetter(index)}
@@ -125,8 +122,8 @@ export function MultiPickAnswer({ mode, seed, content, answer, response, onRespo
                 </span>
                 {selected && !showCorrect && <MarkIcon name="tick" className="size-[1.2em] shrink-0 text-primary" />}
                 {/* Results sit on the border, so an option never grows after Check and never moves page. */}
-                {isCorrect && <OptionStatus tone="bg-green-700" icon="tick" label="Correct answer" />}
-                {isWrongChoice && <OptionStatus tone="bg-amber-800" icon="cross" label="Your answer" />}
+                {isCorrect && <OptionStatus tone="bg-ok" icon="tick" label="Correct answer" />}
+                {isWrongChoice && <OptionStatus tone="bg-warn-strong" icon="cross" label="Your answer" />}
               </label>
             </li>
           );

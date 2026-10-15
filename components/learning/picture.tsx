@@ -34,14 +34,14 @@ export function BookPicture({
         />
       ) : (
         <div
-          className="flex w-full items-center justify-center rounded-md bg-slate-100 text-[max(14px,0.85em)] text-slate-700"
+          className="flex w-full items-center justify-center rounded-md bg-fill text-[max(14px,0.85em)] text-ink"
           style={{ aspectRatio: String(ratio) }}
         >
           Picture unavailable
         </div>
       )}
       {caption && (
-        <figcaption className="mt-[0.4em] text-center text-[max(14px,0.85em)] leading-snug text-slate-700">
+        <figcaption className="mt-[0.4em] text-center text-[max(14px,0.85em)] leading-snug text-ink">
           <InlineText text={caption} />
         </figcaption>
       )}

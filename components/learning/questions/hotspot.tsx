@@ -77,7 +77,7 @@ export function HotspotAnswer({ content, media, answer, response, onResponse, on
           onClick={place}
           onKeyDown={onKeyDown}
           data-hotspot-picture
-          className={`relative w-full select-none rounded-md bg-slate-100 [-webkit-touch-callout:none] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+          className={`relative w-full select-none rounded-md bg-fill [-webkit-touch-callout:none] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary ${
             locked ? "cursor-default" : "cursor-crosshair"
           }`}
         >
@@ -115,13 +115,13 @@ function AreaOutline({ area, label }: { area: HotspotArea; label?: string }) {
     <span
       aria-hidden="true"
       data-hotspot-area
-      className={`pointer-events-none absolute border-[3px] border-green-700 bg-green-600/15 shadow-[0_0_0_2px_white] ${
+      className={`pointer-events-none absolute border-[3px] border-ok bg-ok/15 shadow-[0_0_0_2px_white] ${
         area.shape === "ellipse" ? "rounded-[50%]" : "rounded-sm"
       }`}
       style={{ left: `${area.x}%`, top: `${area.y}%`, width: `${area.w}%`, height: `${area.h}%` }}
     >
       <span
-        className={`absolute ${vertical} ${horizontal} flex max-w-[14em] items-center gap-[0.25em] whitespace-nowrap rounded-full bg-green-700 px-[0.55em] py-[0.08em] text-[max(14px,0.8em)] font-semibold leading-tight text-white shadow-[0_0_0_2px_white]`}
+        className={`absolute ${vertical} ${horizontal} flex max-w-[14em] items-center gap-[0.25em] whitespace-nowrap rounded-full bg-ok px-[0.55em] py-[0.08em] text-[max(14px,0.8em)] font-semibold leading-tight text-white shadow-[0_0_0_2px_white]`}
       >
         <Icon name="tick" />
         <span className="truncate">{label || "Correct area"}</span>
@@ -131,7 +131,7 @@ function AreaOutline({ area, label }: { area: HotspotArea; label?: string }) {
 }
 
 function Marker({ point, marked }: { point: HotspotPoint; marked: "right" | "wrong" | null }) {
-  const tone = marked === "right" ? "bg-green-700" : marked === "wrong" ? "bg-amber-800" : "bg-primary";
+  const tone = marked === "right" ? "bg-ok" : marked === "wrong" ? "bg-warn-strong" : "bg-primary";
   return (
     <span
       aria-hidden="true"
@@ -139,7 +139,7 @@ function Marker({ point, marked }: { point: HotspotPoint; marked: "right" | "wro
       className={`pointer-events-none absolute grid size-[max(32px,2em)] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-[3px] border-white text-white shadow-[0_0_0_2px_rgba(15,23,42,0.85)] ${tone}`}
       style={{ left: `${point.x}%`, top: `${point.y}%` }}
     >
-      {marked ? <Icon name={marked === "right" ? "tick" : "cross"} /> : <span className="size-[0.45em] rounded-full bg-white" />}
+      {marked ? <Icon name={marked === "right" ? "tick" : "cross"} /> : <span className="size-[0.45em] rounded-full bg-card" />}
     </span>
   );
 }
@@ -160,7 +160,7 @@ export function TapPicture({ picture, ratio, measuring }: { picture: ResolvedMed
       style={{ aspectRatio: String(ratio) }}
     />
   ) : (
-    <span className="grid w-full place-items-center text-[max(14px,0.85em)] text-slate-700" style={{ aspectRatio: String(ratio) }}>
+    <span className="grid w-full place-items-center text-[max(14px,0.85em)] text-ink" style={{ aspectRatio: String(ratio) }}>
       Picture unavailable
     </span>
   );
@@ -168,5 +168,5 @@ export function TapPicture({ picture, ratio, measuring }: { picture: ResolvedMed
 
 // The bolder mark used on pictures (hotspot, area and match questions).
 export function Icon({ name }: { name: Mark }) {
-  return <MarkIcon name={name} className="size-[1.1em] shrink-0" strokeWidth="2.5" />;
+  return <MarkIcon name={name} className="size-[1.1em] shrink-0" />;
 }

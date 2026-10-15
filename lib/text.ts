@@ -20,3 +20,9 @@ export function cleanLine(value: unknown): string {
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+
+// The first word of a full name ("Samira Khan" → "Samira"), for a friendly greeting.
+export function firstName(fullName: string | null): string | null {
+  const first = fullName?.trim().split(/\s+/)[0];
+  return first ? first : null;
+}

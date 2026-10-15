@@ -19,7 +19,7 @@ export function CategoryForm({ categories }: { categories: SwitchableCategory[] 
     { error: null }
   );
   return (
-    <form method="post" onSubmit={submitKeepingChoices(action)} className="mt-6">
+    <form method="post" onSubmit={submitKeepingChoices(action)} className="mt-5 lg:mt-6">
       <fieldset>
         <legend className="mb-3 text-xl font-bold text-ink">Choose a category</legend>
         <div className="flex flex-col gap-3">
@@ -35,9 +35,9 @@ export function CategoryForm({ categories }: { categories: SwitchableCategory[] 
                 className={CHOICE_INPUT}
               />
               <span className="flex min-w-0 flex-col">
-                <span className="text-lg font-semibold text-ink [overflow-wrap:anywhere]">{category.name}</span>
+                <span className="text-base font-semibold text-ink [overflow-wrap:anywhere]">{category.name}</span>
                 {(category.isCurrent || category.isAssigned) && (
-                  <span className="text-base text-ink/80">
+                  <span className="text-base text-muted">
                     {[category.isCurrent && "Studying now", category.isAssigned && "Your starting category"].filter(Boolean).join(" · ")}
                   </span>
                 )}
@@ -49,13 +49,13 @@ export function CategoryForm({ categories }: { categories: SwitchableCategory[] 
 
       <div aria-live="polite">
         {state.error && (
-          <p role="alert" className={`mt-6 ${ERROR_BOX}`}>
+          <p role="alert" className={`mt-5 lg:mt-6 ${ERROR_BOX}`}>
             {state.error}
           </p>
         )}
       </div>
 
-      <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+      <div className="mt-5 lg:mt-6 flex flex-col gap-3 sm:flex-row">
         <SaveCategoryButton pending={pending} />
         <Link href="/dashboard" className={SECONDARY_BUTTON}>
           Back to home

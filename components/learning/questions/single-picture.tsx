@@ -5,7 +5,7 @@ import { seededShuffle } from "@/lib/questions/shuffle";
 import type { SinglePictureAnswer as Answer, SinglePictureContent } from "@/lib/questions/types/single-picture";
 import { optionLetter } from "@/lib/questions/types/single-text";
 import { InlineText } from "../inline-text";
-import { MarkIcon, type Mark } from "./answer-parts";
+import { MarkIcon, optionLook, type Mark } from "./answer-parts";
 import type { AnswerAreaProps } from "./renderers";
 import { MeasuringContext } from "../measuring";
 
@@ -32,17 +32,14 @@ export function SinglePictureAnswer({ mode, seed, content, media, answer, respon
         const inputId = `${name}-${option.id}`;
         const picture = media[option.mediaId];
 
-        let tone = "border-slate-300 bg-white";
-        if (isCorrect) tone = "border-green-700 bg-green-50";
-        else if (isWrongChoice) tone = "border-amber-600 bg-amber-50";
-        else if (selected) tone = "border-primary bg-primary/[0.06]";
+        const tone = optionLook(isCorrect ? "correct" : isWrongChoice ? "wrong" : selected ? "selected" : "plain", locked);
 
         return (
           <li key={option.id} data-flow-unit className="min-w-0 [break-inside:avoid]">
             <label
               htmlFor={inputId}
               data-option={option.id}
-              className={`flex h-full flex-col gap-[0.4em] rounded-lg border-2 p-[0.4em] text-ink has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary ${tone} ${
+              className={`flex h-full flex-col gap-[0.4em] border-2 p-[0.4em] text-ink has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary ${tone} ${
                 locked ? "cursor-default" : "cursor-pointer hover:border-primary"
               }`}
             >
@@ -58,18 +55,18 @@ export function SinglePictureAnswer({ mode, seed, content, media, answer, respon
               />
               {/* Screen readers hear: "A: picture description, label, result". */}
               <span className="sr-only">{optionLetter(index)}: </span>
-              <span className="relative block aspect-[4/3] max-h-(--book-option-picture-max) w-full overflow-hidden rounded-md bg-slate-100">
+              <span className="relative block aspect-[4/3] max-h-(--book-option-picture-max) w-full overflow-hidden rounded-md bg-fill">
                 {picture ? (
                   // eslint-disable-next-line @next/next/no-img-element -- short-lived signed link; files are pre-shrunk WebP
                   <img src={measuring ? undefined : picture.src} alt={picture.alt} loading="lazy" decoding="async" className="absolute inset-0 size-full object-contain" />
                 ) : (
-                  <span className="absolute inset-0 grid place-items-center p-[0.4em] text-center text-[max(14px,0.8em)] text-slate-700">
+                  <span className="absolute inset-0 grid place-items-center p-[0.4em] text-center text-[max(14px,0.8em)] text-ink">
                     Picture unavailable
                   </span>
                 )}
                 {/* Results sit on the picture, so a card never grows after Check and options never move pages. */}
-                {isCorrect && <Status tone="bg-green-700" icon="tick" label="Correct answer" />}
-                {isWrongChoice && <Status tone="bg-amber-800" icon="cross" label="Your answer" />}
+                {isCorrect && <Status tone="bg-ok" icon="tick" label="Correct answer" />}
+                {isWrongChoice && <Status tone="bg-warn-strong" icon="cross" label="Your answer" />}
                 {selected && !correctId && (
                   <span aria-hidden="true" className="absolute right-[0.3em] top-[0.3em] grid size-[1.6em] place-items-center rounded-full bg-primary text-white">
                     <MarkIcon name="tick" className="size-[1.1em] shrink-0" />
@@ -80,7 +77,7 @@ export function SinglePictureAnswer({ mode, seed, content, media, answer, respon
                 <span
                   aria-hidden="true"
                   className={`grid size-[1.8em] shrink-0 place-items-center rounded-full border-2 text-[0.85em] font-bold ${
-                    selected ? "hc-fill border-primary bg-primary text-white" : "border-slate-400 text-slate-700"
+                    selected ? "hc-fill border-primary bg-primary text-white" : "border-edge text-ink"
                   }`}
                 >
                   {optionLetter(index)}

@@ -1,14 +1,28 @@
 // Tick and cross marks, and the result badge on text answers, shared by the question types.
 
-const PATHS = { tick: "M4 10.5l4 4 8-9", cross: "M5 5l10 10M15 5L5 15" } as const;
-export type Mark = keyof typeof PATHS;
+import { Icon } from "@/components/icons";
 
-export function MarkIcon({ name, className, strokeWidth = "2.25" }: { name: Mark; className: string; strokeWidth?: string }) {
-  return (
-    <svg viewBox="0 0 20 20" aria-hidden="true" className={className} fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
-      <path d={PATHS[name]} />
-    </svg>
-  );
+export type Mark = "tick" | "cross";
+
+// Sized by className (e.g. size-[1.2em]) so it follows the question's text size.
+export function MarkIcon({ name, className }: { name: Mark; className: string }) {
+  return <Icon name={name} className={className} />;
+}
+
+export type OptionState = "plain" | "selected" | "correct" | "wrong";
+
+const OPTION_TONES: Record<OptionState, string> = {
+  plain: "border-line bg-card",
+  selected: "border-primary bg-primary/10",
+  correct: "border-ok bg-ok-bg",
+  wrong: "border-warn bg-warn-bg",
+};
+
+// Corners, colours and edge of an answer option. Never changes sizes, so the book's page layout stays the same.
+export function optionLook(state: OptionState, locked: boolean): string {
+  const tone = OPTION_TONES[state];
+  const edge = locked ? "" : state === "selected" ? "shadow-[inset_0_-2px_0_var(--ycc-primary)]" : "shadow-[inset_0_-2px_0_var(--ycc-line)]";
+  return `rounded-xl ${tone} ${edge}`;
 }
 
 // "Correct answer" / "Your answer" on the top edge of a text answer.

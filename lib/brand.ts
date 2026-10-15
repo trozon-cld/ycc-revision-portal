@@ -1,2 +1,2 @@
-// Placeholder until the real logo file is added to public/; change src, width and height here.
-export const LOGO = { src: "/ycc-logo-placeholder.svg", width: 120, height: 48 };
+// The YCC logo (transparent, about 5:1); shown in the top bars and, on a white plate, on the standard Handbook cover.
+export const LOGO = { src: "/YCC_logo_header_transparent.webp", width: 540, height: 110 };

@@ -20,11 +20,11 @@ function BlockView({ block, media }: { block: Block; media: ResolvedMedia }) {
   switch (block.type) {
     case "heading":
       return block.level === 1 ? (
-        <h2 className="mb-[0.5em] mt-[0.9em] text-[1.45em] font-bold leading-tight text-primary [break-after:avoid] [break-inside:avoid] first:mt-0">
+        <h2 className="mb-[0.5em] mt-[0.9em] text-[1.3em] font-bold leading-tight text-primary [break-after:avoid] [break-inside:avoid] first:mt-0">
           <InlineText text={block.text} />
         </h2>
       ) : (
-        <h3 className="mb-[0.4em] mt-[0.8em] text-[1.2em] font-bold leading-snug text-ink [break-after:avoid] [break-inside:avoid] first:mt-0">
+        <h3 className="mb-[0.4em] mt-[0.8em] text-[1.15em] font-bold leading-snug text-ink [break-after:avoid] [break-inside:avoid] first:mt-0">
           <InlineText text={block.text} />
         </h3>
       );
@@ -63,7 +63,7 @@ function PictureView({ block, media }: { block: PictureBlock; media: ResolvedMed
 
 const CALLOUT_STYLE = {
   "key-point": { label: "Key point", box: "border-primary bg-primary/[0.07]", title: "text-primary" },
-  remember: { label: "Remember", box: "border-amber-600 bg-amber-50", title: "text-amber-900" },
+  remember: { label: "Remember", box: "border-warn bg-warn-bg", title: "text-warn-strong" },
 } as const;
 
 function CalloutView({ block }: { block: CalloutBlock }) {
@@ -71,7 +71,7 @@ function CalloutView({ block }: { block: CalloutBlock }) {
   return (
     <aside
       aria-label={style.label}
-      className={`mb-[0.9em] rounded-r-lg border-l-[0.3em] px-[0.9em] py-[0.7em] [break-inside:avoid] ${style.box}`}
+      className={`mb-[0.9em] rounded-r-xl border-l-[0.3em] px-[0.9em] py-[0.7em] [break-inside:avoid] ${style.box}`}
     >
       <p className={`mb-[0.2em] text-[max(14px,0.8em)] font-bold uppercase tracking-wide ${style.title}`}>{style.label}</p>
       <p className="whitespace-pre-line">

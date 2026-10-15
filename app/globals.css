@@ -1,10 +1,35 @@
 @import "tailwindcss";
 
+/* Colours: every colour in the app is one of these names. Values live here once (a dark set can be added
+   later under the same names). Brand: Deep Cobalt, Lagoon Blue, Navy Ink, white; greys are Navy Ink tints. */
 :root {
-  --background: #ffffff;
-  --foreground: #1e293b; /* Navy Ink */
+  --ycc-primary: #005da1; /* Deep Cobalt */
+  --ycc-accent: #00aac5; /* Lagoon Blue: decoration only, too light for text or icons on white */
+  --ycc-ink: #1e293b; /* Navy Ink: text, and the pressed edge of filled buttons */
+  --ycc-card: #ffffff; /* Pure White */
+  --ycc-page: #f4f6f9; /* page tint behind cards */
+  --ycc-muted: #475569; /* secondary text (7:1 on white) */
+  --ycc-line: #cbd5e1; /* borders */
+  --ycc-line-soft: #e2e8f0; /* dividers, bar tracks */
+  --ycc-edge: #94a3b8; /* bottom edge of white pressable buttons */
+  --ycc-fill: #f1f5f9; /* neutral fills: hover, quiet tiles */
+  --ycc-fill-soft: #f8fafc;
+  /* Feedback only: right, attention (not quite, flagged, weak, access warning), error. */
+  --ycc-ok: #15803d;
+  --ycc-ok-strong: #14532d;
+  --ycc-ok-bg: #f0fdf4;
+  --ycc-warn: #b45309;
+  --ycc-warn-strong: #78350f;
+  --ycc-warn-bg: #fffbeb;
+  --ycc-danger: #b91c1c;
+  --ycc-danger-strong: #991b1b;
+  --ycc-danger-bg: #fef2f2;
+}
+
+:root {
   /* Candidate header height; the book reader fills the rest of the screen. */
-  --candidate-header: 4.5rem;
+  --candidate-header: 3.5rem;
+  --candidate-tabs: 4rem;
 }
 
 /* Phones, for the Handbook reader page. Keep in step with lib/layout.ts. */
@@ -27,16 +52,31 @@
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: var(--font-google-sans);
 
-  /* Brand palette. Use with opacity modifiers (text-ink/70) for tints
-     instead of separate gray shades. */
-  --color-primary: #005da1; /* Deep Cobalt */
-  --color-accent: #00aac5; /* Lagoon Blue */
-  --color-ink: #1e293b; /* Navy Ink */
-  --color-surface: #ffffff; /* Pure White */
+  /* The colour names above as Tailwind colours (bg-page, text-muted, border-line, text-ok…).
+     Tints of the same colour use opacity (text-ink/70, bg-primary/5), never a new shade. */
+  --color-primary: var(--ycc-primary);
+  --color-accent: var(--ycc-accent);
+  --color-ink: var(--ycc-ink);
+  --color-surface: var(--ycc-card);
+  --color-card: var(--ycc-card);
+  --color-page: var(--ycc-page);
+  --color-muted: var(--ycc-muted);
+  --color-line: var(--ycc-line);
+  --color-line-soft: var(--ycc-line-soft);
+  --color-edge: var(--ycc-edge);
+  --color-fill: var(--ycc-fill);
+  --color-fill-soft: var(--ycc-fill-soft);
+  --color-ok: var(--ycc-ok);
+  --color-ok-strong: var(--ycc-ok-strong);
+  --color-ok-bg: var(--ycc-ok-bg);
+  --color-warn: var(--ycc-warn);
+  --color-warn-strong: var(--ycc-warn-strong);
+  --color-warn-bg: var(--ycc-warn-bg);
+  --color-danger: var(--ycc-danger);
+  --color-danger-strong: var(--ycc-danger-strong);
+  --color-danger-bg: var(--ycc-danger-bg);
 }
 
 /* Forced light mode — no dark variant of the brand palette exists yet. */
@@ -45,8 +85,8 @@ html {
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--ycc-card);
+  color: var(--ycc-ink);
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
@@ -76,6 +116,18 @@ body {
 .admin-loading,
 .candidate-loading {
   animation: loading-fade-in 200ms ease-out 150ms both;
+}
+
+/* Practice result panel on phones and tablets (only without reduced motion). */
+@keyframes panel-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+/* The page under that panel scrolls clear of it (Tab-key focus too). */
+.focused-scroll:has([data-feedback-panel]) {
+  scroll-padding-bottom: 14rem;
 }
 
 @keyframes loading-fade-in {
@@ -185,6 +237,18 @@ body:has([data-focused-owns-header]) .candidate-header {
    Only while the reader is on the page, so an empty Handbook message keeps the header. */
 body:has([data-reader-owns-header]) .candidate-header {
   display: none;
+}
+
+/* The bottom tab bar (and the room kept for it) shows wherever the header does, below laptop width. */
+body:has([data-focused-owns-header]) .candidate-tabs,
+body:has([data-reader-owns-header]) .candidate-tabs {
+  display: none;
+}
+/* A field reached with Tab scrolls clear of the tab bar. */
+@media (max-width: 1023.98px) {
+  html:has(.candidate-tabs):not(:has([data-focused-owns-header], [data-reader-owns-header])) {
+    scroll-padding-bottom: calc(var(--candidate-tabs) + env(safe-area-inset-bottom) + 0.5rem);
+  }
 }
 
 /* Admin editors: a field reached with Tab scrolls clear of the fixed Save bar (bottom on phones, top from tablets). */

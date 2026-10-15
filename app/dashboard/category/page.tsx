@@ -7,7 +7,7 @@ import { PageBody } from "@/components/candidate/page-body";
 import { loadSwitchableCategories } from "@/lib/candidates/categories";
 import { loadMockInProgress } from "@/lib/mock/attempts";
 import { loadPracticeInProgress } from "@/lib/practice/sessions";
-import { ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { ERROR_BOX, PAGE_TITLE, PRIMARY_BUTTON, SECONDARY_BUTTON, WARN_BOX } from "@/components/candidate/buttons";
 import { CategoryForm } from "./category-form";
 
 export const metadata: Metadata = { title: "Change category" };
@@ -33,19 +33,19 @@ export default async function ChangeCategoryPage({ searchParams }: PageProps<"/d
 
   return (
     <PageBody>
-      <div className="max-w-2xl">
-        <h1 className="text-3xl font-bold text-ink">Change category</h1>
-        <p className="mt-3 text-lg leading-relaxed text-ink">
+      <div className="max-w-3xl">
+        <h1 className={`${PAGE_TITLE}`}>Change category</h1>
+        <p className="mt-3 text-base leading-relaxed text-ink">
           Your Handbook, Practice questions and mock tests follow the category you choose. You can change it again at
           any time.
         </p>
 
         {mock ? (
-          <div className="mt-6">
-            <p role="status" className="rounded-xl border-2 border-amber-500 bg-amber-50 p-4 text-lg leading-relaxed text-amber-950">
+          <div className="mt-5 lg:mt-6">
+            <p role="status" className={`${WARN_BOX} p-4 text-base leading-relaxed`}>
               <span className="font-bold">You have a mock test in progress.</span> Please finish it before changing category.
             </p>
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-5 lg:mt-6 flex flex-col gap-3 sm:flex-row">
               <Link href={`/dashboard/mock/${mock.id}`} className={PRIMARY_BUTTON}>
                 Continue mock test
               </Link>
@@ -57,12 +57,12 @@ export default async function ChangeCategoryPage({ searchParams }: PageProps<"/d
         ) : (
           <>
             {error && (
-              <p role="alert" className={`mt-6 ${ERROR_BOX}`}>
+              <p role="alert" className={`mt-5 lg:mt-6 ${ERROR_BOX}`}>
                 {error}
               </p>
             )}
             {practice && (
-              <p className="mt-6 rounded-xl border-2 border-amber-500 bg-amber-50 p-4 text-lg leading-relaxed text-amber-950">
+              <p className={`mt-5 lg:mt-6 ${WARN_BOX} p-4 text-base leading-relaxed`}>
                 <span className="font-bold">
                   You have a practice in progress (question {Math.min(practice.position + 1, practice.total)} of {practice.total}).
                 </span>{" "}
