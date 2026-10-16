@@ -7,7 +7,8 @@ Status: in active development.
 ## Stack
 
 - Next.js 16 (App Router, TypeScript, Tailwind CSS v4)
-- PostgreSQL on Supabase (raw SQL via `pg`), plus Supabase Storage for pictures and log archives
+- PostgreSQL on Supabase (raw SQL via `pg`), plus Supabase Storage for pictures, log archives and Handbook audio
+- Handbook translations and audio through the Gemini API (plain `fetch`); MP3 encoding with `@breezystack/lamejs`
 - Custom JWT auth (jose + bcryptjs, HTTP-only cookies)
 
 ## Roles
@@ -32,6 +33,8 @@ Status: in active development.
    - **Storage → New bucket**, name `handbook-media`, **Public bucket off** (pictures are served through short-lived signed links).
    - Add `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (Project Settings → API; the secret or legacy service_role key) to `.env.local`. They are server-only; never prefix them with `NEXT_PUBLIC_`.
    - **Storage → New bucket**, name `log-archives`, **Public bucket off**, for archived login records (Activity → Archives). Leave its allowed file types open, or allow `application/gzip`.
+   - **Storage → New bucket**, name `handbook-audio`, **Public bucket off**, for Handbook audio (MP3). Leave its allowed file types open, or allow `audio/mpeg`.
+   - For Handbook translations and audio, add `GEMINI_API_KEY` to `.env.local` (server only; see `.env.example`). A free Gemini key is for building and testing only; use a billed key before candidates hear any audio.
 
 5. Generate the Superadmin password hash, paste it and the email into `supabase/seed.sql`, then run that file:
 
@@ -71,7 +74,8 @@ Status: in active development.
 - `lib/mock/` — Mock test: the draw (50 questions spread across chapters), tests in progress, deadline and marking
 - `lib/faq/` — General queries: questions in order and the support contact details (`types.ts` safe in forms)
 - `lib/progress/` — candidates' progress per category (Handbook pages done, question results), the My progress overview and the readiness score (`readiness.ts`, pure); not activity-log data
-- `lib/storage/` — the only code that talks to the storage provider (upload, delete, signed links; pictures and archive buckets)
+- `lib/storage/` — the only code that talks to the storage provider (upload, delete, signed links; pictures, archive and audio buckets) and the total stored (`usage.ts`, for the storage cap)
+- `lib/voice/` — Handbook translations and audio: languages, what is read aloud, translation checks, the voice service (Gemini today, behind `services.ts`; a stand-in in `fake.ts`), MP3 encoding and the hourly request cap
 - `lib/media/` — image checks (real type and size from the file), in-browser WebP conversion, saving uploads and the storage cap (`upload.ts`)
 - `lib/ids.ts`, `lib/text.ts`, `lib/format.ts`, `lib/limits.ts`, `lib/forms.ts`, `lib/params.ts` — small shared helpers (id checks, text clean-up, display formats, length limits, form results, URL parameters)
 - `lib/brand.ts`, `lib/layout.ts` — logo and phone screen sizes
@@ -80,3 +84,7 @@ Status: in active development.
 - `supabase/` — schema, migrations and seed
 
 This project runs Next.js 16, which differs from older versions. See `AGENTS.md` and `node_modules/next/dist/docs/` before changing routing, data fetching or config.
+
+## Third-party licences
+
+MP3 encoding uses LAME through `@breezystack/lamejs` (LGPL-3.0; https://lame.sourceforge.io), used unmodified as a separate package. Icons: Phosphor Icons (MIT).
