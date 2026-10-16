@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { LogoutButton } from "@/components/logout-button";
 import { LOGO } from "@/lib/brand";
 import { Icon, type IconName } from "@/components/icons";
+import { BAR_SHADOW_TOP } from "@/components/candidate/buttons";
 
 const NAV_BUTTON =
   "inline-flex min-h-12 items-center justify-center rounded-lg border-2 border-ink/25 bg-card px-4 text-base font-semibold text-ink hover:border-primary hover:text-primary focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary";
@@ -63,7 +64,7 @@ export function CandidateHeader() {
   const pathname = usePathname();
   const ownBar = OWN_BAR_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
   return (
-    <header className={`candidate-header h-(--candidate-header) shrink-0 border-b border-line bg-card ${ownBar ? "lg:hidden" : ""}`}>
+    <header className={`candidate-header h-(--candidate-header) shrink-0 border-b border-line bg-card ${BAR_SHADOW_TOP} ${ownBar ? "lg:hidden" : ""}`}>
       <div className="mx-auto flex h-full w-full max-w-5xl items-center justify-between gap-2 px-3 sm:px-4">
         <Link
           href="/dashboard"
@@ -71,8 +72,8 @@ export function CandidateHeader() {
         >
           {/* Room for a wide logo (about 5:1, up to 157 x 32). */}
           <Image src={LOGO.src} width={LOGO.width} height={LOGO.height} alt="YCC" unoptimized className="h-8 w-auto max-w-[157px] object-contain object-left" />
-          <span className="hidden text-base font-semibold min-[420px]:inline">Revision Portal</span>
-          <span className="sr-only min-[420px]:hidden">Revision Portal, home</span>
+          <span className="hidden text-base font-semibold lg:inline">Revision Portal</span>
+          <span className="sr-only lg:hidden">Revision Portal, home</span>
         </Link>
         <nav aria-label="Help and account" className="flex items-center gap-1">
           <TopLink href="/dashboard/help" icon="help" label="Help" pathname={pathname} />
