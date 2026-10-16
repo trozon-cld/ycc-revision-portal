@@ -5,17 +5,17 @@ import { requireRole } from "@/lib/auth/guard";
 import { SESSION_ENDED_LOGIN } from "@/lib/auth/constants";
 import { loadMockHistory, loadMockHome } from "@/lib/mock/attempts";
 import { firstParam } from "@/lib/params";
-import { MOCK_QUESTIONS, timeLeftText } from "@/lib/mock/types";
+import { MOCK_HISTORY_STEP, MOCK_QUESTIONS, timeLeftText } from "@/lib/mock/types";
 import { PageBody } from "@/components/candidate/page-body";
 import { INFO_BOX, NOTE_BOX, PAGE_TITLE, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { FocusedShell } from "@/components/learning/focused-shell";
+import { Accordion } from "@/components/candidate/accordion";
 import { MockHistoryList } from "./mock-history";
 import { StartMock } from "./start-mock";
 
 export const metadata: Metadata = { title: "Mock test" };
 
-// Past tests shown at first, and how many more each "Show more" adds (up to the cap).
-const HISTORY_STEP = 10;
+// Show more stops here.
 const HISTORY_MAX = 500;
 
 const HOW_IT_WORKS = [
@@ -31,9 +31,11 @@ export default async function MockTestPage({ searchParams }: PageProps<"/dashboa
   const home = await loadMockHome(session.sub);
   if (!home) redirect(SESSION_ENDED_LOGIN);
   const asked = Number(firstParam((await searchParams).shown));
-  const shown = Number.isInteger(asked) ? Math.min(HISTORY_MAX, Math.max(HISTORY_STEP, asked)) : HISTORY_STEP;
+  const shown = Number.isInteger(asked) ? Math.min(HISTORY_MAX, Math.max(MOCK_HISTORY_STEP, asked)) : MOCK_HISTORY_STEP;
   const history = await loadMockHistory(session.sub, shown);
-  const more = history.count > history.items.length && shown < HISTORY_MAX ? `/dashboard/mock?shown=${shown + HISTORY_STEP}#history-heading` : null;
+  // Opened on purpose (Show more, or "See all your mock tests" from My progress): the history starts open.
+  const showing = firstParam((await searchParams).shown) !== undefined;
+  const more = history.count > history.items.length && shown < HISTORY_MAX ? `/dashboard/mock?shown=${shown + MOCK_HISTORY_STEP}#history-heading` : null;
 
   return (
     <FocusedShell label="Mock test tools" status="Mock test">
@@ -71,12 +73,16 @@ export default async function MockTestPage({ searchParams }: PageProps<"/dashboa
                   questions for {home.categoryName} so far.
                 </p>
               )}
-              <h2 className="mt-5 lg:mt-6 text-xl font-bold text-ink">How it works</h2>
-              <ul className="mt-3 flex list-disc flex-col gap-2 pl-6 text-base leading-relaxed text-ink">
-                {HOW_IT_WORKS.map((line) => (
-                  <li key={line}>{line}</li>
-                ))}
-              </ul>
+              {/* Open until the first test is taken. */}
+              <div className="mt-5 lg:mt-6">
+                <Accordion id="how-it-works" title="How it works" open={history.count === 0}>
+                  <ul className="flex list-disc flex-col gap-2 pl-6 text-base leading-relaxed text-ink">
+                    {HOW_IT_WORKS.map((line) => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ul>
+                </Accordion>
+              </div>
               <StartMock />
             </>
           )}
@@ -85,7 +91,7 @@ export default async function MockTestPage({ searchParams }: PageProps<"/dashboa
             Back to home
           </Link>
 
-          {history.count > 0 && <MockHistoryList history={history} moreHref={more} />}
+          {history.count > 0 && <MockHistoryList history={history} moreHref={more} collapse="all" open={showing} />}
         </div>
       </PageBody>
     </FocusedShell>

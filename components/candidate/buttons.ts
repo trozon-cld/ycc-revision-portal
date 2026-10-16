@@ -32,3 +32,11 @@ export const OK_BOX = "rounded-2xl border-2 border-ok bg-ok-bg text-ok-strong";
 // Headings on candidate pages: page title 24px (28px on laptops), section title 20px (22px on laptops).
 export const PAGE_TITLE = "text-2xl font-bold text-ink lg:text-[1.75rem]";
 export const SECTION_TITLE = "text-xl font-bold text-ink lg:text-[1.375rem]";
+
+// A compact radio or checkbox card for a grid (e.g. Practice's "Or focus on…").
+export const CHOICE_TILE =
+  "flex h-full cursor-pointer flex-col gap-2 rounded-xl border-2 border-line bg-card p-3 hover:border-primary has-checked:border-primary has-checked:bg-primary/5 has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-primary has-disabled:cursor-default has-disabled:border-line-soft has-disabled:bg-fill has-disabled:text-ink/60";
+
+// A soft shadow on bars that content scrolls under (top bars and the bottom tab bar); borders stay for high contrast.
+export const BAR_SHADOW_TOP = "relative z-10 shadow-[0_2px_8px_rgb(30_41_59/0.08)]";
+export const BAR_SHADOW_BOTTOM = "shadow-[0_-2px_8px_rgb(30_41_59/0.08)]";

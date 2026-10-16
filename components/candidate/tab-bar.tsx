@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon, type IconName } from "@/components/icons";
+import { BAR_SHADOW_BOTTOM } from "@/components/candidate/buttons";
 
 const TABS: { href: string; label: string; icon: IconName }[] = [
   { href: "/dashboard", label: "Home", icon: "home" },
@@ -21,7 +22,7 @@ export function CandidateTabBar() {
       <div aria-hidden="true" className="candidate-tabs h-[calc(var(--candidate-tabs)+env(safe-area-inset-bottom))] shrink-0 lg:hidden" />
       <nav
         aria-label="Main"
-        className="candidate-tabs fixed inset-x-0 bottom-0 z-30 border-t border-line bg-card pb-[env(safe-area-inset-bottom)] lg:hidden"
+        className={`candidate-tabs fixed inset-x-0 bottom-0 z-30 border-t border-line bg-card pb-[env(safe-area-inset-bottom)] lg:hidden ${BAR_SHADOW_BOTTOM}`}
       >
         <ul className="mx-auto grid h-(--candidate-tabs) max-w-3xl grid-cols-5">
           {TABS.map((tab) => {

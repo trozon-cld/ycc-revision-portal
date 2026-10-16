@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useId, useLayoutEffect, useRef, u
 import Link from "next/link";
 import { useDeviceSwitch } from "@/components/use-browser-value";
 import { Icon, type IconName } from "@/components/icons";
+import { BAR_SHADOW_TOP } from "@/components/candidate/buttons";
 import { useLatest } from "@/components/use-latest";
 import { TEXT_SIZES, type BookPageData, type Sheet, type TextSize } from "@/lib/content/book";
 
@@ -92,13 +93,20 @@ export function ReaderBar({
     if (previous.current && !panel) refs[previous.current].current?.focus();
     previous.current = panel;
   });
-  // Phones: words under the icons (text size in Settings); the smallest phones, or any bar where the words
-  // don't fit, show icons only. Names stay for screen readers and as tooltips.
+  // Phones: five equal buttons with the word under each icon (13px under 360px); only if the words still
+  // don't fit (e.g. a wider font) icons only. Names stay for screen readers and as tooltips.
   const barRef = useRef<HTMLDivElement>(null);
   const [crowdedAt, setCrowdedAt] = useState<number | null>(null);
+  // Measured again whenever the bar's layout or the labels choice changes (the first layout may be a wider one).
+  const crowdKey = `${compact}:${showLabels}`;
+  const [measuredFor, setMeasuredFor] = useState(crowdKey);
+  if (measuredFor !== crowdKey) {
+    setMeasuredFor(crowdKey);
+    setCrowdedAt(null);
+  }
   useLayoutEffect(() => {
     const bar = barRef.current;
-    if (!bar || !home) return;
+    if (!bar || !home || !compact || !showLabels) return;
     const check = () => {
       if (crowdedAt === null && bar.scrollWidth > bar.clientWidth + 1) setCrowdedAt(bar.clientWidth);
       else if (crowdedAt !== null && bar.clientWidth > crowdedAt) setCrowdedAt(null);
@@ -113,15 +121,17 @@ export function ReaderBar({
       observer.disconnect();
     };
   });
-  const iconsOnly = tiny || crowdedAt !== null;
+  const iconsOnly = (tiny && !home) || crowdedAt !== null;
   const labelled = showLabels && crowdedAt === null;
   const size = iconsOnly
     ? "h-12 min-w-11 px-2 text-base"
     : dense
       ? BAR_BUTTON_DENSE
       : compact
-      ? // Phones with the Home button: a little less padding, so five buttons fit from 380px.
-        `h-14 min-w-12 flex-col gap-0 ${home ? "px-1.5" : "px-2"} text-sm leading-tight`
+      ? // Phones with the Home button: five equal buttons, as tall as the Practice and Mock test bars.
+        home
+        ? "h-14 min-w-max flex-1 basis-0 flex-col gap-0 px-1 text-sm leading-tight max-[359px]:text-[13px]"
+        : "h-14 min-w-12 flex-col gap-0 px-2 text-sm leading-tight"
       : "h-14 min-w-14 px-4 text-lg";
   // Smaller laptops with labels on: the word sits under the icon, so the page status keeps the middle.
   const panelSize =
@@ -201,7 +211,7 @@ export function ReaderBar({
   // Dense bar: three columns, so the page status stays exactly in the middle whatever the buttons show.
   if (status && !centreStatus) {
     return (
-      <div ref={barRef} role="toolbar" aria-label="Reader tools" className="flex items-center gap-2 border-b border-line bg-card px-3 py-2">
+      <div ref={barRef} role="toolbar" aria-label="Reader tools" className={`flex items-center gap-2 border-b border-line bg-card px-3 py-2 ${BAR_SHADOW_TOP}`}>
         {leftTools}
         <span aria-hidden="true" className="min-w-0 flex-1 truncate px-2 text-center text-base font-semibold text-ink">
           {status}
@@ -215,7 +225,7 @@ export function ReaderBar({
       <div
         role="toolbar"
         aria-label="Reader tools"
-        className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-line bg-card px-6 py-2"
+        className={`grid grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-line bg-card px-6 py-2 ${BAR_SHADOW_TOP}`}
       >
         <div className="flex min-w-0 items-center gap-2">{leftTools}</div>
         <span aria-hidden="true" className="whitespace-nowrap px-2 text-center text-base font-semibold text-ink">
@@ -230,10 +240,10 @@ export function ReaderBar({
       ref={barRef}
       role="toolbar"
       aria-label="Reader tools"
-      className={`flex items-center border-b border-line bg-card py-2 ${iconsOnly ? "gap-1.5 px-2" : compact ? (home ? "gap-1.5 px-3" : "gap-2 px-3") : "gap-2 px-6"}`}
+      className={`flex items-center border-b border-line bg-card py-2 ${BAR_SHADOW_TOP} ${iconsOnly ? "gap-1.5 px-2" : compact ? (home ? "gap-1 px-2" : "gap-2 px-3") : "gap-2 px-6"}`}
     >
       {leftTools}
-      <span className="flex-1" />
+      {!home && <span className="flex-1" />}
       {rightTools}
     </div>
   );

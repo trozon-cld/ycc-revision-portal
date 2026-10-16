@@ -10,3 +10,12 @@ export function OpeningMessage({ text = "Opening your Handbook…", icon = "book
     </div>
   );
 }
+
+// Practice and the Mock test: the opening screen fills the screen like the Handbook's (no bar while it loads).
+export function FocusedLoading({ text, icon }: { text: string; icon: "practice" | "timer" }) {
+  return (
+    <div data-focused-owns-header="" className="flex h-dvh flex-col">
+      <OpeningMessage text={text} icon={icon} />
+    </div>
+  );
+}

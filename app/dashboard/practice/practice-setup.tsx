@@ -1,8 +1,8 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { PRACTICE_SIZES, WEAK_BELOW, type PracticeOptions, type PracticeWay } from "@/lib/practice/types";
-import { CHOICE_INPUT, CHOICE_ROW, ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
+import { PRACTICE_SIZES, type PracticeOptions, type PracticeWay } from "@/lib/practice/types";
+import { CHOICE_INPUT, CHOICE_ROW, CHOICE_TILE, ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { countOf } from "@/lib/format";
 import { NOT_THROUGH_MESSAGE, reachServer } from "@/lib/forms";
 import { submitKeepingChoices } from "@/components/candidate/submit-form";
@@ -15,11 +15,11 @@ const WAYS: { way: PracticeWay; title: string; description: string }[] = [
   { way: "all", title: "All questions", description: "Questions from every chapter, in a random order." },
 ];
 
-const FOCUS: { way: PracticeWay; title: string; description: string; none: string }[] = [
-  { way: "wrong", title: "Questions I got wrong", description: "Ones you got wrong the last time you practised them.", none: "None yet: you haven’t got any wrong in Practice." },
-  { way: "flagged", title: "Flagged questions", description: "Ones you flagged for review.", none: "None yet: use “Flag for review” on a question to add it here." },
-  { way: "unseen", title: "Not practised yet", description: "Ones you haven’t answered in Practice.", none: "None left: you’ve practised every question." },
-  { way: "weak", title: "Weak chapters", description: `Chapters where you get less than ${Math.round(WEAK_BELOW * 100)}% right.`, none: "Practise a little more to find your weak chapters." },
+const FOCUS: { way: PracticeWay; title: string; none: string }[] = [
+  { way: "wrong", title: "Questions I got wrong", none: "None yet: you haven’t got any wrong in Practice." },
+  { way: "flagged", title: "Flagged questions", none: "None yet: use “Flag for review” on a question to add it here." },
+  { way: "unseen", title: "Not practised yet", none: "None left: you’ve practised every question." },
+  { way: "weak", title: "Weak chapters", none: "Practise a little more to find your weak chapters." },
 ];
 
 // `initialChapters` (e.g. a mock test's weakest chapters) opens "By chapter" with those ticked.
@@ -66,36 +66,34 @@ export function PracticeSetup({ options, hasOpen, initialChapters = [] }: { opti
           ))}
         </div>
         <p className="mt-5 lg:mt-6 mb-3 text-base font-bold text-ink">Or focus on…</p>
-        <div className="flex flex-col gap-3">
+        <div className="grid grid-cols-2 gap-3">
           {FOCUS.map((item) => {
             const count = options.focus[item.way as keyof PracticeOptions["focus"]];
             const weak = item.way === "weak" && count > 0;
             return (
-              <label key={item.way} className={CHOICE_ROW}>
-                <input
-                  type="radio"
-                  name="way"
-                  value={item.way}
-                  checked={way === item.way}
-                  disabled={count === 0}
-                  onChange={() => setWay(item.way)}
-                  className={CHOICE_INPUT}
-                />
-                <span className="flex min-w-0 flex-col">
-                  <span className="text-base font-semibold">{item.title}</span>
-                  <span className="text-base text-muted [overflow-wrap:anywhere]">
-                    {count === 0 ? item.none : weak ? `${item.description} ${countOf(count, "question")} from:` : `${item.description} ${countOf(count, "question")}.`}
-                  </span>
-                  {weak && (
-                    <span className="mt-1 flex flex-col text-base text-ink">
-                      {options.weakChapters.map((chapter) => (
-                        <span key={chapter.id} className="[overflow-wrap:anywhere]">
-                          {chapter.label} ({chapter.percent}% right)
-                        </span>
-                      ))}
-                    </span>
-                  )}
+              <label key={item.way} className={CHOICE_TILE}>
+                <span className="flex items-start gap-2">
+                  <input
+                    type="radio"
+                    name="way"
+                    value={item.way}
+                    checked={way === item.way}
+                    disabled={count === 0}
+                    onChange={() => setWay(item.way)}
+                    className={`${CHOICE_INPUT} mt-0.5`}
+                  />
+                  <span className="min-w-0 text-base font-semibold [overflow-wrap:anywhere]">{item.title}</span>
                 </span>
+                <span className="text-base text-muted [overflow-wrap:anywhere]">{count === 0 ? item.none : countOf(count, "question")}</span>
+                {weak && (
+                  <span className="flex flex-col text-base text-ink">
+                    {options.weakChapters.map((chapter) => (
+                      <span key={chapter.id} className="[overflow-wrap:anywhere]">
+                        {chapter.label} ({chapter.percent}% right)
+                      </span>
+                    ))}
+                  </span>
+                )}
               </label>
             );
           })}
