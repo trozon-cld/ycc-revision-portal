@@ -96,7 +96,7 @@ export function PageRowActions({
         onCancel={close}
       >
         <p className="text-sm [overflow-wrap:anywhere]">
-          <strong className="font-medium">{title}</strong> and all its content will be removed. Pictures stay in Media.
+          <strong className="font-medium">{title}</strong> and all its content, translations and audio will be removed. Pictures stay in Media.
           This can&apos;t be undone.
         </p>
       </ActionForm>

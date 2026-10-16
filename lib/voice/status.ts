@@ -31,3 +31,10 @@ export const TRANSLATION_STATE_LABELS: Record<TranslationState, string> = {
   checked: "Checked",
   outdated: "Out of date",
 };
+
+export const AUDIO_STATE_LABELS: Record<AudioState, string> = {
+  missing: "No audio",
+  ready: "Audio ready",
+  outdated: "Audio out of date",
+  waiting: "Waiting for checked translation",
+};

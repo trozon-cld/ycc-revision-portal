@@ -54,7 +54,7 @@ Status: in active development.
 
 - `app/` — routes:
   - `/login`, `/access-expired`
-  - `/admin/*` (Admin/Superadmin): `/admin/candidates` (`[id]` a candidate's progress, read only), `/admin/admins`, `/admin/categories`, `/admin/handbook` (sections and chapters; `chapters/[id]` a chapter's pages and questions; `pages/[id]` the page editor, `pages/[id]/translations` its Hindi/Punjabi translations; `preview` the book as candidates see it), `/admin/questions` (bank; `new`, `[id]`), `/admin/media`, `/admin/faq` (General queries and support contact details; Superadmin only), `/admin/activity` (actions, logins and login-record archives), `/admin/account`
+  - `/admin/*` (Admin/Superadmin): `/admin/candidates` (`[id]` a candidate's progress, read only), `/admin/admins`, `/admin/categories`, `/admin/handbook` (sections and chapters; `chapters/[id]` a chapter's pages and questions; `pages/[id]` the page editor (with each language's translation and audio), `pages/[id]/translations` its Hindi/Punjabi translations; `preview` the book as candidates see it), `/admin/questions` (bank; `new`, `[id]`), `/admin/media`, `/admin/faq` (General queries and support contact details; Superadmin only), `/admin/activity` (actions, logins and login-record archives), `/admin/account`
   - `/dashboard` (Candidate home): `category` to switch within the group, `prepare` the Handbook, `practice` Practice setup and `practice/[id]` a run or its report, `mock` the Mock test start page and `mock/[id]` a test (its results and `review` once ended), `progress` My progress, `help` (also Log out of all devices)
   - `/api/auth/login`, `/api/auth/logout` (also "log out of all devices"), `/api/media/upload` (picture uploads: sign-in, origin and size are checked before the file is read)
 - `components/admin/` — compact admin console UI (sidebar shell, tables, row menus, slide-in panels, `ActionForm`, `Pagination`); admin pages must build from these. Candidate pages keep the large, simple style.
@@ -75,7 +75,7 @@ Status: in active development.
 - `lib/faq/` — General queries: questions in order and the support contact details (`types.ts` safe in forms)
 - `lib/progress/` — candidates' progress per category (Handbook pages done, question results), the My progress overview and the readiness score (`readiness.ts`, pure); not activity-log data
 - `lib/storage/` — the only code that talks to the storage provider (upload, delete, signed links; pictures, archive and audio buckets) and the total stored (`usage.ts`, for the storage cap)
-- `lib/voice/` — Handbook translations and audio: languages, what is read aloud, translation checks, saving translations (`page-translations.ts`), the voice service (Gemini today, behind `services.ts`; a stand-in in `fake.ts`), MP3 encoding and the hourly request cap
+- `lib/voice/` — Handbook translations and audio: languages, what is read aloud, translation checks, saving translations (`page-translations.ts`) and page audio (`page-audio.ts`), the voice service (Gemini today, behind `services.ts`; a stand-in in `fake.ts`), MP3 encoding and the hourly request cap
 - `lib/media/` — image checks (real type and size from the file), in-browser WebP conversion, saving uploads and the storage cap (`upload.ts`)
 - `lib/ids.ts`, `lib/text.ts`, `lib/format.ts`, `lib/limits.ts`, `lib/forms.ts`, `lib/params.ts` — small shared helpers (id checks, text clean-up, display formats, length limits, form results, URL parameters)
 - `lib/brand.ts`, `lib/layout.ts` — logo and phone screen sizes

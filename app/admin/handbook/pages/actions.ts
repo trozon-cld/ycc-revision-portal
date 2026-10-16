@@ -13,6 +13,7 @@ import type { ResolvedMedia } from "@/lib/content/book";
 import { resolveMedia } from "@/lib/content/pages";
 import { getSignedUrls, isStorageConfigured } from "@/lib/storage/storage";
 import { isUuid } from "@/lib/ids";
+import { deleteAudioFilesQuietly, pageAudioPaths } from "@/lib/voice/page-audio";
 import { escapeLike } from "@/lib/db/like";
 import { TITLE_MAX_LENGTH } from "@/lib/limits";
 import { lockHandbookOrder, normaliseTitle } from "@/lib/handbook/structure";
@@ -138,12 +139,16 @@ export async function deletePage(_prev: PageActionState, formData: FormData): Pr
   const pageId = String(formData.get("pageId") ?? "");
   if (!isUuid(pageId)) return { error: NOT_FOUND };
 
+  // The page's audio rows go with it; their files are removed once the delete is committed.
+  let audioPaths: string[] = [];
   const result = await withTransaction<PageActionState>(async (client) => {
     await lockHandbookOrder(client);
     const { rows } = await client.query<{ chapter_id: string; position: number }>(
       `select chapter_id, position from handbook_items where content_page_id = $1`,
       [pageId]
     );
+    await client.query(`select 1 from content_pages where id = $1 for update`, [pageId]);
+    audioPaths = await pageAudioPaths(client, pageId);
     const { rows: deleted } = await client.query<{ title: string; chapter_title: string }>(
       `delete from content_pages p where p.id = $1
        returning p.title, (select title from chapters where id = p.chapter_id) as chapter_title`,
@@ -166,6 +171,7 @@ export async function deletePage(_prev: PageActionState, formData: FormData): Pr
     return { success: true };
   });
 
+  if (result.success) await deleteAudioFilesQuietly(audioPaths);
   revalidatePath("/admin/handbook", "layout");
   revalidatePath("/admin/media");
   return result;

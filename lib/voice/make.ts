@@ -47,7 +47,7 @@ export async function translatePage(userId: string, blocks: Block[], to: string)
   return { blocks: result.blocks, provider: translator.name };
 }
 
-export type PageSpeech = { mp3: Uint8Array; durationMs: number; provider: string; voice: string };
+export type PageSpeech = { mp3: Uint8Array<ArrayBuffer>; durationMs: number; provider: string; voice: string };
 
 // One MP3 for the page in this language (blocks already in that language). Long pages go in parts.
 export async function speakPage(userId: string, blocks: Block[], code: string): Promise<PageSpeech> {

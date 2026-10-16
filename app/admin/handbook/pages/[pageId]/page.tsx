@@ -8,6 +8,7 @@ import type { ResolvedMedia } from "@/lib/content/book";
 import { getChapterContext, resolveMedia } from "@/lib/content/pages";
 import { isStorageConfigured } from "@/lib/storage/storage";
 import { isUuid } from "@/lib/ids";
+import { loadAudioSummaries } from "@/lib/voice/page-audio";
 import { loadTranslationSummaries } from "@/lib/voice/page-translations";
 import { PageEditor } from "./page-editor";
 
@@ -37,7 +38,7 @@ export default async function EditPagePage({ params }: PageProps<"/admin/handboo
   const blocks = parsed.ok ? parsed.blocks : [];
   const loadProblem = parsed.ok ? null : parsed.error;
 
-  const translations = await loadTranslationSummaries(page.id);
+  const [translations, audio] = await Promise.all([loadTranslationSummaries(page.id), loadAudioSummaries(page.id)]);
 
   let media: ResolvedMedia = {};
   try {
@@ -58,6 +59,7 @@ export default async function EditPagePage({ params }: PageProps<"/admin/handboo
       storageReady={isStorageConfigured()}
       loadProblem={loadProblem}
       translations={translations}
+      audio={audio}
     />
   );
 }

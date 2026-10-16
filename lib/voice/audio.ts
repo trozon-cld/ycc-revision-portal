@@ -81,7 +81,7 @@ export function durationMs(pcm: Pcm): number {
 }
 
 // Mono MP3 at MP3_KBPS; encoded in blocks so long pages don't build one huge array at once.
-export function encodeMp3(pcm: Pcm): Uint8Array {
+export function encodeMp3(pcm: Pcm): Uint8Array<ArrayBuffer> {
   const encoder = new Mp3Encoder(1, pcm.sampleRate, MP3_KBPS);
   const chunks: Uint8Array[] = [];
   const BLOCK = 1152 * 20;
