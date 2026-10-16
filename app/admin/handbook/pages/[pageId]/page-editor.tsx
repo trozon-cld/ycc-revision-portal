@@ -17,6 +17,8 @@ import { TITLE_MAX_LENGTH } from "@/lib/limits";
 import { NOT_THROUGH_MESSAGE, reachServer } from "@/lib/forms";
 import { getPreviewMedia, listPickerMedia, savePageContent, setPageStatus, type PickerItem } from "../actions";
 import { BlockEditor } from "./block-editor";
+import { LanguagesStrip } from "./languages-strip";
+import type { TranslationSummary } from "@/lib/voice/page-translations";
 
 const ADD_ORDER: BlockType[] = ["heading", "paragraph", "list", "picture", "callout"];
 
@@ -32,6 +34,7 @@ export function PageEditor({
   initialMedia,
   storageReady,
   loadProblem,
+  translations,
 }: {
   pageId: string;
   initialTitle: string;
@@ -42,6 +45,7 @@ export function PageEditor({
   initialMedia: ResolvedMedia;
   storageReady: boolean;
   loadProblem: string | null;
+  translations: TranslationSummary[];
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -250,6 +254,7 @@ export function PageEditor({
       {status === "published" && (
         <p className="mb-3 text-sm text-slate-700">This page is published. Saved changes go live straight away.</p>
       )}
+      <LanguagesStrip pageId={pageId} pageVersion={version} dirty={dirty} initial={translations} />
       {loadProblem && (
         <p role="alert" className="mb-3 rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25">
           Some saved content no longer passes the checks and was left out: {loadProblem}

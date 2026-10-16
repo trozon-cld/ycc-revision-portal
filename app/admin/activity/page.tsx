@@ -447,6 +447,8 @@ function describeDetails(details: Record<string, string>): string | null {
   if (details.group) parts.push(`Group: ${details.group}`);
   if (details.section) parts.push(`Section: ${details.section}`);
   if (details.chapter) parts.push(`Chapter: ${details.chapter}`);
+  if (details.language) parts.push(`Language: ${details.language}`);
+  if (details.pageVersion) parts.push(`From page ${details.pageVersion.toLowerCase()}`);
   if (details.position) parts.push(details.position);
   if (details.items) parts.push(details.items);
   if (details.questionType) parts.push(`Type: ${details.questionType}`);

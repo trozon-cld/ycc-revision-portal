@@ -24,3 +24,10 @@ export function audioState(isSource: boolean, pageVersion: number, translation: 
   if (!audio) return source === null ? "waiting" : "missing";
   return source !== null && audio.sourceVersion === source ? "ready" : "outdated";
 }
+
+export const TRANSLATION_STATE_LABELS: Record<TranslationState, string> = {
+  missing: "Not translated",
+  draft: "Draft",
+  checked: "Checked",
+  outdated: "Out of date",
+};
