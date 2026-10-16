@@ -122,7 +122,7 @@ export function PracticeReportView({ report, againUnavailable }: { report: Pract
           )}
 
           {report.wrong && report.answered > 0 && (
-            <section aria-labelledby="review-heading" className="mt-5 lg:mt-6 lg:mt-8">
+            <section aria-labelledby="review-heading" className="mt-5 lg:mt-8">
               <h2 id="review-heading" className={`${SECTION_TITLE}`}>
                 Questions to look at again
               </h2>

@@ -111,3 +111,6 @@ export type MockReview = { kept: boolean; total: number; items: MockReviewItem[]
 
 export type MockChange = { position: number; response?: unknown; flagged?: boolean };
 export type MockSaveReply = { ok: true; secondsLeft: number } | { ok: false; reason: "ended" | "invalid" };
+
+// Past tests shown at first on the Mock test page, and how many more each "Show more" adds.
+export const MOCK_HISTORY_STEP = 10;
