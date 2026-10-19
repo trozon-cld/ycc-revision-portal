@@ -36,5 +36,5 @@ export const AUDIO_STATE_LABELS: Record<AudioState, string> = {
   missing: "No audio",
   ready: "Audio ready",
   outdated: "Audio out of date",
-  waiting: "Waiting for checked translation",
+  waiting: "Waiting for check",
 };
