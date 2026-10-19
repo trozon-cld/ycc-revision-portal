@@ -17,6 +17,8 @@ export type CandidateDetail = {
   isBlocked: boolean;
   accessExpiresAt: Date | null;
   lastLoginAt: Date | null;
+  // Listen's language code, chosen by the candidate on their Account page.
+  language: string;
 };
 
 // The latest successful login of `u` (newest first on the user/time index; login records cover the last 180 days or so).
@@ -38,10 +40,11 @@ export async function loadCandidateDetail(candidateId: string, viewer: SessionPa
     is_blocked: boolean;
     access_expires_at: Date | null;
     last_login_at: Date | null;
+    preferred_language: string;
   }>(
     `select u.id, u.email, u.full_name, a.id as admin_id, a.full_name as admin_name, a.email as admin_email,
             asg.id as assigned_id, asg.name as assigned_name, cur.id as current_id, cur.name as current_name,
-            u.is_blocked, u.access_expires_at,
+            u.is_blocked, u.access_expires_at, u.preferred_language,
             ${LAST_LOGIN_SQL} as last_login_at
      from users u
      join users a on a.id = u.admin_id
@@ -64,5 +67,6 @@ export async function loadCandidateDetail(candidateId: string, viewer: SessionPa
     isBlocked: row.is_blocked,
     accessExpiresAt: row.access_expires_at,
     lastLoginAt: row.last_login_at,
+    language: row.preferred_language,
   };
 }

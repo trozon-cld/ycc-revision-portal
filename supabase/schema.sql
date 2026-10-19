@@ -50,6 +50,8 @@ create table users (
   full_name varchar(100) check (full_name is null or length(trim(full_name)) > 0),
   -- Goes up when the password changes; sign-ins carrying an older number are signed out.
   session_version integer not null default 1 check (session_version > 0),
+  -- Candidates: the language Listen reads Handbook pages in (lib/voice/languages.ts). Staff: unused.
+  preferred_language varchar(10) not null default 'en' check (preferred_language ~ '^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$'),
   constraint users_candidate_fields_check check (
     (role = 'candidate' and category_id is not null and admin_id is not null)
     or (role <> 'candidate' and admin_id is null)

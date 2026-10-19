@@ -2,6 +2,7 @@ import { pool } from "@/lib/db/pool";
 import { toTextSize, type BookPageData, type ResolvedMedia, type TextSize } from "./book";
 import type { BookCovers } from "./covers";
 import { loadPreviewBook } from "./preview";
+import { listeningLanguage, loadReadyAudio } from "@/lib/voice/listen";
 
 export type CandidateBook = {
   categoryId: string;
@@ -11,6 +12,8 @@ export type CandidateBook = {
   startPageId: string | null;
   textSize: TextSize;
   covers: BookCovers;
+  // Listen: the candidate's language and the pages with up-to-date audio in it (item id → length in ms).
+  listen: { language: string; languageName: string; durations: Record<string, number> };
 };
 
 // The candidate's current category as they see it (published items in published chapters): one query for
@@ -22,10 +25,11 @@ export async function loadCandidateBook(userId: string): Promise<CandidateBook |
     front_id: string | null;
     back_id: string | null;
     reader_text_size: number | null;
+    preferred_language: string;
     item_id: string | null;
   }>(
     `select c.id as category_id, c.name as category_name, c.front_cover_media_id as front_id,
-            c.back_cover_media_id as back_id, u.reader_text_size, hp.item_id
+            c.back_cover_media_id as back_id, u.reader_text_size, u.preferred_language, hp.item_id
      from users u
      join categories c on c.id = u.current_category_id
      left join handbook_progress hp on hp.user_id = u.id and hp.category_id = u.current_category_id
@@ -36,10 +40,11 @@ export async function loadCandidateBook(userId: string): Promise<CandidateBook |
   if (!row) return null;
 
   const coverIds = [row.front_id, row.back_id].filter((id): id is string => Boolean(id));
-  const book = await loadPreviewBook(
-    { chapterId: null, categoryId: row.category_id, includeDrafts: false },
-    { ids: coverIds, thumbIds: coverIds }
-  );
+  const language = listeningLanguage(row.preferred_language);
+  const [book, durations] = await Promise.all([
+    loadPreviewBook({ chapterId: null, categoryId: row.category_id, includeDrafts: false }, { ids: coverIds, thumbIds: coverIds }),
+    loadReadyAudio(row.category_id, language.code),
+  ]);
   return {
     categoryId: row.category_id,
     categoryName: row.category_name,
@@ -53,6 +58,7 @@ export async function loadCandidateBook(userId: string): Promise<CandidateBook |
       back: row.back_id ? (book.media[row.back_id] ?? null) : null,
       homeHref: "/dashboard",
     },
+    listen: { language: language.code, languageName: language.name, durations },
   };
 }
 

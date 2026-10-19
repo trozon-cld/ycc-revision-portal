@@ -7,9 +7,7 @@ import { Icon, type IconName } from "@/components/icons";
 import { BAR_SHADOW_TOP } from "@/components/candidate/buttons";
 import { useLatest } from "@/components/use-latest";
 import { TEXT_SIZES, type BookPageData, type Sheet, type TextSize } from "@/lib/content/book";
-
-// Phase 2 (planned soon, decided 13 Oct): set to true when Listen reads pages aloud, to show its button again.
-const LISTEN_READY = false;
+import { READING_SPEEDS, READING_SPEED_LABELS, type ListenBar, type ReadingSpeed } from "./listen";
 
 // The reader bar and its panels. Candidate style: big targets, words next to icons,
 // high contrast. Panels cover the pages (no pop-up windows) and close with Escape.
@@ -54,6 +52,7 @@ export function ReaderBar({
   start,
   end,
   status,
+  listen,
 }: {
   compact: boolean;
   tiny: boolean;
@@ -65,7 +64,7 @@ export function ReaderBar({
   hasQuestions: boolean;
   // Laptops and desktops: one slimmer bar that also holds the page's own items at each end.
   dense?: boolean;
-  // Under 1280px wide: no Listen yet (a placeholder); in the dense bar also short labels.
+  // Smaller laptops (under 1280px, or 1600px with Listen): in the dense bar, short labels with the word under the icon.
   narrow?: boolean;
   // Tablets held upright: with labels on, each word sits under its icon so the bar fits.
   stacked?: boolean;
@@ -79,6 +78,8 @@ export function ReaderBar({
   end?: ReactNode;
   // Dense bar only: "Pages 5–6 of 11", shown between the tools (read out by the reader itself).
   status?: string;
+  // The candidate Handbook's Listen button (phones: in Go to page's place, which moves to Settings).
+  listen?: ListenBar;
 }) {
   const showLabels = useContext(ReaderLabelsContext);
   const refs = {
@@ -88,9 +89,9 @@ export function ReaderBar({
     settings: useRef<HTMLButtonElement>(null),
   };
   const previous = useRef(panel);
-  // When a panel closes, focus goes back to the button that opened it.
+  // When a panel closes, focus goes back to the button that opened it (Settings, for Go to page opened from there).
   useEffect(() => {
-    if (previous.current && !panel) refs[previous.current].current?.focus();
+    if (previous.current && !panel) (refs[previous.current].current ?? refs.settings.current)?.focus();
     previous.current = panel;
   });
   // Phones: five equal buttons with the word under each icon (13px under 360px); only if the words still
@@ -171,6 +172,19 @@ export function ReaderBar({
       )}
     </button>
   );
+  const listenButton = listen && (
+    <button
+      type="button"
+      onClick={listen.onToggle}
+      aria-busy={listen.busy || undefined}
+      title={labelled ? undefined : listen.label}
+      className={`${barButton} ${panelSize}`}
+    >
+      <Icon name={listen.icon} />
+      <span className={iconsOnly || !showLabels ? "sr-only" : undefined}>{listen.label}</span>
+      {listen.busy && <span className="sr-only"> (loading)</span>}
+    </button>
+  );
   const leftTools = (
     <>
       {start && <div className="mr-2 flex shrink-0 items-center">{start}</div>}
@@ -181,7 +195,7 @@ export function ReaderBar({
         </Link>
       )}
       {panelButton("contents", "contents", "Contents", "Contents")}
-      {panelButton("goto", "page", "Go to page", "Page")}
+      {listen && compact ? listenButton : panelButton("goto", "page", "Go to page", "Page")}
       {hasQuestions && panelButton("results", "results", "Results", "Results")}
     </>
   );
@@ -197,14 +211,7 @@ export function ReaderBar({
           </span>
         </>
       )}
-      {/* Reading aloud (phase 2, planned soon): hidden until it works (LISTEN_READY); never on phones' bars. */}
-      {LISTEN_READY && !compact && !narrow && (
-        <button type="button" disabled title="Listen is coming later" className={`${barButton} ${size}`}>
-          <Icon name="listen" />
-          <span className={showLabels ? undefined : "sr-only"}>Listen</span>
-          <span className="sr-only"> (coming later)</span>
-        </button>
-      )}
+      {listen && !compact && listenButton}
       {end && <div className="ml-2 flex shrink-0 items-center gap-2 border-l border-line-soft pl-4">{end}</div>}
     </>
   );
@@ -213,10 +220,15 @@ export function ReaderBar({
     return (
       <div ref={barRef} role="toolbar" aria-label="Reader tools" className={`flex items-center gap-2 border-b border-line bg-card px-3 py-2 ${BAR_SHADOW_TOP}`}>
         {leftTools}
-        <span aria-hidden="true" className="min-w-0 flex-1 truncate px-2 text-center text-base font-semibold text-ink">
-          {status}
-        </span>
+        {listen?.extras ? (
+          <div className="flex min-w-0 flex-1 items-center justify-center gap-2 px-2">{listen.extras}</div>
+        ) : (
+          <span aria-hidden="true" className="min-w-0 flex-1 truncate px-2 text-center text-base font-semibold text-ink">
+            {status}
+          </span>
+        )}
         {rightTools}
+        {listen?.below}
       </div>
     );
   }
@@ -228,10 +240,15 @@ export function ReaderBar({
         className={`grid grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-line bg-card px-6 py-2 ${BAR_SHADOW_TOP}`}
       >
         <div className="flex min-w-0 items-center gap-2">{leftTools}</div>
-        <span aria-hidden="true" className="whitespace-nowrap px-2 text-center text-base font-semibold text-ink">
-          {status}
-        </span>
+        {listen?.extras ? (
+          <div className="flex items-center justify-center gap-2 px-2">{listen.extras}</div>
+        ) : (
+          <span aria-hidden="true" className="whitespace-nowrap px-2 text-center text-base font-semibold text-ink">
+            {status}
+          </span>
+        )}
         <div className="flex min-w-0 items-center justify-end gap-2">{rightTools}</div>
+        {listen?.below}
       </div>
     );
   }
@@ -245,6 +262,7 @@ export function ReaderBar({
       {leftTools}
       {!home && <span className="flex-1" />}
       {rightTools}
+      {listen?.below}
     </div>
   );
 }
@@ -562,6 +580,9 @@ export function SettingsPanel({
   pageTurn,
   onTogglePageTurn,
   reducedMotion = false,
+  readingSpeed,
+  onReadingSpeedChange,
+  onGoToPage,
   actions,
   links,
   onClose,
@@ -574,6 +595,11 @@ export function SettingsPanel({
   pageTurn?: boolean;
   onTogglePageTurn?: () => void;
   reducedMotion?: boolean;
+  // Handbook with Listen: how fast pages are read aloud (remembered on this device).
+  readingSpeed?: ReadingSpeed;
+  onReadingSpeedChange?: (speed: ReadingSpeed) => void;
+  // Phones with Listen: Go to page lives here, as Listen took its place in the bar.
+  onGoToPage?: () => void;
   // Practice: End practice, shown before the links.
   actions?: ReactNode;
   // Back to home, Help and Log out where the bar has no room for them (phones; the Mock test everywhere).
@@ -584,6 +610,12 @@ export function SettingsPanel({
   return (
     <Panel title="Settings" onClose={onClose}>
       <div className="mx-auto max-w-xl space-y-4">
+        {onGoToPage && (
+          <button type="button" onClick={onGoToPage} className={PANEL_LINK}>
+            <Icon name="page" />
+            Go to page
+          </button>
+        )}
         {onTextSizeChange && (
           <div role="group" aria-labelledby="reader-text-size" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border-2 border-line px-4 py-3">
             <span id="reader-text-size" className="text-lg font-semibold text-ink">
@@ -618,8 +650,35 @@ export function SettingsPanel({
             onChange={onTogglePageTurn}
           />
         )}
+        {readingSpeed && onReadingSpeedChange && (
+          <div role="group" aria-labelledby="reader-speed" aria-describedby="reader-speed-help" className="rounded-xl border-2 border-line px-4 py-3">
+            <span id="reader-speed" className="block text-lg font-semibold text-ink">
+              Reading speed
+            </span>
+            <span id="reader-speed-help" className="block text-base text-ink">
+              How fast Listen reads pages aloud.
+            </span>
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              {READING_SPEEDS.map((speed) => (
+                <button
+                  key={speed}
+                  type="button"
+                  aria-pressed={readingSpeed === speed}
+                  onClick={() => onReadingSpeedChange(speed)}
+                  className={`${barButton} h-14 px-2 text-lg`}
+                >
+                  {READING_SPEED_LABELS[speed]}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <p className="text-base text-ink">
-          {onTogglePageTurn ? "Button labels and page turn are remembered on this device." : "Button labels are remembered on this device."}
+          {readingSpeed
+            ? "Button labels, page turn and reading speed are remembered on this device."
+            : onTogglePageTurn
+              ? "Button labels and page turn are remembered on this device."
+              : "Button labels are remembered on this device."}
         </p>
         {actions}
         {links && <div className="grid gap-3 border-t-2 border-line-soft pt-4 min-[400px]:grid-cols-3">{links}</div>}

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { listeningLanguage } from "@/lib/voice/listen";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -132,6 +133,7 @@ export default async function CandidateProgressPage({ params, searchParams }: Pa
             ["Last login", candidate.lastLoginAt ? formatUkDateTime(candidate.lastLoginAt) : "No logins recorded"],
             ["Assigned category", candidate.assigned.name],
             ["Current category", candidate.current.name],
+            ["Listening language", listeningLanguage(candidate.language).name],
             ...(session.role === "superadmin" ? [["Admin", <PersonLabel key="admin" name={candidate.admin.name} email={candidate.admin.email} />] as [string, ReactNode]] : []),
           ]}
         />

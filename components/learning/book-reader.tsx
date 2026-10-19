@@ -27,6 +27,7 @@ import { collectMediaIds } from "@/lib/content/blocks";
 import { BackCoverFace, FrontCoverFace } from "./book-covers";
 import { MeasuringContext } from "./measuring";
 import { OpeningMessage } from "./opening-message";
+import { useListen, useReadingSpeed, type ListenSetup, type ListenTarget } from "./listen";
 import { BlockList } from "./blocks";
 import { FRESH_QUESTION_STATE, QuestionView, type QuestionViewState } from "./questions/question-view";
 import {
@@ -38,6 +39,8 @@ import {
   ResultsPanel,
   PANEL_LINK,
   SettingsPanel,
+  BAR_BUTTON_DENSE,
+  barButton,
   type ReaderPanel,
   type ResultEntry,
 } from "./reader-tools";
@@ -95,8 +98,14 @@ const SWIPE_MAX_MS = 800;
 const STACKED_BAR_BELOW = 820;
 // This browser's choice of button labels on or off (a small display preference, not saved to the account).
 const SPREAD_PADDING = 8;
-// Below this width the laptop bar uses short labels and leaves out Listen, so everything fits.
+// Below this width the laptop bar uses short labels with the word under the icon, so everything fits;
+// with Listen in the bar it needs more room.
 const ROOMY_BAR = 1280;
+const ROOMY_BAR_WITH_LISTEN = 1600;
+// Listen's time and Back 10 seconds (in place of the page status) need at least this much bar; with Listen,
+// narrower bars keep text size in Settings only, as phones do.
+const LISTEN_EXTRAS_MIN = 1360;
+const TEXT_SIZE_WITH_LISTEN_MIN = 1180;
 // Spreads: picture answer options are at most this share of the page height, so a question keeps room
 // for its explanation.
 const OPTION_PICTURE_SHARE = 0.22;
@@ -196,6 +205,7 @@ export function BookReader({
   accountLinks,
   onPagesDone,
   onQuestionDone,
+  listen,
 }: {
   pages: BookPageData[];
   media: ResolvedMedia;
@@ -224,6 +234,8 @@ export function BookReader({
   // Candidate progress: content pages shown to their last part, and questions checked or revealed.
   onPagesDone?: (pageIds: string[]) => void;
   onQuestionDone?: (pageId: string, outcome: HandbookOutcome) => void;
+  // Candidate Handbook: Listen reads the page on screen aloud (components/learning/listen.tsx).
+  listen?: ListenSetup;
 }) {
   const sectionRef = useRef<HTMLElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -650,6 +662,11 @@ export function BookReader({
   // Without the laptop bar's logo, Help and Log out: Home goes in the bar, the rest in Settings.
   const phone = Boolean(homeHref) && !wide;
 
+  const [readingSpeed, setReadingSpeed] = useReadingSpeed();
+  const listenPage = pages[position.pageIndex];
+  const listenTarget: ListenTarget = !listenPage ? { kind: "none" } : listenPage.question ? { kind: "question" } : { kind: "page", id: listenPage.id };
+  const player = useListen(listen, listenTarget, readingSpeed, wide && (stageSize?.width ?? 0) >= LISTEN_EXTRAS_MIN, showLabels, `${barButton} ${sideNav ? BAR_BUTTON_DENSE : "h-14 min-w-14 px-4 text-lg"}`);
+
   const sheetStyle = geometry
     ? ({
         width: geometry.sheetWidth,
@@ -802,16 +819,18 @@ export function BookReader({
           onTextSizeChange={onTextSizeChange}
           hasQuestions={results.length > 0}
           dense={sideNav}
-          narrow={(stageSize?.width ?? 0) < ROOMY_BAR}
+          narrow={(stageSize?.width ?? 0) < (player ? ROOMY_BAR_WITH_LISTEN : ROOMY_BAR)}
           stacked={!sideNav && !compact && (phone || (stageSize?.width ?? 0) < STACKED_BAR_BELOW)}
           status={sideNav ? status : undefined}
           centreStatus={!sideways}
           start={wide ? barStart : undefined}
           end={wide ? barEnd : undefined}
           home={phone ? homeHref : undefined}
-          textSizeInBar={!compact && !sideways}
+          textSizeInBar={!compact && !sideways && !(player && (stageSize?.width ?? 0) < TEXT_SIZE_WITH_LISTEN_MIN)}
+          listen={player?.bar}
         />
       )}
+      {player?.audio}
       <div
         ref={stageRef}
         // Pictures aren't dragged out of the book, so a swipe that starts on one still turns the page.
@@ -872,6 +891,9 @@ export function BookReader({
             pageTurn={pageTurn}
             onTogglePageTurn={togglePageTurn}
             reducedMotion={reducedMotion}
+            readingSpeed={player ? readingSpeed : undefined}
+            onReadingSpeedChange={player ? setReadingSpeed : undefined}
+            onGoToPage={player && compact ? () => setPanel("goto") : undefined}
             links={
               phone && homeHref ? (
                 <>

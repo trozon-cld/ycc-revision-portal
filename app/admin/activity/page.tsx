@@ -97,8 +97,8 @@ export default async function ActivityPage({ searchParams }: PageProps<"/admin/a
         title={isSuperadmin ? "Activity" : "My activity"}
         description={
           isSuperadmin
-            ? "Everything Admins and the Superadmin have changed, candidates' category switches, and every login."
-            : "Changes you have made, category switches by your current candidates, and your logins."
+            ? "Everything Admins and the Superadmin have changed, candidates' category and language changes, and every login."
+            : "Changes you have made, category and language changes by your current candidates, and your logins."
         }
       />
 
@@ -144,7 +144,7 @@ async function ActivityTab({
   filters,
 }: {
   isSuperadmin: boolean;
-  // Admins: also shows category switches made by their own candidates.
+  // Admins: also shows category switches and listening-language changes made by their own candidates.
   ownerId: string | null;
   actorId: string | null;
   action: ActivityAction | null;
@@ -154,7 +154,7 @@ async function ActivityTab({
 }) {
   // One filter for the count and the page, so both always agree.
   const where = `where ($1::uuid is null or actor_id = $1::uuid
-              or ($3::uuid is not null and action = 'candidate.category_switched'
+              or ($3::uuid is not null and action in ('candidate.category_switched', 'account.language_changed')
                   and target_id in (select id from users where admin_id = $3::uuid)))
          and ($2::varchar is null or action = $2::varchar)`;
   const values = [actorId, action, ownerId];

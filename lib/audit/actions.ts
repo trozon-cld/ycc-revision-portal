@@ -73,6 +73,7 @@ export const ACTIVITY_ACTIONS = {
   "account.email_changed": "Changed own email",
   "account.name_changed": "Changed own name",
   "account.password_changed": "Changed own password",
+  "account.language_changed": "Changed listening language",
   "log.login_records_archived": "Archived old login records",
 } as const;
 

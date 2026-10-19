@@ -12,9 +12,9 @@ export function formatDuration(seconds: number): string {
   return parts.filter(Boolean).join(" ");
 }
 
-// A clock-style length for audio: "0:45", "3:07".
+// A clock-style time for audio: "0:00", "0:45", "3:07".
 export function formatClock(ms: number): string {
-  const seconds = Math.max(1, Math.round(ms / 1000));
+  const seconds = Math.max(0, Math.floor(ms / 1000));
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 }
 

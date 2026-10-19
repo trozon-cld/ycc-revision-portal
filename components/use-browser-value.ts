@@ -53,3 +53,36 @@ export function useDeviceSwitch(key: string): [on: boolean, toggle: () => void] 
   }, [key]);
   return [on, toggle];
 }
+
+// One of a few named values remembered on this device (Listen's reading speed); same rules as the switches.
+const picked = new Map<string, string>();
+
+function pickedValue<T extends string>(key: string, options: readonly T[], fallback: T): T {
+  let known = picked.get(key);
+  if (known === undefined) {
+    try {
+      known = window.localStorage.getItem(key) ?? fallback;
+    } catch {
+      known = fallback;
+    }
+    picked.set(key, known);
+  }
+  return (options as readonly string[]).includes(known) ? (known as T) : fallback;
+}
+
+export function useDeviceChoice<T extends string>(key: string, options: readonly T[], fallback: T): [value: T, choose: (value: T) => void] {
+  const value = useSyncExternalStore(subscribe, () => pickedValue(key, options, fallback), () => fallback);
+  const choose = useCallback(
+    (next: T) => {
+      picked.set(key, next);
+      try {
+        window.localStorage.setItem(key, next);
+      } catch {
+        // Not remembered, but still chosen for this visit.
+      }
+      listeners.forEach((listener) => listener());
+    },
+    [key]
+  );
+  return [value, choose];
+}
