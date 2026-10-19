@@ -1,5 +1,6 @@
 "use client";
 
+import { Spinner } from "@/components/spinner";
 import { Icon } from "@/components/icons";
 import {
   useCallback,
@@ -27,7 +28,7 @@ import { collectMediaIds } from "@/lib/content/blocks";
 import { BackCoverFace, FrontCoverFace } from "./book-covers";
 import { MeasuringContext } from "./measuring";
 import { OpeningMessage } from "./opening-message";
-import { ListenSpinner, useListen, useReadingSpeed, type ListenControl, type ListenItem, type ListenSetup } from "./listen";
+import { useListen, useReadingSpeed, type ListenControl, type ListenItem, type ListenSetup } from "./listen";
 import { BlockList } from "./blocks";
 import { FRESH_QUESTION_STATE, QuestionView, type QuestionViewState } from "./questions/question-view";
 import {
@@ -1349,7 +1350,7 @@ function SheetView({
             className="absolute inset-y-0 inline-flex min-w-11 items-center justify-center gap-1.5 rounded-lg px-2 text-base font-semibold text-primary before:absolute before:inset-x-0 before:top-1/2 before:h-11 before:-translate-y-1/2 before:content-[''] hover:bg-primary/[0.06] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-45"
             style={{ right: geometry.padX - 8 }}
           >
-            {listen.busy ? <ListenSpinner small /> : <Icon name={listen.icon} className="size-5" />}
+            {listen.busy ? <span className="flex size-5 shrink-0 items-center justify-center"><Spinner /></span> : <Icon name={listen.icon} className="size-5" />}
             <span className={showLabels ? undefined : "sr-only"}>{listen.label}</span>
             <span className="sr-only">{listen.label === "Listen" ? " to" : ""} page {sheet.number}</span>
           </button>

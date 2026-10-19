@@ -306,14 +306,3 @@ function ListenClock({ audioRef, expected, page }: { audioRef: RefObject<HTMLAud
     </span>
   );
 }
-
-// Shown in place of the speaker while the audio is being fetched (still under reduced motion).
-export function ListenSpinner({ small = false }: { small?: boolean }) {
-  return (
-    <span
-      aria-hidden="true"
-      data-listen-spinner=""
-      className={`inline-block shrink-0 rounded-full border-primary/20 border-t-primary motion-safe:animate-spin ${small ? "size-5 border-2" : "size-6 border-[3px]"}`}
-    />
-  );
-}
