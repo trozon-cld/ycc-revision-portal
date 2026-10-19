@@ -27,7 +27,7 @@ import { collectMediaIds } from "@/lib/content/blocks";
 import { BackCoverFace, FrontCoverFace } from "./book-covers";
 import { MeasuringContext } from "./measuring";
 import { OpeningMessage } from "./opening-message";
-import { useListen, useReadingSpeed, type ListenControl, type ListenItem, type ListenSetup } from "./listen";
+import { ListenSpinner, useListen, useReadingSpeed, type ListenControl, type ListenItem, type ListenSetup } from "./listen";
 import { BlockList } from "./blocks";
 import { FRESH_QUESTION_STATE, QuestionView, type QuestionViewState } from "./questions/question-view";
 import {
@@ -736,7 +736,7 @@ export function BookReader({
         textSize={textSize}
         style={sheetStyle}
         side={side}
-        listen={!still && player && geometry.spread && page !== null && pages[page] ? player.page(pages[page].id) : undefined}
+        listen={!still && player && page !== null && pages[page] ? player.page(pages[page].id) : undefined}
       />
     );
   }
@@ -1220,8 +1220,8 @@ function SheetView({
   textSize: number;
   style?: CSSProperties;
   side: "left" | "right" | "single";
-  // Spreads: this page's own Listen button, and whether it is the page being read.
-  listen?: ListenControl & { reading: boolean };
+  // Listen: this page's progress line while it is being read, and (spreads) its own Listen button.
+  listen?: ListenControl & { reading: boolean; progress: ReactNode };
 }) {
   const showLabels = useContext(ReaderLabelsContext);
   const boxRef = useRef<HTMLDivElement>(null);
@@ -1262,7 +1262,7 @@ function SheetView({
   const repeat = sheet.part > 0 && !page.question;
   return (
     <article aria-label={`Page ${sheet.number}`} className={`relative flex shrink-0 flex-col ${edge}`} style={style}>
-      {listen?.reading && <span aria-hidden="true" className="hc-fill absolute inset-x-0 top-0 h-1 bg-primary" />}
+      {listen?.progress}
       {page.badge && sheet.part === 0 && (
         <span className="absolute right-1.5 top-1.5 rounded bg-warn-bg px-1.5 py-0.5 text-xs font-semibold text-warn-strong ring-1 ring-warn/30">
           {page.badge}
@@ -1338,7 +1338,7 @@ function SheetView({
 
       <footer className="relative flex items-center justify-center text-[max(14px,0.8em)] text-ink" style={{ height: geometry.footerHeight }}>
         <span aria-hidden="true">{sheet.number}</span>
-        {listen && (
+        {listen && geometry.spread && (
           <button
             type="button"
             onClick={listen.onPress}
@@ -1349,7 +1349,7 @@ function SheetView({
             className="absolute inset-y-0 inline-flex min-w-11 items-center justify-center gap-1.5 rounded-lg px-2 text-base font-semibold text-primary before:absolute before:inset-x-0 before:top-1/2 before:h-11 before:-translate-y-1/2 before:content-[''] hover:bg-primary/[0.06] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-45"
             style={{ right: geometry.padX - 8 }}
           >
-            <Icon name={listen.icon} className="size-5" />
+            {listen.busy ? <ListenSpinner small /> : <Icon name={listen.icon} className="size-5" />}
             <span className={showLabels ? undefined : "sr-only"}>{listen.label}</span>
             <span className="sr-only">{listen.label === "Listen" ? " to" : ""} page {sheet.number}</span>
           </button>

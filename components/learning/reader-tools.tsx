@@ -7,7 +7,7 @@ import { Icon, type IconName } from "@/components/icons";
 import { BAR_SHADOW_TOP } from "@/components/candidate/buttons";
 import { useLatest } from "@/components/use-latest";
 import { TEXT_SIZES, type BookPageData, type Sheet, type TextSize } from "@/lib/content/book";
-import { READING_SPEEDS, READING_SPEED_LABELS, type ListenBar, type ReadingSpeed } from "./listen";
+import { ListenSpinner, READING_SPEEDS, READING_SPEED_LABELS, type ListenBar, type ReadingSpeed } from "./listen";
 
 // The reader bar and its panels. Candidate style: big targets, words next to icons,
 // high contrast. Panels cover the pages (no pop-up windows) and close with Escape.
@@ -181,7 +181,7 @@ export function ReaderBar({
       title={labelled ? undefined : listen.label}
       className={`${barButton} ${panelSize}`}
     >
-      <Icon name={listen.icon} />
+      {listen.busy ? <ListenSpinner /> : <Icon name={listen.icon} />}
       <span className={iconsOnly || !showLabels ? "sr-only" : undefined}>{listen.label}</span>
       {listen.busy && <span className="sr-only"> (loading)</span>}
     </button>

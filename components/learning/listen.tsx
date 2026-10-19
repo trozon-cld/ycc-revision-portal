@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { useDeviceChoice } from "@/components/use-browser-value";
 import { Icon } from "@/components/icons";
+import { BAR_SHADOW_TOP } from "@/components/candidate/buttons";
 import { formatClock, formatDuration } from "@/lib/format";
 
 // Listen (V5): the Handbook reads pages aloud in the candidate's language. The bar's Listen reads every text page
@@ -46,14 +47,14 @@ export type ListenControl = { label: string; icon: "listen" | "pause"; busy: boo
 export type ListenBar = ListenControl & {
   // Laptops and desktops while audio is on: the page, time and Back 10 seconds, in place of the page status.
   extras: ReactNode;
-  // The progress line and short messages, drawn along the bottom of the bar.
+  // Short messages, shown just under the bar.
   below: ReactNode;
 };
 
 export type ListenPlayer = {
   bar: ListenBar;
-  // A page's footer button, and whether that page is being read (playing or paused).
-  page: (id: string) => ListenControl & { reading: boolean };
+  // A page's footer button (spreads), whether that page is being read, and its progress line along the page top.
+  page: (id: string) => ListenControl & { reading: boolean; progress: ReactNode };
   audio: ReactNode;
 };
 
@@ -205,19 +206,18 @@ export function useListen(
 
   const below = (
     <>
-      {on && <ListenProgress key={reading} audioRef={audioRef} expected={expected} />}
       <p className="sr-only" aria-live="polite">
         {on ? announce : ""}
       </p>
       <div role="status" className="pointer-events-none absolute inset-x-0 top-full z-30 flex justify-center px-4 pt-2">
         {notice && (
-          <p className="pointer-events-auto max-w-xl rounded-xl border-2 border-primary bg-card px-4 py-3 text-base text-ink shadow-lg">
+          <p className={`pointer-events-auto max-w-xl rounded-xl border-2 border-warn bg-warn-bg px-4 py-3 text-base text-warn-strong ${BAR_SHADOW_TOP}`}>
             {notice.text}
             {notice.account && (
               <>
                 {" "}
                 You can change your listening language in{" "}
-                <Link href={setup.accountHref} className="font-semibold text-primary underline underline-offset-2">
+                <Link href={setup.accountHref} className="font-semibold underline underline-offset-2">
                   Account
                 </Link>
                 .
@@ -252,7 +252,12 @@ export function useListen(
     bar: { ...control(BAR, view), extras, below },
     page: (id) => {
       const item = view.find((entry) => entry.id === id);
-      return { ...control(id, item ? [item] : []), reading: reading === id };
+      const isReading = reading === id;
+      return {
+        ...control(id, item ? [item] : []),
+        reading: isReading,
+        progress: isReading ? <ListenProgress key={id} audioRef={audioRef} expected={expected} /> : null,
+      };
     },
     audio,
   };
@@ -286,7 +291,7 @@ function ListenProgress({ audioRef, expected }: { audioRef: RefObject<HTMLAudioE
       aria-valuemax={whole}
       aria-valuenow={done}
       aria-valuetext={`${formatDuration(done)} of ${formatDuration(whole)}`}
-      className="absolute inset-x-0 bottom-0 h-1.5 bg-line-soft"
+      className="absolute inset-x-0 top-0 z-10 h-1.5 bg-line-soft"
     >
       <div className="hc-fill h-full bg-primary" style={{ width: `${Math.min(100, (time / duration) * 100)}%` }} />
     </div>
@@ -299,5 +304,16 @@ function ListenClock({ audioRef, expected, page }: { audioRef: RefObject<HTMLAud
     <span className="whitespace-nowrap text-base font-semibold tabular-nums text-ink" aria-hidden="true">
       Page {page} · {formatClock(time * 1000)} / {formatClock(duration * 1000)}
     </span>
+  );
+}
+
+// Shown in place of the speaker while the audio is being fetched (still under reduced motion).
+export function ListenSpinner({ small = false }: { small?: boolean }) {
+  return (
+    <span
+      aria-hidden="true"
+      data-listen-spinner=""
+      className={`inline-block shrink-0 rounded-full border-primary/20 border-t-primary motion-safe:animate-spin ${small ? "size-5 border-2" : "size-6 border-[3px]"}`}
+    />
   );
 }
