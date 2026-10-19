@@ -175,7 +175,8 @@ export function ReaderBar({
   const listenButton = listen && (
     <button
       type="button"
-      onClick={listen.onToggle}
+      onClick={listen.onPress}
+      disabled={listen.disabled}
       aria-busy={listen.busy || undefined}
       title={labelled ? undefined : listen.label}
       className={`${barButton} ${panelSize}`}

@@ -27,7 +27,7 @@ import { collectMediaIds } from "@/lib/content/blocks";
 import { BackCoverFace, FrontCoverFace } from "./book-covers";
 import { MeasuringContext } from "./measuring";
 import { OpeningMessage } from "./opening-message";
-import { useListen, useReadingSpeed, type ListenSetup, type ListenTarget } from "./listen";
+import { useListen, useReadingSpeed, type ListenControl, type ListenItem, type ListenSetup } from "./listen";
 import { BlockList } from "./blocks";
 import { FRESH_QUESTION_STATE, QuestionView, type QuestionViewState } from "./questions/question-view";
 import {
@@ -663,9 +663,14 @@ export function BookReader({
   const phone = Boolean(homeHref) && !wide;
 
   const [readingSpeed, setReadingSpeed] = useReadingSpeed();
-  const listenPage = pages[position.pageIndex];
-  const listenTarget: ListenTarget = !listenPage ? { kind: "none" } : listenPage.question ? { kind: "question" } : { kind: "page", id: listenPage.id };
-  const player = useListen(listen, listenTarget, readingSpeed, wide && (stageSize?.width ?? 0) >= LISTEN_EXTRAS_MIN, showLabels, `${barButton} ${sideNav ? BAR_BUTTON_DENSE : "h-14 min-w-14 px-4 text-lg"}`);
+  // The pages in view, in reading order; a page split over two sheets counts once.
+  const listenView: ListenItem[] = [];
+  for (const sheet of visible) {
+    if (sheet.kind !== "page" || listenView.some((item) => item.id === pages[sheet.pageIndex]?.id)) continue;
+    const page = pages[sheet.pageIndex];
+    if (page) listenView.push({ id: page.id, question: Boolean(page.question), number: sheet.number });
+  }
+  const player = useListen(listen, listenView, readingSpeed, wide && (stageSize?.width ?? 0) >= LISTEN_EXTRAS_MIN, showLabels, `${barButton} ${sideNav ? BAR_BUTTON_DENSE : "h-14 min-w-14 px-4 text-lg"}`);
 
   const sheetStyle = geometry
     ? ({
@@ -731,6 +736,7 @@ export function BookReader({
         textSize={textSize}
         style={sheetStyle}
         side={side}
+        listen={!still && player && geometry.spread && page !== null && pages[page] ? player.page(pages[page].id) : undefined}
       />
     );
   }
@@ -1199,6 +1205,7 @@ function SheetView({
   textSize,
   style,
   side,
+  listen,
 }: {
   sheet: Sheet;
   pages: BookPageData[];
@@ -1213,7 +1220,10 @@ function SheetView({
   textSize: number;
   style?: CSSProperties;
   side: "left" | "right" | "single";
+  // Spreads: this page's own Listen button, and whether it is the page being read.
+  listen?: ListenControl & { reading: boolean };
 }) {
+  const showLabels = useContext(ReaderLabelsContext);
   const boxRef = useRef<HTMLDivElement>(null);
   // Scrolling question pages: whether there is more below what shows, for the "More below" cue.
   const [moreBelow, setMoreBelow] = useState(false);
@@ -1252,6 +1262,7 @@ function SheetView({
   const repeat = sheet.part > 0 && !page.question;
   return (
     <article aria-label={`Page ${sheet.number}`} className={`relative flex shrink-0 flex-col ${edge}`} style={style}>
+      {listen?.reading && <span aria-hidden="true" className="hc-fill absolute inset-x-0 top-0 h-1 bg-primary" />}
       {page.badge && sheet.part === 0 && (
         <span className="absolute right-1.5 top-1.5 rounded bg-warn-bg px-1.5 py-0.5 text-xs font-semibold text-warn-strong ring-1 ring-warn/30">
           {page.badge}
@@ -1325,12 +1336,24 @@ function SheetView({
         )}
       </div>
 
-      <footer
-        aria-hidden="true"
-        className="flex items-center justify-center text-[max(14px,0.8em)] text-ink"
-        style={{ height: geometry.footerHeight }}
-      >
-        {sheet.number}
+      <footer className="relative flex items-center justify-center text-[max(14px,0.8em)] text-ink" style={{ height: geometry.footerHeight }}>
+        <span aria-hidden="true">{sheet.number}</span>
+        {listen && (
+          <button
+            type="button"
+            onClick={listen.onPress}
+            disabled={listen.disabled}
+            aria-busy={listen.busy || undefined}
+            title={showLabels ? undefined : `${listen.label} page ${sheet.number}`}
+            // Drawn within the footer so no page text moves; the tap area is a full 44px, centred on it.
+            className="absolute inset-y-0 inline-flex min-w-11 items-center justify-center gap-1.5 rounded-lg px-2 text-base font-semibold text-primary before:absolute before:inset-x-0 before:top-1/2 before:h-11 before:-translate-y-1/2 before:content-[''] hover:bg-primary/[0.06] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-45"
+            style={{ right: geometry.padX - 8 }}
+          >
+            <Icon name={listen.icon} className="size-5" />
+            <span className={showLabels ? undefined : "sr-only"}>{listen.label}</span>
+            <span className="sr-only">{listen.label === "Listen" ? " to" : ""} page {sheet.number}</span>
+          </button>
+        )}
       </footer>
     </article>
   );

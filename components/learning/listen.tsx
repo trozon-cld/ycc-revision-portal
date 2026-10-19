@@ -6,9 +6,10 @@ import { useDeviceChoice } from "@/components/use-browser-value";
 import { Icon } from "@/components/icons";
 import { formatClock, formatDuration } from "@/lib/format";
 
-// Listen (V5): the Handbook reads the page on screen aloud in the candidate's language. The Listen button is the
-// player (Listen → Pause → Resume); a thin line under the reader bar shows progress. One page at a time:
-// it stops at the end of the page, when the page changes, and when the screen locks or the tab is hidden.
+// Listen (V5): the Handbook reads pages aloud in the candidate's language. The bar's Listen reads every text page
+// in view (left, then right) and stops; on spreads each page also has its own Listen in its footer. Only the
+// button that started the audio works while it plays (Pause); when paused or finished every button works again.
+// Audio stops when the view changes, and pauses when the screen locks or the tab is hidden.
 
 export type ListenSetup = {
   languageName: string;
@@ -18,8 +19,8 @@ export type ListenSetup = {
   accountHref: string;
 };
 
-// What's on screen: a text page, a question page (V6) or no page (a cover).
-export type ListenTarget = { kind: "page"; id: string } | { kind: "question" } | { kind: "none" };
+// The pages in view, in reading order (a page split over two sheets is listed once, with its first number in view).
+export type ListenItem = { id: string; question: boolean; number: number };
 
 export const READING_SPEEDS = ["slower", "normal", "faster"] as const;
 export type ReadingSpeed = (typeof READING_SPEEDS)[number];
@@ -28,6 +29,7 @@ const RATES: Record<ReadingSpeed, number> = { slower: 0.85, normal: 1, faster: 1
 const SPEED_KEY = "ycc-listen-speed";
 const NOTICE_MS = 8000;
 const BACK_SECONDS = 10;
+const BAR = "bar";
 
 export function useReadingSpeed(): [ReadingSpeed, (speed: ReadingSpeed) => void] {
   return useDeviceChoice(SPEED_KEY, READING_SPEEDS, "normal");
@@ -35,39 +37,45 @@ export function useReadingSpeed(): [ReadingSpeed, (speed: ReadingSpeed) => void]
 
 type Status = "idle" | "loading" | "playing" | "paused";
 type Notice = { text: string; account: boolean };
+// `source`: what started it (the bar, or one page's footer button); `queue`: the pages it reads, in order.
+type Session = { key: string; status: Status; source: string | null; queue: string[]; index: number };
 
-// What the reader bar shows for Listen.
-export type ListenBar = {
-  label: string;
-  icon: "listen" | "pause";
-  busy: boolean;
-  onToggle: () => void;
-  // Laptops and desktops while audio is on: the time and Back 10 seconds, in place of the page status.
+// One Listen button's look and action (the bar's, or a page's footer button).
+export type ListenControl = { label: string; icon: "listen" | "pause"; busy: boolean; disabled: boolean; onPress: () => void };
+
+export type ListenBar = ListenControl & {
+  // Laptops and desktops while audio is on: the page, time and Back 10 seconds, in place of the page status.
   extras: ReactNode;
   // The progress line and short messages, drawn along the bottom of the bar.
   below: ReactNode;
 };
 
-function keyOf(target: ListenTarget) {
-  return target.kind === "page" ? target.id : target.kind;
-}
+export type ListenPlayer = {
+  bar: ListenBar;
+  // A page's footer button, and whether that page is being read (playing or paused).
+  page: (id: string) => ListenControl & { reading: boolean };
+  audio: ReactNode;
+};
+
+const IDLE = { status: "idle" as Status, source: null, queue: [] as string[], index: 0 };
 
 export function useListen(
   setup: ListenSetup | undefined,
-  target: ListenTarget,
+  view: ListenItem[],
   speed: ReadingSpeed,
   withExtras: boolean,
   showLabels: boolean,
   extraButtonClass: string
-): { bar: ListenBar; audio: ReactNode } | null {
+): ListenPlayer | null {
   const audioRef = useRef<HTMLAudioElement>(null);
-  const key = keyOf(target);
-  const [state, setState] = useState<{ key: string; status: Status }>({ key, status: "idle" });
+  const key = view.map((item) => item.id).join(",");
+  const [session, setSession] = useState<Session>({ key, ...IDLE });
   const [notice, setNotice] = useState<Notice | null>(null);
+  const [announce, setAnnounce] = useState("");
   const noticeTimer = useRef<number | undefined>(undefined);
-  // A new page: back to Listen, nothing playing (the audio element is emptied below).
-  if (state.key !== key) {
-    setState({ key, status: "idle" });
+  // A new view: nothing playing, every button back to Listen (the audio element is emptied below).
+  if (session.key !== key) {
+    setSession({ key, ...IDLE });
     setNotice(null);
   }
   const rate = RATES[speed];
@@ -101,55 +109,106 @@ export function useListen(
     setNotice({ text, account });
     noticeTimer.current = window.setTimeout(() => setNotice(null), NOTICE_MS);
   };
+  const numberOf = (id: string) => view.find((item) => item.id === id)?.number ?? 0;
 
-  const toggle = () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    if (target.kind === "question") return show("Listen isn't available for question pages yet.");
-    if (target.kind === "none") return show("Open a page to listen.");
-    if (state.status === "playing" || state.status === "loading") return audio.pause();
-    if (!(target.id in setup.durations)) return show(`${setup.languageName} audio isn't ready for this page yet.`, true);
-    setNotice(null);
-    if (state.status === "idle") {
-      const src = setup.src(target.id);
-      if (audio.getAttribute("src") !== src) audio.setAttribute("src", src);
-      else audio.currentTime = 0;
-      setState((current) => ({ ...current, status: "loading" }));
-    }
+  const playAt = (audio: HTMLAudioElement, id: string) => {
+    const src = setup.src(id);
+    if (audio.getAttribute("src") !== src) audio.setAttribute("src", src);
+    else audio.currentTime = 0;
     audio.playbackRate = rate;
     audio.play().catch((error: unknown) => {
       if (error instanceof DOMException && error.name === "AbortError") return;
       show("The audio couldn't be played. Please try again.");
-      setState((current) => ({ ...current, status: "idle" }));
+      setSession((current) => ({ ...current, ...IDLE }));
     });
   };
 
-  const expected = target.kind === "page" ? (setup.durations[target.id] ?? 0) / 1000 : 0;
-  const on = state.status !== "idle";
-  // While loading the button keeps its word (phones' bar must not grow); screen readers hear it's busy.
-  const label = state.status === "playing" ? "Pause" : state.status === "paused" ? "Resume" : "Listen";
+  // Starts afresh: the bar reads every playable page in view; a footer button reads its own page.
+  const start = (source: string, items: ListenItem[]) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (items.length === 0) return show("Open a page to listen.");
+    const playable = items.filter((item) => !item.question && item.id in setup.durations);
+    const questions = items.filter((item) => item.question);
+    const missing = items.filter((item) => !item.question && !(item.id in setup.durations));
+    if (playable.length === 0) {
+      if (missing.length === 0) return show("Listen isn't available for question pages yet.");
+      return show(
+        missing.length > 1 ? `${setup.languageName} audio isn't ready for these pages yet.` : `${setup.languageName} audio isn't ready for this page yet.`,
+        true
+      );
+    }
+    const skipped = [
+      ...missing.map((item) => `page ${item.number} (no ${setup.languageName} audio yet)`),
+      ...questions.map((item) => `page ${item.number} (a question page)`),
+    ];
+    if (skipped.length) show(`Listen skips ${skipped.join(" and ")}.`);
+    else setNotice(null);
+    setSession((current) => ({ ...current, status: "loading", source, queue: playable.map((item) => item.id), index: 0 }));
+    setAnnounce(playable.length > 1 || view.length > 1 ? `Reading page ${playable[0].number} aloud.` : "");
+    playAt(audio, playable[0].id);
+  };
+
+  // Pause or resume the session this button started; otherwise start its own reading.
+  const press = (source: string, items: ListenItem[]) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (session.source === source && (session.status === "playing" || session.status === "loading")) return audio.pause();
+    if (session.source === source && session.status === "paused") {
+      audio.play().catch(() => show("The audio couldn't be played. Please try again."));
+      return;
+    }
+    start(source, items);
+  };
+
+  const busyElsewhere = (source: string) => (session.status === "playing" || session.status === "loading") && session.source !== source;
+  const control = (source: string, items: ListenItem[]): ListenControl => {
+    const mine = session.source === source;
+    return {
+      label: mine && session.status === "playing" ? "Pause" : mine && session.status === "paused" ? "Resume" : "Listen",
+      icon: mine && session.status === "playing" ? "pause" : "listen",
+      busy: mine && session.status === "loading",
+      disabled: busyElsewhere(source),
+      onPress: () => press(source, items),
+    };
+  };
+
+  const on = session.status !== "idle";
+  const reading = on ? session.queue[session.index] : null;
+  const expected = reading ? (setup.durations[reading] ?? 0) / 1000 : 0;
 
   const audio = (
     <audio
       ref={audioRef}
       preload="none"
-      onPlaying={() => setState((current) => ({ ...current, status: "playing" }))}
+      onPlaying={() => setSession((current) => (current.status === "idle" ? current : { ...current, status: "playing" }))}
       onPause={(event) => {
-        if (!event.currentTarget.ended && event.currentTarget.getAttribute("src")) setState((current) => ({ ...current, status: "paused" }));
+        if (!event.currentTarget.ended && event.currentTarget.getAttribute("src")) {
+          setSession((current) => (current.status === "idle" ? current : { ...current, status: "paused" }));
+        }
       }}
-      onEnded={() => setState((current) => ({ ...current, status: "idle" }))}
+      onEnded={(event) => {
+        const next = session.queue[session.index + 1];
+        if (!next) return setSession((current) => ({ ...current, ...IDLE }));
+        setSession((current) => ({ ...current, status: "loading", index: current.index + 1 }));
+        setAnnounce(`Reading page ${numberOf(next)} aloud.`);
+        playAt(event.currentTarget, next);
+      }}
       onError={(event) => {
         if (!event.currentTarget.getAttribute("src")) return;
         event.currentTarget.removeAttribute("src");
         show("The audio couldn't be loaded. Please try again.");
-        setState((current) => ({ ...current, status: "idle" }));
+        setSession((current) => ({ ...current, ...IDLE }));
       }}
     />
   );
 
   const below = (
     <>
-      {on && <ListenProgress audioRef={audioRef} expected={expected} />}
+      {on && <ListenProgress key={reading} audioRef={audioRef} expected={expected} />}
+      <p className="sr-only" aria-live="polite">
+        {on ? announce : ""}
+      </p>
       <div role="status" className="pointer-events-none absolute inset-x-0 top-full z-30 flex justify-center px-4 pt-2">
         {notice && (
           <p className="pointer-events-auto max-w-xl rounded-xl border-2 border-primary bg-card px-4 py-3 text-base text-ink shadow-lg">
@@ -171,9 +230,9 @@ export function useListen(
   );
 
   const extras =
-    withExtras && on ? (
+    withExtras && on && reading ? (
       <>
-        <ListenClock audioRef={audioRef} expected={expected} />
+        <ListenClock key={reading} audioRef={audioRef} expected={expected} page={numberOf(reading)} />
         <button
           type="button"
           onClick={() => {
@@ -190,7 +249,11 @@ export function useListen(
     ) : null;
 
   return {
-    bar: { label, icon: state.status === "playing" ? "pause" : "listen", busy: state.status === "loading", onToggle: toggle, extras, below },
+    bar: { ...control(BAR, view), extras, below },
+    page: (id) => {
+      const item = view.find((entry) => entry.id === id);
+      return { ...control(id, item ? [item] : []), reading: reading === id };
+    },
     audio,
   };
 }
@@ -202,14 +265,9 @@ function useAudioClock(audioRef: RefObject<HTMLAudioElement | null>, expected: n
     const audio = audioRef.current;
     if (!audio) return;
     const update = () => setClock({ time: audio.currentTime, duration: Number.isFinite(audio.duration) ? audio.duration : 0 });
-    audio.addEventListener("timeupdate", update);
-    audio.addEventListener("loadedmetadata", update);
-    audio.addEventListener("seeked", update);
-    return () => {
-      audio.removeEventListener("timeupdate", update);
-      audio.removeEventListener("loadedmetadata", update);
-      audio.removeEventListener("seeked", update);
-    };
+    const events = ["timeupdate", "loadedmetadata", "durationchange", "seeked", "emptied"];
+    events.forEach((name) => audio.addEventListener(name, update));
+    return () => events.forEach((name) => audio.removeEventListener(name, update));
   }, [audioRef]);
   const duration = clock.duration || expected;
   return { time: Math.min(clock.time, duration || clock.time), duration };
@@ -235,11 +293,11 @@ function ListenProgress({ audioRef, expected }: { audioRef: RefObject<HTMLAudioE
   );
 }
 
-function ListenClock({ audioRef, expected }: { audioRef: RefObject<HTMLAudioElement | null>; expected: number }) {
+function ListenClock({ audioRef, expected, page }: { audioRef: RefObject<HTMLAudioElement | null>; expected: number; page: number }) {
   const { time, duration } = useAudioClock(audioRef, expected);
   return (
     <span className="whitespace-nowrap text-base font-semibold tabular-nums text-ink" aria-hidden="true">
-      {formatClock(time * 1000)} / {formatClock(duration * 1000)}
+      Page {page} · {formatClock(time * 1000)} / {formatClock(duration * 1000)}
     </span>
   );
 }
