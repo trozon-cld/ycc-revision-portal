@@ -37,6 +37,14 @@ export const SECTION_TITLE = "text-xl font-bold text-ink lg:text-[1.375rem]";
 export const CHOICE_TILE =
   "flex h-full cursor-pointer flex-col gap-2 rounded-xl border-2 border-line bg-card p-3 hover:border-primary has-checked:border-primary has-checked:bg-primary/5 has-focus-visible:outline-3 has-focus-visible:outline-offset-2 has-focus-visible:outline-primary has-disabled:cursor-default has-disabled:border-line-soft has-disabled:bg-fill has-disabled:text-ink/60";
 
+// Stacking order, lowest first (use these levels, not new numbers): page content and the Listen progress line
+// (none) · bars that content scrolls under and fixed answer bars (z-10) · panels and overlays covering the pages
+// (z-20) · the Handbook reader bar, whose Listen messages must show over the pages and panels, the bottom tab bar
+// and staff row menus (z-30) · toasts, drag previews and the skip link (z-50) · dialogs (the browser's top layer).
+
 // A soft shadow on bars that content scrolls under (top bars and the bottom tab bar); borders stay for high contrast.
-export const BAR_SHADOW_TOP = "relative z-10 shadow-[0_2px_8px_rgb(30_41_59/0.08)]";
+export const SOFT_SHADOW = "shadow-[0_2px_8px_rgb(30_41_59/0.08)]";
+export const BAR_SHADOW_TOP = `relative z-10 ${SOFT_SHADOW}`;
 export const BAR_SHADOW_BOTTOM = "shadow-[0_-2px_8px_rgb(30_41_59/0.08)]";
+// The candidate Handbook reader bar (with Listen): the same shadow, one level higher (see the stacking order above).
+export const READER_BAR_LAYER = `relative z-30 ${SOFT_SHADOW}`;

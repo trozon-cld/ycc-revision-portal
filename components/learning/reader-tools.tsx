@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useDeviceSwitch } from "@/components/use-browser-value";
 import { Spinner } from "@/components/spinner";
 import { Icon, type IconName } from "@/components/icons";
-import { BAR_SHADOW_TOP } from "@/components/candidate/buttons";
+import { BAR_SHADOW_TOP, READER_BAR_LAYER } from "@/components/candidate/buttons";
 import { useLatest } from "@/components/use-latest";
 import { TEXT_SIZES, type BookPageData, type Sheet, type TextSize } from "@/lib/content/book";
 import { READING_SPEEDS, READING_SPEED_LABELS, type ListenBar, type ReadingSpeed } from "./listen";
@@ -173,6 +173,9 @@ export function ReaderBar({
       )}
     </button>
   );
+  // With Listen (candidate Handbook) the bar sits above the pages so its messages show over them; the staff
+  // preview keeps the usual level under the admin header.
+  const layer = listen ? READER_BAR_LAYER : BAR_SHADOW_TOP;
   const listenButton = listen && (
     <button
       type="button"
@@ -220,7 +223,7 @@ export function ReaderBar({
   // Dense bar: three columns, so the page status stays exactly in the middle whatever the buttons show.
   if (status && !centreStatus) {
     return (
-      <div ref={barRef} role="toolbar" aria-label="Reader tools" className={`flex items-center gap-2 border-b border-line bg-card px-3 py-2 ${BAR_SHADOW_TOP}`}>
+      <div ref={barRef} role="toolbar" aria-label="Reader tools" className={`flex items-center gap-2 border-b border-line bg-card px-3 py-2 ${layer}`}>
         {leftTools}
         {listen?.extras ? (
           <div className="flex min-w-0 flex-1 items-center justify-center gap-2 px-2">{listen.extras}</div>
@@ -239,7 +242,7 @@ export function ReaderBar({
       <div
         role="toolbar"
         aria-label="Reader tools"
-        className={`grid grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-line bg-card px-6 py-2 ${BAR_SHADOW_TOP}`}
+        className={`grid grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-line bg-card px-6 py-2 ${layer}`}
       >
         <div className="flex min-w-0 items-center gap-2">{leftTools}</div>
         {listen?.extras ? (
@@ -259,7 +262,7 @@ export function ReaderBar({
       ref={barRef}
       role="toolbar"
       aria-label="Reader tools"
-      className={`flex items-center border-b border-line bg-card py-2 ${BAR_SHADOW_TOP} ${iconsOnly ? "gap-1.5 px-2" : compact ? (home ? "gap-1 px-2" : "gap-2 px-3") : "gap-2 px-6"}`}
+      className={`flex items-center border-b border-line bg-card py-2 ${layer} ${iconsOnly ? "gap-1.5 px-2" : compact ? (home ? "gap-1 px-2" : "gap-2 px-3") : "gap-2 px-6"}`}
     >
       {leftTools}
       {!home && <span className="flex-1" />}

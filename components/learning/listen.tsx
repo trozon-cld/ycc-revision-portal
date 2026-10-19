@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { useDeviceChoice } from "@/components/use-browser-value";
 import { Icon } from "@/components/icons";
-import { BAR_SHADOW_TOP } from "@/components/candidate/buttons";
+import { SOFT_SHADOW } from "@/components/candidate/buttons";
 import { formatClock, formatDuration } from "@/lib/format";
 
 // Listen (V5): the Handbook reads pages aloud in the candidate's language. The bar's Listen reads every text page
@@ -211,7 +211,7 @@ export function useListen(
       </p>
       <div role="status" className="pointer-events-none absolute inset-x-0 top-full z-30 flex justify-center px-4 pt-2">
         {notice && (
-          <p className={`pointer-events-auto max-w-xl rounded-xl border-2 border-warn bg-warn-bg px-4 py-3 text-base text-warn-strong ${BAR_SHADOW_TOP}`}>
+          <p className={`pointer-events-auto max-w-xl rounded-xl border-2 border-warn bg-warn-bg px-4 py-3 text-base text-warn-strong ${SOFT_SHADOW}`}>
             {notice.text}
             {notice.account && (
               <>
@@ -291,7 +291,7 @@ function ListenProgress({ audioRef, expected }: { audioRef: RefObject<HTMLAudioE
       aria-valuemax={whole}
       aria-valuenow={done}
       aria-valuetext={`${formatDuration(done)} of ${formatDuration(whole)}`}
-      className="absolute inset-x-0 top-0 z-10 h-1.5 bg-line-soft"
+      className="absolute inset-x-0 top-0 h-1.5 bg-line-soft"
     >
       <div className="hc-fill h-full bg-primary" style={{ width: `${Math.min(100, (time / duration) * 100)}%` }} />
     </div>
