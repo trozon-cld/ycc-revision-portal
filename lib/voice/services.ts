@@ -23,6 +23,7 @@ export type VoiceErrorKind =
   | "not_set_up"
   | "key"
   | "billing"
+  | "setting"
   | "daily_limit"
   | "rate_limit"
   | "busy"
@@ -36,6 +37,7 @@ const MESSAGES: Record<VoiceErrorKind, string> = {
   not_set_up: "The voice service isn't set up yet. Add GEMINI_API_KEY to the server settings.",
   key: "The voice service didn't accept the API key. Check GEMINI_API_KEY in the server settings.",
   billing: "The voice service needs billing or credit on its account before it can be used.",
+  setting: "The voice service doesn't accept the thinking level for this model. Set GEMINI_THINKING_LEVEL=low in the server settings (or remove it) and restart.",
   daily_limit: "Today's limit for the voice service is used up. Please try again tomorrow.",
   rate_limit: "The voice service is getting too many requests. Please wait a minute and try again.",
   busy: "The voice service is busy at the moment. Please try again in a few minutes.",

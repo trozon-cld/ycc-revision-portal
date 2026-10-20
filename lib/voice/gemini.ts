@@ -1,5 +1,5 @@
 import { isRecord } from "@/lib/text";
-import { VoiceError, type SpeechMaker, type TranslationKind, type Translator } from "./services";
+import { VoiceError, type SpeechMaker, type Translator } from "./services";
 
 // Gemini over plain fetch (Interactions API, no SDK). Server only: it reads GEMINI_API_KEY.
 // Nothing is kept on Google's side after the reply (store: false).
@@ -10,13 +10,14 @@ const DEFAULT_VOICE = "Kore";
 const DEFAULT_STYLE = "Calm, clear and steady, at a moderate teaching pace";
 // Translating needs little reasoning; Gemini 3 models think at "high" unless told otherwise, which can take a minute.
 const THINKING_LEVELS = ["minimal", "low", "medium", "high"] as const;
-const DEFAULT_THINKING = { page: "low", question: "minimal" } as const;
+// "minimal" isn't accepted by every model (gemini-3.8-flash refused it, 20 Oct), so the default is "low".
+const DEFAULT_THINKING = "low";
 // Question texts are short; a reply this long means the model is repeating itself, so it stops early instead of timing out.
 const QUESTION_MAX_OUTPUT_TOKENS = 8192;
 
-function thinkingLevel(kind: TranslationKind): string {
+function thinkingLevel(): string {
   const value = process.env.GEMINI_THINKING_LEVEL?.trim().toLowerCase() ?? "";
-  return (THINKING_LEVELS as readonly string[]).includes(value) ? value : DEFAULT_THINKING[kind];
+  return (THINKING_LEVELS as readonly string[]).includes(value) ? value : DEFAULT_THINKING;
 }
 
 function apiKey(): string {
@@ -82,6 +83,7 @@ function errorFor(status: number, body: string): VoiceError {
   const has = (...words: string[]) => words.some((word) => code.includes(word) || message.toLowerCase().includes(word));
   if (status === 401 || code === "authentication" || has("api key not valid", "api_key_invalid", "leaked")) return new VoiceError("key", detail);
   if (status === 402 || code === "payment_required" || has("billing")) return new VoiceError("billing", detail);
+  if (has("thinking level")) return new VoiceError("setting", detail);
   if (status === 403 || code === "permission_denied") return new VoiceError("key", detail);
   if (status === 429 || has("quota", "rate_limit", "resource_exhausted", "too_many_requests")) {
     return new VoiceError(code === "rate_limit_exceeded" || code === "too_many_requests" || has("per minute") ? "rate_limit" : "daily_limit", detail);
@@ -116,7 +118,7 @@ export function geminiTranslator(): Translator {
           model,
           input: `${instruction}\n\nBlocks (JSON):\n${JSON.stringify(blocks)}`,
           generation_config: {
-            thinking_level: thinkingLevel(kind),
+            thinking_level: thinkingLevel(),
             ...(kind === "question" ? { max_output_tokens: QUESTION_MAX_OUTPUT_TOKENS } : {}),
           },
           response_format: {

@@ -29,6 +29,7 @@ import { BackCoverFace, FrontCoverFace } from "./book-covers";
 import { MeasuringContext } from "./measuring";
 import { OpeningMessage } from "./opening-message";
 import { useListen, useReadingSpeed, type ListenControl, type ListenItem, type ListenSetup } from "./listen";
+import { questionTypeHasListen } from "@/lib/voice/question-listen";
 import { BlockList } from "./blocks";
 import { FRESH_QUESTION_STATE, QuestionView, type QuestionViewState } from "./questions/question-view";
 import {
@@ -669,7 +670,15 @@ export function BookReader({
   for (const sheet of visible) {
     if (sheet.kind !== "page" || listenView.some((item) => item.id === pages[sheet.pageIndex]?.id)) continue;
     const page = pages[sheet.pageIndex];
-    if (page) listenView.push({ id: page.id, question: Boolean(page.question), number: sheet.number });
+    if (!page) continue;
+    const phase = page.question ? (questionStates[questionKey(page)]?.phase ?? "answering") : "answering";
+    listenView.push({
+      id: page.id,
+      question: Boolean(page.question),
+      supported: !page.question || questionTypeHasListen(page.question.data.type),
+      answered: phase !== "answering",
+      number: sheet.number,
+    });
   }
   const player = useListen(listen, listenView, readingSpeed, wide && (stageSize?.width ?? 0) >= LISTEN_EXTRAS_MIN, showLabels, `${barButton} ${sideNav ? BAR_BUTTON_DENSE : "h-14 min-w-14 px-4 text-lg"}`);
 

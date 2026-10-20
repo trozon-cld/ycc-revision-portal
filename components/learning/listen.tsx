@@ -7,8 +7,8 @@ import { Icon } from "@/components/icons";
 import { SOFT_SHADOW } from "@/components/candidate/buttons";
 import { formatClock, formatDuration } from "@/lib/format";
 
-// Listen (V5): the Handbook reads pages aloud in the candidate's language. The bar's Listen reads every text page
-// in view (left, then right) and stops; on spreads each page also has its own Listen in its footer. Only the
+// Listen (V5, question pages V6b): the Handbook reads pages aloud in the candidate's language. The bar's Listen reads
+// every page in view that has audio (left, then right) and stops; on spreads each page also has its own Listen in its footer. Only the
 // button that started the audio works while it plays (Pause); when paused or finished every button works again.
 // Audio stops when the view changes, and pauses when the screen locks or the tab is hidden.
 
@@ -21,7 +21,8 @@ export type ListenSetup = {
 };
 
 // The pages in view, in reading order (a page split over two sheets is listed once, with its first number in view).
-export type ListenItem = { id: string; question: boolean; number: number };
+// `supported`: false for a question type that doesn't have Listen yet; `answered`: a question page checked or revealed.
+export type ListenItem = { id: string; question: boolean; supported: boolean; answered: boolean; number: number };
 
 export const READING_SPEEDS = ["slower", "normal", "faster"] as const;
 export type ReadingSpeed = (typeof READING_SPEEDS)[number];
@@ -38,8 +39,9 @@ export function useReadingSpeed(): [ReadingSpeed, (speed: ReadingSpeed) => void]
 
 type Status = "idle" | "loading" | "playing" | "paused";
 type Notice = { text: string; account: boolean };
-// `source`: what started it (the bar, or one page's footer button); `queue`: the pages it reads, in order.
-type Session = { key: string; status: Status; source: string | null; queue: string[]; index: number };
+// `source`: what started it (the bar, or one page's footer button); `queue`: the pages it reads, in order;
+// `answered`: question pages already checked when it started (Listen can read them again on purpose).
+type Session = { key: string; status: Status; source: string | null; queue: string[]; index: number; answered: string[] };
 
 // One Listen button's look and action (the bar's, or a page's footer button).
 export type ListenControl = { label: string; icon: "listen" | "pause"; busy: boolean; disabled: boolean; onPress: () => void };
@@ -58,7 +60,7 @@ export type ListenPlayer = {
   audio: ReactNode;
 };
 
-const IDLE = { status: "idle" as Status, source: null, queue: [] as string[], index: 0 };
+const IDLE = { status: "idle" as Status, source: null, queue: [] as string[], index: 0, answered: [] as string[] };
 
 export function useListen(
   setup: ListenSetup | undefined,
@@ -79,6 +81,18 @@ export function useListen(
     setSession({ key, ...IDLE });
     setNotice(null);
   }
+  // Check answer or Reveal answer on a question page stops its reading (or drops it from what's still to come).
+  if (session.status !== "idle") {
+    // Try again puts a question back to answering: from then on, checking it stops it again.
+    const reopened = session.answered.filter((id) => view.some((item) => item.id === id && !item.answered));
+    if (reopened.length) setSession((current) => ({ ...current, answered: current.answered.filter((id) => !reopened.includes(id)) }));
+    const fresh = new Set(view.filter((item) => item.answered && !session.answered.includes(item.id)).map((item) => item.id));
+    const ahead = session.queue.slice(session.index);
+    if (ahead.some((id) => fresh.has(id))) {
+      if (fresh.has(ahead[0])) setSession((current) => ({ ...current, ...IDLE }));
+      else setSession((current) => ({ ...current, queue: current.queue.filter((id, index) => index <= current.index || !fresh.has(id)) }));
+    }
+  }
   const rate = RATES[speed];
 
   useEffect(() => {
@@ -88,6 +102,11 @@ export function useListen(
     audio.removeAttribute("src");
     audio.load();
   }, [key]);
+  // Stopped without ending (an answer was checked): the sound stops too.
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (session.status === "idle" && audio && !audio.paused) audio.pause();
+  }, [session.status]);
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -129,11 +148,11 @@ export function useListen(
     const audio = audioRef.current;
     if (!audio) return;
     if (items.length === 0) return show("Open a page to listen.");
-    const playable = items.filter((item) => !item.question && item.id in setup.durations);
-    const questions = items.filter((item) => item.question);
-    const missing = items.filter((item) => !item.question && !(item.id in setup.durations));
+    const playable = items.filter((item) => item.supported && item.id in setup.durations);
+    const later = items.filter((item) => !item.supported);
+    const missing = items.filter((item) => item.supported && !(item.id in setup.durations));
     if (playable.length === 0) {
-      if (missing.length === 0) return show("Listen isn't available for question pages yet.");
+      if (missing.length === 0) return show("Listen isn't available for this question type yet.");
       return show(
         missing.length > 1 ? `${setup.languageName} audio isn't ready for these pages yet.` : `${setup.languageName} audio isn't ready for this page yet.`,
         true
@@ -141,11 +160,12 @@ export function useListen(
     }
     const skipped = [
       ...missing.map((item) => `page ${item.number} (no ${setup.languageName} audio yet)`),
-      ...questions.map((item) => `page ${item.number} (a question page)`),
+      ...later.map((item) => `page ${item.number} (Listen comes later for this question type)`),
     ];
     if (skipped.length) show(`Listen skips ${skipped.join(" and ")}.`);
     else setNotice(null);
-    setSession((current) => ({ ...current, status: "loading", source, queue: playable.map((item) => item.id), index: 0 }));
+    const answered = items.filter((item) => item.answered).map((item) => item.id);
+    setSession((current) => ({ ...current, status: "loading", source, queue: playable.map((item) => item.id), index: 0, answered }));
     setAnnounce(playable.length > 1 || view.length > 1 ? `Reading page ${playable[0].number} aloud.` : "");
     playAt(audio, playable[0].id);
   };
