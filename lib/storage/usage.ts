@@ -6,7 +6,8 @@ export async function storedBytes(): Promise<number> {
   const { rows } = await pool.query<{ bytes: string }>(
     `select ((select coalesce(sum(byte_size), 0) from media)
            + (select coalesce(sum(byte_size), 0) from log_archives)
-           + (select coalesce(sum(byte_size), 0) from page_audio))::text as bytes`
+           + (select coalesce(sum(byte_size), 0) from page_audio)
+           + (select coalesce(sum(byte_size), 0) from question_audio))::text as bytes`
   );
   return Number(rows[0].bytes);
 }

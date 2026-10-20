@@ -27,6 +27,16 @@ export function readingParts(blocks: Block[], language: VoiceLanguage): string[]
   return parts.filter(Boolean);
 }
 
+// A question page: the question, then each option with its letter as shown ("Option A. …"). Not the explanation,
+// which only appears after the answer is checked, and not the picture.
+export function questionReadingParts(stem: string, options: string[], language: VoiceLanguage, letter: (index: number) => string): string[] {
+  const { question, option } = language.questionLabels;
+  return [
+    `${sentence(question)}\n${sentence(plainText(stem))}`,
+    ...options.map((text, index) => `${sentence(`${option} ${letter(index)}`)}\n${sentence(plainText(text))}`),
+  ];
+}
+
 // A full stop where a line ends without one, so the voice pauses (headings and list items often have none).
 function sentence(text: string): string {
   return text

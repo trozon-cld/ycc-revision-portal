@@ -14,9 +14,9 @@ export function parseQuestionRef(value: string): number | null {
 
 const EXCERPT_LENGTH = 60;
 
-// Activity log label, e.g. "Q0042 · Which of these must you…".
-export function questionLogLabel(refNo: number, stemText: string): string {
+// Activity log label, e.g. "Q0042 · Which of these must you…" (lists may allow a longer excerpt).
+export function questionLogLabel(refNo: number, stemText: string, length = EXCERPT_LENGTH): string {
   const text = plainText(stemText).replace(/\s+/g, " ").trim();
-  const excerpt = text.length > EXCERPT_LENGTH ? `${text.slice(0, EXCERPT_LENGTH - 1).trimEnd()}…` : text;
+  const excerpt = text.length > length ? `${text.slice(0, length - 1).trimEnd()}…` : text;
   return `${questionRef(refNo)} · ${excerpt}`;
 }

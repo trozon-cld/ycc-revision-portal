@@ -4,12 +4,12 @@ import { fakeSpeech, fakeTranslator } from "./fake";
 import { geminiSpeech, geminiTranslator } from "./gemini";
 import { SOURCE_LANGUAGE, voiceLanguage, type VoiceLanguage } from "./languages";
 import { VOICE_REQUEST_TIMEOUT_MS } from "./limits";
-import { takeVoiceRequests } from "./quota";
+import { takeVoiceRequests, VoiceQuotaError } from "./quota";
 import { readingParts, speechChunks } from "./reading";
 import { VoiceError, type SpeechMaker, type Translator } from "./services";
-import { applyTranslation, toTranslatable } from "./translation";
+import { applyTranslation, matchTranslation, toTranslatable, type TranslatableBlock } from "./translation";
 
-// The page editor's two jobs: translate a page, and turn a page (English or translated) into one MP3.
+// The editors' two jobs: translate a page or question, and turn one (English or translated) into one MP3.
 // Each call to the service counts toward the editor's hourly cap; nothing is saved here.
 
 function services(): { translator: Translator; speech: SpeechMaker } {
@@ -17,6 +17,16 @@ function services(): { translator: Translator; speech: SpeechMaker } {
   if (provider === "fake" && process.env.NODE_ENV !== "production") return { translator: fakeTranslator(), speech: fakeSpeech() };
   if (provider !== "gemini") throw new VoiceError("not_set_up", `unknown VOICE_PROVIDER "${provider}"`);
   return { translator: geminiTranslator(), speech: geminiSpeech() };
+}
+
+// What staff see when the voice service fails or the hourly cap is reached (the service's own words go to the log).
+export function voiceFailure(error: unknown): { ok: false; error: string } {
+  if (error instanceof VoiceError) {
+    if (error.detail) console.error("Voice service:", error.kind, error.detail);
+    return { ok: false, error: error.message };
+  }
+  if (error instanceof VoiceQuotaError) return { ok: false, error: error.message };
+  throw error;
 }
 
 async function withTimeout<T>(run: (signal: AbortSignal) => Promise<T>): Promise<T> {
@@ -35,25 +45,39 @@ function language(code: string): VoiceLanguage {
   return found;
 }
 
-export async function translatePage(userId: string, blocks: Block[], to: string): Promise<{ blocks: Block[]; provider: string }> {
+// Sends texts to the translator and checks every item comes back once, with the same number of texts.
+export async function translateItems(userId: string, items: TranslatableBlock[], to: string): Promise<{ items: TranslatableBlock[]; provider: string }> {
   if (to === SOURCE_LANGUAGE) throw new VoiceError("failed", "English is the source and isn't translated");
-  const translatable = toTranslatable(blocks);
-  if (translatable.length === 0) throw new VoiceError("failed", "the page has no text to translate");
+  if (items.length === 0) throw new VoiceError("failed", "there is no text to translate");
   const { translator } = services();
   await takeVoiceRequests(userId, "translate", 1);
-  const reply = await withTimeout((signal) => translator.translate({ from: language(SOURCE_LANGUAGE), to: language(to), blocks: translatable }, signal));
-  const result = applyTranslation(blocks, reply);
+  const reply = await withTimeout((signal) => translator.translate({ from: language(SOURCE_LANGUAGE), to: language(to), blocks: items }, signal));
+  const result = matchTranslation(items, reply);
   if (!result.ok) throw new VoiceError("bad_reply", result.error);
-  return { blocks: result.blocks, provider: translator.name };
+  return { items: result.items, provider: translator.name };
+}
+
+export async function translatePage(userId: string, blocks: Block[], to: string): Promise<{ blocks: Block[]; provider: string }> {
+  const translatable = toTranslatable(blocks);
+  if (translatable.length === 0) throw new VoiceError("failed", "the page has no text to translate");
+  const { items, provider } = await translateItems(userId, translatable, to);
+  const result = applyTranslation(blocks, items);
+  if (!result.ok) throw new VoiceError("bad_reply", result.error);
+  return { blocks: result.blocks, provider };
 }
 
 export type PageSpeech = { mp3: Uint8Array<ArrayBuffer>; durationMs: number; provider: string; voice: string };
 
 // One MP3 for the page in this language (blocks already in that language). Long pages go in parts.
 export async function speakPage(userId: string, blocks: Block[], code: string): Promise<PageSpeech> {
+  return speakParts(userId, readingParts(blocks, language(code)), code);
+}
+
+// One MP3 from the parts read aloud, in order, sent to the voice service in chunks.
+export async function speakParts(userId: string, readParts: string[], code: string): Promise<PageSpeech> {
   const lang = language(code);
-  const chunks = speechChunks(readingParts(blocks, lang));
-  if (chunks.length === 0) throw new VoiceError("failed", "the page has nothing to read aloud");
+  const chunks = speechChunks(readParts);
+  if (chunks.length === 0) throw new VoiceError("failed", "there is nothing to read aloud");
   const { speech } = services();
   await takeVoiceRequests(userId, "speech", chunks.length);
   const parts: Pcm[] = [];

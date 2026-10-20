@@ -5,9 +5,7 @@ import { parseBlocks, type Block } from "@/lib/content/blocks";
 import { pool } from "@/lib/db/pool";
 import { withTransaction } from "@/lib/db/transaction";
 import { isTranslatedLanguage, voiceLanguage } from "./languages";
-import { translatePage } from "./make";
-import { VoiceQuotaError } from "./quota";
-import { VoiceError } from "./services";
+import { translatePage, voiceFailure } from "./make";
 import type { TranslationRow } from "./status";
 import { checkEditedTranslation } from "./translation";
 
@@ -59,15 +57,6 @@ function languageName(code: string) {
   return voiceLanguage(code)?.name ?? code;
 }
 
-function serviceError(error: unknown): TranslationResult {
-  if (error instanceof VoiceError) {
-    if (error.detail) console.error("Voice service:", error.kind, error.detail);
-    return { ok: false, error: error.message };
-  }
-  if (error instanceof VoiceQuotaError) return { ok: false, error: error.message };
-  throw error;
-}
-
 // A new translation from the saved English page (replaces any earlier one, which goes back to draft).
 export async function generateTranslation(session: SessionPayload, pageId: string, language: string): Promise<TranslationResult> {
   if (!isTranslatedLanguage(language)) return { ok: false, error: "Choose a language." };
@@ -80,7 +69,7 @@ export async function generateTranslation(session: SessionPayload, pageId: strin
   try {
     translated = (await translatePage(session.sub, parsed.blocks, language)).blocks;
   } catch (error) {
-    return serviceError(error);
+    return voiceFailure(error);
   }
 
   return withTransaction<TranslationResult>(async (client) => {

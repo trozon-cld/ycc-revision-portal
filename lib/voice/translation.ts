@@ -27,25 +27,34 @@ export function toTranslatable(blocks: Block[]): TranslatableBlock[] {
 
 export type TranslationResult = { ok: true; blocks: Block[] } | { ok: false; error: string };
 
-// Puts translated texts back into the English page's blocks. Refused unless every block comes back once,
-// with the same number of texts, and the result passes the page's own checks (lengths, empty text).
-export function applyTranslation(source: Block[], translated: unknown): TranslationResult {
-  if (!Array.isArray(translated)) return { ok: false, error: "The translation came back in the wrong shape." };
-  const expected = toTranslatable(source);
+// The translator's reply, checked against what was sent: every item back once, with the same number of texts.
+export function matchTranslation(sent: TranslatableBlock[], reply: unknown): { ok: true; items: TranslatableBlock[] } | { ok: false; error: string } {
+  if (!Array.isArray(reply)) return { ok: false, error: "The translation came back in the wrong shape." };
   const byId = new Map<string, string[]>();
-  for (const item of translated) {
+  for (const item of reply) {
     if (!isRecord(item) || typeof item.id !== "string" || !Array.isArray(item.texts) || !item.texts.every((t) => typeof t === "string")) {
       return { ok: false, error: "The translation came back in the wrong shape." };
     }
     if (byId.has(item.id)) return { ok: false, error: "The translation repeated a block." };
     byId.set(item.id, item.texts as string[]);
   }
-  if (byId.size !== expected.length) return { ok: false, error: "The translation missed or added blocks." };
-  for (const block of expected) {
+  if (byId.size !== sent.length) return { ok: false, error: "The translation missed or added blocks." };
+  const items: TranslatableBlock[] = [];
+  for (const block of sent) {
     const texts = byId.get(block.id);
     if (!texts) return { ok: false, error: "The translation missed or added blocks." };
     if (texts.length !== block.texts.length) return { ok: false, error: "The translation changed the number of list items." };
+    items.push({ id: block.id, texts });
   }
+  return { ok: true, items };
+}
+
+// Puts translated texts back into the English page's blocks. Refused unless every block comes back once,
+// with the same number of texts, and the result passes the page's own checks (lengths, empty text).
+export function applyTranslation(source: Block[], translated: unknown): TranslationResult {
+  const matched = matchTranslation(toTranslatable(source), translated);
+  if (!matched.ok) return matched;
+  const byId = new Map(matched.items.map((item) => [item.id, item.texts]));
 
   const merged = source.map((block): Block => {
     const texts = byId.get(block.id);

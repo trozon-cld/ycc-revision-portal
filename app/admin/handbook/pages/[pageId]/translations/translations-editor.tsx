@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useDeferredValue, useEffect, useMemo, useState, useTransition } from "react";
+import { useDeferredValue, useMemo, useState, useTransition } from "react";
 import type { Block } from "@/lib/content/blocks";
 import type { BookPageData, ResolvedMedia } from "@/lib/content/book";
 import type { ChapterContext } from "@/lib/content/pages";
 import { BookPreview } from "@/components/admin/book-preview";
-import { Dialog } from "@/components/admin/dialog";
 import { buttonClass, cardClass, inputClass, textareaClass } from "@/components/admin/styles";
 import { useToast } from "@/components/admin/toast";
+import { LeaveDialog, useLeaveGuard } from "@/components/admin/leave-guard";
 import { formatUkDateTime } from "@/lib/candidates/access";
 import { NOT_THROUGH_MESSAGE, reachServer } from "@/lib/forms";
 import { TRANSLATED_LANGUAGES, voiceLanguage } from "@/lib/voice/languages";
@@ -53,7 +53,6 @@ export function TranslationsEditor({
   const [texts, setTexts] = useState<Texts>(initialTexts);
   const [problem, setProblem] = useState<{ message: string; conflict?: boolean } | null>(null);
   const [confirmAgain, setConfirmAgain] = useState(false);
-  const [leaveTo, setLeaveTo] = useState<string | null>(null);
   const [view, setView] = useState<"edit" | "preview">("edit");
   const [isSaving, startSaving] = useTransition();
   const [isChecking, startChecking] = useTransition();
@@ -64,29 +63,8 @@ export function TranslationsEditor({
   const dirty = JSON.stringify(texts) !== JSON.stringify(initialTexts);
   const busy = isSaving || isChecking || isTranslating;
   const translatable = useMemo(() => new Set(toTranslatable(english).map((block) => block.id)), [english]);
+  const [leaveTo, setLeaveTo] = useLeaveGuard(dirty);
   const missingBlocks = current ? english.filter((block) => translatable.has(block.id) && !current.blocks.some((b) => b.id === block.id)).length : 0;
-
-  // Unsaved edits: warn on closing the tab and catch in-app links, as the page editor does.
-  useEffect(() => {
-    if (!dirty) return;
-    function onBeforeUnload(event: BeforeUnloadEvent) {
-      event.preventDefault();
-    }
-    function onClickCapture(event: MouseEvent) {
-      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-      const anchor = (event.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
-      if (!anchor || anchor.target === "_blank" || anchor.origin !== window.location.origin) return;
-      event.preventDefault();
-      event.stopPropagation();
-      setLeaveTo(anchor.pathname + anchor.search);
-    }
-    window.addEventListener("beforeunload", onBeforeUnload);
-    document.addEventListener("click", onClickCapture, true);
-    return () => {
-      window.removeEventListener("beforeunload", onBeforeUnload);
-      document.removeEventListener("click", onClickCapture, true);
-    };
-  }, [dirty]);
 
   function translate() {
     setConfirmAgain(false);
@@ -289,26 +267,16 @@ export function TranslationsEditor({
       )}
 
       {leaveTo && (
-        <Dialog title="Leave without saving?" variant="confirm" onClose={() => setLeaveTo(null)}>
-          <p className="px-5 py-4 text-sm">Your changes to this translation haven&apos;t been saved yet.</p>
-          <div className="flex justify-end gap-2 border-t border-slate-200 px-5 py-3">
-            <button type="button" onClick={() => setLeaveTo(null)} className={buttonClass("secondary")}>
-              Stay
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                const target = leaveTo;
-                setTexts(initialTexts);
-                setLeaveTo(null);
-                router.push(target);
-              }}
-              className={buttonClass("danger")}
-            >
-              Leave without saving
-            </button>
-          </div>
-        </Dialog>
+        <LeaveDialog
+          what="this translation"
+          onStay={() => setLeaveTo(null)}
+          onLeave={() => {
+            const target = leaveTo;
+            setTexts(initialTexts);
+            setLeaveTo(null);
+            router.push(target);
+          }}
+        />
       )}
     </>
   );

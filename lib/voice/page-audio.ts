@@ -9,9 +9,7 @@ import { STORAGE_LIMIT_BYTES } from "@/lib/media/limits";
 import { StorageConfigError, deleteObjects, getSignedUrls, isStorageConfigured, storeObject } from "@/lib/storage/storage";
 import { storedBytes } from "@/lib/storage/usage";
 import { SOURCE_LANGUAGE, voiceLanguage } from "./languages";
-import { speakPage, type PageSpeech } from "./make";
-import { VoiceQuotaError } from "./quota";
-import { VoiceError } from "./services";
+import { speakPage, voiceFailure, type PageSpeech } from "./make";
 import { audioSourceVersion, type TranslationRow } from "./status";
 
 // Server-only: a page's audio (V3), one MP3 per page and language. English is read from the saved page,
@@ -26,8 +24,9 @@ const NOT_FOUND = "This page no longer exists.";
 const NOT_CONFIGURED = "Audio storage isn't set up yet. Add the Supabase settings to the server's environment.";
 const STORAGE_FULL = "Storage is full, so no new audio can be made. Delete pictures in Media or audio you no longer need, then try again.";
 const SAVE_FAILED = "The audio couldn't be saved. Please try again.";
+const MISSING = "This audio no longer exists. Reload the page.";
 const SUMMARY_COLUMNS = `language, source_version, duration_ms, byte_size, created_at`;
-// Long enough to listen to a page in the editor.
+// Long enough to listen to a page or question in the editor.
 const PREVIEW_LINK_SECONDS = 30 * 60;
 
 type SummaryRow = { language: string; source_version: number; duration_ms: number; byte_size: number; created_at: Date };
@@ -62,6 +61,40 @@ export async function deleteAudioFilesQuietly(paths: string[]) {
   }
 }
 
+// Shared by page and question audio: checks before the voice service is called, and room for the new file.
+export async function audioCanStart(): Promise<string | null> {
+  if (!isStorageConfigured()) return NOT_CONFIGURED;
+  return (await storedBytes()) >= STORAGE_LIMIT_BYTES ? STORAGE_FULL : null;
+}
+
+// Stores a new MP3 at `path`; on failure nothing is left behind.
+export async function storeAudioFile(path: string, mp3: Uint8Array<ArrayBuffer>): Promise<string | null> {
+  if ((await storedBytes()) + mp3.byteLength > STORAGE_LIMIT_BYTES) return STORAGE_FULL;
+  try {
+    await storeObject(path, new Blob([mp3], { type: "audio/mpeg" }), "audio/mpeg", { area: "audio" });
+    return null;
+  } catch (error) {
+    await deleteAudioFilesQuietly([path]);
+    if (error instanceof StorageConfigError) return NOT_CONFIGURED;
+    console.error("Audio upload failed", error);
+    return SAVE_FAILED;
+  }
+}
+
+// A short-lived link for listening in an editor (the bucket is private).
+export async function audioFileLink(path: string | undefined): Promise<AudioLinkResult> {
+  if (!path) return { ok: false, error: MISSING };
+  if (!isStorageConfigured()) return { ok: false, error: NOT_CONFIGURED };
+  try {
+    const urls = await getSignedUrls([path], PREVIEW_LINK_SECONDS, "audio");
+    const url = urls.get(path);
+    return url ? { ok: true, url } : { ok: false, error: "The audio file is missing from storage. Make it again." };
+  } catch (error) {
+    console.error("Audio link failed", error);
+    return { ok: false, error: "The audio couldn't be opened. Please try again." };
+  }
+}
+
 type Source = { title: string; blocks: Block[]; version: number } | { error: string };
 
 // What the audio is read from, and its version: the page for English, a checked translation otherwise.
@@ -91,15 +124,6 @@ async function readSource(client: PoolClient | typeof pool, pageId: string, lang
   return { title: page.title, blocks: parsed.blocks, version };
 }
 
-function serviceError(error: unknown): AudioResult {
-  if (error instanceof VoiceError) {
-    if (error.detail) console.error("Voice service:", error.kind, error.detail);
-    return { ok: false, error: error.message };
-  }
-  if (error instanceof VoiceQuotaError) return { ok: false, error: error.message };
-  throw error;
-}
-
 // Makes (or replaces) the page's audio in one language. The old file is removed once the new one is recorded.
 export async function generateAudio(session: SessionPayload, pageId: string, language: string): Promise<AudioResult> {
   const lang = voiceLanguage(language);
@@ -107,25 +131,19 @@ export async function generateAudio(session: SessionPayload, pageId: string, lan
   if (!isStorageConfigured()) return { ok: false, error: NOT_CONFIGURED };
   const source = await readSource(pool, pageId, lang.code);
   if ("error" in source) return { ok: false, error: source.error };
-  if ((await storedBytes()) >= STORAGE_LIMIT_BYTES) return { ok: false, error: STORAGE_FULL };
+  const blocked = await audioCanStart();
+  if (blocked) return { ok: false, error: blocked };
 
   let speech: PageSpeech;
   try {
     speech = await speakPage(session.sub, source.blocks, lang.code);
   } catch (error) {
-    return serviceError(error);
+    return voiceFailure(error);
   }
-  if ((await storedBytes()) + speech.mp3.byteLength > STORAGE_LIMIT_BYTES) return { ok: false, error: STORAGE_FULL };
 
   const path = `pages/${pageId}/${lang.code}-${crypto.randomUUID()}.mp3`;
-  try {
-    await storeObject(path, new Blob([speech.mp3], { type: "audio/mpeg" }), "audio/mpeg", { area: "audio" });
-  } catch (error) {
-    await deleteAudioFilesQuietly([path]);
-    if (error instanceof StorageConfigError) return { ok: false, error: NOT_CONFIGURED };
-    console.error("Audio upload failed", error);
-    return { ok: false, error: SAVE_FAILED };
-  }
+  const storeError = await storeAudioFile(path, speech.mp3);
+  if (storeError) return { ok: false, error: storeError };
 
   let outcome: { result: AudioResult; oldPath: string | null };
   try {
@@ -185,22 +203,11 @@ export async function deleteAudio(session: SessionPayload, pageId: string, langu
   return { ok: true };
 }
 
-// A short-lived link for listening in the editor (the bucket is private).
 export async function audioPreviewLink(pageId: string, language: string): Promise<AudioLinkResult> {
-  const missing: AudioLinkResult = { ok: false, error: "This audio no longer exists. Reload the page." };
-  if (!voiceLanguage(language)) return missing;
-  if (!isStorageConfigured()) return { ok: false, error: NOT_CONFIGURED };
+  if (!voiceLanguage(language)) return audioFileLink(undefined);
   const { rows } = await pool.query<{ storage_path: string }>(
     `select storage_path from page_audio where content_page_id = $1 and language = $2`,
     [pageId, language]
   );
-  if (!rows[0]) return missing;
-  try {
-    const urls = await getSignedUrls([rows[0].storage_path], PREVIEW_LINK_SECONDS, "audio");
-    const url = urls.get(rows[0].storage_path);
-    return url ? { ok: true, url } : { ok: false, error: "The audio file is missing from storage. Make it again." };
-  } catch (error) {
-    console.error("Audio link failed", error);
-    return { ok: false, error: "The audio couldn't be opened. Please try again." };
-  }
+  return audioFileLink(rows[0]?.storage_path);
 }

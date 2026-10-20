@@ -1,5 +1,5 @@
 // Languages for translated text and audio. English is the source (the page itself); others are translated
-// from it. Adding a language is one entry here. Box labels should be checked by a reader of that language.
+// from it. Adding a language is one entry here. Box and question labels should be checked by a reader of that language.
 export type VoiceLanguage = {
   code: string;
   name: string;
@@ -7,15 +7,17 @@ export type VoiceLanguage = {
   nativeName: string;
   // How a Key point / Remember box starts when read aloud.
   boxLabels: { "key-point": string; remember: string };
+  // How a question page's question and each option start when read aloud ("Option A").
+  questionLabels: { question: string; option: string };
 };
 
 export const SOURCE_LANGUAGE = "en";
 
 export const VOICE_LANGUAGES: readonly VoiceLanguage[] = [
-  { code: "en", name: "English", nativeName: "English", boxLabels: { "key-point": "Key point", remember: "Remember" } },
-  { code: "hi", name: "Hindi", nativeName: "हिन्दी", boxLabels: { "key-point": "मुख्य बात", remember: "याद रखें" } },
+  { code: "en", name: "English", nativeName: "English", boxLabels: { "key-point": "Key point", remember: "Remember" }, questionLabels: { question: "Question", option: "Option" } },
+  { code: "hi", name: "Hindi", nativeName: "हिन्दी", boxLabels: { "key-point": "मुख्य बात", remember: "याद रखें" }, questionLabels: { question: "प्रश्न", option: "विकल्प" } },
   // Gurmukhi script (decided 16 Oct); Shahmukhi would be a separate entry.
-  { code: "pa", name: "Punjabi", nativeName: "ਪੰਜਾਬੀ", boxLabels: { "key-point": "ਮੁੱਖ ਗੱਲ", remember: "ਯਾਦ ਰੱਖੋ" } },
+  { code: "pa", name: "Punjabi", nativeName: "ਪੰਜਾਬੀ", boxLabels: { "key-point": "ਮੁੱਖ ਗੱਲ", remember: "ਯਾਦ ਰੱਖੋ" }, questionLabels: { question: "ਸਵਾਲ", option: "ਵਿਕਲਪ" } },
 ];
 
 // Languages that need a translation first (all but the source).
