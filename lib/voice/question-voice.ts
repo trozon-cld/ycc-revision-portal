@@ -153,7 +153,7 @@ export async function generateQuestionTranslation(session: SessionPayload, quest
   let texts: QuestionText;
   try {
     const sent = [{ id: "stem", texts: [english.stem] }, ...english.options.map((option) => ({ id: option.id, texts: [option.text] }))];
-    const { items } = await translateItems(session.sub, sent, language);
+    const { items } = await translateItems(session.sub, sent, language, "question");
     const byId = new Map(items.map((item) => [item.id, item.texts[0]]));
     const checked = checkQuestionTexts(english, { stem: byId.get("stem"), options: english.options.map((option) => ({ id: option.id, text: byId.get(option.id) })) });
     if (!checked.ok) throw new VoiceError("bad_reply", checked.error);

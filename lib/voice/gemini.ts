@@ -8,6 +8,14 @@ const DEFAULT_TEXT_MODEL = "gemini-3.8-flash";
 const DEFAULT_SPEECH_MODEL = "gemini-3.8-flash-tts";
 const DEFAULT_VOICE = "Kore";
 const DEFAULT_STYLE = "Calm, clear and steady, at a moderate teaching pace";
+// Translating needs little reasoning; Gemini 3 models think at "high" unless told otherwise, which can take a minute.
+const THINKING_LEVELS = ["minimal", "low", "medium", "high"] as const;
+const DEFAULT_THINKING = "low";
+
+function thinkingLevel(): string {
+  const value = process.env.GEMINI_THINKING_LEVEL?.trim().toLowerCase() ?? "";
+  return (THINKING_LEVELS as readonly string[]).includes(value) ? value : DEFAULT_THINKING;
+}
 
 function apiKey(): string {
   const key = process.env.GEMINI_API_KEY?.trim();
@@ -86,10 +94,13 @@ export function geminiTranslator(): Translator {
   const model = process.env.GEMINI_TEXT_MODEL?.trim() || DEFAULT_TEXT_MODEL;
   return {
     name: `gemini:${model}`,
-    async translate({ from, to, blocks }, signal) {
+    async translate({ from, to, blocks, kind = "page" }, signal) {
       const instruction = [
         `Translate study material for construction site workers from ${from.name} into ${to.name} (${to.nativeName}).`,
         to.code === "pa" ? "Use Gurmukhi script." : "",
+        kind === "question"
+          ? "The blocks are one multiple-choice question (the first block) and its answer options. Translate each one as written; do not answer the question or work out which option is right."
+          : "",
         "Use plain, everyday words that are easy to understand. Keep the meaning exact; it is safety training.",
         "Keep any text wrapped in ** ** wrapped in ** ** around the matching words of the translation.",
         "Return every block with the same id and the same number of texts, in the same order. Translate nothing else.",
@@ -100,6 +111,7 @@ export function geminiTranslator(): Translator {
         {
           model,
           input: `${instruction}\n\nBlocks (JSON):\n${JSON.stringify(blocks)}`,
+          generation_config: { thinking_level: thinkingLevel() },
           response_format: {
             type: "text",
             mime_type: "application/json",
