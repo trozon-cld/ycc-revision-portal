@@ -1,5 +1,5 @@
 import { isRecord } from "@/lib/text";
-import { VoiceError, type SpeechMaker, type Translator } from "./services";
+import { VoiceError, type SpeechMaker, type TranslationKind, type Translator } from "./services";
 
 // Gemini over plain fetch (Interactions API, no SDK). Server only: it reads GEMINI_API_KEY.
 // Nothing is kept on Google's side after the reply (store: false).
@@ -10,11 +10,13 @@ const DEFAULT_VOICE = "Kore";
 const DEFAULT_STYLE = "Calm, clear and steady, at a moderate teaching pace";
 // Translating needs little reasoning; Gemini 3 models think at "high" unless told otherwise, which can take a minute.
 const THINKING_LEVELS = ["minimal", "low", "medium", "high"] as const;
-const DEFAULT_THINKING = "low";
+const DEFAULT_THINKING = { page: "low", question: "minimal" } as const;
+// Question texts are short; a reply this long means the model is repeating itself, so it stops early instead of timing out.
+const QUESTION_MAX_OUTPUT_TOKENS = 8192;
 
-function thinkingLevel(): string {
+function thinkingLevel(kind: TranslationKind): string {
   const value = process.env.GEMINI_THINKING_LEVEL?.trim().toLowerCase() ?? "";
-  return (THINKING_LEVELS as readonly string[]).includes(value) ? value : DEFAULT_THINKING;
+  return (THINKING_LEVELS as readonly string[]).includes(value) ? value : DEFAULT_THINKING[kind];
 }
 
 function apiKey(): string {
@@ -36,7 +38,7 @@ async function interact(body: Record<string, unknown>, signal: AbortSignal): Pro
     });
   } catch (error) {
     if (error instanceof VoiceError) throw error;
-    if (signal.aborted) throw new VoiceError("timeout");
+    if (signal.aborted) throw new VoiceError("timeout", "no reply within the time limit");
     throw new VoiceError("failed", `network: ${String(error)}`);
   }
   const text = await response.text().catch(() => "");
@@ -95,23 +97,28 @@ export function geminiTranslator(): Translator {
   return {
     name: `gemini:${model}`,
     async translate({ from, to, blocks, kind = "page" }, signal) {
+      // Question pages are sent as plain short texts: nothing says question, option or answer, so the model
+      // has no reason to work one out.
       const instruction = [
-        `Translate study material for construction site workers from ${from.name} into ${to.name} (${to.nativeName}).`,
-        to.code === "pa" ? "Use Gurmukhi script." : "",
         kind === "question"
-          ? "The blocks are one multiple-choice question (the first block) and its answer options. Translate each one as written; do not answer the question or work out which option is right."
-          : "",
+          ? `Translate these short texts from construction safety training from ${from.name} into ${to.name} (${to.nativeName}). Your only task is to translate each text separately and exactly as written. Return only the translations.`
+          : `Translate study material for construction site workers from ${from.name} into ${to.name} (${to.nativeName}).`,
+        to.code === "pa" ? "Use Gurmukhi script." : "",
         "Use plain, everyday words that are easy to understand. Keep the meaning exact; it is safety training.",
         "Keep any text wrapped in ** ** wrapped in ** ** around the matching words of the translation.",
         "Return every block with the same id and the same number of texts, in the same order. Translate nothing else.",
       ]
         .filter(Boolean)
         .join(" ");
+      const started = Date.now();
       const content = await interact(
         {
           model,
           input: `${instruction}\n\nBlocks (JSON):\n${JSON.stringify(blocks)}`,
-          generation_config: { thinking_level: thinkingLevel() },
+          generation_config: {
+            thinking_level: thinkingLevel(kind),
+            ...(kind === "question" ? { max_output_tokens: QUESTION_MAX_OUTPUT_TOKENS } : {}),
+          },
           response_format: {
             type: "text",
             mime_type: "application/json",
@@ -132,7 +139,7 @@ export function geminiTranslator(): Translator {
           },
         },
         signal
-      );
+      ).finally(() => console.info(`Voice service: ${kind} translation into ${to.name}, ${blocks.length} parts, ${Date.now() - started} ms`));
       const text = content.filter((item) => typeof item.text === "string").at(-1)?.text;
       if (!text) throw new VoiceError("bad_reply", "no text in translation reply");
       try {
