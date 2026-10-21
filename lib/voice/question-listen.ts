@@ -7,14 +7,15 @@ import type { TranslationSummary } from "./page-translations";
 // Listen for question pages, shared by the server and the editors (no database code here).
 
 // Question types with Listen so far; the others come one by one.
-export const VOICE_QUESTION_TYPES = ["single_text", "multi_pick"] as const;
+export const VOICE_QUESTION_TYPES = ["single_text", "multi_pick", "single_picture"] as const;
 
 export function questionTypeHasListen(type: string): boolean {
   return (VOICE_QUESTION_TYPES as readonly string[]).includes(type);
 }
 
 // `pick`: Multiple answers only, how many to choose (read aloud in fixed wording, never translated by the service).
-export type QuestionText = { stem: string; options: { id: string; text: string }[]; pick?: number };
+// `from`: picture options only, whether the words are the option's label or the picture's description in Media.
+export type QuestionText = { stem: string; options: { id: string; text: string; from?: "label" | "description" }[]; pick?: number };
 
 // The status rules (status.ts) count versions; for questions "1" means made from the current English.
 export const QUESTION_CURRENT_VERSION = 1;

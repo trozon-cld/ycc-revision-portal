@@ -37,10 +37,16 @@ import {
 // question and options are the same as when it was made (`source`), so answer or explanation edits don't matter.
 
 // The English question and options of question `q`, built in SQL so stored copies compare exactly.
+// What is said for option `o`: its text, or for a picture option its label, else the picture's description in Media.
+const OPTION_LABEL_SQL = `nullif(btrim(o->>'label'), '')`;
+const OPTION_SPOKEN_SQL = `coalesce(o->>'text', ${OPTION_LABEL_SQL}, (select m.alt_text from media m where m.id = nullif(o->>'mediaId', '')::uuid))`;
+// Picture options also say where their words come from (shown in the Translations page); text options add nothing.
+const OPTION_FROM_SQL = `case when o ? 'mediaId' then jsonb_build_object('from', case when ${OPTION_LABEL_SQL} is null then 'description' else 'label' end) else '{}'::jsonb end`;
+
 // Multiple answers adds how many to choose ("pick"); other types have no such key, so their copies are unchanged.
 export const QUESTION_SOURCE_SQL = `(jsonb_build_object(
     'stem', q.stem_text,
-    'options', coalesce((select jsonb_agg(jsonb_build_object('id', o->>'id', 'text', o->>'text') order by n)
+    'options', coalesce((select jsonb_agg(jsonb_build_object('id', o->>'id', 'text', ${OPTION_SPOKEN_SQL}) || ${OPTION_FROM_SQL} order by n)
                          from jsonb_array_elements(q.content->'options') with ordinality as x(o, n)), '[]'::jsonb))
   || case when q.content ? 'pick' then jsonb_build_object('pick', q.content->'pick') else '{}'::jsonb end)`;
 

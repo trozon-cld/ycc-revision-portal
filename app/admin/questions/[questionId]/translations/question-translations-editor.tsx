@@ -220,6 +220,12 @@ export function QuestionTranslationsEditor({
           <span lang={lang.code}>&ldquo;{choosePhrase(lang, english.pick)}&rdquo;</span> in {lang.name}. It isn&apos;t translated by the voice service.
         </p>
       )}
+      {english.options.some((option) => option.from === "description") && (
+        <p className="mt-3 text-sm text-slate-700">
+          Options without a label are read using their picture&apos;s description from Media. Make sure those descriptions say what the
+          picture shows without hinting at the right answer.
+        </p>
+      )}
       {editable && (
         <ol className="mt-4 space-y-3">
           <li className={`${cardClass} p-3`}>
@@ -238,7 +244,7 @@ export function QuestionTranslationsEditor({
             <li key={option.id} className={`${cardClass} p-3`}>
               <TextRow
                 id={`tr-${option.id}`}
-                label={`Option ${optionLetter(index)}`}
+                label={`Option ${optionLetter(index)}${option.from === "label" ? " · picture label" : option.from === "description" ? " · picture description (no label)" : ""}`}
                 english={option.text}
                 language={lang.code}
                 languageName={lang.name}

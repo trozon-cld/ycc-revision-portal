@@ -17,6 +17,10 @@ type Selection =
   | { status: "error"; message: string };
 
 // The upload form, shared by the Media page and the picture picker's "Upload new" tab.
+// Shared with the Media page's Edit description panel.
+export const DESCRIPTION_HINT =
+  "Say what the picture shows, in plain words. It's read aloud to people who can't see it, and by Listen for picture answers without a label, so don't hint at the right answer.";
+
 export function MediaUploadForm({
   onCancel,
   onUploaded,
@@ -100,7 +104,7 @@ export function MediaUploadForm({
       <Field
         id="media-alt"
         label="Description"
-        hint="Say what the picture shows, in plain words. It's read aloud to people who can't see it."
+        hint={DESCRIPTION_HINT}
       >
         <textarea id="media-alt" name="altText" required maxLength={ALT_TEXT_MAX_LENGTH} rows={3} className={textareaClass} />
       </Field>
