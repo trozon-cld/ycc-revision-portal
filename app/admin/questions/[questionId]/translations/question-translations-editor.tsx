@@ -227,6 +227,13 @@ export function QuestionTranslationsEditor({
           this isn&apos;t translated by the voice service.
         </p>
       )}
+      {english.boxes && (
+        <p className="mt-3 text-sm text-slate-700">
+          After the question, Listen reads &ldquo;{voiceLanguage("en")!.questionLabels.matchBoxes}. {voiceLanguage("en")!.questionLabels.boxesAre}&rdquo; in
+          fixed wording (<span lang={lang.code}>&ldquo;{lang.questionLabels.matchBoxes}. {lang.questionLabels.boxesAre}&rdquo;</span> in {lang.name}), then the
+          box labels below. The pictures aren&apos;t read.
+        </p>
+      )}
       {english.tap && (
         <p className="mt-3 text-sm text-slate-700">
           After the question, Listen reads &ldquo;{voiceLanguage("en")!.questionLabels.tapArea}&rdquo; in fixed wording:{" "}
@@ -258,7 +265,7 @@ export function QuestionTranslationsEditor({
             <li key={option.id} className={`${cardClass} p-3`}>
               <TextRow
                 id={`tr-${option.id}`}
-                label={`Option ${optionLetter(index)}${option.from === "label" ? " · picture label" : option.from === "description" ? " · picture description (no label)" : ""}`}
+                label={`${english.boxes ? `Box ${index + 1}` : `Option ${optionLetter(index)}`}${option.from === "label" ? " · picture label" : option.from === "description" ? " · picture description (no label)" : ""}`}
                 english={option.text}
                 language={lang.code}
                 languageName={lang.name}

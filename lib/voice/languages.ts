@@ -8,17 +8,18 @@ export type VoiceLanguage = {
   // How a Key point / Remember box starts when read aloud.
   boxLabels: { "key-point": string; remember: string };
   // How a question page's question and each option start when read aloud ("Option A"); `choose` is the
-  // Multiple answers instruction and `chooseArea` the Choose the area one, {n} being how many; `tapArea` Tap the area's.
-  questionLabels: { question: string; option: string; choose: string; chooseArea: string; tapArea: string };
+  // Multiple answers instruction and `chooseArea` the Choose the area one, {n} being how many; `tapArea` Tap the area's;
+  // `matchBoxes` and `boxesAre` Match pictures' (the box labels follow).
+  questionLabels: { question: string; option: string; choose: string; chooseArea: string; tapArea: string; matchBoxes: string; boxesAre: string };
 };
 
 export const SOURCE_LANGUAGE = "en";
 
 export const VOICE_LANGUAGES: readonly VoiceLanguage[] = [
-  { code: "en", name: "English", nativeName: "English", boxLabels: { "key-point": "Key point", remember: "Remember" }, questionLabels: { question: "Question", option: "Option", choose: "Choose {n} answers", chooseArea: "Choose one of the {n} outlined areas on the picture", tapArea: "Look at the picture and tap the place that answers the question" } },
-  { code: "hi", name: "Hindi", nativeName: "हिन्दी", boxLabels: { "key-point": "मुख्य बात", remember: "याद रखें" }, questionLabels: { question: "प्रश्न", option: "विकल्प", choose: "{n} उत्तर चुनें", chooseArea: "चित्र पर बने {n} चिह्नित हिस्सों में से एक चुनें", tapArea: "चित्र को देखें और उस जगह पर टैप करें जो प्रश्न का उत्तर है" } },
+  { code: "en", name: "English", nativeName: "English", boxLabels: { "key-point": "Key point", remember: "Remember" }, questionLabels: { question: "Question", option: "Option", choose: "Choose {n} answers", chooseArea: "Choose one of the {n} outlined areas on the picture", tapArea: "Look at the picture and tap the place that answers the question", matchBoxes: "Put each picture in the box it belongs to", boxesAre: "The boxes are:" } },
+  { code: "hi", name: "Hindi", nativeName: "हिन्दी", boxLabels: { "key-point": "मुख्य बात", remember: "याद रखें" }, questionLabels: { question: "प्रश्न", option: "विकल्प", choose: "{n} उत्तर चुनें", chooseArea: "चित्र पर बने {n} चिह्नित हिस्सों में से एक चुनें", tapArea: "चित्र को देखें और उस जगह पर टैप करें जो प्रश्न का उत्तर है", matchBoxes: "हर चित्र को उस बॉक्स में रखें जिससे वह मेल खाता है", boxesAre: "बॉक्स ये हैं:" } },
   // Gurmukhi script (decided 16 Oct); Shahmukhi would be a separate entry.
-  { code: "pa", name: "Punjabi", nativeName: "ਪੰਜਾਬੀ", boxLabels: { "key-point": "ਮੁੱਖ ਗੱਲ", remember: "ਯਾਦ ਰੱਖੋ" }, questionLabels: { question: "ਸਵਾਲ", option: "ਵਿਕਲਪ", choose: "{n} ਜਵਾਬ ਚੁਣੋ", chooseArea: "ਤਸਵੀਰ 'ਤੇ ਬਣੇ {n} ਨਿਸ਼ਾਨ ਲੱਗੇ ਹਿੱਸਿਆਂ ਵਿੱਚੋਂ ਇੱਕ ਚੁਣੋ", tapArea: "ਤਸਵੀਰ ਨੂੰ ਦੇਖੋ ਅਤੇ ਉਸ ਥਾਂ 'ਤੇ ਟੈਪ ਕਰੋ ਜੋ ਸਵਾਲ ਦਾ ਜਵਾਬ ਹੈ" } },
+  { code: "pa", name: "Punjabi", nativeName: "ਪੰਜਾਬੀ", boxLabels: { "key-point": "ਮੁੱਖ ਗੱਲ", remember: "ਯਾਦ ਰੱਖੋ" }, questionLabels: { question: "ਸਵਾਲ", option: "ਵਿਕਲਪ", choose: "{n} ਜਵਾਬ ਚੁਣੋ", chooseArea: "ਤਸਵੀਰ 'ਤੇ ਬਣੇ {n} ਨਿਸ਼ਾਨ ਲੱਗੇ ਹਿੱਸਿਆਂ ਵਿੱਚੋਂ ਇੱਕ ਚੁਣੋ", tapArea: "ਤਸਵੀਰ ਨੂੰ ਦੇਖੋ ਅਤੇ ਉਸ ਥਾਂ 'ਤੇ ਟੈਪ ਕਰੋ ਜੋ ਸਵਾਲ ਦਾ ਜਵਾਬ ਹੈ", matchBoxes: "ਹਰ ਤਸਵੀਰ ਨੂੰ ਉਸ ਡੱਬੇ ਵਿੱਚ ਰੱਖੋ ਜਿਸ ਨਾਲ ਉਹ ਮੇਲ ਖਾਂਦੀ ਹੈ", boxesAre: "ਡੱਬੇ ਇਹ ਹਨ:" } },
 ];
 
 // Languages that need a translation first (all but the source).
