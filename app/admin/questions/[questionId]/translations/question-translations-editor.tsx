@@ -13,7 +13,7 @@ import { optionLetter } from "@/lib/questions/types/single-text";
 import { TRANSLATED_LANGUAGES, voiceLanguage } from "@/lib/voice/languages";
 import type { TranslationSummary } from "@/lib/voice/page-translations";
 import { QUESTION_CURRENT_VERSION, type QuestionText } from "@/lib/voice/question-listen";
-import { choosePhrase } from "@/lib/voice/reading";
+import { areasPhrase, choosePhrase } from "@/lib/voice/reading";
 import { translationState } from "@/lib/voice/status";
 import { TranslationBadge } from "@/app/admin/handbook/pages/translation-badge";
 import { checkQuestionTranslation, saveQuestionTranslation, translateQuestionLanguage } from "../../voice-actions";
@@ -218,6 +218,13 @@ export function QuestionTranslationsEditor({
         <p className="mt-3 text-sm text-slate-700">
           After the question, Listen reads &ldquo;{choosePhrase(voiceLanguage("en")!, english.pick)}&rdquo; in fixed wording:{" "}
           <span lang={lang.code}>&ldquo;{choosePhrase(lang, english.pick)}&rdquo;</span> in {lang.name}. It isn&apos;t translated by the voice service.
+        </p>
+      )}
+      {english.areas && (
+        <p className="mt-3 text-sm text-slate-700">
+          After the question, Listen reads &ldquo;{areasPhrase(voiceLanguage("en")!, english.areas)}&rdquo; in fixed wording:{" "}
+          <span lang={lang.code}>&ldquo;{areasPhrase(lang, english.areas)}&rdquo;</span> in {lang.name}. The areas themselves aren&apos;t read, and
+          this isn&apos;t translated by the voice service.
         </p>
       )}
       {english.options.some((option) => option.from === "description") && (

@@ -8,17 +8,17 @@ export type VoiceLanguage = {
   // How a Key point / Remember box starts when read aloud.
   boxLabels: { "key-point": string; remember: string };
   // How a question page's question and each option start when read aloud ("Option A"); `choose` is the
-  // Multiple answers instruction, {n} being how many.
-  questionLabels: { question: string; option: string; choose: string };
+  // Multiple answers instruction and `chooseArea` the Choose the area one, {n} being how many.
+  questionLabels: { question: string; option: string; choose: string; chooseArea: string };
 };
 
 export const SOURCE_LANGUAGE = "en";
 
 export const VOICE_LANGUAGES: readonly VoiceLanguage[] = [
-  { code: "en", name: "English", nativeName: "English", boxLabels: { "key-point": "Key point", remember: "Remember" }, questionLabels: { question: "Question", option: "Option", choose: "Choose {n} answers" } },
-  { code: "hi", name: "Hindi", nativeName: "हिन्दी", boxLabels: { "key-point": "मुख्य बात", remember: "याद रखें" }, questionLabels: { question: "प्रश्न", option: "विकल्प", choose: "{n} उत्तर चुनें" } },
+  { code: "en", name: "English", nativeName: "English", boxLabels: { "key-point": "Key point", remember: "Remember" }, questionLabels: { question: "Question", option: "Option", choose: "Choose {n} answers", chooseArea: "Choose one of the {n} outlined areas on the picture" } },
+  { code: "hi", name: "Hindi", nativeName: "हिन्दी", boxLabels: { "key-point": "मुख्य बात", remember: "याद रखें" }, questionLabels: { question: "प्रश्न", option: "विकल्प", choose: "{n} उत्तर चुनें", chooseArea: "चित्र पर बने {n} चिह्नित हिस्सों में से एक चुनें" } },
   // Gurmukhi script (decided 16 Oct); Shahmukhi would be a separate entry.
-  { code: "pa", name: "Punjabi", nativeName: "ਪੰਜਾਬੀ", boxLabels: { "key-point": "ਮੁੱਖ ਗੱਲ", remember: "ਯਾਦ ਰੱਖੋ" }, questionLabels: { question: "ਸਵਾਲ", option: "ਵਿਕਲਪ", choose: "{n} ਜਵਾਬ ਚੁਣੋ" } },
+  { code: "pa", name: "Punjabi", nativeName: "ਪੰਜਾਬੀ", boxLabels: { "key-point": "ਮੁੱਖ ਗੱਲ", remember: "ਯਾਦ ਰੱਖੋ" }, questionLabels: { question: "ਸਵਾਲ", option: "ਵਿਕਲਪ", choose: "{n} ਜਵਾਬ ਚੁਣੋ", chooseArea: "ਤਸਵੀਰ 'ਤੇ ਬਣੇ {n} ਨਿਸ਼ਾਨ ਲੱਗੇ ਹਿੱਸਿਆਂ ਵਿੱਚੋਂ ਇੱਕ ਚੁਣੋ" } },
 ];
 
 // Languages that need a translation first (all but the source).

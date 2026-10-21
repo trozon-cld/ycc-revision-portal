@@ -29,11 +29,21 @@ export function readingParts(blocks: Block[], language: VoiceLanguage): string[]
 
 // A question page: the question, "Choose 2 answers" for Multiple answers, then each option with its letter as shown ("Option A. …"). Not the explanation,
 // which only appears after the answer is checked, and not the picture.
-export function questionReadingParts(stem: string, options: string[], language: VoiceLanguage, letter: (index: number) => string, pick?: number): string[] {
+// `pick`: Multiple answers, how many to choose; `areas`: Choose the area, how many outlined areas the picture has.
+export type QuestionInstruction = { pick?: number; areas?: number };
+
+export function questionReadingParts(
+  stem: string,
+  options: string[],
+  language: VoiceLanguage,
+  letter: (index: number) => string,
+  instruction: QuestionInstruction = {}
+): string[] {
   const { question, option } = language.questionLabels;
   return [
     `${sentence(question)}\n${sentence(plainText(stem))}`,
-    ...(pick ? [sentence(choosePhrase(language, pick))] : []),
+    ...(instruction.pick ? [sentence(choosePhrase(language, instruction.pick))] : []),
+    ...(instruction.areas ? [sentence(areasPhrase(language, instruction.areas))] : []),
     ...options.map((text, index) => `${sentence(`${option} ${letter(index)}`)}\n${sentence(plainText(text))}`),
   ];
 }
@@ -41,6 +51,11 @@ export function questionReadingParts(stem: string, options: string[], language: 
 // Multiple answers: "Choose 2 answers" in the language's own fixed wording.
 export function choosePhrase(language: VoiceLanguage, pick: number): string {
   return language.questionLabels.choose.replace("{n}", String(pick));
+}
+
+// Choose the area: "Choose one of the 5 outlined areas on the picture" in the language's own fixed wording.
+export function areasPhrase(language: VoiceLanguage, areas: number): string {
+  return language.questionLabels.chooseArea.replace("{n}", String(areas));
 }
 
 // A full stop where a line ends without one, so the voice pauses (headings and list items often have none).
