@@ -37,10 +37,12 @@ import {
 // question and options are the same as when it was made (`source`), so answer or explanation edits don't matter.
 
 // The English question and options of question `q`, built in SQL so stored copies compare exactly.
-export const QUESTION_SOURCE_SQL = `jsonb_build_object(
+// Multiple answers adds how many to choose ("pick"); other types have no such key, so their copies are unchanged.
+export const QUESTION_SOURCE_SQL = `(jsonb_build_object(
     'stem', q.stem_text,
     'options', coalesce((select jsonb_agg(jsonb_build_object('id', o->>'id', 'text', o->>'text') order by n)
-                         from jsonb_array_elements(q.content->'options') with ordinality as x(o, n)), '[]'::jsonb))`;
+                         from jsonb_array_elements(q.content->'options') with ordinality as x(o, n)), '[]'::jsonb))
+  || case when q.content ? 'pick' then jsonb_build_object('pick', q.content->'pick') else '{}'::jsonb end)`;
 
 const NOT_FOUND = "This question no longer exists.";
 const NOT_IN_HANDBOOK = "Listen is only for questions placed in the Handbook. Add this question to a chapter's page order first.";
@@ -292,7 +294,7 @@ export async function generateQuestionAudio(session: SessionPayload, questionId:
 
   let speech: PageSpeech;
   try {
-    const parts = questionReadingParts(source.texts.stem, source.texts.options.map((option) => option.text), lang, optionLetter);
+    const parts = questionReadingParts(source.texts.stem, source.texts.options.map((option) => option.text), lang, optionLetter, source.question.source.pick);
     speech = await speakParts(session.sub, parts, lang.code);
   } catch (error) {
     return voiceFailure(error);

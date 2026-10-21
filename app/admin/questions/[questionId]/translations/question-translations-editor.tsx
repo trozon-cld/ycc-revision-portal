@@ -13,6 +13,7 @@ import { optionLetter } from "@/lib/questions/types/single-text";
 import { TRANSLATED_LANGUAGES, voiceLanguage } from "@/lib/voice/languages";
 import type { TranslationSummary } from "@/lib/voice/page-translations";
 import { QUESTION_CURRENT_VERSION, type QuestionText } from "@/lib/voice/question-listen";
+import { choosePhrase } from "@/lib/voice/reading";
 import { translationState } from "@/lib/voice/status";
 import { TranslationBadge } from "@/app/admin/handbook/pages/translation-badge";
 import { checkQuestionTranslation, saveQuestionTranslation, translateQuestionLanguage } from "../../voice-actions";
@@ -213,6 +214,12 @@ export function QuestionTranslationsEditor({
         </p>
       )}
 
+      {english.pick && (
+        <p className="mt-3 text-sm text-slate-700">
+          After the question, Listen reads &ldquo;{choosePhrase(voiceLanguage("en")!, english.pick)}&rdquo; in fixed wording:{" "}
+          <span lang={lang.code}>&ldquo;{choosePhrase(lang, english.pick)}&rdquo;</span> in {lang.name}. It isn&apos;t translated by the voice service.
+        </p>
+      )}
       {editable && (
         <ol className="mt-4 space-y-3">
           <li className={`${cardClass} p-3`}>

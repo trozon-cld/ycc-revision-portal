@@ -27,14 +27,20 @@ export function readingParts(blocks: Block[], language: VoiceLanguage): string[]
   return parts.filter(Boolean);
 }
 
-// A question page: the question, then each option with its letter as shown ("Option A. …"). Not the explanation,
+// A question page: the question, "Choose 2 answers" for Multiple answers, then each option with its letter as shown ("Option A. …"). Not the explanation,
 // which only appears after the answer is checked, and not the picture.
-export function questionReadingParts(stem: string, options: string[], language: VoiceLanguage, letter: (index: number) => string): string[] {
+export function questionReadingParts(stem: string, options: string[], language: VoiceLanguage, letter: (index: number) => string, pick?: number): string[] {
   const { question, option } = language.questionLabels;
   return [
     `${sentence(question)}\n${sentence(plainText(stem))}`,
+    ...(pick ? [sentence(choosePhrase(language, pick))] : []),
     ...options.map((text, index) => `${sentence(`${option} ${letter(index)}`)}\n${sentence(plainText(text))}`),
   ];
+}
+
+// Multiple answers: "Choose 2 answers" in the language's own fixed wording.
+export function choosePhrase(language: VoiceLanguage, pick: number): string {
+  return language.questionLabels.choose.replace("{n}", String(pick));
 }
 
 // A full stop where a line ends without one, so the voice pauses (headings and list items often have none).
