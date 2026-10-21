@@ -43,14 +43,15 @@ const OPTION_SPOKEN_SQL = `coalesce(o->>'text', ${OPTION_LABEL_SQL}, (select m.a
 // Picture options also say where their words come from (shown in the Translations page); text options add nothing.
 const OPTION_FROM_SQL = `case when o ? 'mediaId' then jsonb_build_object('from', case when ${OPTION_LABEL_SQL} is null then 'description' else 'label' end) else '{}'::jsonb end`;
 
-// Multiple answers adds how many to choose ("pick"), Choose the area how many areas ("areas"); other types have
-// neither key, so their copies are unchanged.
+// Multiple answers adds how many to choose ("pick"), Choose the area how many areas ("areas"), Tap the area "tap";
+// other types have none of these keys, so their copies are unchanged.
 export const QUESTION_SOURCE_SQL = `(jsonb_build_object(
     'stem', q.stem_text,
     'options', coalesce((select jsonb_agg(jsonb_build_object('id', o->>'id', 'text', ${OPTION_SPOKEN_SQL}) || ${OPTION_FROM_SQL} order by n)
                          from jsonb_array_elements(q.content->'options') with ordinality as x(o, n)), '[]'::jsonb))
   || case when q.content ? 'pick' then jsonb_build_object('pick', q.content->'pick') else '{}'::jsonb end
-  || case when q.content ? 'areas' then jsonb_build_object('areas', jsonb_array_length(q.content->'areas')) else '{}'::jsonb end)`;
+  || case when q.content ? 'areas' then jsonb_build_object('areas', jsonb_array_length(q.content->'areas')) else '{}'::jsonb end
+  || case when q.type = 'hotspot' then jsonb_build_object('tap', true) else '{}'::jsonb end)`;
 
 const NOT_FOUND = "This question no longer exists.";
 const NOT_IN_HANDBOOK = "Listen is only for questions placed in the Handbook. Add this question to a chapter's page order first.";
@@ -322,6 +323,7 @@ export async function generateQuestionAudio(session: SessionPayload, questionId:
     const parts = questionReadingParts(source.texts.stem, source.texts.options.map((option) => option.text), lang, optionLetter, {
       pick: source.question.source.pick,
       areas: source.question.source.areas,
+      tap: source.question.source.tap,
     });
     speech = await speakParts(session.sub, parts, lang.code);
   } catch (error) {

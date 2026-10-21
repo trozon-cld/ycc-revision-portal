@@ -29,8 +29,9 @@ export function readingParts(blocks: Block[], language: VoiceLanguage): string[]
 
 // A question page: the question, "Choose 2 answers" for Multiple answers, then each option with its letter as shown ("Option A. …"). Not the explanation,
 // which only appears after the answer is checked, and not the picture.
-// `pick`: Multiple answers, how many to choose; `areas`: Choose the area, how many outlined areas the picture has.
-export type QuestionInstruction = { pick?: number; areas?: number };
+// `pick`: Multiple answers, how many to choose; `areas`: Choose the area, how many outlined areas the picture has;
+// `tap`: Tap the area.
+export type QuestionInstruction = { pick?: number; areas?: number; tap?: boolean };
 
 export function questionReadingParts(
   stem: string,
@@ -44,6 +45,7 @@ export function questionReadingParts(
     `${sentence(question)}\n${sentence(plainText(stem))}`,
     ...(instruction.pick ? [sentence(choosePhrase(language, instruction.pick))] : []),
     ...(instruction.areas ? [sentence(areasPhrase(language, instruction.areas))] : []),
+    ...(instruction.tap ? [sentence(language.questionLabels.tapArea)] : []),
     ...options.map((text, index) => `${sentence(`${option} ${letter(index)}`)}\n${sentence(plainText(text))}`),
   ];
 }

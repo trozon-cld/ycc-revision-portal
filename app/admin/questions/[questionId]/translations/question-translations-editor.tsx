@@ -227,6 +227,13 @@ export function QuestionTranslationsEditor({
           this isn&apos;t translated by the voice service.
         </p>
       )}
+      {english.tap && (
+        <p className="mt-3 text-sm text-slate-700">
+          After the question, Listen reads &ldquo;{voiceLanguage("en")!.questionLabels.tapArea}&rdquo; in fixed wording:{" "}
+          <span lang={lang.code}>&ldquo;{lang.questionLabels.tapArea}&rdquo;</span> in {lang.name}. The answer spot is never read, and this
+          isn&apos;t translated by the voice service.
+        </p>
+      )}
       {english.options.some((option) => option.from === "description") && (
         <p className="mt-3 text-sm text-slate-700">
           Options without a label are read using their picture&apos;s description from Media. Make sure those descriptions say what the
