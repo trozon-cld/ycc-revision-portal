@@ -74,7 +74,8 @@ function target(questionId: string, question: QuestionRow) {
 // ---- What the editor shows ----
 
 const TRANSLATION_COLUMNS = `t.language, t.revision, t.status, t.updated_at, t.checked_at, (t.source = ${QUESTION_SOURCE_SQL}) as current`;
-type TranslationSummaryRow = { language: string; revision: number; status: TranslationRow["status"]; updated_at: Date; checked_at: Date | null; current: boolean };
+// Dates arrive as Date from plain columns and as text from JSON (the one-query loader below).
+type TranslationSummaryRow = { language: string; revision: number; status: TranslationRow["status"]; updated_at: Date | string; checked_at: Date | string | null; current: boolean };
 
 function toTranslationSummary(row: TranslationSummaryRow): TranslationSummary {
   return {
@@ -82,13 +83,13 @@ function toTranslationSummary(row: TranslationSummaryRow): TranslationSummary {
     sourceVersion: row.current ? QUESTION_CURRENT_VERSION : 0,
     revision: row.revision,
     status: row.status,
-    updatedAt: row.updated_at.toISOString(),
-    checkedAt: row.checked_at ? row.checked_at.toISOString() : null,
+    updatedAt: new Date(row.updated_at).toISOString(),
+    checkedAt: row.checked_at ? new Date(row.checked_at).toISOString() : null,
   };
 }
 
 const AUDIO_COLUMNS = `a.language, a.source_revision, a.duration_ms, a.byte_size, a.created_at, (a.source = ${QUESTION_SOURCE_SQL}) as current`;
-type AudioSummaryRow = { language: string; source_revision: number | null; duration_ms: number; byte_size: number; created_at: Date; current: boolean };
+type AudioSummaryRow = { language: string; source_revision: number | null; duration_ms: number; byte_size: number; created_at: Date | string; current: boolean };
 
 // English audio counts as version 1 when made from the current English; translated audio by the revision it was made from.
 function toAudioSummary(row: AudioSummaryRow): AudioSummary {
@@ -97,23 +98,41 @@ function toAudioSummary(row: AudioSummaryRow): AudioSummary {
     sourceVersion: !row.current ? 0 : row.language === SOURCE_LANGUAGE ? QUESTION_CURRENT_VERSION : (row.source_revision ?? 0),
     durationMs: row.duration_ms,
     byteSize: row.byte_size,
-    createdAt: row.created_at.toISOString(),
+    createdAt: new Date(row.created_at).toISOString(),
+  };
+}
+
+type VoiceRow = QuestionRow & { translations: (TranslationSummaryRow & { texts: unknown })[]; audio: AudioSummaryRow[] };
+
+// The question, its translations (with their texts) and audio in one query, so a page needs one connection.
+async function readVoice(questionId: string): Promise<VoiceRow | null> {
+  const { rows } = await pool.query<VoiceRow>(
+    `select q.ref_no, q.type, q.stem_text, exists (select 1 from handbook_items i where i.question_id = q.id) as in_handbook,
+            ${QUESTION_SOURCE_SQL} as source,
+            coalesce((select json_agg(json_build_object('language', t.language, 'revision', t.revision, 'status', t.status,
+                                                        'updated_at', t.updated_at, 'checked_at', t.checked_at,
+                                                        'current', t.source = ${QUESTION_SOURCE_SQL}, 'texts', t.texts))
+                      from question_translations t where t.question_id = q.id), '[]') as translations,
+            coalesce((select json_agg(json_build_object('language', a.language, 'source_revision', a.source_revision,
+                                                        'duration_ms', a.duration_ms, 'byte_size', a.byte_size, 'created_at', a.created_at,
+                                                        'current', a.source = ${QUESTION_SOURCE_SQL}))
+                      from question_audio a where a.question_id = q.id), '[]') as audio
+     from questions q where q.id = $1`,
+    [questionId]
+  );
+  return rows[0] ?? null;
+}
+
+function toVoice(row: VoiceRow | null): QuestionVoice {
+  return {
+    unavailable: unavailable(row),
+    translations: (row?.translations ?? []).map(toTranslationSummary),
+    audio: (row?.audio ?? []).map(toAudioSummary),
   };
 }
 
 export async function loadQuestionVoice(questionId: string): Promise<QuestionVoice> {
-  const [question, translations, audio] = await Promise.all([
-    readQuestion(pool, questionId),
-    pool.query<TranslationSummaryRow>(`select ${TRANSLATION_COLUMNS} from question_translations t join questions q on q.id = t.question_id where t.question_id = $1`, [
-      questionId,
-    ]),
-    pool.query<AudioSummaryRow>(`select ${AUDIO_COLUMNS} from question_audio a join questions q on q.id = a.question_id where a.question_id = $1`, [questionId]),
-  ]);
-  return {
-    unavailable: unavailable(question),
-    translations: translations.rows.map(toTranslationSummary),
-    audio: audio.rows.map(toAudioSummary),
-  };
+  return toVoice(await readVoice(questionId));
 }
 
 export type QuestionTranslationsView = {
@@ -127,19 +146,17 @@ export type QuestionTranslationsView = {
 
 // Everything the question's Translations page shows for one language, or null when the question doesn't exist.
 export async function loadQuestionTranslations(questionId: string, language: string): Promise<QuestionTranslationsView | null> {
-  const [question, voice, found] = await Promise.all([
-    readQuestion(pool, questionId),
-    loadQuestionVoice(questionId),
-    pool.query<{ texts: unknown }>(`select texts from question_translations where question_id = $1 and language = $2`, [questionId, language]),
-  ]);
-  if (!question) return null;
-  const summary = voice.translations.find((row) => row.language === language);
-  const texts = found.rows[0] ? (readTexts(found.rows[0].texts) ?? { stem: "", options: [] }) : null;
+  const row = await readVoice(questionId);
+  if (!row) return null;
+  const voice = toVoice(row);
+  const summary = voice.translations.find((item) => item.language === language);
+  const raw = row.translations.find((item) => item.language === language);
+  const texts = raw ? (readTexts(raw.texts) ?? { stem: "", options: [] }) : null;
   return {
-    refNo: question.ref_no,
-    english: question.source,
+    refNo: row.ref_no,
+    english: row.source,
     voice,
-    current: summary && texts ? { summary, texts, optionsChanged: !sameOptions(question.source, texts) } : null,
+    current: summary && texts ? { summary, texts, optionsChanged: !sameOptions(row.source, texts) } : null,
   };
 }
 

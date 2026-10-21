@@ -11,6 +11,8 @@ declare global {
 // its error screen. The slowest job, archiving a month of login records, takes a few seconds.
 const CONNECT_TIMEOUT_MS = 10_000;
 const QUERY_TIMEOUT_MS = 30_000;
+// Keep idle connections a minute (pg's default is 10 seconds): opening one to a distant database is slow.
+const IDLE_TIMEOUT_MS = 60_000;
 // Connections each running copy of the site may open (DATABASE_POOL_MAX). Serverless hosts run many copies,
 // so 1–3 there keeps the total under the database's limit; one long-running server can use the default.
 const DEFAULT_POOL_MAX = 10;
@@ -30,6 +32,7 @@ function createPool() {
     ssl: { rejectUnauthorized: false },
     connectionTimeoutMillis: CONNECT_TIMEOUT_MS,
     query_timeout: QUERY_TIMEOUT_MS,
+    idleTimeoutMillis: IDLE_TIMEOUT_MS,
     max: poolMax(),
   });
   // An idle connection the database dropped: log it; without a listener it would stop the server.
