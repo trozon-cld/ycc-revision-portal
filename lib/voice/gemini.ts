@@ -13,7 +13,7 @@ const THINKING_LEVELS = ["minimal", "low", "medium", "high"] as const;
 // "minimal" isn't accepted by every model (gemini-3.8-flash refused it, 20 Oct), so the default is "low".
 const DEFAULT_THINKING = "low";
 // Question texts are short; a reply this long means the model is repeating itself, so it stops early instead of timing out.
-const QUESTION_MAX_OUTPUT_TOKENS = 8192;
+const QUESTION_MAX_OUTPUT_TOKENS = 4096;
 
 function thinkingLevel(): string {
   const value = process.env.GEMINI_THINKING_LEVEL?.trim().toLowerCase() ?? "";
@@ -28,7 +28,14 @@ function apiKey(): string {
 
 type Content = { type?: string; text?: string; data?: string; mime_type?: string; mimeType?: string };
 
-async function interact(body: Record<string, unknown>, signal: AbortSignal): Promise<Content[]> {
+// How many tokens the model spent thinking and answering, for the server log (numbers only).
+function usageText(json: Record<string, unknown>): string {
+  const usage = isRecord(json.usage) ? json.usage : {};
+  const count = (key: string) => (typeof usage[key] === "number" ? usage[key] : "?");
+  return `thinking ${count("total_thought_tokens")} + answer ${count("total_output_tokens")} tokens`;
+}
+
+async function interact(body: Record<string, unknown>, signal: AbortSignal): Promise<{ content: Content[]; usage: string }> {
   let response: Response;
   try {
     response = await fetch(ENDPOINT, {
@@ -56,8 +63,8 @@ async function interact(body: Record<string, unknown>, signal: AbortSignal): Pro
     const first = Array.isArray(json.errors) && isRecord(json.errors[0]) ? json.errors[0] : {};
     throw errorFor(0, JSON.stringify({ error: first }));
   }
-  if (json.status === "incomplete") throw new VoiceError("bad_reply", "reply was cut short (incomplete)");
-  return outputContent(json);
+  if (json.status === "incomplete") throw new VoiceError("bad_reply", `reply was cut short (incomplete; ${usageText(json)})`);
+  return { content: outputContent(json), usage: usageText(json) };
 }
 
 // The model's output: the content of the last model_output step (older replies: an outputs list).
@@ -113,6 +120,7 @@ export function geminiTranslator(): Translator {
         .filter(Boolean)
         .join(" ");
       const started = Date.now();
+      let usage = "";
       const content = await interact(
         {
           model,
@@ -141,7 +149,12 @@ export function geminiTranslator(): Translator {
           },
         },
         signal
-      ).finally(() => console.info(`Voice service: ${kind} translation into ${to.name}, ${blocks.length} parts, ${Date.now() - started} ms`));
+      )
+        .then((reply) => {
+          usage = reply.usage;
+          return reply.content;
+        })
+        .finally(() => console.info(`Voice service: ${kind} translation into ${to.name}, ${blocks.length} parts, ${Date.now() - started} ms${usage ? `, ${usage}` : ""}`));
       const text = content.filter((item) => typeof item.text === "string").at(-1)?.text;
       if (!text) throw new VoiceError("bad_reply", "no text in translation reply");
       try {
@@ -162,7 +175,7 @@ export function geminiSpeech(): SpeechMaker {
     name: `gemini:${model}`,
     voice,
     async speak({ text }, signal) {
-      const content = await interact(
+      const { content } = await interact(
         {
           model,
           input: [{ type: "user_input", content: [{ type: "text", text, annotations: [{ type: "speech_metadata", style }] }] }],

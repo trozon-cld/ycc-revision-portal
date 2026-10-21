@@ -246,7 +246,6 @@ export function QuestionEditor({
       )}
       {voice && questionId && (
         <LanguagesStrip
-          key={voiceKey(voice)}
           target={{ kind: "question", id: questionId, version: QUESTION_CURRENT_VERSION }}
           dirty={dirty}
           initial={voice.translations}
@@ -487,11 +486,4 @@ function Check({ label, checked, onChange }: { label: string; checked: boolean; 
       {label}
     </label>
   );
-}
-
-// The strip starts again from the server's figures whenever they change (e.g. after saving the English).
-function voiceKey(voice: QuestionVoice): string {
-  const parts = [...voice.translations.map((row) => `${row.language}:${row.revision}:${row.sourceVersion}:${row.status}`)];
-  parts.push(...voice.audio.map((row) => `${row.language}:${row.sourceVersion}:${row.createdAt}`), voice.unavailable ?? "");
-  return parts.join("|");
 }

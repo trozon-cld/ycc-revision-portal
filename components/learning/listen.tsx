@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useDeviceChoice } from "@/components/use-browser-value";
 import { Icon } from "@/components/icons";
 import { SOFT_SHADOW } from "@/components/candidate/buttons";
@@ -70,12 +70,12 @@ export function useListen(
   showLabels: boolean,
   extraButtonClass: string
 ): ListenPlayer | null {
-  const audioRef = useRef<HTMLAudioElement>(null);
+  // The audio element itself, kept in state (a callback ref), so nothing reads a ref while drawing.
+  const [audioEl, setAudioEl] = useState<HTMLAudioElement | null>(null);
   const key = view.map((item) => item.id).join(",");
   const [session, setSession] = useState<Session>({ key, ...IDLE });
   const [notice, setNotice] = useState<Notice | null>(null);
   const [announce, setAnnounce] = useState("");
-  const noticeTimer = useRef<number | undefined>(undefined);
   // A new view: nothing playing, every button back to Listen (the audio element is emptied below).
   if (session.key !== key) {
     setSession({ key, ...IDLE });
@@ -96,39 +96,38 @@ export function useListen(
   const rate = RATES[speed];
 
   useEffect(() => {
-    const audio = audioRef.current;
+    const audio = audioEl;
     if (!audio) return;
     audio.pause();
     audio.removeAttribute("src");
     audio.load();
-  }, [key]);
+  }, [key, audioEl]);
   // Stopped without ending (an answer was checked): the sound stops too.
   useEffect(() => {
-    const audio = audioRef.current;
+    const audio = audioEl;
     if (session.status === "idle" && audio && !audio.paused) audio.pause();
-  }, [session.status]);
+  }, [session.status, audioEl]);
   useEffect(() => {
-    const audio = audioRef.current;
+    const audio = audioEl;
     if (!audio) return;
     audio.defaultPlaybackRate = rate;
     audio.playbackRate = rate;
-  }, [rate]);
+  }, [rate, audioEl]);
   useEffect(() => {
-    const hidden = () => document.visibilityState === "hidden" && audioRef.current?.pause();
+    const hidden = () => document.visibilityState === "hidden" && audioEl?.pause();
     document.addEventListener("visibilitychange", hidden);
-    return () => {
-      document.removeEventListener("visibilitychange", hidden);
-      window.clearTimeout(noticeTimer.current);
-    };
-  }, []);
+    return () => document.removeEventListener("visibilitychange", hidden);
+  }, [audioEl]);
+  // A message goes after a few seconds (a new one starts the time again).
+  useEffect(() => {
+    if (!notice) return;
+    const timer = window.setTimeout(() => setNotice(null), NOTICE_MS);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
 
   if (!setup) return null;
 
-  const show = (text: string, account = false) => {
-    window.clearTimeout(noticeTimer.current);
-    setNotice({ text, account });
-    noticeTimer.current = window.setTimeout(() => setNotice(null), NOTICE_MS);
-  };
+  const show = (text: string, account = false) => setNotice({ text, account });
   const numberOf = (id: string) => view.find((item) => item.id === id)?.number ?? 0;
 
   const playAt = (audio: HTMLAudioElement, id: string) => {
@@ -145,7 +144,7 @@ export function useListen(
 
   // Starts afresh: the bar reads every playable page in view; a footer button reads its own page.
   const start = (source: string, items: ListenItem[]) => {
-    const audio = audioRef.current;
+    const audio = audioEl;
     if (!audio) return;
     if (items.length === 0) return show("Open a page to listen.");
     const playable = items.filter((item) => item.supported && item.id in setup.durations);
@@ -172,7 +171,7 @@ export function useListen(
 
   // Pause or resume the session this button started; otherwise start its own reading.
   const press = (source: string, items: ListenItem[]) => {
-    const audio = audioRef.current;
+    const audio = audioEl;
     if (!audio) return;
     if (session.source === source && (session.status === "playing" || session.status === "loading")) return audio.pause();
     if (session.source === source && session.status === "paused") {
@@ -200,7 +199,7 @@ export function useListen(
 
   const audio = (
     <audio
-      ref={audioRef}
+      ref={setAudioEl}
       preload="none"
       onPlaying={() => setSession((current) => (current.status === "idle" ? current : { ...current, status: "playing" }))}
       onPause={(event) => {
@@ -252,11 +251,11 @@ export function useListen(
   const extras =
     withExtras && on && reading ? (
       <>
-        <ListenClock key={reading} audioRef={audioRef} expected={expected} page={numberOf(reading)} />
+        <ListenClock key={reading} audio={audioEl} expected={expected} page={numberOf(reading)} />
         <button
           type="button"
           onClick={() => {
-            const audio = audioRef.current;
+            const audio = audioEl;
             if (audio) audio.currentTime = Math.max(0, audio.currentTime - BACK_SECONDS);
           }}
           className={extraButtonClass}
@@ -276,7 +275,7 @@ export function useListen(
       return {
         ...control(id, item ? [item] : []),
         reading: isReading,
-        progress: isReading ? <ListenProgress key={id} audioRef={audioRef} expected={expected} /> : null,
+        progress: isReading ? <ListenProgress key={id} audio={audioEl} expected={expected} /> : null,
       };
     },
     audio,
@@ -284,22 +283,21 @@ export function useListen(
 }
 
 // The audio's place and length, followed from its own events so only these small parts redraw while it plays.
-function useAudioClock(audioRef: RefObject<HTMLAudioElement | null>, expected: number) {
+function useAudioClock(audio: HTMLAudioElement | null, expected: number) {
   const [clock, setClock] = useState({ time: 0, duration: 0 });
   useEffect(() => {
-    const audio = audioRef.current;
     if (!audio) return;
     const update = () => setClock({ time: audio.currentTime, duration: Number.isFinite(audio.duration) ? audio.duration : 0 });
     const events = ["timeupdate", "loadedmetadata", "durationchange", "seeked", "emptied"];
     events.forEach((name) => audio.addEventListener(name, update));
     return () => events.forEach((name) => audio.removeEventListener(name, update));
-  }, [audioRef]);
+  }, [audio]);
   const duration = clock.duration || expected;
   return { time: Math.min(clock.time, duration || clock.time), duration };
 }
 
-function ListenProgress({ audioRef, expected }: { audioRef: RefObject<HTMLAudioElement | null>; expected: number }) {
-  const { time, duration } = useAudioClock(audioRef, expected);
+function ListenProgress({ audio, expected }: { audio: HTMLAudioElement | null; expected: number }) {
+  const { time, duration } = useAudioClock(audio, expected);
   const whole = Math.round(duration);
   if (whole <= 0) return null;
   const done = Math.min(Math.round(time), whole);
@@ -318,8 +316,8 @@ function ListenProgress({ audioRef, expected }: { audioRef: RefObject<HTMLAudioE
   );
 }
 
-function ListenClock({ audioRef, expected, page }: { audioRef: RefObject<HTMLAudioElement | null>; expected: number; page: number }) {
-  const { time, duration } = useAudioClock(audioRef, expected);
+function ListenClock({ audio, expected, page }: { audio: HTMLAudioElement | null; expected: number; page: number }) {
+  const { time, duration } = useAudioClock(audio, expected);
   return (
     <span className="whitespace-nowrap text-base font-semibold tabular-nums text-ink" aria-hidden="true">
       Page {page} · {formatClock(time * 1000)} / {formatClock(duration * 1000)}

@@ -59,8 +59,15 @@ export function LanguagesStrip({
   const kind = KINDS[target.kind];
   const itemId = target.id;
   const version = target.version;
-  const [rows, setRows] = useState<Record<string, TranslationSummary>>(() => Object.fromEntries(initial.map((row) => [row.language, row])));
-  const [audio, setAudio] = useState<Record<string, AudioSummary>>(() => Object.fromEntries(initialAudio.map((row) => [row.language, row])));
+  const [rows, setRows] = useState<Record<string, TranslationSummary>>(() => byLanguage(initial));
+  const [audio, setAudio] = useState<Record<string, AudioSummary>>(() => byLanguage(initialAudio));
+  // Fresh figures from the server (after a save or an action): taken in place, so a running "all" keeps its progress.
+  const [fromServer, setFromServer] = useState({ initial, initialAudio });
+  if (fromServer.initial !== initial || fromServer.initialAudio !== initialAudio) {
+    setFromServer({ initial, initialAudio });
+    setRows(byLanguage(initial));
+    setAudio(byLanguage(initialAudio));
+  }
   const [busy, setBusy] = useState<Job | null>(null);
   const [messages, setMessages] = useState<Record<string, string>>({});
   const [confirming, setConfirming] = useState<string[] | null>(null);
@@ -362,4 +369,8 @@ export function LanguagesStrip({
 function listNames(codes: string[]) {
   const names = codes.map((code) => TRANSLATED_LANGUAGES.find((language) => language.code === code)?.name ?? code);
   return names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names[0];
+}
+
+function byLanguage<T extends { language: string }>(list: T[]): Record<string, T> {
+  return Object.fromEntries(list.map((row) => [row.language, row]));
 }
