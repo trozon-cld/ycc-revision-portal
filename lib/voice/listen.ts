@@ -59,11 +59,12 @@ export async function loadReadyAudio(categoryId: string, language: string): Prom
 }
 
 // A short-lived link to one Handbook item's audio for this candidate, or null when they can't hear it
-// (not in their current category, unpublished, a question type without Listen, or no up-to-date audio in their language).
+// (Listen off for their current category, not in it, unpublished, or no up-to-date audio in their language).
 export async function candidateAudioLink(userId: string, itemId: string): Promise<string | null> {
   const { rows } = await pool.query<{ storage_path: string }>(
     `select a.storage_path
      from users u
+     join categories cat on cat.id = u.current_category_id and cat.listen_enabled
      join category_chapters cc on cc.category_id = u.current_category_id
      join chapters c on c.id = cc.chapter_id and c.status = 'published'
      join handbook_items i on i.chapter_id = c.id and i.id = $2
@@ -73,6 +74,7 @@ export async function candidateAudioLink(userId: string, itemId: string): Promis
      union all
      select a.storage_path
      from users u
+     join categories cat on cat.id = u.current_category_id and cat.listen_enabled
      join category_chapters cc on cc.category_id = u.current_category_id
      join chapters c on c.id = cc.chapter_id and c.status = 'published'
      join handbook_items i on i.chapter_id = c.id and i.id = $2

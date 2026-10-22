@@ -27,7 +27,8 @@ const ROW = "flex flex-col gap-0.5 py-3 first:pt-0 last:pb-0";
 const LABEL = "text-base font-semibold text-muted";
 const VALUE = "text-base text-ink [overflow-wrap:anywhere]";
 
-// Account: who you are, what you're studying, until when, your listening language (saved and logged), and signing out.
+// Account: who you are, what you're studying, until when, your listening language (saved and logged; only when
+// Listen is on for the current category), and signing out.
 export default async function AccountPage() {
   const session = await requireRole(["candidate"]);
   const home = await loadCandidateHome(session.sub);
@@ -72,15 +73,17 @@ export default async function AccountPage() {
           )}
         </section>
 
-        <section aria-labelledby="language-heading" className={`${CARD} p-4 lg:p-5`}>
-          <h2 id="language-heading" className={`${SECTION_TITLE}`}>
-            Listening language
-          </h2>
-          <p className="mt-2 text-base leading-relaxed text-ink">
-            Listen reads Handbook pages aloud in this language when audio is available.
-          </p>
-          <LanguageForm current={home.language} />
-        </section>
+        {home.current.listenEnabled && (
+          <section aria-labelledby="language-heading" className={`${CARD} p-4 lg:p-5`}>
+            <h2 id="language-heading" className={`${SECTION_TITLE}`}>
+              Listening language
+            </h2>
+            <p className="mt-2 text-base leading-relaxed text-ink">
+              Listen reads Handbook pages aloud in this language when audio is available.
+            </p>
+            <LanguageForm current={home.language} />
+          </section>
+        )}
 
         <section aria-labelledby="signins-heading" className={`${CARD} p-4 lg:p-5`}>
           <h2 id="signins-heading" className={`${SECTION_TITLE}`}>

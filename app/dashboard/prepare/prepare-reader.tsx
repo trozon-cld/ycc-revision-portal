@@ -132,11 +132,16 @@ export function PrepareReader({
   startPageId: string | null;
   initialTextSize: TextSize;
   covers: BookCovers;
-  listen: { language: string; languageName: string; durations: Record<string, number> };
+  // null when Listen is off for the category: no Listen button and no Reading speed.
+  listen: { language: string; languageName: string; durations: Record<string, number> } | null;
 }) {
-  const { languageName, durations } = listen;
-  const listenSetup = useMemo<ListenSetup>(
-    () => ({ languageName, durations, src: (pageId) => `/api/handbook/audio/${pageId}`, accountHref: "/dashboard/account" }),
+  const languageName = listen?.languageName ?? null;
+  const durations = listen?.durations ?? null;
+  const listenSetup = useMemo<ListenSetup | undefined>(
+    () =>
+      languageName && durations
+        ? { languageName, durations, src: (pageId) => `/api/handbook/audio/${pageId}`, accountHref: "/dashboard/account" }
+        : undefined,
     [languageName, durations]
   );
   const [textSize, setTextSize] = useState<TextSize>(initialTextSize);

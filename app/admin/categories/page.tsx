@@ -25,6 +25,7 @@ interface CategoryRow {
   group_id: string;
   name: string;
   candidate_count: number;
+  listen_enabled: boolean;
 }
 
 interface CoverRow {
@@ -56,7 +57,7 @@ export default async function CategoriesPage() {
     pool.query<GroupRow>(`select id, name from category_groups order by position`),
     // A candidate counts once, whether the category is their assigned one, their current one, or both.
     pool.query<CategoryRow>(
-      `select c.id, c.group_id, c.name,
+      `select c.id, c.group_id, c.name, c.listen_enabled,
               (select count(*) from users u where u.category_id = c.id or u.current_category_id = c.id)::int
                 as candidate_count
        from categories c
@@ -151,8 +152,8 @@ export default async function CategoriesPage() {
               </div>
 
               <Table
-                columns={["Name", "Candidates", "Chapters", "Covers", ""]}
-                widths={["", "md:w-32", "md:w-32", "md:w-40", "md:w-14"]}
+                columns={["Name", "Candidates", "Chapters", "Covers", "Listen", ""]}
+                widths={["", "md:w-32", "md:w-32", "md:w-40", "md:w-24", "md:w-14"]}
                 isEmpty={groupCategories.length === 0}
                 emptyMessage="No categories in this group yet."
               >
@@ -182,6 +183,9 @@ export default async function CategoriesPage() {
                       <Cell label="Covers" nowrap>
                         {describeCovers(covers.front !== null, covers.back !== null)}
                       </Cell>
+                      <Cell label="Listen" nowrap>
+                        <Badge tone={category.listen_enabled ? "success" : "neutral"}>{category.listen_enabled ? "On" : "Off"}</Badge>
+                      </Cell>
                       <Cell kind="actions">
                         <CategoryRowActions
                           id={category.id}
@@ -192,6 +196,7 @@ export default async function CategoriesPage() {
                           otherGroups={groupOptions.filter((option) => option.id !== group.id)}
                           covers={covers}
                           storageReady={storageReady}
+                          listenEnabled={category.listen_enabled}
                         />
                       </Cell>
                     </Row>

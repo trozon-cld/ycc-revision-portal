@@ -12,8 +12,9 @@ export type CandidateBook = {
   startPageId: string | null;
   textSize: TextSize;
   covers: BookCovers;
-  // Listen: the candidate's language and the pages with up-to-date audio in it (item id → length in ms).
-  listen: { language: string; languageName: string; durations: Record<string, number> };
+  // Listen: the candidate's language and the pages with up-to-date audio in it (item id → length in ms);
+  // null when Listen is off for the category.
+  listen: { language: string; languageName: string; durations: Record<string, number> } | null;
 };
 
 // The candidate's current category as they see it (published items in published chapters): one query for
@@ -26,10 +27,11 @@ export async function loadCandidateBook(userId: string): Promise<CandidateBook |
     back_id: string | null;
     reader_text_size: number | null;
     preferred_language: string;
+    listen_enabled: boolean;
     item_id: string | null;
   }>(
     `select c.id as category_id, c.name as category_name, c.front_cover_media_id as front_id,
-            c.back_cover_media_id as back_id, u.reader_text_size, u.preferred_language, hp.item_id
+            c.back_cover_media_id as back_id, u.reader_text_size, u.preferred_language, c.listen_enabled, hp.item_id
      from users u
      join categories c on c.id = u.current_category_id
      left join handbook_progress hp on hp.user_id = u.id and hp.category_id = u.current_category_id
@@ -43,7 +45,7 @@ export async function loadCandidateBook(userId: string): Promise<CandidateBook |
   const language = listeningLanguage(row.preferred_language);
   const [book, durations] = await Promise.all([
     loadPreviewBook({ chapterId: null, categoryId: row.category_id, includeDrafts: false }, { ids: coverIds, thumbIds: coverIds }),
-    loadReadyAudio(row.category_id, language.code),
+    row.listen_enabled ? loadReadyAudio(row.category_id, language.code) : null,
   ]);
   return {
     categoryId: row.category_id,
@@ -58,7 +60,7 @@ export async function loadCandidateBook(userId: string): Promise<CandidateBook |
       back: row.back_id ? (book.media[row.back_id] ?? null) : null,
       homeHref: "/dashboard",
     },
-    listen: { language: language.code, languageName: language.name, durations },
+    listen: durations ? { language: language.code, languageName: language.name, durations } : null,
   };
 }
 

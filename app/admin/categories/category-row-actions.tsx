@@ -6,7 +6,7 @@ import { Field } from "@/components/admin/field";
 import { PanelButton, RowActions, type RowAction } from "@/components/admin/row-actions";
 import { buttonClass, inputClass } from "@/components/admin/styles";
 import { CATEGORY_NAME_MAX_LENGTH } from "@/lib/limits";
-import { createCategory, deleteCategory, moveCategoryToGroup, renameCategory } from "./actions";
+import { createCategory, deleteCategory, moveCategoryToGroup, renameCategory, setCategoryListen } from "./actions";
 import { CategoryChaptersForm, type ChapterOutline } from "./category-chapters-form";
 import { CategoryCoversForm, type CoverChoice } from "./category-covers-form";
 
@@ -51,6 +51,7 @@ export function CategoryRowActions({
   otherGroups,
   covers,
   storageReady,
+  listenEnabled,
 }: {
   id: string;
   name: string;
@@ -60,6 +61,7 @@ export function CategoryRowActions({
   otherGroups: GroupOption[];
   covers: { front: CoverChoice | null; back: CoverChoice | null };
   storageReady: boolean;
+  listenEnabled: boolean;
 }) {
   const hidden = { categoryId: id };
   const countLabel = `${candidateCount} candidate${candidateCount === 1 ? "" : "s"}`;
@@ -115,6 +117,33 @@ export function CategoryRowActions({
         </ActionForm>
       ),
     },
+    listenEnabled
+      ? {
+          label: "Turn Listen off",
+          title: "Turn Listen off?",
+          variant: "confirm",
+          render: (close) => (
+            <ActionForm
+              action={setCategoryListen}
+              hidden={{ categoryId: id, listen: "off" }}
+              submitLabel="Turn off"
+              pendingLabel="Turning off…"
+              successMessage="Listen turned off."
+              onSuccess={close}
+              onCancel={close}
+            >
+              <p className="text-sm">
+                Candidates working in <strong className="font-medium">{name}</strong> won&apos;t see Listen in the Handbook or the
+                listening language on their Account page. Translations and audio are kept, and their language choice is saved.
+              </p>
+            </ActionForm>
+          ),
+        }
+      : {
+          label: "Turn Listen on",
+          run: () => setCategoryListen(undefined, listenForm(id, "on")),
+          successMessage: "Listen turned on.",
+        },
     ...(otherGroups.length > 0 ? [moveToGroupAction()] : []),
     {
       label: "Delete",
@@ -204,4 +233,11 @@ export function CategoryRowActions({
   }
 
   return <RowActions label={`Actions for ${name}`} actions={actions} />;
+}
+
+function listenForm(categoryId: string, listen: "on" | "off"): FormData {
+  const form = new FormData();
+  form.set("categoryId", categoryId);
+  form.set("listen", listen);
+  return form;
 }

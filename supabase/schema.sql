@@ -588,3 +588,6 @@ create table question_audio (
   primary key (question_id, language),
   check ((language = 'en') = (source_revision is null))
 );
+
+-- Listen on or off per category (0032): off hides Listen and the listening language for its candidates.
+alter table categories add column listen_enabled boolean not null default true;

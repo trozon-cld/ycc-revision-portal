@@ -378,3 +378,33 @@ function blockedMessage(candidateCount: number) {
     candidateCount === 1 ? "" : "s"
   }. Their Admins need to move them to another category before it can be deleted.`;
 }
+
+// Listen on or off for one category's candidates (translations, audio and their language choices are kept).
+export async function setCategoryListen(_prevState: CategoryActionState | undefined, formData: FormData): Promise<CategoryActionState> {
+  const session = await requireRole(["superadmin"]);
+
+  const categoryId = String(formData.get("categoryId") ?? "");
+  const listen = formData.get("listen");
+  if (!isUuid(categoryId)) return { error: "Category not found." };
+  if (listen !== "on" && listen !== "off") return { error: "Choose on or off." };
+  const enabled = listen === "on";
+
+  const result = await withTransaction<CategoryActionState>(async (client) => {
+    const { rows } = await client.query<{ name: string; listen_enabled: boolean }>(
+      `select name, listen_enabled from categories where id = $1 for update`,
+      [categoryId]
+    );
+    const category = rows[0];
+    if (!category) return { error: "This category no longer exists." };
+    if (category.listen_enabled === enabled) return { success: true };
+    await client.query(`update categories set listen_enabled = $2 where id = $1`, [categoryId, enabled]);
+    await logActivity(client, session, "category.listen_changed", { type: "category", id: categoryId, label: category.name }, {
+      from: category.listen_enabled ? "On" : "Off",
+      to: enabled ? "On" : "Off",
+    });
+    return { success: true };
+  });
+
+  revalidatePath("/admin/categories");
+  return result;
+}
