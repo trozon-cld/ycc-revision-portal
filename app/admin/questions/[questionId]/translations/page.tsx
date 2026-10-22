@@ -6,7 +6,7 @@ import { isUuid } from "@/lib/ids";
 import { firstParam } from "@/lib/params";
 import { questionRef } from "@/lib/questions/labels";
 import { loadVoiceLanguages } from "@/lib/voice/language-store";
-import { translatedLanguages } from "@/lib/voice/languages";
+import { SOURCE_LANGUAGE, translatedLanguages } from "@/lib/voice/languages";
 import { loadQuestionTranslations } from "@/lib/voice/question-voice";
 import { QuestionTranslationsEditor } from "./question-translations-editor";
 
@@ -23,7 +23,9 @@ export default async function QuestionTranslationsPage({ params, searchParams }:
   const language = translated.find((item) => item.code === asked) ?? translated[0];
   if (!language) notFound();
 
-  const view = await loadQuestionTranslations(questionId, language.code);
+  const english = languages.find((item) => item.code === SOURCE_LANGUAGE);
+  if (!english) notFound();
+  const view = await loadQuestionTranslations(questionId, language.code, english);
   if (!view) notFound();
   const current = view.current;
 

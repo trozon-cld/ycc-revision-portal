@@ -29,9 +29,10 @@ export function readingParts(blocks: Block[], language: VoiceLanguage): string[]
 
 // A question page: the question, "Choose 2 answers" for Multiple answers, then each option with its letter as shown ("Option A. …"). Not the explanation,
 // which only appears after the answer is checked, and not the picture.
-// `pick`: Multiple answers, how many to choose; `areas`: Choose the area, how many outlined areas the picture has;
-// `tap`: Tap the area; `boxes`: Match pictures (the options are then its box labels, read as a list).
-export type QuestionInstruction = { pick?: number; areas?: number; tap?: boolean; boxes?: boolean };
+// `say`: Multiple answers and Choose the area, the instruction sentence with its number, already in the language
+// (English from its fixed wording, others translated with the question); `tap`: Tap the area; `boxes`: Match pictures
+// (the options are then its box labels, read as a list).
+export type QuestionInstruction = { say?: string; tap?: boolean; boxes?: boolean };
 
 export function questionReadingParts(
   stem: string,
@@ -43,8 +44,7 @@ export function questionReadingParts(
   const { question, option } = language.questionLabels;
   return [
     `${sentence(question)}\n${sentence(plainText(stem))}`,
-    ...(instruction.pick ? [sentence(choosePhrase(language, instruction.pick))] : []),
-    ...(instruction.areas ? [sentence(areasPhrase(language, instruction.areas))] : []),
+    ...(instruction.say ? [sentence(instruction.say)] : []),
     ...(instruction.tap ? [sentence(language.questionLabels.tapArea)] : []),
     ...(instruction.boxes
       ? [sentence(language.questionLabels.matchBoxes), [sentence(language.questionLabels.boxesAre), ...options.map((text) => sentence(plainText(text)))].join("\n")]
@@ -52,14 +52,13 @@ export function questionReadingParts(
   ];
 }
 
-// Multiple answers: "Choose 2 answers" in the language's own fixed wording.
-export function choosePhrase(language: VoiceLanguage, pick: number): string {
-  return language.questionLabels.choose.replace("{n}", String(pick));
-}
-
-// Choose the area: "Choose one of the 5 outlined areas on the picture" in the language's own fixed wording.
-export function areasPhrase(language: VoiceLanguage, areas: number): string {
-  return language.questionLabels.chooseArea.replace("{n}", String(areas));
+// The English instruction with its number: "Choose 2 answers" (Multiple answers) or "Choose one of the 5 outlined
+// areas on the picture" (Choose the area); undefined for other types. Other languages translate this sentence.
+export function englishInstruction(english: VoiceLanguage, question: { pick?: number; areas?: number }): string | undefined {
+  const wording = question.pick ? english.questionLabels.choose : question.areas ? english.questionLabels.chooseArea : undefined;
+  const count = question.pick ?? question.areas;
+  if (!wording || !count) return undefined;
+  return wording.replace("{n}", String(count));
 }
 
 // A full stop where a line ends without one, so the voice pauses (headings and list items often have none).

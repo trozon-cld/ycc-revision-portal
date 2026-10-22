@@ -6,8 +6,8 @@ import { withTransaction } from "@/lib/db/transaction";
 import { formatDuration } from "@/lib/format";
 import { questionLogLabel } from "@/lib/questions/labels";
 import { optionLetter } from "@/lib/questions/types/single-text";
-import { findVoiceLanguage, isTranslatedLanguage, languageName } from "./language-store";
-import { SOURCE_LANGUAGE } from "./languages";
+import { findVoiceLanguage, isTranslatedLanguage, languageName, sourceLanguage } from "./language-store";
+import { SOURCE_LANGUAGE, type VoiceLanguage } from "./languages";
 import { speakParts, translateItems, voiceFailure, type PageSpeech } from "./make";
 import {
   audioCanStart,
@@ -20,7 +20,7 @@ import {
   type AudioSummary,
 } from "./page-audio";
 import type { TranslationResult, TranslationSummary } from "./page-translations";
-import { questionReadingParts } from "./reading";
+import { englishInstruction, questionReadingParts } from "./reading";
 import { VoiceError } from "./services";
 import type { TranslationRow } from "./status";
 import {
@@ -56,6 +56,12 @@ export const QUESTION_SOURCE_SQL = `(jsonb_build_object(
   || case when q.type = 'hotspot' then jsonb_build_object('tap', true) else '{}'::jsonb end
   || case when q.type = 'match_pictures' then jsonb_build_object('boxes', true) else '{}'::jsonb end)`;
 
+// What a translation is made from: the English copy, plus for Multiple answers and Choose the area a mark that the
+// instruction sentence was translated with it (0034). Translations from before that show as out of date; audio keeps
+// comparing with QUESTION_SOURCE_SQL, so English audio is unaffected.
+export const TRANSLATION_SOURCE_SQL = `(${QUESTION_SOURCE_SQL}
+  || case when q.content ? 'pick' or q.content ? 'areas' then jsonb_build_object('instruction', true) else '{}'::jsonb end)`;
+
 const NOT_FOUND = "This question no longer exists.";
 const NOT_IN_HANDBOOK = "Listen is only for questions placed in the Handbook. Add this question to a chapter's page order first.";
 const NOT_YET = "Listen isn't available for this question type yet.";
@@ -85,7 +91,7 @@ function target(questionId: string, question: QuestionRow) {
 
 // ---- What the editor shows ----
 
-const TRANSLATION_COLUMNS = `t.language, t.revision, t.status, t.updated_at, t.checked_at, (t.source = ${QUESTION_SOURCE_SQL}) as current`;
+const TRANSLATION_COLUMNS = `t.language, t.revision, t.status, t.updated_at, t.checked_at, (t.source = ${TRANSLATION_SOURCE_SQL}) as current`;
 // Dates arrive as Date from plain columns and as text from JSON (the one-query loader below).
 type TranslationSummaryRow = { language: string; revision: number; status: TranslationRow["status"]; updated_at: Date | string; checked_at: Date | string | null; current: boolean };
 
@@ -123,7 +129,7 @@ async function readVoice(questionId: string): Promise<VoiceRow | null> {
             ${QUESTION_SOURCE_SQL} as source,
             coalesce((select json_agg(json_build_object('language', t.language, 'revision', t.revision, 'status', t.status,
                                                         'updated_at', t.updated_at, 'checked_at', t.checked_at,
-                                                        'current', t.source = ${QUESTION_SOURCE_SQL}, 'texts', t.texts))
+                                                        'current', t.source = ${TRANSLATION_SOURCE_SQL}, 'texts', t.texts))
                       from question_translations t where t.question_id = q.id), '[]') as translations,
             coalesce((select json_agg(json_build_object('language', a.language, 'source_revision', a.source_revision,
                                                         'duration_ms', a.duration_ms, 'byte_size', a.byte_size, 'created_at', a.created_at,
@@ -157,16 +163,18 @@ export type QuestionTranslationsView = {
 };
 
 // Everything the question's Translations page shows for one language, or null when the question doesn't exist.
-export async function loadQuestionTranslations(questionId: string, language: string): Promise<QuestionTranslationsView | null> {
+// `english` (the page has it already) words the instruction sentence of Multiple answers and Choose the area.
+export async function loadQuestionTranslations(questionId: string, language: string, english: VoiceLanguage): Promise<QuestionTranslationsView | null> {
   const row = await readVoice(questionId);
   if (!row) return null;
   const voice = toVoice(row);
   const summary = voice.translations.find((item) => item.language === language);
   const raw = row.translations.find((item) => item.language === language);
   const texts = raw ? (readTexts(raw.texts) ?? { stem: "", options: [] }) : null;
+  const instruction = englishInstruction(english, row.source);
   return {
     refNo: row.ref_no,
-    english: row.source,
+    english: instruction ? { ...row.source, instruction } : row.source,
     voice,
     current: summary && texts ? { summary, texts, optionsChanged: !sameOptions(row.source, texts) } : null,
   };
@@ -180,13 +188,22 @@ export async function generateQuestionTranslation(session: SessionPayload, quest
   const blocked = unavailable(question);
   if (blocked || !question) return { ok: false, error: blocked ?? NOT_FOUND };
   const english = question.source;
+  const instruction = englishInstruction(await sourceLanguage(), english);
 
   let texts: QuestionText;
   try {
-    const sent = [{ id: "stem", texts: [english.stem] }, ...english.options.map((option) => ({ id: option.id, texts: [option.text] }))];
+    const sent = [
+      { id: "stem", texts: [english.stem] },
+      ...(instruction ? [{ id: "instruction", texts: [instruction] }] : []),
+      ...english.options.map((option) => ({ id: option.id, texts: [option.text] })),
+    ];
     const { items } = await translateItems(session.sub, sent, language, "question");
     const byId = new Map(items.map((item) => [item.id, item.texts[0]]));
-    const checked = checkQuestionTexts(english, { stem: byId.get("stem"), options: english.options.map((option) => ({ id: option.id, text: byId.get(option.id) })) });
+    const checked = checkQuestionTexts(english, {
+      stem: byId.get("stem"),
+      options: english.options.map((option) => ({ id: option.id, text: byId.get(option.id) })),
+      instruction: byId.get("instruction"),
+    });
     if (!checked.ok) throw new VoiceError("bad_reply", checked.error);
     texts = checked.texts;
   } catch (error) {
@@ -202,7 +219,7 @@ export async function generateQuestionTranslation(session: SessionPayload, quest
     const { rows } = await client.query<TranslationSummaryRow>(
       `with saved as (
          insert into question_translations (question_id, language, texts, source)
-         select q.id, $2, $3, ${QUESTION_SOURCE_SQL} from questions q where q.id = $1
+         select q.id, $2, $3, ${TRANSLATION_SOURCE_SQL} from questions q where q.id = $1
          on conflict (question_id, language) do update
            set texts = excluded.texts, source = excluded.source, revision = question_translations.revision + 1,
                status = 'draft', checked_by = null, checked_at = null, updated_at = now()
@@ -246,7 +263,7 @@ export async function saveQuestionTranslationEdit(
     const { rows: saved } = await client.query<TranslationSummaryRow>(
       `with saved as (
          update question_translations t
-         set texts = $3, source = ${QUESTION_SOURCE_SQL}, revision = t.revision + 1, status = 'draft', checked_by = null, checked_at = null, updated_at = now()
+         set texts = $3, source = ${TRANSLATION_SOURCE_SQL}, revision = t.revision + 1, status = 'draft', checked_by = null, checked_at = null, updated_at = now()
          from questions q where q.id = t.question_id and t.question_id = $1 and t.language = $2
          returning t.*)
        select ${TRANSLATION_COLUMNS} from saved t join questions q on q.id = t.question_id`,
@@ -298,9 +315,12 @@ async function readAudioSource(client: PoolClient | typeof pool, questionId: str
   const question = await readQuestion(client, questionId, lock);
   const blocked = unavailable(question);
   if (blocked || !question) return { error: blocked ?? NOT_FOUND };
-  if (language === SOURCE_LANGUAGE) return { question, texts: question.source, revision: null };
+  if (language === SOURCE_LANGUAGE) {
+    const instruction = englishInstruction(await sourceLanguage(), question.source);
+    return { question, texts: instruction ? { ...question.source, instruction } : question.source, revision: null };
+  }
   const { rows } = await client.query<{ texts: unknown; revision: number; status: TranslationRow["status"]; current: boolean }>(
-    `select t.texts, t.revision, t.status, (t.source = ${QUESTION_SOURCE_SQL}) as current
+    `select t.texts, t.revision, t.status, (t.source = ${TRANSLATION_SOURCE_SQL}) as current
      from question_translations t join questions q on q.id = t.question_id
      where t.question_id = $1 and t.language = $2 ${lock ? `${lock} of t` : ""}`,
     [questionId, language]
@@ -324,8 +344,7 @@ export async function generateQuestionAudio(session: SessionPayload, questionId:
   let speech: PageSpeech;
   try {
     const parts = questionReadingParts(source.texts.stem, source.texts.options.map((option) => option.text), lang, optionLetter, {
-      pick: source.question.source.pick,
-      areas: source.question.source.areas,
+      say: source.texts.instruction,
       tap: source.question.source.tap,
       boxes: source.question.source.boxes,
     });

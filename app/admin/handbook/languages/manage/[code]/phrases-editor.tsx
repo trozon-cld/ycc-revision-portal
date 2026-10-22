@@ -10,12 +10,12 @@ import { useToast } from "@/components/admin/toast";
 import { NOT_THROUGH_MESSAGE, reachServer } from "@/lib/forms";
 import type { ExpectedPhrases, LanguagePhrases, LanguageResult } from "@/lib/voice/language-admin";
 import { LANGUAGES_MANAGE_PATH } from "@/lib/voice/language-tabs";
-import { PHRASE_KEYS, SOURCE_LANGUAGE, type PhraseKey } from "@/lib/voice/languages";
+import { phraseKeysFor, SOURCE_LANGUAGE, type PhraseKey } from "@/lib/voice/languages";
 import { VOICE_PHRASE_MAX_LENGTH } from "@/lib/voice/limits";
 import { PHRASE_INFO } from "@/lib/voice/phrases";
 import { checkLanguagePhrases, draftLanguagePhrases, publishLanguageNow, saveLanguagePhrases } from "../actions";
 
-type Texts = Record<PhraseKey, string>;
+type Texts = Partial<Record<PhraseKey, string>>;
 type Confirm = "draft" | "live" | null;
 
 // One language's fixed spoken phrases beside the English: draft with the voice service, correct, check, make live.
@@ -26,18 +26,19 @@ export function PhrasesEditor({ view }: { view: LanguagePhrases }) {
   const { language, english, phrases } = view;
   const isSource = language.code === SOURCE_LANGUAGE;
   const isHidden = language.status === "hidden";
-  const expected: ExpectedPhrases = Object.fromEntries(PHRASE_KEYS.flatMap((key) => (phrases[key] ? [[key, phrases[key].text]] : [])));
-  const initialTexts = Object.fromEntries(PHRASE_KEYS.map((key) => [key, phrases[key]?.text ?? ""])) as Texts;
+  const keys = phraseKeysFor(language.code);
+  const expected: ExpectedPhrases = Object.fromEntries(keys.flatMap((key) => (phrases[key] ? [[key, phrases[key].text]] : [])));
+  const initialTexts = Object.fromEntries(keys.map((key) => [key, phrases[key]?.text ?? ""])) as Texts;
   const [texts, setTexts] = useState<Texts>(initialTexts);
   const [problem, setProblem] = useState<{ message: string; conflict?: boolean } | null>(null);
   const [confirming, setConfirming] = useState<Confirm>(null);
   const [running, setRunning] = useState<"draft" | "save" | "check" | "live" | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const written = PHRASE_KEYS.filter((key) => phrases[key]).length;
-  const checked = PHRASE_KEYS.filter((key) => phrases[key]?.status === "checked").length;
-  const total = PHRASE_KEYS.length;
-  const dirty = PHRASE_KEYS.some((key) => texts[key] !== initialTexts[key]);
+  const written = keys.filter((key) => phrases[key]).length;
+  const checked = keys.filter((key) => phrases[key]?.status === "checked").length;
+  const total = keys.length;
+  const dirty = keys.some((key) => texts[key] !== initialTexts[key]);
   const busy = isPending;
   const [leaveTo, setLeaveTo] = useLeaveGuard(dirty);
 
@@ -194,7 +195,7 @@ export function PhrasesEditor({ view }: { view: LanguagePhrases }) {
 
       {(written > 0 || isSource) && (
         <ol className="mt-4 space-y-3">
-          {PHRASE_KEYS.map((key) => {
+          {keys.map((key) => {
             const stored = phrases[key];
             const id = `phrase-${key}`;
             return (
@@ -226,7 +227,7 @@ export function PhrasesEditor({ view }: { view: LanguagePhrases }) {
                       lang={language.code}
                       dir={language.rtl ? "rtl" : "auto"}
                       type="text"
-                      value={texts[key]}
+                      value={texts[key] ?? ""}
                       maxLength={VOICE_PHRASE_MAX_LENGTH}
                       disabled={isHidden}
                       onChange={(event) => setTexts((all) => ({ ...all, [key]: event.target.value }))}

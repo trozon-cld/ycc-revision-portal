@@ -609,7 +609,7 @@ create table voice_languages (
 );
 
 -- The fixed wording Listen reads in each language (box labels, "Question", "Option", the question-type lines).
--- {n} stands for a number in "choose" and "choose_area". Checked once by staff (L2).
+-- {n} stands for a number in "choose" and "choose_area" (English only, 0034). Checked once by staff (L2).
 create table voice_phrases (
   language varchar(10) not null references voice_languages (code),
   phrase varchar(20) not null check (phrase in ('key_point', 'remember', 'question', 'option', 'choose', 'choose_area', 'tap_area', 'match_boxes', 'boxes_are')),
@@ -621,7 +621,9 @@ create table voice_phrases (
   updated_at timestamptz not null default now(),
   primary key (language, phrase),
   check ((status = 'checked') = (checked_at is not null)),
-  check (phrase not in ('choose', 'choose_area') or position('{n}' in text) > 0)
+  check (phrase not in ('choose', 'choose_area') or position('{n}' in text) > 0),
+  -- 0034: the counted phrases are English only; other languages translate that sentence with each question.
+  constraint voice_phrases_counted_english_only check (language = 'en' or phrase not in ('choose', 'choose_area'))
 );
 
 insert into voice_languages (code, name, native_name, translator_note, status) values
@@ -647,8 +649,6 @@ from (values
   ('hi', 'remember', 'याद रखें'),
   ('hi', 'question', 'प्रश्न'),
   ('hi', 'option', 'विकल्प'),
-  ('hi', 'choose', '{n} उत्तर चुनें'),
-  ('hi', 'choose_area', 'चित्र पर बने {n} चिह्नित हिस्सों में से एक चुनें'),
   ('hi', 'tap_area', 'चित्र को देखें और उस जगह पर टैप करें जो प्रश्न का उत्तर है'),
   ('hi', 'match_boxes', 'हर चित्र को उस बॉक्स में रखें जिससे वह मेल खाता है'),
   ('hi', 'boxes_are', 'बॉक्स ये हैं:'),
@@ -656,8 +656,6 @@ from (values
   ('pa', 'remember', 'ਯਾਦ ਰੱਖੋ'),
   ('pa', 'question', 'ਸਵਾਲ'),
   ('pa', 'option', 'ਵਿਕਲਪ'),
-  ('pa', 'choose', '{n} ਜਵਾਬ ਚੁਣੋ'),
-  ('pa', 'choose_area', 'ਤਸਵੀਰ ''ਤੇ ਬਣੇ {n} ਨਿਸ਼ਾਨ ਲੱਗੇ ਹਿੱਸਿਆਂ ਵਿੱਚੋਂ ਇੱਕ ਚੁਣੋ'),
   ('pa', 'tap_area', 'ਤਸਵੀਰ ਨੂੰ ਦੇਖੋ ਅਤੇ ਉਸ ਥਾਂ ''ਤੇ ਟੈਪ ਕਰੋ ਜੋ ਸਵਾਲ ਦਾ ਜਵਾਬ ਹੈ'),
   ('pa', 'match_boxes', 'ਹਰ ਤਸਵੀਰ ਨੂੰ ਉਸ ਡੱਬੇ ਵਿੱਚ ਰੱਖੋ ਜਿਸ ਨਾਲ ਉਹ ਮੇਲ ਖਾਂਦੀ ਹੈ'),
   ('pa', 'boxes_are', 'ਡੱਬੇ ਇਹ ਹਨ:')

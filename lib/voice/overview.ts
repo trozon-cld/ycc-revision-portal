@@ -5,7 +5,7 @@ import { parseQuestionRef, questionLogLabel } from "@/lib/questions/labels";
 import { loadVoiceLanguages } from "./language-store";
 import { SOURCE_LANGUAGE } from "./languages";
 import { QUESTION_CURRENT_VERSION, VOICE_QUESTION_TYPES } from "./question-listen";
-import { QUESTION_SOURCE_SQL } from "./question-voice";
+import { QUESTION_SOURCE_SQL, TRANSLATION_SOURCE_SQL } from "./question-voice";
 import { audioState, translationState, type AudioState, type TranslationState } from "./status";
 
 // Server-only: the Handbook-wide list of text pages and question pages with each language's translation and
@@ -78,10 +78,10 @@ const STATES = `
     select q.id as item_id, l.code,
            case when l.code = '${SOURCE_LANGUAGE}' then null
                 when t.question_id is null then 'missing'
-                when t.source <> ${QUESTION_SOURCE_SQL} then 'outdated'
+                when t.source <> ${TRANSLATION_SOURCE_SQL} then 'outdated'
                 else t.status::text end as t,
            case when l.code = '${SOURCE_LANGUAGE}' then ${QUESTION_CURRENT_VERSION}
-                when t.question_id is not null and t.source = ${QUESTION_SOURCE_SQL} and t.status = 'checked' then t.revision
+                when t.question_id is not null and t.source = ${TRANSLATION_SOURCE_SQL} and t.status = 'checked' then t.revision
                 end as source,
            case when a.source <> ${QUESTION_SOURCE_SQL} then 0
                 when l.code = '${SOURCE_LANGUAGE}' then ${QUESTION_CURRENT_VERSION}
@@ -225,7 +225,7 @@ export async function listLanguageItems(filters: LanguageFilters, page: number):
                         from page_translations t where t.content_page_id = x.id), '[]')
             else
               coalesce((select json_agg(json_build_object('language', t.language,
-                                                          'source_version', case when t.source = ${QUESTION_SOURCE_SQL} then ${QUESTION_CURRENT_VERSION} else 0 end,
+                                                          'source_version', case when t.source = ${TRANSLATION_SOURCE_SQL} then ${QUESTION_CURRENT_VERSION} else 0 end,
                                                           'revision', t.revision, 'status', t.status))
                         from question_translations t join questions q on q.id = t.question_id where t.question_id = x.id), '[]')
             end as translations,

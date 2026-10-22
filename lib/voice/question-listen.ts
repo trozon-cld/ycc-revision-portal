@@ -13,9 +13,11 @@ export function questionTypeHasListen(type: string): boolean {
   return (VOICE_QUESTION_TYPES as readonly string[]).includes(type);
 }
 
-// `pick`: Multiple answers only, how many to choose (read aloud in fixed wording, never translated by the service).
+// `pick`: Multiple answers only, how many to choose.
 // `from`: picture options only, whether the words are the option's label or the picture's description in Media.
-// `areas`: Choose the area only, how many outlined areas (read in fixed wording; the areas themselves aren't read).
+// `areas`: Choose the area only, how many outlined areas (the areas themselves aren't read).
+// `instruction`: Multiple answers and Choose the area, the sentence read after the question ("Choose 2 answers"): in
+// English from the fixed wording, in other languages translated with the question (so the words fit the number).
 // `tap`: Tap the area only (its instruction is fixed wording; the answer spot is never shown or read).
 // `boxes`: Match pictures only; `options` are then its boxes' labels (the pictures aren't read).
 export type QuestionText = {
@@ -25,7 +27,13 @@ export type QuestionText = {
   areas?: number;
   tap?: boolean;
   boxes?: boolean;
+  instruction?: string;
 };
+
+// Multiple answers and Choose the area have an instruction sentence to translate.
+export function needsInstruction(english: Pick<QuestionText, "pick" | "areas">): boolean {
+  return Boolean(english.pick || english.areas);
+}
 
 // The status rules (status.ts) count versions; for questions "1" means made from the current English.
 export const QUESTION_CURRENT_VERSION = 1;
@@ -48,7 +56,7 @@ export function readTexts(value: unknown): QuestionText | null {
     if (!isRecord(option) || typeof option.id !== "string" || typeof option.text !== "string") return null;
     options.push({ id: option.id, text: option.text });
   }
-  return { stem: value.stem, options };
+  return { stem: value.stem, options, ...(typeof value.instruction === "string" ? { instruction: value.instruction } : {}) };
 }
 
 export function sameOptions(english: QuestionText, texts: QuestionText): boolean {
@@ -71,5 +79,9 @@ export function checkQuestionTexts(english: QuestionText, value: unknown): { ok:
     if (text.length > SINGLE_TEXT_LIMITS.optionLength) return { ok: false, error: `${name} must be ${SINGLE_TEXT_LIMITS.optionLength} characters or fewer.` };
     options.push({ id: option.id, text });
   }
-  return { ok: true, texts: { stem, options } };
+  if (!needsInstruction(english)) return { ok: true, texts: { stem, options } };
+  const instruction = cleanLine(raw.instruction ?? "");
+  if (!instruction) return { ok: false, error: "The instruction is empty." };
+  if (instruction.length > SINGLE_TEXT_LIMITS.optionLength) return { ok: false, error: `The instruction must be ${SINGLE_TEXT_LIMITS.optionLength} characters or fewer.` };
+  return { ok: true, texts: { stem, options, instruction } };
 }

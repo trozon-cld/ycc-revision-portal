@@ -13,12 +13,11 @@ import { optionLetter } from "@/lib/questions/types/single-text";
 import { SOURCE_LANGUAGE, translatedLanguages, type VoiceLanguage } from "@/lib/voice/languages";
 import type { TranslationSummary } from "@/lib/voice/page-translations";
 import { QUESTION_CURRENT_VERSION, type QuestionText } from "@/lib/voice/question-listen";
-import { areasPhrase, choosePhrase } from "@/lib/voice/reading";
 import { translationState } from "@/lib/voice/status";
 import { TranslationBadge } from "@/app/admin/handbook/pages/translation-badge";
 import { checkQuestionTranslation, saveQuestionTranslation, translateQuestionLanguage } from "../../voice-actions";
 
-type Texts = { stem: string; options: Record<string, string> };
+type Texts = { stem: string; options: Record<string, string>; instruction: string };
 
 // One language of one question page: the English question and options beside their translation, with save,
 // check and translate again. Only what Listen reads is translated (not the explanation). Remounted after every save.
@@ -47,7 +46,11 @@ export function QuestionTranslationsEditor({
   const lang = languages.find((item) => item.code === language)!;
   const en = languages.find((item) => item.code === SOURCE_LANGUAGE)!;
   const initialTexts = useMemo<Texts>(
-    () => ({ stem: current?.texts.stem ?? "", options: Object.fromEntries((current?.texts.options ?? []).map((option) => [option.id, option.text])) }),
+    () => ({
+      stem: current?.texts.stem ?? "",
+      options: Object.fromEntries((current?.texts.options ?? []).map((option) => [option.id, option.text])),
+      instruction: current?.texts.instruction ?? "",
+    }),
     [current]
   );
   const [texts, setTexts] = useState<Texts>(initialTexts);
@@ -79,7 +82,11 @@ export function QuestionTranslationsEditor({
   function save() {
     if (!summary || !dirty) return;
     setProblem(null);
-    const edited: QuestionText = { stem: texts.stem, options: english.options.map((option) => ({ id: option.id, text: texts.options[option.id] ?? "" })) };
+    const edited: QuestionText = {
+      stem: texts.stem,
+      options: english.options.map((option) => ({ id: option.id, text: texts.options[option.id] ?? "" })),
+      ...(english.instruction ? { instruction: texts.instruction } : {}),
+    };
     startSaving(async () => {
       const result = await reachServer(() => saveQuestionTranslation({ questionId, language, expectedRevision: summary.revision, texts: edited }));
       if (!result) setProblem({ message: NOT_THROUGH_MESSAGE });
@@ -152,7 +159,7 @@ export function QuestionTranslationsEditor({
               : dirty
                 ? "Unsaved changes"
                 : summary
-                  ? stateLine(state, summary)
+                  ? stateLine(state, summary, Boolean(english.instruction && !current?.texts.instruction))
                   : "No translation yet."}
           </p>
         </div>
@@ -218,19 +225,6 @@ export function QuestionTranslationsEditor({
         </p>
       )}
 
-      {english.pick && (
-        <p className="mt-3 text-sm text-slate-700">
-          After the question, Listen reads &ldquo;{choosePhrase(en, english.pick)}&rdquo; in fixed wording:{" "}
-          <span lang={lang.code}>&ldquo;{choosePhrase(lang, english.pick)}&rdquo;</span> in {lang.name}. It isn&apos;t translated by the voice service.
-        </p>
-      )}
-      {english.areas && (
-        <p className="mt-3 text-sm text-slate-700">
-          After the question, Listen reads &ldquo;{areasPhrase(en, english.areas)}&rdquo; in fixed wording:{" "}
-          <span lang={lang.code}>&ldquo;{areasPhrase(lang, english.areas)}&rdquo;</span> in {lang.name}. The areas themselves aren&apos;t read, and
-          this isn&apos;t translated by the voice service.
-        </p>
-      )}
       {english.boxes && (
         <p className="mt-3 text-sm text-slate-700">
           After the question, Listen reads &ldquo;{en.questionLabels.matchBoxes}. {en.questionLabels.boxesAre}&rdquo; in
@@ -265,6 +259,19 @@ export function QuestionTranslationsEditor({
               onChange={(value) => setTexts((all) => ({ ...all, stem: value }))}
             />
           </li>
+          {english.instruction && (
+            <li className={`${cardClass} p-3`}>
+              <TextRow
+                id="tr-instruction"
+                label="Instruction (read after the question)"
+                english={english.instruction}
+                language={lang.code}
+                languageName={lang.name}
+                value={texts.instruction}
+                onChange={(value) => setTexts((all) => ({ ...all, instruction: value }))}
+              />
+            </li>
+          )}
           {english.options.map((option, index) => (
             <li key={option.id} className={`${cardClass} p-3`}>
               <TextRow
@@ -339,8 +346,10 @@ function TextRow({
   );
 }
 
-function stateLine(state: ReturnType<typeof translationState>, summary: TranslationSummary): string {
+// `noInstruction`: made before the instruction sentence was translated with the question (0034).
+function stateLine(state: ReturnType<typeof translationState>, summary: TranslationSummary, noInstruction: boolean): string {
   if (state === "checked") return `Checked ${formatUkDateTime(summary.checkedAt ?? summary.updatedAt)}.`;
+  if (state === "outdated" && noInstruction) return "Made before the instruction was translated with the question. Translate it again, or fill in the instruction and save.";
   if (state === "outdated") return "The English question or options have changed since this was translated.";
   return `Draft, last changed ${formatUkDateTime(summary.updatedAt)}. Not checked yet.`;
 }

@@ -50,7 +50,7 @@ export async function isTranslatedLanguage(code: unknown, scope: LanguageScope =
 
 // English, which always exists and is always live (the database insists).
 export async function sourceLanguage(): Promise<VoiceLanguage> {
-  const found = await findVoiceLanguage(SOURCE_LANGUAGE, "candidate");
+  const found = await findVoiceLanguage(SOURCE_LANGUAGE);
   if (!found) throw new Error("The English voice language is missing a spoken phrase");
   return found;
 }

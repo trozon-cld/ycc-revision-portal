@@ -7,7 +7,7 @@ import { getSignedUrls } from "@/lib/storage/storage";
 import { findVoiceLanguage, languageName } from "./language-store";
 import { SOURCE_LANGUAGE } from "./languages";
 import { VOICE_QUESTION_TYPES } from "./question-listen";
-import { QUESTION_SOURCE_SQL } from "./question-voice";
+import { QUESTION_SOURCE_SQL, TRANSLATION_SOURCE_SQL } from "./question-voice";
 
 // Server-only: what candidates hear (V5; question pages V6b). Only up-to-date audio in the candidate's own language,
 // for published pages and questions in their current category; nothing here is logged except changing the language.
@@ -30,7 +30,7 @@ const READY_QUESTION_AUDIO = `
    and (a.language = '${SOURCE_LANGUAGE}'
         or exists (select 1 from question_translations t
                    where t.question_id = q.id and t.language = a.language and t.status = 'checked'
-                     and t.source = ${QUESTION_SOURCE_SQL} and a.source_revision = t.revision)))`;
+                     and t.source = ${TRANSLATION_SOURCE_SQL} and a.source_revision = t.revision)))`;
 
 // The Handbook items in a category with audio ready in this language (only while it is live), and each one's length in ms.
 export async function loadReadyAudio(categoryId: string, language: string): Promise<Record<string, number>> {

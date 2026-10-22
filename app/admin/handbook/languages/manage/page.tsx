@@ -10,7 +10,7 @@ import { countOf } from "@/lib/format";
 import { LANGUAGE_CATALOGUE, speakerShare } from "@/lib/voice/language-catalogue";
 import { listManagedLanguages, type ManagedLanguage } from "@/lib/voice/language-admin";
 import { LANGUAGE_TABS, LANGUAGES_MANAGE_PATH } from "@/lib/voice/language-tabs";
-import { PHRASE_KEYS, type LanguageStatus } from "@/lib/voice/languages";
+import { phraseKeysFor, type LanguageStatus } from "@/lib/voice/languages";
 import { AddLanguageButton, LanguageRowActions } from "./language-row-actions";
 
 export const metadata: Metadata = { title: "Languages" };
@@ -80,7 +80,7 @@ export default async function ManageLanguagesPage() {
                 name={language.name}
                 status={language.status}
                 candidates={language.candidates}
-                ready={language.phrases === PHRASE_KEYS.length && language.checked === PHRASE_KEYS.length}
+                ready={language.phrases === phraseKeysFor(language.code).length && language.checked === phraseKeysFor(language.code).length}
               />
             </Cell>
           </Row>
@@ -91,7 +91,7 @@ export default async function ManageLanguagesPage() {
 }
 
 function PhraseState({ language }: { language: ManagedLanguage }) {
-  const total = PHRASE_KEYS.length;
+  const total = phraseKeysFor(language.code).length;
   if (language.phrases === 0) return <Badge tone="warning">Not drafted yet</Badge>;
   if (language.phrases < total) return <Badge tone="warning">{`${language.phrases} of ${total} written`}</Badge>;
   if (language.checked === total) return <Badge tone="success">All checked</Badge>;

@@ -12,10 +12,10 @@ export type VoiceLanguage = {
   translatorNote: string | null;
   // How a Key point / Remember box starts when read aloud.
   boxLabels: { "key-point": string; remember: string };
-  // How a question page's question and each option start when read aloud ("Option A"); `choose` is the
-  // Multiple answers instruction and `chooseArea` the Choose the area one, {n} being how many; `tapArea` Tap the area's;
-  // `matchBoxes` and `boxesAre` Match pictures' (the box labels follow).
-  questionLabels: { question: string; option: string; choose: string; chooseArea: string; tapArea: string; matchBoxes: string; boxesAre: string };
+  // How a question page's question and each option start when read aloud ("Option A"); `tapArea` is Tap the area's
+  // instruction, `matchBoxes` and `boxesAre` Match pictures' (the box labels follow). English only: `choose` (Multiple
+  // answers) and `chooseArea` (Choose the area), {n} being how many; other languages translate that sentence with each question.
+  questionLabels: { question: string; option: string; choose?: string; chooseArea?: string; tapArea: string; matchBoxes: string; boxesAre: string };
 };
 
 // What the browser needs to name a language.
@@ -23,10 +23,16 @@ export type LanguageName = Pick<VoiceLanguage, "code" | "name" | "nativeName">;
 
 export const SOURCE_LANGUAGE = "en";
 
-// The fixed spoken phrases every language needs (voice_phrases.phrase); {n} is a number in `choose` and `choose_area`.
+// The fixed spoken phrases (voice_phrases.phrase). The two with a number ({n}) are English only (0034): every other
+// language gets those sentences translated with each question, so the words around the number fit it.
 export const PHRASE_KEYS = ["key_point", "remember", "question", "option", "choose", "choose_area", "tap_area", "match_boxes", "boxes_are"] as const;
 export type PhraseKey = (typeof PHRASE_KEYS)[number];
 export const COUNTED_PHRASES: readonly PhraseKey[] = ["choose", "choose_area"];
+
+// The phrases a language needs: all of them for English, the others without the counted ones.
+export function phraseKeysFor(code: string): PhraseKey[] {
+  return code === SOURCE_LANGUAGE ? [...PHRASE_KEYS] : PHRASE_KEYS.filter((key) => !COUNTED_PHRASES.includes(key));
+}
 
 // A language from its database row and phrases, or null when a phrase is missing.
 export function toVoiceLanguage(
@@ -34,7 +40,7 @@ export function toVoiceLanguage(
   phrases: Partial<Record<string, string>>
 ): VoiceLanguage | null {
   const p = (key: PhraseKey) => phrases[key]?.trim() ?? "";
-  if (PHRASE_KEYS.some((key) => !p(key))) return null;
+  if (phraseKeysFor(row.code).some((key) => !p(key))) return null;
   return {
     code: row.code,
     name: row.name,
@@ -45,8 +51,7 @@ export function toVoiceLanguage(
     questionLabels: {
       question: p("question"),
       option: p("option"),
-      choose: p("choose"),
-      chooseArea: p("choose_area"),
+      ...(row.code === SOURCE_LANGUAGE ? { choose: p("choose"), chooseArea: p("choose_area") } : {}),
       tapArea: p("tap_area"),
       matchBoxes: p("match_boxes"),
       boxesAre: p("boxes_are"),

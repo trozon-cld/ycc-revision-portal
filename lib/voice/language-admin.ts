@@ -5,7 +5,7 @@ import { pool } from "@/lib/db/pool";
 import { withTransaction } from "@/lib/db/transaction";
 import { countOf } from "@/lib/format";
 import { LANGUAGE_CATALOGUE, type CatalogueLanguage } from "./language-catalogue";
-import { PHRASE_KEYS, SOURCE_LANGUAGE, type LanguageStatus, type PhraseKey } from "./languages";
+import { phraseKeysFor, SOURCE_LANGUAGE, type LanguageStatus, type PhraseKey } from "./languages";
 import { translateItems, voiceFailure } from "./make";
 import { checkPhraseTexts, PHRASE_INFO, type PhraseTexts } from "./phrases";
 
@@ -113,8 +113,8 @@ async function lockPhrases(client: PoolClient, code: string): Promise<Map<Phrase
   return new Map(rows.map((row) => [row.phrase, { text: row.text, status: row.status }]));
 }
 
-function matchesExpected(stored: Map<PhraseKey, { text: string }>, expected: ExpectedPhrases): boolean {
-  return PHRASE_KEYS.every((key) => (stored.get(key)?.text ?? "") === (expected[key] ?? ""));
+function matchesExpected(code: string, stored: Map<PhraseKey, { text: string }>, expected: ExpectedPhrases): boolean {
+  return phraseKeysFor(code).every((key) => (stored.get(key)?.text ?? "") === (expected[key] ?? ""));
 }
 
 function target(language: { name: string }) {
@@ -155,17 +155,18 @@ export async function draftPhrases(session: SessionPayload, code: string, expect
   const view = await loadLanguagePhrases(code);
   if (!view) return { ok: false, error: NOT_FOUND };
   if (view.language.status === "hidden") return { ok: false, error: "Show this language again before changing its phrases." };
-  if (PHRASE_KEYS.some((key) => !view.english[key])) return { ok: false, error: "The English phrases are incomplete." };
+  const keys = phraseKeysFor(code);
+  if (keys.some((key) => !view.english[key])) return { ok: false, error: "The English phrases are incomplete." };
 
   let texts: PhraseTexts;
   try {
     const { items } = await translateItems(
       session.sub,
-      PHRASE_KEYS.map((key) => ({ id: key, texts: [view.english[key]] })),
+      keys.map((key) => ({ id: key, texts: [view.english[key] ?? ""] })),
       { code, name: view.language.name, nativeName: view.language.nativeName, translatorNote: view.language.translatorNote },
       "phrases"
     );
-    const checked = checkPhraseTexts(Object.fromEntries(items.map((item) => [item.id, item.texts[0]])));
+    const checked = checkPhraseTexts(Object.fromEntries(items.map((item) => [item.id, item.texts[0]])), keys);
     if (!checked.ok) return { ok: false, error: `The voice service's draft wasn't usable (${checked.error}) Nothing was saved. Please try again.` };
     texts = checked.texts;
   } catch (error) {
@@ -176,7 +177,7 @@ export async function draftPhrases(session: SessionPayload, code: string, expect
     const language = await lockLanguage(client, code);
     if (!language) return { ok: false, error: NOT_FOUND };
     if (language.status === "hidden") return { ok: false, error: "Show this language again before changing its phrases." };
-    if (!matchesExpected(await lockPhrases(client, code), expected)) return { ok: false, error: CONFLICT, conflict: true };
+    if (!matchesExpected(code, await lockPhrases(client, code), expected)) return { ok: false, error: CONFLICT, conflict: true };
     await writePhrases(client, code, texts, session.sub);
     await logActivity(client, session, "language.phrases_drafted", target(language), {});
     return { ok: true, message: `${language.name} phrases drafted. Read them through, correct them, then mark them as checked.` };
@@ -185,15 +186,16 @@ export async function draftPhrases(session: SessionPayload, code: string, expect
 
 // Saves corrected phrases; each changed one goes back to draft. Nothing is logged when nothing changed.
 export async function savePhrases(session: SessionPayload, code: string, expected: ExpectedPhrases, input: unknown): Promise<LanguageResult> {
-  const checked = checkPhraseTexts(input);
+  const keys = phraseKeysFor(code);
+  const checked = checkPhraseTexts(input, keys);
   if (!checked.ok) return checked;
   return withTransaction<LanguageResult>(async (client) => {
     const language = await lockLanguage(client, code);
     if (!language) return { ok: false, error: NOT_FOUND };
     if (language.status === "hidden") return { ok: false, error: "Show this language again before changing its phrases." };
     const stored = await lockPhrases(client, code);
-    if (!matchesExpected(stored, expected)) return { ok: false, error: CONFLICT, conflict: true };
-    const changed = PHRASE_KEYS.filter((key) => stored.get(key)?.text !== checked.texts[key]);
+    if (!matchesExpected(code, stored, expected)) return { ok: false, error: CONFLICT, conflict: true };
+    const changed = keys.filter((key) => stored.get(key)?.text !== checked.texts[key]);
     if (changed.length === 0) return { ok: true, message: "No changes to save." };
     await writePhrases(client, code, Object.fromEntries(changed.map((key) => [key, checked.texts[key]])), session.sub);
     await logActivity(client, session, "language.phrases_edited", target(language), {
@@ -203,14 +205,14 @@ export async function savePhrases(session: SessionPayload, code: string, expecte
   });
 }
 
-// Marks every phrase as checked (all nine must be there).
+// Marks every phrase as checked (all of the language's phrases must be there).
 export async function checkPhrases(session: SessionPayload, code: string, expected: ExpectedPhrases): Promise<LanguageResult> {
   return withTransaction<LanguageResult>(async (client) => {
     const language = await lockLanguage(client, code);
     if (!language) return { ok: false, error: NOT_FOUND };
     const stored = await lockPhrases(client, code);
-    if (!matchesExpected(stored, expected)) return { ok: false, error: CONFLICT, conflict: true };
-    if (PHRASE_KEYS.some((key) => !stored.has(key))) return { ok: false, error: "Every phrase needs wording before it can be checked." };
+    if (!matchesExpected(code, stored, expected)) return { ok: false, error: CONFLICT, conflict: true };
+    if (phraseKeysFor(code).some((key) => !stored.has(key))) return { ok: false, error: "Every phrase needs wording before it can be checked." };
     const { rowCount } = await client.query(
       `update voice_phrases set status = 'checked', checked_by = $2, checked_at = now() where language = $1 and status = 'draft'`,
       [code, session.sub]
@@ -221,7 +223,7 @@ export async function checkPhrases(session: SessionPayload, code: string, expect
   });
 }
 
-// Draft → live: candidates can choose it. Only with all nine phrases checked.
+// Draft → live: candidates can choose it. Only with all its phrases checked.
 export async function publishLanguage(session: SessionPayload, code: string): Promise<LanguageResult> {
   return withTransaction<LanguageResult>(async (client) => {
     const language = await lockLanguage(client, code);
@@ -229,8 +231,8 @@ export async function publishLanguage(session: SessionPayload, code: string): Pr
     if (language.status === "live") return { ok: true, message: `${language.name} is already live.` };
     if (language.status === "hidden") return { ok: false, error: "Show this language again first." };
     const stored = await lockPhrases(client, code);
-    if (PHRASE_KEYS.some((key) => stored.get(key)?.status !== "checked")) {
-      return { ok: false, error: "Check all nine spoken phrases before making the language live." };
+    if (phraseKeysFor(code).some((key) => stored.get(key)?.status !== "checked")) {
+      return { ok: false, error: "Check all the spoken phrases before making the language live." };
     }
     await client.query(`update voice_languages set status = 'live', updated_at = now() where code = $1`, [code]);
     await logActivity(client, session, "language.published", target(language), {});

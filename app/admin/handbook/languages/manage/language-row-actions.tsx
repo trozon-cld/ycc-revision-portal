@@ -56,7 +56,7 @@ export function LanguageRowActions({
   name: string;
   status: LanguageStatus;
   candidates: number;
-  // All nine spoken phrases written and checked.
+  // All its spoken phrases written and checked.
   ready: boolean;
 }) {
   const hidden = { code };
