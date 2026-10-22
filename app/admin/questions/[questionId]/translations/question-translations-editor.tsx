@@ -329,9 +329,9 @@ function TextRow({
             {languageName}
           </label>
           {multiline ? (
-            <textarea id={id} lang={language} value={value} rows={3} onChange={(event) => onChange(event.target.value)} className={textareaClass} />
+            <textarea id={id} lang={language} dir="auto" value={value} rows={3} onChange={(event) => onChange(event.target.value)} className={textareaClass} />
           ) : (
-            <input id={id} lang={language} type="text" value={value} onChange={(event) => onChange(event.target.value)} className={inputClass} />
+            <input id={id} lang={language} dir="auto" type="text" value={value} onChange={(event) => onChange(event.target.value)} className={inputClass} />
           )}
         </div>
       </div>

@@ -309,11 +309,11 @@ function BlockRow({
   const value = block.type === "list" ? (texts ?? []).join("\n") : (texts?.[0] ?? "");
   const field =
     block.type === "heading" || block.type === "picture" ? (
-      <input id={id} lang={language} type="text" value={value} onChange={(event) => onChange([event.target.value])} className={inputClass} />
+      <input id={id} lang={language} dir="auto" type="text" value={value} onChange={(event) => onChange([event.target.value])} className={inputClass} />
     ) : (
       <textarea
         id={id}
-        lang={language}
+        lang={language} dir="auto"
         value={value}
         rows={block.type === "list" ? Math.max(3, block.items.length + 1) : 4}
         onChange={(event) => onChange(block.type === "list" ? event.target.value.split("\n") : [event.target.value])}

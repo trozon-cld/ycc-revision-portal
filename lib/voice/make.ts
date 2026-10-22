@@ -7,7 +7,7 @@ import { SOURCE_LANGUAGE, type VoiceLanguage } from "./languages";
 import { VOICE_REQUEST_TIMEOUT_MS } from "./limits";
 import { takeVoiceRequests, VoiceQuotaError } from "./quota";
 import { readingParts, speechChunks } from "./reading";
-import { VoiceError, type SpeechMaker, type TranslationKind, type Translator } from "./services";
+import { VoiceError, type SpeechMaker, type TranslationKind, type Translator, type TranslatorLanguage } from "./services";
 import { applyTranslation, matchTranslation, toTranslatable, type TranslatableBlock } from "./translation";
 
 // The editors' two jobs: translate a page or question, and turn one (English or translated) into one MP3.
@@ -51,16 +51,17 @@ async function language(code: string): Promise<VoiceLanguage> {
 export async function translateItems(
   userId: string,
   items: TranslatableBlock[],
-  to: string,
+  to: string | TranslatorLanguage,
   kind: TranslationKind = "page"
 ): Promise<{ items: TranslatableBlock[]; provider: string }> {
-  if (to === SOURCE_LANGUAGE) throw new VoiceError("failed", "English is the source and isn't translated");
+  const target = typeof to === "string" ? await language(to) : to;
+  if (target.code === SOURCE_LANGUAGE) throw new VoiceError("failed", "English is the source and isn't translated");
   if (items.length === 0) throw new VoiceError("failed", "there is no text to translate");
   const { translator } = services();
   await takeVoiceRequests(userId, "translate", 1);
   const sent = items.map((item, index) => ({ id: String(index + 1), texts: item.texts }));
-  const [from, toLanguage] = await Promise.all([language(SOURCE_LANGUAGE), language(to)]);
-  const reply = await withTimeout((signal) => translator.translate({ from, to: toLanguage, blocks: sent, kind }, signal));
+  const from = await language(SOURCE_LANGUAGE);
+  const reply = await withTimeout((signal) => translator.translate({ from, to: target, blocks: sent, kind }, signal));
   const result = matchTranslation(sent, reply);
   if (!result.ok) throw new VoiceError("bad_reply", result.error);
   return { items: result.items.map((item, index) => ({ id: items[index].id, texts: item.texts })), provider: translator.name };

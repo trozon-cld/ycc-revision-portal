@@ -3,12 +3,16 @@ import type { TranslatableBlock } from "./translation";
 
 // The two services behind translation and audio. Gemini today; Google Cloud Translation and Text-to-Speech
 // (or any other) later means one new file implementing these, chosen with VOICE_PROVIDER.
-// What is being translated: a Handbook page's blocks, or a question page (the question, then its options).
-export type TranslationKind = "page" | "question";
+// What is being translated: a Handbook page's blocks, a question page (the question, then its options), or a
+// language's fixed spoken phrases (Manage languages).
+export type TranslationKind = "page" | "question" | "phrases";
+
+// What the translator needs to know about a language (a new one may not have its phrases yet).
+export type TranslatorLanguage = Pick<VoiceLanguage, "code" | "name" | "nativeName" | "translatorNote">;
 
 export interface Translator {
   readonly name: string;
-  translate(request: { from: VoiceLanguage; to: VoiceLanguage; blocks: TranslatableBlock[]; kind?: TranslationKind }, signal: AbortSignal): Promise<unknown>;
+  translate(request: { from: TranslatorLanguage; to: TranslatorLanguage; blocks: TranslatableBlock[]; kind?: TranslationKind }, signal: AbortSignal): Promise<unknown>;
 }
 
 export type SpeechAudio = { bytes: Uint8Array; mimeType: string };

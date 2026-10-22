@@ -12,8 +12,8 @@ const DEFAULT_STYLE = "Calm, clear and steady, at a moderate teaching pace";
 const THINKING_LEVELS = ["minimal", "low", "medium", "high"] as const;
 // "minimal" isn't accepted by every model (gemini-3.8-flash refused it, 20 Oct), so the default is "low".
 const DEFAULT_THINKING = "low";
-// Question texts are short; a reply this long means the model is repeating itself, so it stops early instead of timing out.
-const QUESTION_MAX_OUTPUT_TOKENS = 4096;
+// Question texts and phrases are short; a reply this long means the model is repeating itself, so it stops early instead of timing out.
+const SHORT_TEXT_MAX_OUTPUT_TOKENS = 4096;
 
 function thinkingLevel(): string {
   const value = process.env.GEMINI_THINKING_LEVEL?.trim().toLowerCase() ?? "";
@@ -109,7 +109,9 @@ export function geminiTranslator(): Translator {
       // Question pages are sent as plain short texts: nothing says question, option or answer, so the model
       // has no reason to work one out.
       const instruction = [
-        kind === "question"
+        kind === "phrases"
+          ? `Translate these short phrases, which a read-aloud feature says in construction safety training, from ${from.name} into ${to.name} (${to.nativeName}). Your only task is to translate each text separately. Keep {n} exactly as written: it is replaced by a number. Return only the translations.`
+          : kind === "question"
           ? `Translate these short texts from construction safety training from ${from.name} into ${to.name} (${to.nativeName}). Your only task is to translate each text separately and exactly as written. Return only the translations.`
           : `Translate study material for construction site workers from ${from.name} into ${to.name} (${to.nativeName}).`,
         to.translatorNote ?? "",
@@ -127,7 +129,7 @@ export function geminiTranslator(): Translator {
           input: `${instruction}\n\nBlocks (JSON):\n${JSON.stringify(blocks)}`,
           generation_config: {
             thinking_level: thinkingLevel(),
-            ...(kind === "question" ? { max_output_tokens: QUESTION_MAX_OUTPUT_TOKENS } : {}),
+            ...(kind !== "page" ? { max_output_tokens: SHORT_TEXT_MAX_OUTPUT_TOKENS } : {}),
           },
           response_format: {
             type: "text",

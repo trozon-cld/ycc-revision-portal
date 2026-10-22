@@ -94,3 +94,10 @@ export const LANGUAGE_CATALOGUE: readonly CatalogueLanguage[] = [
   { code: "sd", name: "Sindhi", nativeName: "سنڌي", speakers: null, rtl: true },
 ];
 
+
+// Share of England's residents aged 3+ with this as their main language, for the Add language list.
+export function speakerShare(language: CatalogueLanguage): string {
+  if (language.speakers === null) return "not counted separately";
+  const percent = (language.speakers / CENSUS_RESIDENTS) * 100;
+  return percent < 0.01 ? "under 0.01%" : `${percent.toFixed(2)}%`;
+}

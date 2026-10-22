@@ -8,6 +8,8 @@ import { firstParam } from "@/lib/params";
 import { listChapterOptions } from "@/lib/questions/queries";
 import { loadVoiceLanguages } from "@/lib/voice/language-store";
 import { SOURCE_LANGUAGE } from "@/lib/voice/languages";
+import { LANGUAGE_TABS, LANGUAGES_PAGES_PATH } from "@/lib/voice/language-tabs";
+import { PageTabs } from "@/components/admin/page-tabs";
 import {
   LANGUAGE_KIND_LABELS,
   LANGUAGE_KINDS,
@@ -32,7 +34,7 @@ import { AudioBadge, TranslationBadge } from "../pages/translation-badge";
 
 export const metadata: Metadata = { title: "Languages and audio" };
 
-const BASE_PATH = "/admin/handbook/languages";
+const BASE_PATH = LANGUAGES_PAGES_PATH;
 
 export default async function LanguagesPage({ searchParams }: PageProps<"/admin/handbook/languages">) {
   await requireRole(CONTENT_EDITORS);
@@ -75,6 +77,7 @@ export default async function LanguagesPage({ searchParams }: PageProps<"/admin/
         title="Languages and audio"
         description={isFiltered ? `${matching.toLocaleString("en-GB")} of ${plural(total, "page")} match your filters` : pagesLabel}
       />
+      <PageTabs label="Languages and audio" tabs={LANGUAGE_TABS} current={LANGUAGES_PAGES_PATH} />
 
       <ul aria-label="Totals" className="mb-2 grid gap-2 sm:grid-cols-3">
         {languages.map((language) => {

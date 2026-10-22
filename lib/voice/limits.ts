@@ -6,3 +6,5 @@ export const VOICE_REQUEST_TIMEOUT_MS = 90_000;
 export const SPEECH_PART_CHARS = 3000;
 // Stored audio: mono MP3 at this bitrate (speech stays clear; about 0.36 MB a minute).
 export const MP3_KBPS = 48;
+// Longest fixed spoken phrase (voice_phrases.text).
+export const VOICE_PHRASE_MAX_LENGTH = 300;
