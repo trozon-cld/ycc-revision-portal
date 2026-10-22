@@ -178,7 +178,9 @@ export function geminiSpeech(): SpeechMaker {
   return {
     name: `gemini:${model}`,
     voice,
-    async speak({ text }, signal) {
+    async speak({ text, language }, signal) {
+      // One line per part in the server window, like translations (no text or key).
+      const started = Date.now();
       const { content } = await interact(
         {
           model,
@@ -187,7 +189,7 @@ export function geminiSpeech(): SpeechMaker {
           generation_config: { speech_config: [{ voice }] },
         },
         signal
-      );
+      ).finally(() => console.info(`Voice service: speech in ${language.name}, ${text.length} characters, ${model}, voice ${voice}, ${Date.now() - started} ms`));
       const audio = content.filter((item) => item.type === "audio" && typeof item.data === "string").at(-1);
       if (!audio?.data) throw new VoiceError("bad_reply", "no audio in speech reply");
       const bytes = Buffer.from(audio.data, "base64");

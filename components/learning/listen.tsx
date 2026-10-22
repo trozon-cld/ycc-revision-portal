@@ -6,6 +6,7 @@ import { useDeviceChoice } from "@/components/use-browser-value";
 import { Icon } from "@/components/icons";
 import { SOFT_SHADOW } from "@/components/candidate/buttons";
 import { formatClock, formatDuration } from "@/lib/format";
+import { clearAudio, dropSource, playFromStart, setPlaybackRate, stepBack } from "./audio-element";
 
 // Listen (V5, question pages V6b): the Handbook reads pages aloud in the candidate's language. The bar's Listen reads
 // every page in view that has audio (left, then right) and stops; on spreads each page also has its own Listen in its footer. Only the
@@ -96,11 +97,7 @@ export function useListen(
   const rate = RATES[speed];
 
   useEffect(() => {
-    const audio = audioEl;
-    if (!audio) return;
-    audio.pause();
-    audio.removeAttribute("src");
-    audio.load();
+    if (audioEl) clearAudio(audioEl);
   }, [key, audioEl]);
   // Stopped without ending (an answer was checked): the sound stops too.
   useEffect(() => {
@@ -108,10 +105,7 @@ export function useListen(
     if (session.status === "idle" && audio && !audio.paused) audio.pause();
   }, [session.status, audioEl]);
   useEffect(() => {
-    const audio = audioEl;
-    if (!audio) return;
-    audio.defaultPlaybackRate = rate;
-    audio.playbackRate = rate;
+    if (audioEl) setPlaybackRate(audioEl, rate);
   }, [rate, audioEl]);
   useEffect(() => {
     const hidden = () => document.visibilityState === "hidden" && audioEl?.pause();
@@ -131,11 +125,7 @@ export function useListen(
   const numberOf = (id: string) => view.find((item) => item.id === id)?.number ?? 0;
 
   const playAt = (audio: HTMLAudioElement, id: string) => {
-    const src = setup.src(id);
-    if (audio.getAttribute("src") !== src) audio.setAttribute("src", src);
-    else audio.currentTime = 0;
-    audio.playbackRate = rate;
-    audio.play().catch((error: unknown) => {
+    playFromStart(audio, setup.src(id), rate).catch((error: unknown) => {
       if (error instanceof DOMException && error.name === "AbortError") return;
       show("The audio couldn't be played. Please try again.");
       setSession((current) => ({ ...current, ...IDLE }));
@@ -216,7 +206,7 @@ export function useListen(
       }}
       onError={(event) => {
         if (!event.currentTarget.getAttribute("src")) return;
-        event.currentTarget.removeAttribute("src");
+        dropSource(event.currentTarget);
         show("The audio couldn't be loaded. Please try again.");
         setSession((current) => ({ ...current, ...IDLE }));
       }}
@@ -255,8 +245,7 @@ export function useListen(
         <button
           type="button"
           onClick={() => {
-            const audio = audioEl;
-            if (audio) audio.currentTime = Math.max(0, audio.currentTime - BACK_SECONDS);
+            if (audioEl) stepBack(audioEl, BACK_SECONDS);
           }}
           className={extraButtonClass}
         >
