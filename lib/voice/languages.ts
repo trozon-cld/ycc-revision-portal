@@ -1,10 +1,15 @@
-// Languages for translated text and audio. English is the source (the page itself); others are translated
-// from it. Adding a language is one entry here. Box and question labels should be checked by a reader of that language.
+// Languages for translated text and audio, kept in the database (voice_languages, voice_phrases; L1). English is
+// the source (the page itself); others are translated from it. Server code loads them via language-store.ts.
+export type LanguageStatus = "draft" | "live" | "hidden";
+
 export type VoiceLanguage = {
   code: string;
   name: string;
   // The language's own name, in its own script.
   nativeName: string;
+  status: LanguageStatus;
+  // Extra instruction for the translator (e.g. "Use Gurmukhi script.").
+  translatorNote: string | null;
   // How a Key point / Remember box starts when read aloud.
   boxLabels: { "key-point": string; remember: string };
   // How a question page's question and each option start when read aloud ("Option A"); `choose` is the
@@ -13,22 +18,47 @@ export type VoiceLanguage = {
   questionLabels: { question: string; option: string; choose: string; chooseArea: string; tapArea: string; matchBoxes: string; boxesAre: string };
 };
 
+// What the browser needs to name a language.
+export type LanguageName = Pick<VoiceLanguage, "code" | "name" | "nativeName">;
+
 export const SOURCE_LANGUAGE = "en";
 
-export const VOICE_LANGUAGES: readonly VoiceLanguage[] = [
-  { code: "en", name: "English", nativeName: "English", boxLabels: { "key-point": "Key point", remember: "Remember" }, questionLabels: { question: "Question", option: "Option", choose: "Choose {n} answers", chooseArea: "Choose one of the {n} outlined areas on the picture", tapArea: "Look at the picture and tap the place that answers the question", matchBoxes: "Put each picture in the box it belongs to", boxesAre: "The boxes are:" } },
-  { code: "hi", name: "Hindi", nativeName: "हिन्दी", boxLabels: { "key-point": "मुख्य बात", remember: "याद रखें" }, questionLabels: { question: "प्रश्न", option: "विकल्प", choose: "{n} उत्तर चुनें", chooseArea: "चित्र पर बने {n} चिह्नित हिस्सों में से एक चुनें", tapArea: "चित्र को देखें और उस जगह पर टैप करें जो प्रश्न का उत्तर है", matchBoxes: "हर चित्र को उस बॉक्स में रखें जिससे वह मेल खाता है", boxesAre: "बॉक्स ये हैं:" } },
-  // Gurmukhi script (decided 16 Oct); Shahmukhi would be a separate entry.
-  { code: "pa", name: "Punjabi", nativeName: "ਪੰਜਾਬੀ", boxLabels: { "key-point": "ਮੁੱਖ ਗੱਲ", remember: "ਯਾਦ ਰੱਖੋ" }, questionLabels: { question: "ਸਵਾਲ", option: "ਵਿਕਲਪ", choose: "{n} ਜਵਾਬ ਚੁਣੋ", chooseArea: "ਤਸਵੀਰ 'ਤੇ ਬਣੇ {n} ਨਿਸ਼ਾਨ ਲੱਗੇ ਹਿੱਸਿਆਂ ਵਿੱਚੋਂ ਇੱਕ ਚੁਣੋ", tapArea: "ਤਸਵੀਰ ਨੂੰ ਦੇਖੋ ਅਤੇ ਉਸ ਥਾਂ 'ਤੇ ਟੈਪ ਕਰੋ ਜੋ ਸਵਾਲ ਦਾ ਜਵਾਬ ਹੈ", matchBoxes: "ਹਰ ਤਸਵੀਰ ਨੂੰ ਉਸ ਡੱਬੇ ਵਿੱਚ ਰੱਖੋ ਜਿਸ ਨਾਲ ਉਹ ਮੇਲ ਖਾਂਦੀ ਹੈ", boxesAre: "ਡੱਬੇ ਇਹ ਹਨ:" } },
-];
+// The fixed spoken phrases every language needs (voice_phrases.phrase); {n} is a number in `choose` and `choose_area`.
+export const PHRASE_KEYS = ["key_point", "remember", "question", "option", "choose", "choose_area", "tap_area", "match_boxes", "boxes_are"] as const;
+export type PhraseKey = (typeof PHRASE_KEYS)[number];
+export const COUNTED_PHRASES: readonly PhraseKey[] = ["choose", "choose_area"];
 
-// Languages that need a translation first (all but the source).
-export const TRANSLATED_LANGUAGES = VOICE_LANGUAGES.filter((language) => language.code !== SOURCE_LANGUAGE);
-
-export function voiceLanguage(code: unknown): VoiceLanguage | null {
-  return VOICE_LANGUAGES.find((language) => language.code === code) ?? null;
+// A language from its database row and phrases, or null when a phrase is missing.
+export function toVoiceLanguage(
+  row: { code: string; name: string; native_name: string; status: LanguageStatus; translator_note: string | null },
+  phrases: Partial<Record<string, string>>
+): VoiceLanguage | null {
+  const p = (key: PhraseKey) => phrases[key]?.trim() ?? "";
+  if (PHRASE_KEYS.some((key) => !p(key))) return null;
+  return {
+    code: row.code,
+    name: row.name,
+    nativeName: row.native_name,
+    status: row.status,
+    translatorNote: row.translator_note,
+    boxLabels: { "key-point": p("key_point"), remember: p("remember") },
+    questionLabels: {
+      question: p("question"),
+      option: p("option"),
+      choose: p("choose"),
+      chooseArea: p("choose_area"),
+      tapArea: p("tap_area"),
+      matchBoxes: p("match_boxes"),
+      boxesAre: p("boxes_are"),
+    },
+  };
 }
 
-export function isTranslatedLanguage(code: unknown): boolean {
-  return code !== SOURCE_LANGUAGE && voiceLanguage(code) !== null;
+export function languageNames(languages: readonly VoiceLanguage[]): LanguageName[] {
+  return languages.map(({ code, name, nativeName }) => ({ code, name, nativeName }));
+}
+
+// Languages that need a translation first (all but the source).
+export function translatedLanguages<T extends { code: string }>(languages: readonly T[]): T[] {
+  return languages.filter((language) => language.code !== SOURCE_LANGUAGE);
 }

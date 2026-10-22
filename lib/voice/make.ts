@@ -2,7 +2,8 @@ import type { Block } from "@/lib/content/blocks";
 import { encodeMp3, joinPcm, readSpeechAudio, durationMs, AudioFormatError, type Pcm } from "./audio";
 import { fakeSpeech, fakeTranslator } from "./fake";
 import { geminiSpeech, geminiTranslator } from "./gemini";
-import { SOURCE_LANGUAGE, voiceLanguage, type VoiceLanguage } from "./languages";
+import { findVoiceLanguage } from "./language-store";
+import { SOURCE_LANGUAGE, type VoiceLanguage } from "./languages";
 import { VOICE_REQUEST_TIMEOUT_MS } from "./limits";
 import { takeVoiceRequests, VoiceQuotaError } from "./quota";
 import { readingParts, speechChunks } from "./reading";
@@ -39,8 +40,8 @@ async function withTimeout<T>(run: (signal: AbortSignal) => Promise<T>): Promise
   }
 }
 
-function language(code: string): VoiceLanguage {
-  const found = voiceLanguage(code);
+async function language(code: string): Promise<VoiceLanguage> {
+  const found = await findVoiceLanguage(code);
   if (!found) throw new VoiceError("failed", `unknown language ${code}`);
   return found;
 }
@@ -58,7 +59,8 @@ export async function translateItems(
   const { translator } = services();
   await takeVoiceRequests(userId, "translate", 1);
   const sent = items.map((item, index) => ({ id: String(index + 1), texts: item.texts }));
-  const reply = await withTimeout((signal) => translator.translate({ from: language(SOURCE_LANGUAGE), to: language(to), blocks: sent, kind }, signal));
+  const [from, toLanguage] = await Promise.all([language(SOURCE_LANGUAGE), language(to)]);
+  const reply = await withTimeout((signal) => translator.translate({ from, to: toLanguage, blocks: sent, kind }, signal));
   const result = matchTranslation(sent, reply);
   if (!result.ok) throw new VoiceError("bad_reply", result.error);
   return { items: result.items.map((item, index) => ({ id: items[index].id, texts: item.texts })), provider: translator.name };
@@ -77,12 +79,12 @@ export type PageSpeech = { mp3: Uint8Array<ArrayBuffer>; durationMs: number; pro
 
 // One MP3 for the page in this language (blocks already in that language). Long pages go in parts.
 export async function speakPage(userId: string, blocks: Block[], code: string): Promise<PageSpeech> {
-  return speakParts(userId, readingParts(blocks, language(code)), code);
+  return speakParts(userId, readingParts(blocks, await language(code)), code);
 }
 
 // One MP3 from the parts read aloud, in order, sent to the voice service in chunks.
 export async function speakParts(userId: string, readParts: string[], code: string): Promise<PageSpeech> {
-  const lang = language(code);
+  const lang = await language(code);
   const chunks = speechChunks(readParts);
   if (chunks.length === 0) throw new VoiceError("failed", "there is nothing to read aloud");
   const { speech } = services();

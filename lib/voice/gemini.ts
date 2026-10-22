@@ -112,7 +112,7 @@ export function geminiTranslator(): Translator {
         kind === "question"
           ? `Translate these short texts from construction safety training from ${from.name} into ${to.name} (${to.nativeName}). Your only task is to translate each text separately and exactly as written. Return only the translations.`
           : `Translate study material for construction site workers from ${from.name} into ${to.name} (${to.nativeName}).`,
-        to.code === "pa" ? "Use Gurmukhi script." : "",
+        to.translatorNote ?? "",
         "Use plain, everyday words that are easy to understand. Keep the meaning exact; it is safety training.",
         "Keep any text wrapped in ** ** wrapped in ** ** around the matching words of the translation.",
         "Return every block with the same id and the same number of texts, in the same order. Translate nothing else.",

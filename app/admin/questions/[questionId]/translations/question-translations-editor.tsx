@@ -10,7 +10,7 @@ import { useToast } from "@/components/admin/toast";
 import { formatUkDateTime } from "@/lib/candidates/access";
 import { NOT_THROUGH_MESSAGE, reachServer } from "@/lib/forms";
 import { optionLetter } from "@/lib/questions/types/single-text";
-import { TRANSLATED_LANGUAGES, voiceLanguage } from "@/lib/voice/languages";
+import { SOURCE_LANGUAGE, translatedLanguages, type VoiceLanguage } from "@/lib/voice/languages";
 import type { TranslationSummary } from "@/lib/voice/page-translations";
 import { QUESTION_CURRENT_VERSION, type QuestionText } from "@/lib/voice/question-listen";
 import { areasPhrase, choosePhrase } from "@/lib/voice/reading";
@@ -27,6 +27,7 @@ export function QuestionTranslationsEditor({
   refLabel,
   english,
   language,
+  languages,
   summaries,
   unavailable,
   current,
@@ -35,13 +36,16 @@ export function QuestionTranslationsEditor({
   refLabel: string;
   english: QuestionText;
   language: string;
+  // English first, then the languages staff work with.
+  languages: VoiceLanguage[];
   summaries: TranslationSummary[];
   unavailable: string | null;
   current: { summary: TranslationSummary; texts: QuestionText; optionsChanged: boolean } | null;
 }) {
   const router = useRouter();
   const toast = useToast();
-  const lang = voiceLanguage(language)!;
+  const lang = languages.find((item) => item.code === language)!;
+  const en = languages.find((item) => item.code === SOURCE_LANGUAGE)!;
   const initialTexts = useMemo<Texts>(
     () => ({ stem: current?.texts.stem ?? "", options: Object.fromEntries((current?.texts.options ?? []).map((option) => [option.id, option.text])) }),
     [current]
@@ -113,7 +117,7 @@ export function QuestionTranslationsEditor({
       </p>
 
       <div role="group" aria-label="Language" className="mt-4 flex flex-wrap gap-2">
-        {TRANSLATED_LANGUAGES.map((item) => {
+        {translatedLanguages(languages).map((item) => {
           const isCurrent = item.code === language;
           const itemState = translationState(QUESTION_CURRENT_VERSION, summaries.find((row) => row.language === item.code) ?? null);
           return (
@@ -216,27 +220,27 @@ export function QuestionTranslationsEditor({
 
       {english.pick && (
         <p className="mt-3 text-sm text-slate-700">
-          After the question, Listen reads &ldquo;{choosePhrase(voiceLanguage("en")!, english.pick)}&rdquo; in fixed wording:{" "}
+          After the question, Listen reads &ldquo;{choosePhrase(en, english.pick)}&rdquo; in fixed wording:{" "}
           <span lang={lang.code}>&ldquo;{choosePhrase(lang, english.pick)}&rdquo;</span> in {lang.name}. It isn&apos;t translated by the voice service.
         </p>
       )}
       {english.areas && (
         <p className="mt-3 text-sm text-slate-700">
-          After the question, Listen reads &ldquo;{areasPhrase(voiceLanguage("en")!, english.areas)}&rdquo; in fixed wording:{" "}
+          After the question, Listen reads &ldquo;{areasPhrase(en, english.areas)}&rdquo; in fixed wording:{" "}
           <span lang={lang.code}>&ldquo;{areasPhrase(lang, english.areas)}&rdquo;</span> in {lang.name}. The areas themselves aren&apos;t read, and
           this isn&apos;t translated by the voice service.
         </p>
       )}
       {english.boxes && (
         <p className="mt-3 text-sm text-slate-700">
-          After the question, Listen reads &ldquo;{voiceLanguage("en")!.questionLabels.matchBoxes}. {voiceLanguage("en")!.questionLabels.boxesAre}&rdquo; in
+          After the question, Listen reads &ldquo;{en.questionLabels.matchBoxes}. {en.questionLabels.boxesAre}&rdquo; in
           fixed wording (<span lang={lang.code}>&ldquo;{lang.questionLabels.matchBoxes}. {lang.questionLabels.boxesAre}&rdquo;</span> in {lang.name}), then the
           box labels below. The pictures aren&apos;t read.
         </p>
       )}
       {english.tap && (
         <p className="mt-3 text-sm text-slate-700">
-          After the question, Listen reads &ldquo;{voiceLanguage("en")!.questionLabels.tapArea}&rdquo; in fixed wording:{" "}
+          After the question, Listen reads &ldquo;{en.questionLabels.tapArea}&rdquo; in fixed wording:{" "}
           <span lang={lang.code}>&ldquo;{lang.questionLabels.tapArea}&rdquo;</span> in {lang.name}. The answer spot is never read, and this
           isn&apos;t translated by the voice service.
         </p>

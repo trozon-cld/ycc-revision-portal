@@ -8,7 +8,7 @@ export type CandidateHome = {
   // How many categories the candidate can choose from (their group's size).
   choices: number;
   assigned: { id: string; name: string };
-  // Listen's language code (lib/voice/languages.ts).
+  // Listen's language code (voice_languages).
   language: string;
 };
 

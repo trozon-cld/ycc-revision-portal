@@ -8,7 +8,8 @@ import type { ResolvedMedia } from "@/lib/content/book";
 import { getChapterContext, resolveMedia } from "@/lib/content/pages";
 import { isUuid } from "@/lib/ids";
 import { firstParam } from "@/lib/params";
-import { TRANSLATED_LANGUAGES } from "@/lib/voice/languages";
+import { loadVoiceLanguages } from "@/lib/voice/language-store";
+import { translatedLanguages } from "@/lib/voice/languages";
 import { loadTranslationBlocks, loadTranslationSummaries } from "@/lib/voice/page-translations";
 import { TranslationsEditor } from "./translations-editor";
 
@@ -20,7 +21,10 @@ export default async function TranslationsPage({ params, searchParams }: PagePro
   if (!isUuid(pageId)) notFound();
   const query = await searchParams;
   const asked = firstParam(query.lang);
-  const language = TRANSLATED_LANGUAGES.find((item) => item.code === asked) ?? TRANSLATED_LANGUAGES[0];
+  const languages = await loadVoiceLanguages();
+  const translated = translatedLanguages(languages);
+  const language = translated.find((item) => item.code === asked) ?? translated[0];
+  if (!language) notFound();
 
   const { rows } = await pool.query<{ id: string; chapter_id: string; title: string; blocks: unknown; content_version: number }>(
     `select id, chapter_id, title, blocks, content_version from content_pages where id = $1`,
@@ -50,6 +54,7 @@ export default async function TranslationsPage({ params, searchParams }: PagePro
       chapter={chapter}
       english={english}
       language={language.code}
+      languages={languages}
       summaries={summaries}
       current={current}
       media={media}

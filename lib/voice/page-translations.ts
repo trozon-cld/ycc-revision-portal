@@ -4,7 +4,7 @@ import { logActivity } from "@/lib/audit/log";
 import { parseBlocks, type Block } from "@/lib/content/blocks";
 import { pool } from "@/lib/db/pool";
 import { withTransaction } from "@/lib/db/transaction";
-import { isTranslatedLanguage, voiceLanguage } from "./languages";
+import { isTranslatedLanguage, languageName } from "./language-store";
 import { translatePage, voiceFailure } from "./make";
 import type { TranslationRow } from "./status";
 import { checkEditedTranslation } from "./translation";
@@ -53,13 +53,9 @@ async function readPage(client: PoolClient | typeof pool, pageId: string, lock =
   return rows[0] ?? null;
 }
 
-function languageName(code: string) {
-  return voiceLanguage(code)?.name ?? code;
-}
-
 // A new translation from the saved English page (replaces any earlier one, which goes back to draft).
 export async function generateTranslation(session: SessionPayload, pageId: string, language: string): Promise<TranslationResult> {
-  if (!isTranslatedLanguage(language)) return { ok: false, error: "Choose a language." };
+  if (!(await isTranslatedLanguage(language))) return { ok: false, error: "Choose a language." };
   const page = await readPage(pool, pageId);
   if (!page) return { ok: false, error: NOT_FOUND };
   const parsed = parseBlocks(page.blocks);
@@ -88,7 +84,7 @@ export async function generateTranslation(session: SessionPayload, pageId: strin
       [pageId, language, JSON.stringify(translated), page.content_version]
     );
     await logActivity(client, session, "page_translation.generated", { type: "page", id: pageId, label: current.title }, {
-      language: languageName(language),
+      language: await languageName(language),
       pageVersion: `Version ${page.content_version}`,
     });
     return { ok: true, translation: toSummary(rows[0]) };
@@ -104,7 +100,7 @@ export async function saveTranslationEdit(
   expectedRevision: number,
   edited: unknown
 ): Promise<TranslationResult> {
-  if (!isTranslatedLanguage(language)) return { ok: false, error: "Choose a language." };
+  if (!(await isTranslatedLanguage(language))) return { ok: false, error: "Choose a language." };
   return withTransaction<TranslationResult>(async (client) => {
     const page = await readPage(client, pageId, "for share");
     if (!page) return { ok: false, error: NOT_FOUND };
@@ -136,7 +132,7 @@ export async function saveTranslationEdit(
       [pageId, language, JSON.stringify(checked.blocks), page.content_version]
     );
     await logActivity(client, session, "page_translation.edited", { type: "page", id: pageId, label: page.title }, {
-      language: languageName(language),
+      language: await languageName(language),
     });
     return { ok: true, translation: toSummary(saved[0]) };
   });
@@ -144,7 +140,7 @@ export async function saveTranslationEdit(
 
 // A reader of the language has checked it: only for an up-to-date draft, as it was when they read it.
 export async function markTranslationChecked(session: SessionPayload, pageId: string, language: string, expectedRevision: number): Promise<TranslationResult> {
-  if (!isTranslatedLanguage(language)) return { ok: false, error: "Choose a language." };
+  if (!(await isTranslatedLanguage(language))) return { ok: false, error: "Choose a language." };
   return withTransaction<TranslationResult>(async (client) => {
     const page = await readPage(client, pageId, "for share");
     if (!page) return { ok: false, error: NOT_FOUND };
@@ -168,7 +164,7 @@ export async function markTranslationChecked(session: SessionPayload, pageId: st
       [pageId, language, session.sub]
     );
     await logActivity(client, session, "page_translation.checked", { type: "page", id: pageId, label: page.title }, {
-      language: languageName(language),
+      language: await languageName(language),
     });
     return { ok: true, translation: toSummary(saved[0]) };
   });

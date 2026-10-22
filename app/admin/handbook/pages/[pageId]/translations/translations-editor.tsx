@@ -12,7 +12,7 @@ import { useToast } from "@/components/admin/toast";
 import { LeaveDialog, useLeaveGuard } from "@/components/admin/leave-guard";
 import { formatUkDateTime } from "@/lib/candidates/access";
 import { NOT_THROUGH_MESSAGE, reachServer } from "@/lib/forms";
-import { TRANSLATED_LANGUAGES, voiceLanguage } from "@/lib/voice/languages";
+import { translatedLanguages, type VoiceLanguage } from "@/lib/voice/languages";
 import { translationState } from "@/lib/voice/status";
 import type { TranslationSummary } from "@/lib/voice/page-translations";
 import { toTranslatable } from "@/lib/voice/translation";
@@ -32,6 +32,7 @@ export function TranslationsEditor({
   chapter,
   english,
   language,
+  languages,
   summaries,
   current,
   media,
@@ -42,13 +43,15 @@ export function TranslationsEditor({
   chapter: ChapterContext;
   english: Block[];
   language: string;
+  // English first, then the languages staff work with.
+  languages: VoiceLanguage[];
   summaries: TranslationSummary[];
   current: { summary: TranslationSummary; blocks: Block[] } | null;
   media: ResolvedMedia;
 }) {
   const router = useRouter();
   const toast = useToast();
-  const lang = voiceLanguage(language)!;
+  const lang = languages.find((item) => item.code === language)!;
   const initialTexts = useMemo(() => textsOf(current?.blocks ?? []), [current]);
   const [texts, setTexts] = useState<Texts>(initialTexts);
   const [problem, setProblem] = useState<{ message: string; conflict?: boolean } | null>(null);
@@ -135,7 +138,7 @@ export function TranslationsEditor({
       </p>
 
       <div role="group" aria-label="Language" className="mt-4 flex flex-wrap gap-2">
-        {TRANSLATED_LANGUAGES.map((item) => {
+        {translatedLanguages(languages).map((item) => {
           const isCurrent = item.code === language;
           const itemState = translationState(pageVersion, summaries.find((row) => row.language === item.code) ?? null);
           return (

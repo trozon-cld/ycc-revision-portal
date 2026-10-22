@@ -5,7 +5,7 @@ import { useState } from "react";
 import { buttonClass, cardClass } from "@/components/admin/styles";
 import { formatClock } from "@/lib/format";
 import { NOT_THROUGH_MESSAGE, reachServer } from "@/lib/forms";
-import { SOURCE_LANGUAGE, TRANSLATED_LANGUAGES, VOICE_LANGUAGES } from "@/lib/voice/languages";
+import { SOURCE_LANGUAGE, translatedLanguages, type LanguageName } from "@/lib/voice/languages";
 import { audioSourceVersion, audioState, translationState } from "@/lib/voice/status";
 import type { AudioSummary } from "@/lib/voice/page-audio";
 import type { TranslationSummary } from "@/lib/voice/page-translations";
@@ -48,6 +48,7 @@ export function LanguagesStrip({
   initial,
   initialAudio,
   unavailable = null,
+  languages,
 }: {
   target: VoiceTarget;
   dirty: boolean;
@@ -55,6 +56,8 @@ export function LanguagesStrip({
   initialAudio: AudioSummary[];
   // Why nothing new can be translated or made (a question type without Listen yet, or not in the Handbook).
   unavailable?: string | null;
+  // English first, then the languages staff work with.
+  languages: LanguageName[];
 }) {
   const kind = KINDS[target.kind];
   const itemId = target.id;
@@ -79,8 +82,8 @@ export function LanguagesStrip({
   const stateOf = (code: string) => translationState(version, rows[code] ?? null);
   const audioOf = (code: string) => audioState(isSource(code), version, rows[code] ?? null, audio[code] ?? null);
   const canMakeAudio = (code: string) => audioSourceVersion(isSource(code), version, rows[code] ?? null) !== null;
-  const needed = TRANSLATED_LANGUAGES.filter((language) => ["missing", "outdated"].includes(stateOf(language.code))).map((language) => language.code);
-  const audioNeeded = VOICE_LANGUAGES.filter(
+  const needed = translatedLanguages(languages).filter((language) => ["missing", "outdated"].includes(stateOf(language.code))).map((language) => language.code);
+  const audioNeeded = languages.filter(
     (language) => ["missing", "outdated"].includes(audioOf(language.code)) && canMakeAudio(language.code)
   ).map((language) => language.code);
 
@@ -214,7 +217,7 @@ export function LanguagesStrip({
         dirty && <p className="mt-1 text-xs text-slate-600">Translations and audio are made from the saved {kind.noun}. Save your changes first.</p>
       )}
       <ul className="mt-2 divide-y divide-slate-100">
-        {VOICE_LANGUAGES.map((language) => {
+        {languages.map((language) => {
           const code = language.code;
           const source = isSource(code);
           const state = stateOf(code);
@@ -349,7 +352,7 @@ export function LanguagesStrip({
       {confirming && (
         <div role="alertdialog" aria-labelledby="replace-title" className="mt-2 rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25">
           <p id="replace-title" className="font-medium">
-            Replace the out-of-date {listNames(confirming.filter((code) => rows[code]))} translation?
+            Replace the out-of-date {listNames(languages, confirming.filter((code) => rows[code]))} translation?
           </p>
           <p className="mt-0.5">Any edits made to it will be lost. Its new translation starts as a draft.</p>
           <div className="mt-2 flex gap-2">
@@ -366,8 +369,8 @@ export function LanguagesStrip({
   );
 }
 
-function listNames(codes: string[]) {
-  const names = codes.map((code) => TRANSLATED_LANGUAGES.find((language) => language.code === code)?.name ?? code);
+function listNames(languages: LanguageName[], codes: string[]) {
+  const names = codes.map((code) => languages.find((language) => language.code === code)?.name ?? code);
   return names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names[0];
 }
 

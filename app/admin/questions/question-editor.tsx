@@ -21,6 +21,7 @@ import { getPreviewMedia, listPickerMedia, type PickerItem } from "@/app/admin/h
 import { saveQuestion, setQuestionStatus } from "./actions";
 import { TYPE_EDITORS } from "./type-editors";
 import { LanguagesStrip } from "@/app/admin/handbook/languages/languages-strip";
+import type { LanguageName } from "@/lib/voice/languages";
 import { QUESTION_CURRENT_VERSION, type QuestionVoice } from "@/lib/voice/question-listen";
 
 export type QuestionDraft = {
@@ -52,6 +53,7 @@ export function QuestionEditor({
   storageReady,
   loadProblem,
   voice = null,
+  languages = [],
 }: {
   questionId: string | null;
   refLabel: string | null;
@@ -67,6 +69,8 @@ export function QuestionEditor({
   loadProblem: string | null;
   // Saved questions: translations and audio for Listen in the Handbook.
   voice?: QuestionVoice | null;
+  // The languages the Languages strip shows (English first).
+  languages?: LanguageName[];
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -251,6 +255,7 @@ export function QuestionEditor({
           initial={voice.translations}
           initialAudio={voice.audio}
           unavailable={voice.unavailable}
+          languages={languages}
         />
       )}
       {isNew && (

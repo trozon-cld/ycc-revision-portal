@@ -2,7 +2,8 @@ import { pool } from "@/lib/db/pool";
 import { escapeLike } from "@/lib/db/like";
 import { chapterNumber } from "@/lib/handbook/structure";
 import { parseQuestionRef, questionLogLabel } from "@/lib/questions/labels";
-import { SOURCE_LANGUAGE, VOICE_LANGUAGES, voiceLanguage } from "./languages";
+import { loadVoiceLanguages } from "./language-store";
+import { SOURCE_LANGUAGE } from "./languages";
 import { QUESTION_CURRENT_VERSION, VOICE_QUESTION_TYPES } from "./question-listen";
 import { QUESTION_SOURCE_SQL } from "./question-voice";
 import { audioState, translationState, type AudioState, type TranslationState } from "./status";
@@ -147,13 +148,15 @@ function where(filters: LanguageFilters, params: unknown[]): string {
   return parts.join(" and ");
 }
 
-function baseParams(filters: LanguageFilters | null): unknown[] {
-  const chosen = filters?.language ? voiceLanguage(filters.language) : null;
-  return [chosen ? [chosen.code] : VOICE_LANGUAGES.map((language) => language.code), [...VOICE_QUESTION_TYPES]];
+// The staff languages (or just the one filtered on) and the question types with Listen.
+async function baseParams(filters: LanguageFilters | null): Promise<unknown[]> {
+  const codes = (await loadVoiceLanguages()).map((language) => language.code);
+  const chosen = filters?.language && codes.includes(filters.language) ? filters.language : null;
+  return [chosen ? [chosen] : codes, [...VOICE_QUESTION_TYPES]];
 }
 
 export async function countLanguageItems(filters: LanguageFilters): Promise<number> {
-  const params = baseParams(filters);
+  const params = await baseParams(filters);
   const condition = where(filters, params);
   const { rows } = await pool.query<{ total: number }>(`${STATES} select count(*)::int as total from items x where ${condition}`, params);
   return rows[0].total;
@@ -177,9 +180,9 @@ export async function languageTotals(): Promise<LanguageTotals[]> {
     `${STATES}
      select code, count(*) filter (where t = 'checked')::int as checked, count(*) filter (where a = 'ready')::int as ready
      from states group by code`,
-    baseParams(null)
+    await baseParams(null)
   );
-  return VOICE_LANGUAGES.map((language) => {
+  return (await loadVoiceLanguages()).map((language) => {
     const row = rows.find((found) => found.code === language.code);
     return { language: language.code, checked: row?.checked ?? 0, audioReady: row?.ready ?? 0 };
   });
@@ -204,7 +207,8 @@ const EXCERPT_LENGTH = 90;
 
 // Pages and question pages in book order (section, chapter, place in the chapter).
 export async function listLanguageItems(filters: LanguageFilters, page: number): Promise<LanguageListRow[]> {
-  const params = baseParams(filters);
+  const params = await baseParams(filters);
+  const languages = await loadVoiceLanguages();
   const condition = where(filters, params);
   params.push(LANGUAGE_LIST_PAGE_SIZE, (page - 1) * LANGUAGE_LIST_PAGE_SIZE);
   const { rows } = await pool.query<RawRow>(
@@ -249,7 +253,7 @@ export async function listLanguageItems(filters: LanguageFilters, page: number):
     let states: Record<string, PageLanguageState> | null = null;
     if (row.supported) {
       states = {};
-      for (const language of VOICE_LANGUAGES) {
+      for (const language of languages) {
         const isSource = language.code === SOURCE_LANGUAGE;
         const found = row.translations.find((t) => t.language === language.code);
         const translation = found ? { sourceVersion: found.source_version, revision: found.revision, status: found.status } : null;

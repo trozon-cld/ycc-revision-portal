@@ -8,7 +8,8 @@ import { formatDuration } from "@/lib/format";
 import { STORAGE_LIMIT_BYTES } from "@/lib/media/limits";
 import { StorageConfigError, deleteObjects, getSignedUrls, isStorageConfigured, storeObject } from "@/lib/storage/storage";
 import { storedBytes } from "@/lib/storage/usage";
-import { SOURCE_LANGUAGE, voiceLanguage } from "./languages";
+import { findVoiceLanguage } from "./language-store";
+import { SOURCE_LANGUAGE } from "./languages";
 import { speakPage, voiceFailure, type PageSpeech } from "./make";
 import { audioSourceVersion, type TranslationRow } from "./status";
 
@@ -126,7 +127,7 @@ async function readSource(client: PoolClient | typeof pool, pageId: string, lang
 
 // Makes (or replaces) the page's audio in one language. The old file is removed once the new one is recorded.
 export async function generateAudio(session: SessionPayload, pageId: string, language: string): Promise<AudioResult> {
-  const lang = voiceLanguage(language);
+  const lang = await findVoiceLanguage(language);
   if (!lang) return { ok: false, error: "Choose a language." };
   if (!isStorageConfigured()) return { ok: false, error: NOT_CONFIGURED };
   const source = await readSource(pool, pageId, lang.code);
@@ -185,7 +186,7 @@ export async function generateAudio(session: SessionPayload, pageId: string, lan
 }
 
 export async function deleteAudio(session: SessionPayload, pageId: string, language: string): Promise<AudioDeleteResult> {
-  const lang = voiceLanguage(language);
+  const lang = await findVoiceLanguage(language, "any");
   if (!lang) return { ok: false, error: "Choose a language." };
   const result = await withTransaction<{ ok: false; error: string } | { ok: true; path: string }>(async (client) => {
     const { rows: page } = await client.query<{ title: string }>(`select title from content_pages where id = $1 for share`, [pageId]);
@@ -204,7 +205,7 @@ export async function deleteAudio(session: SessionPayload, pageId: string, langu
 }
 
 export async function audioPreviewLink(pageId: string, language: string): Promise<AudioLinkResult> {
-  if (!voiceLanguage(language)) return audioFileLink(undefined);
+  if (!(await findVoiceLanguage(language, "any"))) return audioFileLink(undefined);
   const { rows } = await pool.query<{ storage_path: string }>(
     `select storage_path from page_audio where content_page_id = $1 and language = $2`,
     [pageId, language]

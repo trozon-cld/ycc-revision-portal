@@ -2,7 +2,8 @@ import { pool } from "@/lib/db/pool";
 import { toTextSize, type BookPageData, type ResolvedMedia, type TextSize } from "./book";
 import type { BookCovers } from "./covers";
 import { loadPreviewBook } from "./preview";
-import { listeningLanguage, loadReadyAudio } from "@/lib/voice/listen";
+import { listeningLanguage } from "@/lib/voice/language-store";
+import { loadReadyAudio } from "@/lib/voice/listen";
 
 export type CandidateBook = {
   categoryId: string;
@@ -42,7 +43,7 @@ export async function loadCandidateBook(userId: string): Promise<CandidateBook |
   if (!row) return null;
 
   const coverIds = [row.front_id, row.back_id].filter((id): id is string => Boolean(id));
-  const language = listeningLanguage(row.preferred_language);
+  const language = await listeningLanguage(row.preferred_language);
   const [book, durations] = await Promise.all([
     loadPreviewBook({ chapterId: null, categoryId: row.category_id, includeDrafts: false }, { ids: coverIds, thumbIds: coverIds }),
     row.listen_enabled ? loadReadyAudio(row.category_id, language.code) : null,

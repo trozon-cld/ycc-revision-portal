@@ -6,7 +6,8 @@ import { withTransaction } from "@/lib/db/transaction";
 import { formatDuration } from "@/lib/format";
 import { questionLogLabel } from "@/lib/questions/labels";
 import { optionLetter } from "@/lib/questions/types/single-text";
-import { SOURCE_LANGUAGE, isTranslatedLanguage, voiceLanguage } from "./languages";
+import { findVoiceLanguage, isTranslatedLanguage, languageName } from "./language-store";
+import { SOURCE_LANGUAGE } from "./languages";
 import { speakParts, translateItems, voiceFailure, type PageSpeech } from "./make";
 import {
   audioCanStart,
@@ -174,7 +175,7 @@ export async function loadQuestionTranslations(questionId: string, language: str
 // ---- Translations ----
 
 export async function generateQuestionTranslation(session: SessionPayload, questionId: string, language: string): Promise<TranslationResult> {
-  if (!isTranslatedLanguage(language)) return { ok: false, error: "Choose a language." };
+  if (!(await isTranslatedLanguage(language))) return { ok: false, error: "Choose a language." };
   const question = await readQuestion(pool, questionId);
   const blocked = unavailable(question);
   if (blocked || !question) return { ok: false, error: blocked ?? NOT_FOUND };
@@ -209,7 +210,7 @@ export async function generateQuestionTranslation(session: SessionPayload, quest
        select ${TRANSLATION_COLUMNS} from saved t join questions q on q.id = t.question_id`,
       [questionId, language, JSON.stringify(texts)]
     );
-    await logActivity(client, session, "question_translation.generated", target(questionId, current), { language: voiceLanguage(language)!.name });
+    await logActivity(client, session, "question_translation.generated", target(questionId, current), { language: await languageName(language) });
     return { ok: true, translation: toTranslationSummary(rows[0]) };
   });
 }
@@ -223,7 +224,7 @@ export async function saveQuestionTranslationEdit(
   expectedRevision: number,
   edited: unknown
 ): Promise<TranslationResult> {
-  if (!isTranslatedLanguage(language)) return { ok: false, error: "Choose a language." };
+  if (!(await isTranslatedLanguage(language))) return { ok: false, error: "Choose a language." };
   return withTransaction<TranslationResult>(async (client) => {
     const question = await readQuestion(client, questionId, "for share");
     if (!question) return { ok: false, error: NOT_FOUND };
@@ -251,14 +252,14 @@ export async function saveQuestionTranslationEdit(
        select ${TRANSLATION_COLUMNS} from saved t join questions q on q.id = t.question_id`,
       [questionId, language, JSON.stringify(checked.texts)]
     );
-    await logActivity(client, session, "question_translation.edited", target(questionId, question), { language: voiceLanguage(language)!.name });
+    await logActivity(client, session, "question_translation.edited", target(questionId, question), { language: await languageName(language) });
     return { ok: true, translation: toTranslationSummary(saved[0]) };
   });
 }
 
 // A reader of the language has checked it: only an up-to-date draft, as it was when they read it.
 export async function markQuestionTranslationChecked(session: SessionPayload, questionId: string, language: string, expectedRevision: number): Promise<TranslationResult> {
-  if (!isTranslatedLanguage(language)) return { ok: false, error: "Choose a language." };
+  if (!(await isTranslatedLanguage(language))) return { ok: false, error: "Choose a language." };
   return withTransaction<TranslationResult>(async (client) => {
     const question = await readQuestion(client, questionId, "for share");
     if (!question) return { ok: false, error: NOT_FOUND };
@@ -283,7 +284,7 @@ export async function markQuestionTranslationChecked(session: SessionPayload, qu
        select ${TRANSLATION_COLUMNS} from saved t join questions q on q.id = t.question_id`,
       [questionId, language, session.sub]
     );
-    await logActivity(client, session, "question_translation.checked", target(questionId, question), { language: voiceLanguage(language)!.name });
+    await logActivity(client, session, "question_translation.checked", target(questionId, question), { language: await languageName(language) });
     return { ok: true, translation: toTranslationSummary(saved[0]) };
   });
 }
@@ -313,7 +314,7 @@ async function readAudioSource(client: PoolClient | typeof pool, questionId: str
 }
 
 export async function generateQuestionAudio(session: SessionPayload, questionId: string, language: string): Promise<AudioResult> {
-  const lang = voiceLanguage(language);
+  const lang = await findVoiceLanguage(language);
   if (!lang) return { ok: false, error: "Choose a language." };
   const source = await readAudioSource(pool, questionId, lang.code);
   if ("error" in source) return { ok: false, error: source.error };
@@ -380,7 +381,7 @@ export async function generateQuestionAudio(session: SessionPayload, questionId:
 
 // Works for any question that has audio (even one since removed from the Handbook).
 export async function deleteQuestionAudio(session: SessionPayload, questionId: string, language: string): Promise<AudioDeleteResult> {
-  const lang = voiceLanguage(language);
+  const lang = await findVoiceLanguage(language, "any");
   if (!lang) return { ok: false, error: "Choose a language." };
   const result = await withTransaction<{ ok: false; error: string } | { ok: true; path: string }>(async (client) => {
     const question = await readQuestion(client, questionId, "for share");
@@ -399,7 +400,7 @@ export async function deleteQuestionAudio(session: SessionPayload, questionId: s
 }
 
 export async function questionAudioPreviewLink(questionId: string, language: string): Promise<AudioLinkResult> {
-  if (!voiceLanguage(language)) return audioFileLink(undefined);
+  if (!(await findVoiceLanguage(language, "any"))) return audioFileLink(undefined);
   const { rows } = await pool.query<{ storage_path: string }>(`select storage_path from question_audio where question_id = $1 and language = $2`, [
     questionId,
     language,

@@ -6,7 +6,8 @@ import { formatClock } from "@/lib/format";
 import { isUuid } from "@/lib/ids";
 import { firstParam } from "@/lib/params";
 import { listChapterOptions } from "@/lib/questions/queries";
-import { SOURCE_LANGUAGE, VOICE_LANGUAGES, voiceLanguage } from "@/lib/voice/languages";
+import { loadVoiceLanguages } from "@/lib/voice/language-store";
+import { SOURCE_LANGUAGE } from "@/lib/voice/languages";
 import {
   LANGUAGE_KIND_LABELS,
   LANGUAGE_KINDS,
@@ -36,6 +37,7 @@ const BASE_PATH = "/admin/handbook/languages";
 export default async function LanguagesPage({ searchParams }: PageProps<"/admin/handbook/languages">) {
   await requireRole(CONTENT_EDITORS);
   const params = await searchParams;
+  const languages = await loadVoiceLanguages();
 
   const chapterParam = firstParam(params.chapter);
   const needParam = firstParam(params.need);
@@ -43,7 +45,7 @@ export default async function LanguagesPage({ searchParams }: PageProps<"/admin/
   const filters: LanguageFilters = {
     search: (firstParam(params.q) ?? "").trim().slice(0, 100),
     chapterId: chapterParam && isUuid(chapterParam) ? chapterParam : null,
-    language: voiceLanguage(firstParam(params.language))?.code ?? null,
+    language: languages.find((language) => language.code === firstParam(params.language))?.code ?? null,
     need: isLanguageNeed(needParam) ? needParam : null,
     kind: isLanguageKind(kindParam) ? kindParam : null,
   };
@@ -75,7 +77,7 @@ export default async function LanguagesPage({ searchParams }: PageProps<"/admin/
       />
 
       <ul aria-label="Totals" className="mb-2 grid gap-2 sm:grid-cols-3">
-        {VOICE_LANGUAGES.map((language) => {
+        {languages.map((language) => {
           const done = totals.find((row) => row.language === language.code);
           return (
             <li key={language.code} className={`${cardClass} px-3 py-2 text-sm`}>
@@ -121,7 +123,7 @@ export default async function LanguagesPage({ searchParams }: PageProps<"/admin/
         </FilterSelect>
         <FilterSelect name="language" label="Language" defaultValue={filters.language ?? ""}>
           <option value="">All languages</option>
-          {VOICE_LANGUAGES.map((language) => (
+          {languages.map((language) => (
             <option key={language.code} value={language.code}>
               {language.name}
             </option>
@@ -138,7 +140,7 @@ export default async function LanguagesPage({ searchParams }: PageProps<"/admin/
       </FilterBar>
 
       <Table
-        columns={["Page", "Status", ...VOICE_LANGUAGES.map((language) => language.name)]}
+        columns={["Page", "Status", ...languages.map((language) => language.name)]}
         isEmpty={rows.length === 0}
         emptyMessage={total === 0 ? "No pages yet. Add pages to chapters in the Handbook." : "No pages match these filters."}
       >
@@ -157,11 +159,11 @@ export default async function LanguagesPage({ searchParams }: PageProps<"/admin/
               <Badge tone={row.status === "published" ? "success" : "neutral"}>{row.status === "published" ? "Published" : "Draft"}</Badge>
             </Cell>
             {!row.states && (
-              <Cell label="Languages" colSpan={VOICE_LANGUAGES.length}>
+              <Cell label="Languages" colSpan={languages.length}>
                 <span className="text-xs text-slate-600">Listen for this question type comes later</span>
               </Cell>
             )}
-            {row.states && VOICE_LANGUAGES.map((language) => {
+            {row.states && languages.map((language) => {
               const state = row.states![language.code];
               return (
                 <Cell key={language.code} label={language.name}>
