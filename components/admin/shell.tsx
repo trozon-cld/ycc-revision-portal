@@ -10,7 +10,7 @@ import { ToastProvider } from "./toast";
 import { Icon, type IconName } from "@/components/icons";
 
 type Role = "admin" | "superadmin";
-type NavIconName = "admins" | "candidates" | "categories" | "handbook" | "questions" | "media" | "faq" | "activity" | "account";
+type NavIconName = "admins" | "candidates" | "categories" | "handbook" | "questions" | "media" | "faq" | "languages" | "activity" | "account";
 type NavItem = { href: string; label: string; icon: NavIconName };
 type NavGroup = { heading?: string; items: NavItem[] };
 
@@ -20,6 +20,7 @@ const CONTENT: NavGroup = {
   items: [
     { href: "/admin/handbook", label: "Handbook", icon: "handbook" },
     { href: "/admin/questions", label: "Question bank", icon: "questions" },
+    { href: "/admin/handbook/languages", label: "Languages", icon: "languages" },
     { href: "/admin/media", label: "Media", icon: "media" },
     { href: "/admin/faq", label: "General queries", icon: "faq" },
   ],
@@ -29,6 +30,7 @@ const contentFor = (role: Role): NavGroup[] => (CONTENT_EDITORS.includes(role) ?
 const NAV: Record<Role, NavGroup[]> = {
   superadmin: [
     {
+      heading: "Access",
       items: [
         { href: "/admin/admins", label: "Admins", icon: "admins" },
         { href: "/admin/candidates", label: "Candidates", icon: "candidates" },
@@ -37,6 +39,7 @@ const NAV: Record<Role, NavGroup[]> = {
     },
     ...contentFor("superadmin"),
     {
+      heading: "System",
       items: [
         { href: "/admin/activity", label: "Activity", icon: "activity" },
         { href: "/admin/account", label: "My account", icon: "account" },
@@ -46,9 +49,10 @@ const NAV: Record<Role, NavGroup[]> = {
   // One group today; with content access, Content sits between Candidates and the rest, as for the Superadmin.
   admin: CONTENT_EDITORS.includes("admin")
     ? [
-        { items: [{ href: "/admin/candidates", label: "Candidates", icon: "candidates" }] },
+        { heading: "Access", items: [{ href: "/admin/candidates", label: "Candidates", icon: "candidates" }] },
         ...contentFor("admin"),
         {
+          heading: "System",
           items: [
             { href: "/admin/activity", label: "My activity", icon: "activity" },
             { href: "/admin/account", label: "My account", icon: "account" },
@@ -65,6 +69,14 @@ const NAV: Record<Role, NavGroup[]> = {
         },
       ],
 };
+
+// The link for this address: the longest one it falls under, so Languages (under /admin/handbook) lights alone.
+function currentHref(groups: NavGroup[], pathname: string): string | undefined {
+  return groups
+    .flatMap((group) => group.items.map((item) => item.href))
+    .filter((href) => pathname === href || pathname.startsWith(`${href}/`))
+    .sort((a, b) => b.length - a.length)[0];
+}
 
 const ROLE_LABEL: Record<Role, string> = { superadmin: "Superadmin", admin: "Admin" };
 
@@ -127,6 +139,7 @@ function Brand({ role }: { role: Role }) {
 
 function SidebarContent({ role, email, name, onNavigate }: { role: Role; email: string; name: string | null; onNavigate?: () => void }) {
   const pathname = usePathname();
+  const current = currentHref(NAV[role], pathname);
 
   return (
     <>
@@ -145,7 +158,7 @@ function SidebarContent({ role, email, name, onNavigate }: { role: Role; email: 
               <p aria-hidden="true" className="px-3 pb-1 text-xs font-medium uppercase tracking-wide text-slate-600">{group.heading}</p>
             )}
             {group.items.map((item) => {
-              const isCurrent = pathname === item.href || pathname.startsWith(`${item.href}/`);
+              const isCurrent = current === item.href;
               return (
                 <Link
                   key={item.href}
@@ -223,6 +236,7 @@ const NAV_ICONS: Record<NavIconName, IconName> = {
   questions: "help",
   media: "picture",
   faq: "faq",
+  languages: "listen",
   activity: "activity",
   account: "account",
 };

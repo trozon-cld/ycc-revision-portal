@@ -45,6 +45,7 @@ export default async function PreparePage() {
         startPageId={book.startPageId}
         initialTextSize={book.textSize}
         covers={book.covers}
+        listen={book.listen}
       />
     </div>
   );

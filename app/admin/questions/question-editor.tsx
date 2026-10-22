@@ -20,6 +20,9 @@ import { useToast } from "@/components/admin/toast";
 import { getPreviewMedia, listPickerMedia, type PickerItem } from "@/app/admin/handbook/pages/actions";
 import { saveQuestion, setQuestionStatus } from "./actions";
 import { TYPE_EDITORS } from "./type-editors";
+import { LanguagesStrip } from "@/app/admin/handbook/languages/languages-strip";
+import type { LanguageName } from "@/lib/voice/languages";
+import { QUESTION_CURRENT_VERSION, type QuestionVoice } from "@/lib/voice/question-listen";
 
 export type QuestionDraft = {
   chapterId: string;
@@ -49,6 +52,8 @@ export function QuestionEditor({
   initialMedia,
   storageReady,
   loadProblem,
+  voice = null,
+  languages = [],
 }: {
   questionId: string | null;
   refLabel: string | null;
@@ -62,6 +67,10 @@ export function QuestionEditor({
   initialMedia: ResolvedMedia;
   storageReady: boolean;
   loadProblem: string | null;
+  // Saved questions: translations and audio for Listen in the Handbook.
+  voice?: QuestionVoice | null;
+  // The languages the Languages strip shows (English first).
+  languages?: LanguageName[];
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -238,6 +247,16 @@ export function QuestionEditor({
 
       {status === "published" && (
         <p className="mb-3 text-sm text-slate-700">This question is published. Saved changes go live straight away.</p>
+      )}
+      {voice && questionId && (
+        <LanguagesStrip
+          target={{ kind: "question", id: questionId, version: QUESTION_CURRENT_VERSION }}
+          dirty={dirty}
+          initial={voice.translations}
+          initialAudio={voice.audio}
+          unavailable={voice.unavailable}
+          languages={languages}
+        />
       )}
       {isNew && (
         <p className="mb-3 text-sm text-slate-700">The question is added to the bank when you first save it. New questions start as drafts.</p>

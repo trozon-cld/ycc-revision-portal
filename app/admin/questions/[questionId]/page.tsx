@@ -14,6 +14,9 @@ import { editableDraft } from "@/lib/questions/drafts";
 import { parseQuestion } from "@/lib/questions/validate";
 import { isStorageConfigured } from "@/lib/storage/storage";
 import { isUuid } from "@/lib/ids";
+import { loadVoiceLanguages } from "@/lib/voice/language-store";
+import { languageNames } from "@/lib/voice/languages";
+import { loadQuestionVoice } from "@/lib/voice/question-voice";
 import { QuestionEditor } from "../question-editor";
 
 export const metadata: Metadata = { title: "Edit question" };
@@ -54,7 +57,7 @@ export default async function EditQuestionPage({ params }: PageProps<"/admin/que
   const question = rows[0];
   if (!question) notFound();
 
-  const chapters = await listChapterOptions();
+  const [chapters, voice, languages] = await Promise.all([listChapterOptions(), loadQuestionVoice(question.id), loadVoiceLanguages()]);
   // Saved questions passed the checks on save; if the rules tightened since, say so and keep the data.
   const parsed = parseQuestion({
     type: question.type,
@@ -107,6 +110,8 @@ export default async function EditQuestionPage({ params }: PageProps<"/admin/que
       initialMedia={media}
       storageReady={isStorageConfigured()}
       loadProblem={parsed.ok ? null : parsed.error}
+      voice={voice}
+      languages={languageNames(languages)}
     />
   );
 }

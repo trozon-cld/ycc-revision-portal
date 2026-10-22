@@ -1,5 +1,6 @@
 "use client";
 
+import { Spinner } from "@/components/spinner";
 import { Icon } from "@/components/icons";
 import {
   useCallback,
@@ -27,6 +28,8 @@ import { collectMediaIds } from "@/lib/content/blocks";
 import { BackCoverFace, FrontCoverFace } from "./book-covers";
 import { MeasuringContext } from "./measuring";
 import { OpeningMessage } from "./opening-message";
+import { useListen, useReadingSpeed, type ListenControl, type ListenItem, type ListenSetup } from "./listen";
+import { questionTypeHasListen } from "@/lib/voice/question-listen";
 import { BlockList } from "./blocks";
 import { FRESH_QUESTION_STATE, QuestionView, type QuestionViewState } from "./questions/question-view";
 import {
@@ -38,6 +41,8 @@ import {
   ResultsPanel,
   PANEL_LINK,
   SettingsPanel,
+  BAR_BUTTON_DENSE,
+  barButton,
   type ReaderPanel,
   type ResultEntry,
 } from "./reader-tools";
@@ -95,8 +100,14 @@ const SWIPE_MAX_MS = 800;
 const STACKED_BAR_BELOW = 820;
 // This browser's choice of button labels on or off (a small display preference, not saved to the account).
 const SPREAD_PADDING = 8;
-// Below this width the laptop bar uses short labels and leaves out Listen, so everything fits.
+// Below this width the laptop bar uses short labels with the word under the icon, so everything fits;
+// with Listen in the bar it needs more room.
 const ROOMY_BAR = 1280;
+const ROOMY_BAR_WITH_LISTEN = 1600;
+// Listen's time and Back 10 seconds (in place of the page status) need at least this much bar; with Listen,
+// narrower bars keep text size in Settings only, as phones do.
+const LISTEN_EXTRAS_MIN = 1360;
+const TEXT_SIZE_WITH_LISTEN_MIN = 1180;
 // Spreads: picture answer options are at most this share of the page height, so a question keeps room
 // for its explanation.
 const OPTION_PICTURE_SHARE = 0.22;
@@ -196,6 +207,7 @@ export function BookReader({
   accountLinks,
   onPagesDone,
   onQuestionDone,
+  listen,
 }: {
   pages: BookPageData[];
   media: ResolvedMedia;
@@ -224,6 +236,8 @@ export function BookReader({
   // Candidate progress: content pages shown to their last part, and questions checked or revealed.
   onPagesDone?: (pageIds: string[]) => void;
   onQuestionDone?: (pageId: string, outcome: HandbookOutcome) => void;
+  // Candidate Handbook: Listen reads the page on screen aloud (components/learning/listen.tsx).
+  listen?: ListenSetup;
 }) {
   const sectionRef = useRef<HTMLElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -650,6 +664,24 @@ export function BookReader({
   // Without the laptop bar's logo, Help and Log out: Home goes in the bar, the rest in Settings.
   const phone = Boolean(homeHref) && !wide;
 
+  const [readingSpeed, setReadingSpeed] = useReadingSpeed();
+  // The pages in view, in reading order; a page split over two sheets counts once.
+  const listenView: ListenItem[] = [];
+  for (const sheet of visible) {
+    if (sheet.kind !== "page" || listenView.some((item) => item.id === pages[sheet.pageIndex]?.id)) continue;
+    const page = pages[sheet.pageIndex];
+    if (!page) continue;
+    const phase = page.question ? (questionStates[questionKey(page)]?.phase ?? "answering") : "answering";
+    listenView.push({
+      id: page.id,
+      question: Boolean(page.question),
+      supported: !page.question || questionTypeHasListen(page.question.data.type),
+      answered: phase !== "answering",
+      number: sheet.number,
+    });
+  }
+  const player = useListen(listen, listenView, readingSpeed, wide && (stageSize?.width ?? 0) >= LISTEN_EXTRAS_MIN, showLabels, `${barButton} ${sideNav ? BAR_BUTTON_DENSE : "h-14 min-w-14 px-4 text-lg"}`);
+
   const sheetStyle = geometry
     ? ({
         width: geometry.sheetWidth,
@@ -714,6 +746,7 @@ export function BookReader({
         textSize={textSize}
         style={sheetStyle}
         side={side}
+        listen={!still && player && page !== null && pages[page] ? player.page(pages[page].id) : undefined}
       />
     );
   }
@@ -802,16 +835,18 @@ export function BookReader({
           onTextSizeChange={onTextSizeChange}
           hasQuestions={results.length > 0}
           dense={sideNav}
-          narrow={(stageSize?.width ?? 0) < ROOMY_BAR}
+          narrow={(stageSize?.width ?? 0) < (player ? ROOMY_BAR_WITH_LISTEN : ROOMY_BAR)}
           stacked={!sideNav && !compact && (phone || (stageSize?.width ?? 0) < STACKED_BAR_BELOW)}
           status={sideNav ? status : undefined}
           centreStatus={!sideways}
           start={wide ? barStart : undefined}
           end={wide ? barEnd : undefined}
           home={phone ? homeHref : undefined}
-          textSizeInBar={!compact && !sideways}
+          textSizeInBar={!compact && !sideways && !(player && (stageSize?.width ?? 0) < TEXT_SIZE_WITH_LISTEN_MIN)}
+          listen={player?.bar}
         />
       )}
+      {player?.audio}
       <div
         ref={stageRef}
         // Pictures aren't dragged out of the book, so a swipe that starts on one still turns the page.
@@ -872,6 +907,9 @@ export function BookReader({
             pageTurn={pageTurn}
             onTogglePageTurn={togglePageTurn}
             reducedMotion={reducedMotion}
+            readingSpeed={player ? readingSpeed : undefined}
+            onReadingSpeedChange={player ? setReadingSpeed : undefined}
+            onGoToPage={player && compact ? () => setPanel("goto") : undefined}
             links={
               phone && homeHref ? (
                 <>
@@ -1177,6 +1215,7 @@ function SheetView({
   textSize,
   style,
   side,
+  listen,
 }: {
   sheet: Sheet;
   pages: BookPageData[];
@@ -1191,7 +1230,10 @@ function SheetView({
   textSize: number;
   style?: CSSProperties;
   side: "left" | "right" | "single";
+  // Listen: this page's progress line while it is being read, and (spreads) its own Listen button.
+  listen?: ListenControl & { reading: boolean; progress: ReactNode };
 }) {
+  const showLabels = useContext(ReaderLabelsContext);
   const boxRef = useRef<HTMLDivElement>(null);
   // Scrolling question pages: whether there is more below what shows, for the "More below" cue.
   const [moreBelow, setMoreBelow] = useState(false);
@@ -1230,6 +1272,7 @@ function SheetView({
   const repeat = sheet.part > 0 && !page.question;
   return (
     <article aria-label={`Page ${sheet.number}`} className={`relative flex shrink-0 flex-col ${edge}`} style={style}>
+      {listen?.progress}
       {page.badge && sheet.part === 0 && (
         <span className="absolute right-1.5 top-1.5 rounded bg-warn-bg px-1.5 py-0.5 text-xs font-semibold text-warn-strong ring-1 ring-warn/30">
           {page.badge}
@@ -1303,12 +1346,24 @@ function SheetView({
         )}
       </div>
 
-      <footer
-        aria-hidden="true"
-        className="flex items-center justify-center text-[max(14px,0.8em)] text-ink"
-        style={{ height: geometry.footerHeight }}
-      >
-        {sheet.number}
+      <footer className="relative flex items-center justify-center text-[max(14px,0.8em)] text-ink" style={{ height: geometry.footerHeight }}>
+        <span aria-hidden="true">{sheet.number}</span>
+        {listen && geometry.spread && (
+          <button
+            type="button"
+            onClick={listen.onPress}
+            disabled={listen.disabled}
+            aria-busy={listen.busy || undefined}
+            title={showLabels ? undefined : `${listen.label} page ${sheet.number}`}
+            // Drawn within the footer so no page text moves; the tap area is a full 44px, centred on it.
+            className="absolute inset-y-0 inline-flex min-w-11 items-center justify-center gap-1.5 rounded-lg px-2 text-base font-semibold text-primary before:absolute before:inset-x-0 before:top-1/2 before:h-11 before:-translate-y-1/2 before:content-[''] hover:bg-primary/[0.06] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-45"
+            style={{ right: geometry.padX - 8 }}
+          >
+            {listen.busy ? <span className="flex size-5 shrink-0 items-center justify-center"><Spinner /></span> : <Icon name={listen.icon} className="size-5" />}
+            <span className={showLabels ? undefined : "sr-only"}>{listen.label}</span>
+            <span className="sr-only">{listen.label === "Listen" ? " to" : ""} page {sheet.number}</span>
+          </button>
+        )}
       </footer>
     </article>
   );

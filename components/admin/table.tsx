@@ -82,6 +82,7 @@ export function Cell({
   nowrap = false,
   breakAnywhere = false,
   wide = false,
+  colSpan,
   children,
 }: {
   label?: string;
@@ -90,6 +91,8 @@ export function Cell({
   breakAnywhere?: boolean;
   // A primary cell with longer text (e.g. question text) keeps more room on tablets and laptops.
   wide?: boolean;
+  // One cell covering several columns on tablets and laptops (e.g. a note in place of per-language cells).
+  colSpan?: number;
   children: ReactNode;
 }) {
   const wrapping =
@@ -98,6 +101,7 @@ export function Cell({
       : "[overflow-wrap:anywhere] md:[overflow-wrap:break-word]";
   return (
     <td
+      colSpan={colSpan}
       data-label={kind === "data" ? label : undefined}
       className={`${cellClasses[kind]} ${wrapping} ${nowrap ? "md:whitespace-nowrap" : ""} ${wide ? "md:min-w-60" : ""} align-middle md:px-4 md:py-2.5 md:max-xl:px-3`}
     >

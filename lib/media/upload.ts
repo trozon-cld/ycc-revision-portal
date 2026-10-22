@@ -1,9 +1,9 @@
 import { revalidatePath } from "next/cache";
 import type { SessionPayload } from "@/lib/auth/jwt";
-import { pool } from "@/lib/db/pool";
 import { withTransaction } from "@/lib/db/transaction";
 import { logActivity } from "@/lib/audit/log";
 import { EXTENSION_BY_MIME, readImageInfo, type ImageInfo } from "@/lib/media/image-info";
+import { storedBytes } from "@/lib/storage/usage";
 import { MAX_THUMB_BYTES, MAX_UPLOAD_BYTES, STORAGE_LIMIT_BYTES } from "@/lib/media/limits";
 import { StorageConfigError, deleteObjects, storeObject } from "@/lib/storage/storage";
 import { ALT_TEXT_MAX_LENGTH } from "@/lib/limits";
@@ -62,15 +62,6 @@ export async function saveUpload(session: SessionPayload, formData: FormData): P
 
   revalidatePath(MEDIA_PAGE_PATH);
   return { success: true, mediaId: id };
-}
-
-// Pictures plus archived login records, both kept in storage. Thumbnails (tens of KB each) fit in the margin
-// between STORAGE_LIMIT_BYTES and the provider's quota.
-async function storedBytes(): Promise<number> {
-  const { rows } = await pool.query<{ bytes: string }>(
-    `select ((select coalesce(sum(byte_size), 0) from media) + (select coalesce(sum(byte_size), 0) from log_archives))::text as bytes`
-  );
-  return Number(rows[0].bytes);
 }
 
 type ReadUpload = { file: File; info: ImageInfo } | { error: string };

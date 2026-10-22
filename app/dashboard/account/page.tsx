@@ -5,10 +5,13 @@ import { requireRole } from "@/lib/auth/guard";
 import { SESSION_ENDED_LOGIN } from "@/lib/auth/constants";
 import { formatUkDate } from "@/lib/candidates/access";
 import { loadCandidateHome } from "@/lib/candidates/home";
+import { listeningLanguage, loadVoiceLanguages } from "@/lib/voice/language-store";
+import { languageNames } from "@/lib/voice/languages";
 import { PageBody } from "@/components/candidate/page-body";
 import { CARD, ERROR_BOX, NOTE_BOX, PAGE_TITLE, PRIMARY_BUTTON, SECONDARY_BUTTON, SECTION_TITLE } from "@/components/candidate/buttons";
 import { LogoutButton } from "@/components/logout-button";
 import { LogoutEverywhere, type LogoutEverywhereStyles } from "@/components/logout-everywhere";
+import { LanguageForm } from "./language-form";
 
 export const metadata: Metadata = { title: "Account" };
 
@@ -26,11 +29,13 @@ const ROW = "flex flex-col gap-0.5 py-3 first:pt-0 last:pb-0";
 const LABEL = "text-base font-semibold text-muted";
 const VALUE = "text-base text-ink [overflow-wrap:anywhere]";
 
-// Account: who you are, what you're studying, until when, and signing out (read only; nothing here is logged).
+// Account: who you are, what you're studying, until when, your listening language (saved and logged; only when
+// Listen is on for the current category), and signing out.
 export default async function AccountPage() {
   const session = await requireRole(["candidate"]);
   const home = await loadCandidateHome(session.sub);
   if (!home) redirect(SESSION_ENDED_LOGIN);
+  const [languages, listening] = await Promise.all([loadVoiceLanguages("candidate"), listeningLanguage(home.language)]);
 
   return (
     <PageBody>
@@ -70,6 +75,18 @@ export default async function AccountPage() {
             </Link>
           )}
         </section>
+
+        {home.current.listenEnabled && (
+          <section aria-labelledby="language-heading" className={`${CARD} p-4 lg:p-5`}>
+            <h2 id="language-heading" className={`${SECTION_TITLE}`}>
+              Listening language
+            </h2>
+            <p className="mt-2 text-base leading-relaxed text-ink">
+              Listen reads Handbook pages aloud in this language when audio is available.
+            </p>
+            <LanguageForm current={listening.code} languages={languageNames(languages)} />
+          </section>
+        )}
 
         <section aria-labelledby="signins-heading" className={`${CARD} p-4 lg:p-5`}>
           <h2 id="signins-heading" className={`${SECTION_TITLE}`}>

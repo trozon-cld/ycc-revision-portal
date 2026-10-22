@@ -1,5 +1,6 @@
 "use client";
 
+import { DESCRIPTION_HINT } from "@/components/admin/media-upload-form";
 import { ActionForm } from "@/components/admin/action-form";
 import { Field } from "@/components/admin/field";
 import { RowActions, type RowAction } from "@/components/admin/row-actions";
@@ -49,7 +50,7 @@ export function MediaRowActions({
             // eslint-disable-next-line @next/next/no-img-element -- short-lived signed link, already a small thumbnail
             <img src={thumbUrl} alt="" className="max-h-48 w-full rounded-md bg-slate-100 object-contain" />
           )}
-          <Field id={`alt-${id}`} label="Description" hint="Say what the picture shows, in plain words.">
+          <Field id={`alt-${id}`} label="Description" hint={DESCRIPTION_HINT}>
             <textarea
               id={`alt-${id}`}
               name="altText"

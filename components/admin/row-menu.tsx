@@ -3,6 +3,7 @@
 import { Icon } from "@/components/icons";
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type RefObject } from "react";
 import { buttonClass } from "./styles";
+import { Spinner } from "@/components/spinner";
 
 export type RowMenuItem = { label: string; danger?: boolean; onSelect: () => void };
 
@@ -135,14 +136,5 @@ export function RowMenu({
         </div>
       )}
     </div>
-  );
-}
-
-function Spinner() {
-  return (
-    <svg viewBox="0 0 20 20" aria-hidden="true" className="size-4 motion-safe:animate-spin">
-      <circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" strokeOpacity="0.25" strokeWidth="2.5" />
-      <path d="M10 3a7 7 0 0 1 7 7" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-    </svg>
   );
 }

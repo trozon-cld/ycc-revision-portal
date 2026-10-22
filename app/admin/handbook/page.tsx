@@ -73,6 +73,9 @@ export default async function HandbookPage() {
             <Link href="/admin/handbook/preview" className={buttonClass("secondary")}>
               Preview book
             </Link>
+            <Link href="/admin/handbook/languages" className={buttonClass("secondary")}>
+              Languages and audio
+            </Link>
             <NewSectionButton />
             <NewChapterButton sections={sectionOptions} categoryGroups={categoryGroups} />
           </>

@@ -14,6 +14,7 @@ type TargetType =
   | "question"
   | "media"
   | "faq"
+  | "language"
   | "support_contact"
   | "account"
   | "log_archive";

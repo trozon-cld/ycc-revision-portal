@@ -11,6 +11,8 @@ import { readQuestionForUpdate } from "@/lib/questions/queries";
 import { questionTypeLabel } from "@/lib/questions/registry";
 import { parseQuestion, type ParsedQuestion } from "@/lib/questions/validate";
 import { isUuid } from "@/lib/ids";
+import { deleteAudioFilesQuietly } from "@/lib/voice/page-audio";
+import { questionAudioPaths } from "@/lib/voice/question-voice";
 import type { FormState } from "@/lib/forms";
 
 export type QuestionActionState = FormState;
@@ -221,6 +223,8 @@ export async function deleteQuestion(_prev: QuestionActionState, formData: FormD
   if (!isUuid(questionId)) return { error: NOT_FOUND };
 
   let result: QuestionActionState;
+  // Its audio files (if it was once in the Handbook), removed from storage once the delete is saved.
+  let audioPaths: string[] = [];
   try {
     result = await withTransaction<QuestionActionState>(async (client) => {
       const question = await readQuestionForUpdate(client, questionId);
@@ -228,6 +232,7 @@ export async function deleteQuestion(_prev: QuestionActionState, formData: FormD
 
       const { rows: used } = await client.query(`select 1 from handbook_items where question_id = $1`, [questionId]);
       if (used.length > 0) return { error: IN_HANDBOOK };
+      audioPaths = await questionAudioPaths(client, questionId);
 
       const { rows: chapter } = await client.query<{ title: string }>(`select title from chapters where id = $1`, [
         question.chapterId,
@@ -248,6 +253,7 @@ export async function deleteQuestion(_prev: QuestionActionState, formData: FormD
     throw error;
   }
 
+  if (result.success) await deleteAudioFilesQuietly(audioPaths);
   revalidateQuestionPaths();
   return result;
 }

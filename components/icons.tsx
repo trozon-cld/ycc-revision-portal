@@ -1,6 +1,7 @@
 // Every icon in the app comes from here: Phosphor Icons (MIT licence, phosphoricons.com), server-safe build.
 // Line icons normally ("bold" on candidate pages, "regular" in the staff console); "fill" for selected or on.
 import type { IconWeight } from "@phosphor-icons/react/dist/lib/types";
+import { ArrowCounterClockwiseIcon } from "@phosphor-icons/react/dist/ssr/ArrowCounterClockwise";
 import { ArrowDownIcon } from "@phosphor-icons/react/dist/ssr/ArrowDown";
 import { ArrowUpIcon } from "@phosphor-icons/react/dist/ssr/ArrowUp";
 import { BookOpenIcon } from "@phosphor-icons/react/dist/ssr/BookOpen";
@@ -23,6 +24,7 @@ import { ImageIcon } from "@phosphor-icons/react/dist/ssr/Image";
 import { ListIcon } from "@phosphor-icons/react/dist/ssr/List";
 import { ListBulletsIcon } from "@phosphor-icons/react/dist/ssr/ListBullets";
 import { ListChecksIcon } from "@phosphor-icons/react/dist/ssr/ListChecks";
+import { PauseIcon } from "@phosphor-icons/react/dist/ssr/Pause";
 import { PlusIcon } from "@phosphor-icons/react/dist/ssr/Plus";
 import { QuestionIcon } from "@phosphor-icons/react/dist/ssr/Question";
 import { SlidersHorizontalIcon } from "@phosphor-icons/react/dist/ssr/SlidersHorizontal";
@@ -49,6 +51,8 @@ const ICONS = {
   page: FileTextIcon,
   results: ListChecksIcon,
   listen: SpeakerHighIcon,
+  pause: PauseIcon,
+  "listen-back": ArrowCounterClockwiseIcon,
   flag: FlagIcon,
   // Marks and movement
   tick: CheckIcon,

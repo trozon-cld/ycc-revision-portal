@@ -4,10 +4,12 @@ export type CandidateHome = {
   email: string;
   name: string | null;
   accessExpiresAt: string | null;
-  current: { id: string; name: string; groupName: string };
+  current: { id: string; name: string; groupName: string; listenEnabled: boolean };
   // How many categories the candidate can choose from (their group's size).
   choices: number;
   assigned: { id: string; name: string };
+  // Listen's language code (voice_languages).
+  language: string;
 };
 
 // Read live, not from the JWT, so an extension or a category change shows straight away.
@@ -19,14 +21,17 @@ export async function loadCandidateHome(userId: string): Promise<CandidateHome |
     current_id: string;
     current_name: string;
     group_name: string;
+    listen_enabled: boolean;
     assigned_id: string;
     assigned_name: string;
     choices: number;
+    preferred_language: string;
   }>(
     `select u.email, u.full_name, u.access_expires_at,
-            cur.id as current_id, cur.name as current_name, g.name as group_name,
+            cur.id as current_id, cur.name as current_name, g.name as group_name, cur.listen_enabled,
             asg.id as assigned_id, asg.name as assigned_name,
-            (select count(*)::int from categories c where c.group_id = asg.group_id) as choices
+            (select count(*)::int from categories c where c.group_id = asg.group_id) as choices,
+            u.preferred_language
      from users u
      join categories cur on cur.id = u.current_category_id
      join category_groups g on g.id = cur.group_id
@@ -40,8 +45,9 @@ export async function loadCandidateHome(userId: string): Promise<CandidateHome |
     email: row.email,
     name: row.full_name,
     accessExpiresAt: row.access_expires_at ? row.access_expires_at.toISOString() : null,
-    current: { id: row.current_id, name: row.current_name, groupName: row.group_name },
+    current: { id: row.current_id, name: row.current_name, groupName: row.group_name, listenEnabled: row.listen_enabled },
     assigned: { id: row.assigned_id, name: row.assigned_name },
     choices: row.choices,
+    language: row.preferred_language,
   };
 }

@@ -8,6 +8,10 @@ import type { ResolvedMedia } from "@/lib/content/book";
 import { getChapterContext, resolveMedia } from "@/lib/content/pages";
 import { isStorageConfigured } from "@/lib/storage/storage";
 import { isUuid } from "@/lib/ids";
+import { loadVoiceLanguages } from "@/lib/voice/language-store";
+import { languageNames } from "@/lib/voice/languages";
+import { loadAudioSummaries } from "@/lib/voice/page-audio";
+import { loadTranslationSummaries } from "@/lib/voice/page-translations";
 import { PageEditor } from "./page-editor";
 
 export const metadata: Metadata = { title: "Edit page" };
@@ -36,6 +40,8 @@ export default async function EditPagePage({ params }: PageProps<"/admin/handboo
   const blocks = parsed.ok ? parsed.blocks : [];
   const loadProblem = parsed.ok ? null : parsed.error;
 
+  const [translations, audio, languages] = await Promise.all([loadTranslationSummaries(page.id), loadAudioSummaries(page.id), loadVoiceLanguages()]);
+
   let media: ResolvedMedia = {};
   try {
     media = await resolveMedia(collectMediaIds(blocks));
@@ -54,6 +60,9 @@ export default async function EditPagePage({ params }: PageProps<"/admin/handboo
       initialMedia={media}
       storageReady={isStorageConfigured()}
       loadProblem={loadProblem}
+      translations={translations}
+      audio={audio}
+      languages={languageNames(languages)}
     />
   );
 }

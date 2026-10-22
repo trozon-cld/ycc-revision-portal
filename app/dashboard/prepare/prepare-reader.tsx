@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PICTURE_LINK_SECONDS, type BookPageData, type HandbookOutcome, type ResolvedMedia, type TextSize } from "@/lib/content/book";
 import type { BookCovers } from "@/lib/content/covers";
 import { BookReader } from "@/components/learning/book-reader";
+import type { ListenSetup } from "@/components/learning/listen";
 import { BAR_BUTTON_DENSE, PANEL_LINK, barButton } from "@/components/learning/reader-tools";
 import { AccountLinks, HomeLogo } from "@/components/candidate/header";
 import { saveHandbookAnswer, saveHandbookPagesDone, saveReadingPosition, saveTextSize } from "./actions";
@@ -122,6 +123,7 @@ export function PrepareReader({
   startPageId,
   initialTextSize,
   covers,
+  listen,
 }: {
   // Every save names the category this book was opened for; the server ignores it after a switch.
   categoryId: string;
@@ -130,7 +132,18 @@ export function PrepareReader({
   startPageId: string | null;
   initialTextSize: TextSize;
   covers: BookCovers;
+  // null when Listen is off for the category: no Listen button and no Reading speed.
+  listen: { language: string; languageName: string; durations: Record<string, number> } | null;
 }) {
+  const languageName = listen?.languageName ?? null;
+  const durations = listen?.durations ?? null;
+  const listenSetup = useMemo<ListenSetup | undefined>(
+    () =>
+      languageName && durations
+        ? { languageName, durations, src: (pageId) => `/api/handbook/audio/${pageId}`, accountHref: "/dashboard/account" }
+        : undefined,
+    [languageName, durations]
+  );
   const [textSize, setTextSize] = useState<TextSize>(initialTextSize);
   useFreshPictureLinks(media);
   const savePosition = useDebounced(useCallback((itemId: string) => saveReadingPosition(categoryId, itemId), [categoryId]), POSITION_DELAY);
@@ -164,6 +177,7 @@ export function PrepareReader({
       barEnd={<AccountLinks buttonClass={`${barButton} ${BAR_BUTTON_DENSE}`} />}
       homeHref="/dashboard"
       accountLinks={<AccountLinks buttonClass={PANEL_LINK} />}
+      listen={listenSetup}
     />
   );
 }

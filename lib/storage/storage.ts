@@ -1,11 +1,12 @@
 // The only file that knows the storage provider (Supabase Storage REST). Server-only:
 // it reads the service key, so never import it from a client component.
 
-// Pictures and log archives live in separate private buckets.
-export type StorageArea = "media" | "archives";
+// Pictures, log archives and Handbook audio live in separate private buckets.
+export type StorageArea = "media" | "archives" | "audio";
 const BUCKETS: Record<StorageArea, { env: string; fallback: string }> = {
   media: { env: "SUPABASE_STORAGE_BUCKET", fallback: "handbook-media" },
   archives: { env: "SUPABASE_ARCHIVE_BUCKET", fallback: "log-archives" },
+  audio: { env: "SUPABASE_AUDIO_BUCKET", fallback: "handbook-audio" },
 };
 const IMMUTABLE_MAX_AGE = "max-age=31536000";
 
@@ -34,7 +35,7 @@ export function isStorageConfigured() {
   return Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
-// Media paths are unique per upload, so objects never change and can be cached for a year.
+// Media and audio paths are unique per upload, so objects never change and can be cached for a year.
 // `replace`: for fixed paths written again on a retry (log archives); those aren't cached.
 export async function storeObject(
   path: string,
@@ -60,9 +61,9 @@ export async function storeObject(
   }
 }
 
-export async function deleteObjects(paths: string[]): Promise<void> {
+export async function deleteObjects(paths: string[], area: StorageArea = "media"): Promise<void> {
   if (paths.length === 0) return;
-  const { base, key, bucket } = config();
+  const { base, key, bucket } = config(area);
   const response = await fetch(`${base}/object/${encodeURIComponent(bucket)}`, {
     method: "DELETE",
     headers: { ...authHeaders(key), "Content-Type": "application/json" },
