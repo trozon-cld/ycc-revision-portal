@@ -7,6 +7,8 @@ export type CatalogueLanguage = {
   nativeName: string;
   // Extra instruction for the translator (sent with every translation into this language).
   translatorNote?: string;
+  // Google Cloud Translation's code when it differs from ours (e.g. European Portuguese).
+  googleTranslate?: string;
 };
 
 export const LANGUAGE_CATALOGUE: readonly CatalogueLanguage[] = [
@@ -15,7 +17,7 @@ export const LANGUAGE_CATALOGUE: readonly CatalogueLanguage[] = [
   { code: "de", name: "German (Germany)", nativeName: "Deutsch (Deutschland)" },
   { code: "lt", name: "Lithuanian", nativeName: "Lietuvių" },
   { code: "pl", name: "Polish", nativeName: "Polski" },
-  { code: "pt", name: "Portuguese", nativeName: "Português" },
+  { code: "pt", name: "Portuguese", nativeName: "Português", googleTranslate: "pt-PT" },
   { code: "pa", name: "Punjabi", nativeName: "ਪੰਜਾਬੀ", translatorNote: "Use Gurmukhi script." },
   { code: "ro", name: "Romanian", nativeName: "Română" },
   { code: "ru", name: "Russian", nativeName: "Русский" },
@@ -25,3 +27,9 @@ export const LANGUAGE_CATALOGUE: readonly CatalogueLanguage[] = [
   { code: "fr", name: "French", nativeName: "Français" },
   { code: "es", name: "Spanish", nativeName: "Español" },
 ];
+
+// The code Google Cloud Translation uses for one of our languages (ours unless the list says otherwise;
+// Punjabi "pa" is Gurmukhi there).
+export function googleTranslateCode(code: string): string {
+  return LANGUAGE_CATALOGUE.find((language) => language.code === code)?.googleTranslate ?? code;
+}

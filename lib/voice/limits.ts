@@ -8,3 +8,8 @@ export const SPEECH_PART_CHARS = 3000;
 export const MP3_KBPS = 48;
 // Longest fixed spoken phrase (voice_phrases.text).
 export const VOICE_PHRASE_MAX_LENGTH = 300;
+// Google Cloud: one request gives up after this long (Google usually answers within seconds).
+export const GOOGLE_REQUEST_TIMEOUT_MS = 30_000;
+// Translation requests stay within Google's recommended size: about 5,000 characters, and at most this many texts.
+export const TRANSLATE_BATCH_CHARS = 5_000;
+export const TRANSLATE_BATCH_TEXTS = 100;

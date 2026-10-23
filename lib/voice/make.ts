@@ -2,6 +2,7 @@ import type { Block } from "@/lib/content/blocks";
 import { encodeMp3, joinPcm, readSpeechAudio, durationMs, AudioFormatError, type Pcm } from "./audio";
 import { fakeSpeech, fakeTranslator } from "./fake";
 import { geminiSpeech, geminiTranslator } from "./gemini";
+import { googleTranslator } from "./google";
 import { findVoiceLanguage } from "./language-store";
 import { SOURCE_LANGUAGE, type VoiceLanguage } from "./languages";
 import { VOICE_REQUEST_TIMEOUT_MS } from "./limits";
@@ -13,9 +14,11 @@ import { applyTranslation, matchTranslation, toTranslatable, type TranslatableBl
 // The editors' two jobs: translate a page or question, and turn one (English or translated) into one MP3.
 // Each call to the service counts toward the editor's hourly cap; nothing is saved here.
 
+// google (the default): Google Cloud translates; Gemini still speaks until Google's speech is added (G2).
 function services(): { translator: Translator; speech: SpeechMaker } {
-  const provider = (process.env.VOICE_PROVIDER?.trim() || "gemini").toLowerCase();
+  const provider = (process.env.VOICE_PROVIDER?.trim() || "google").toLowerCase();
   if (provider === "fake" && process.env.NODE_ENV !== "production") return { translator: fakeTranslator(), speech: fakeSpeech() };
+  if (provider === "google") return { translator: googleTranslator(), speech: geminiSpeech() };
   if (provider !== "gemini") throw new VoiceError("not_set_up", `unknown VOICE_PROVIDER "${provider}"`);
   return { translator: geminiTranslator(), speech: geminiSpeech() };
 }

@@ -28,6 +28,7 @@ export type VoiceErrorKind =
   | "key"
   | "billing"
   | "setting"
+  | "disabled"
   | "daily_limit"
   | "rate_limit"
   | "busy"
@@ -41,6 +42,7 @@ const MESSAGES: Record<VoiceErrorKind, string> = {
   not_set_up: "The voice service isn't set up yet. Add GEMINI_API_KEY to the server settings.",
   key: "The voice service didn't accept the API key. Check GEMINI_API_KEY in the server settings.",
   billing: "The voice service needs billing or credit on its account before it can be used.",
+  disabled: "The voice service's API isn't turned on for this account. Turn it on in the provider's console.",
   setting: "The voice service doesn't accept the thinking level for this model. Set GEMINI_THINKING_LEVEL=low in the server settings (or remove it) and restart.",
   daily_limit: "Today's limit for the voice service is used up. Please try again tomorrow.",
   rate_limit: "The voice service is getting too many requests. Please wait a minute and try again.",
@@ -51,12 +53,14 @@ const MESSAGES: Record<VoiceErrorKind, string> = {
   failed: "The voice service couldn't do this just now. Nothing was saved. Please try again.",
 };
 
+// `message`: a provider's own wording for staff (e.g. naming its setting); otherwise the general one for the kind.
 export class VoiceError extends Error {
   constructor(
     readonly kind: VoiceErrorKind,
-    readonly detail?: string
+    readonly detail?: string,
+    message?: string
   ) {
-    super(MESSAGES[kind]);
+    super(message ?? MESSAGES[kind]);
     this.name = "VoiceError";
   }
 }
