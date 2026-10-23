@@ -15,12 +15,14 @@ import { QUESTION_SOURCE_SQL, TRANSLATION_SOURCE_SQL } from "./question-voice";
 // How long the private link to one page's audio lasts (it's fetched again on the next Listen).
 const LISTEN_LINK_SECONDS = 10 * 60;
 
-// The candidate's current category `cat` offers the language of audio `a` (0035): Listen on, and English, all
-// languages, or one of its chosen ones.
-const OFFERED = `
-  (cat.listen_mode <> 'off'
-   and (a.language = '${SOURCE_LANGUAGE}' or cat.listen_mode = 'all'
-        or exists (select 1 from category_languages cl where cl.category_id = cat.id and cl.language = a.language)))`;
+// The language candidate `u` hears in their current category `cat` (0035), the same rule as listeningLanguageIn:
+// their choice while it is live and the category offers it (English, all languages, or one of its chosen ones),
+// otherwise English. Their saved choice is never changed, so it comes back in a category that offers it.
+const HEARS = `
+  (case when exists (select 1 from voice_languages hl where hl.code = u.preferred_language and hl.status = 'live')
+             and (u.preferred_language = '${SOURCE_LANGUAGE}' or cat.listen_mode = 'all'
+                  or exists (select 1 from category_languages cl where cl.category_id = cat.id and cl.language = u.preferred_language))
+        then u.preferred_language else '${SOURCE_LANGUAGE}' end)`;
 
 // Audio `a` of page `p` is up to date: English from the page's current version, other languages from the
 // current revision of a checked translation of that version (the same rules as status.ts).
@@ -65,7 +67,7 @@ export async function loadReadyAudio(categoryId: string, language: string): Prom
 }
 
 // A short-lived link to one Handbook item's audio for this candidate, or null when they can't hear it
-// (Listen off for their current category or the language not offered there, not in it, unpublished, or no up-to-date audio in their language).
+// (Listen off for their current category, not in it, unpublished, or no up-to-date audio in the language they hear there).
 export async function candidateAudioLink(userId: string, itemId: string): Promise<string | null> {
   const { rows } = await pool.query<{ storage_path: string }>(
     `select a.storage_path
@@ -75,9 +77,9 @@ export async function candidateAudioLink(userId: string, itemId: string): Promis
      join chapters c on c.id = cc.chapter_id and c.status = 'published'
      join handbook_items i on i.chapter_id = c.id and i.id = $2
      join content_pages p on p.id = i.content_page_id and p.status = 'published'
-     join page_audio a on a.content_page_id = p.id and a.language = u.preferred_language
+     join page_audio a on a.content_page_id = p.id and a.language = ${HEARS}
      join voice_languages vl on vl.code = a.language and vl.status = 'live'
-     where u.id = $1 and u.role = 'candidate' and ${OFFERED} and ${READY_AUDIO}
+     where u.id = $1 and u.role = 'candidate' and cat.listen_mode <> 'off' and ${READY_AUDIO}
      union all
      select a.storage_path
      from users u
@@ -86,9 +88,9 @@ export async function candidateAudioLink(userId: string, itemId: string): Promis
      join chapters c on c.id = cc.chapter_id and c.status = 'published'
      join handbook_items i on i.chapter_id = c.id and i.id = $2
      join questions q on q.id = i.question_id
-     join question_audio a on a.question_id = q.id and a.language = u.preferred_language
+     join question_audio a on a.question_id = q.id and a.language = ${HEARS}
      join voice_languages vl on vl.code = a.language and vl.status = 'live'
-     where u.id = $1 and u.role = 'candidate' and ${OFFERED} and ${READY_QUESTION_AUDIO}`,
+     where u.id = $1 and u.role = 'candidate' and cat.listen_mode <> 'off' and ${READY_QUESTION_AUDIO}`,
     [userId, itemId, [...VOICE_QUESTION_TYPES]]
   );
   const path = rows[0]?.storage_path;
