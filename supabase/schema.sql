@@ -589,8 +589,9 @@ create table question_audio (
   check ((language = 'en') = (source_revision is null))
 );
 
--- Listen on or off per category (0032): off hides Listen and the listening language for its candidates.
-alter table categories add column listen_enabled boolean not null default true;
+-- Listen per category (0032, 0035): off hides Listen and the listening language for its candidates; all offers every
+-- live language (including ones added later); chosen offers English plus category_languages (added below).
+alter table categories add column listen_mode varchar(10) not null default 'all' check (listen_mode in ('off', 'all', 'chosen'));
 
 -- Listen's languages and their fixed spoken phrases (0033); managed in the app from L2.
 -- One row per language. Only live languages are offered to candidates; staff can prepare draft ones; hidden ones
@@ -667,3 +668,10 @@ alter table page_audio add foreign key (language) references voice_languages (co
 alter table question_translations add foreign key (language) references voice_languages (code);
 alter table question_audio add foreign key (language) references voice_languages (code);
 alter table users add foreign key (preferred_language) references voice_languages (code);
+
+-- The languages a category offers when its listen_mode is 'chosen' (0035; kept when the mode changes). English is always offered.
+create table category_languages (
+  category_id uuid not null references categories (id) on delete cascade,
+  language varchar(10) not null references voice_languages (code) check (language <> 'en'),
+  primary key (category_id, language)
+);

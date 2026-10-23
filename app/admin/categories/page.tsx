@@ -8,6 +8,8 @@ import { Badge } from "@/components/admin/badge";
 import { PageHeader } from "@/components/admin/page-header";
 import { Cell, Row, Table } from "@/components/admin/table";
 import { countOf } from "@/lib/format";
+import type { ListenMode } from "@/lib/voice/language-store";
+import type { ListenLanguageOption } from "./category-listen-form";
 import type { ChapterOutline } from "./category-chapters-form";
 import type { CoverChoice } from "./category-covers-form";
 import { CategoryRowActions, NewCategoryButton, type GroupOption } from "./category-row-actions";
@@ -25,7 +27,9 @@ interface CategoryRow {
   group_id: string;
   name: string;
   candidate_count: number;
-  listen_enabled: boolean;
+  listen_mode: ListenMode;
+  // Chosen Listen languages that aren't hidden (used when listen_mode is "chosen").
+  chosen: string[];
 }
 
 interface CoverRow {
@@ -57,7 +61,9 @@ export default async function CategoriesPage() {
     pool.query<GroupRow>(`select id, name from category_groups order by position`),
     // A candidate counts once, whether the category is their assigned one, their current one, or both.
     pool.query<CategoryRow>(
-      `select c.id, c.group_id, c.name, c.listen_enabled,
+      `select c.id, c.group_id, c.name, c.listen_mode,
+              array(select cl.language from category_languages cl join voice_languages l on l.code = cl.language and l.status <> 'hidden'
+                    where cl.category_id = c.id order by l.name) as chosen,
               (select count(*) from users u where u.category_id = c.id or u.current_category_id = c.id)::int
                 as candidate_count
        from categories c
@@ -79,6 +85,12 @@ export default async function CategoriesPage() {
        join media m on m.id = s.media_id`
     ),
   ]);
+
+  // Languages a category can offer besides English: live and draft ones (drafts are offered once they go live).
+  const { rows: languageRows } = await pool.query<{ code: string; name: string; status: string }>(
+    `select code, name, status from voice_languages where code <> 'en' and status <> 'hidden' order by name`
+  );
+  const listenLanguages: ListenLanguageOption[] = languageRows.map((row) => ({ code: row.code, name: row.name, draft: row.status === "draft" }));
 
   const storageReady = isStorageConfigured();
   let thumbs = new Map<string, string>();
@@ -153,7 +165,7 @@ export default async function CategoriesPage() {
 
               <Table
                 columns={["Name", "Candidates", "Chapters", "Covers", "Listen", ""]}
-                widths={["", "md:w-32", "md:w-32", "md:w-40", "md:w-24", "md:w-14"]}
+                widths={["", "md:w-32", "md:w-32", "md:w-40", "md:w-32", "md:w-14"]}
                 isEmpty={groupCategories.length === 0}
                 emptyMessage="No categories in this group yet."
               >
@@ -184,7 +196,7 @@ export default async function CategoriesPage() {
                         {describeCovers(covers.front !== null, covers.back !== null)}
                       </Cell>
                       <Cell label="Listen" nowrap>
-                        <Badge tone={category.listen_enabled ? "success" : "neutral"}>{category.listen_enabled ? "On" : "Off"}</Badge>
+                        <ListenBadge mode={category.listen_mode} chosen={category.chosen.length} />
                       </Cell>
                       <Cell kind="actions">
                         <CategoryRowActions
@@ -196,7 +208,9 @@ export default async function CategoriesPage() {
                           otherGroups={groupOptions.filter((option) => option.id !== group.id)}
                           covers={covers}
                           storageReady={storageReady}
-                          listenEnabled={category.listen_enabled}
+                          listenMode={category.listen_mode}
+                          listenChosen={category.chosen}
+                          listenLanguages={listenLanguages}
                         />
                       </Cell>
                     </Row>
@@ -231,4 +245,11 @@ function buildOutline(rows: OutlineRow[]): ChapterOutline {
     }
   }
   return outline;
+}
+
+// The Listen column: Off, All languages, or how many languages (English plus the chosen ones).
+function ListenBadge({ mode, chosen }: { mode: ListenMode; chosen: number }) {
+  if (mode === "off") return <Badge tone="neutral">Off</Badge>;
+  if (mode === "all") return <Badge tone="success">All languages</Badge>;
+  return <Badge tone="info">{countOf(chosen + 1, "language", "languages")}</Badge>;
 }

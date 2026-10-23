@@ -55,12 +55,47 @@ export async function sourceLanguage(): Promise<VoiceLanguage> {
   return found;
 }
 
-// What a candidate hears in: their chosen language while it is live, otherwise English.
-export async function listeningLanguage(code: string | null | undefined): Promise<VoiceLanguage> {
-  return (await findVoiceLanguage(code, "candidate")) ?? sourceLanguage();
-}
-
 // A language's English name for logs and details (hidden ones too); the code if it is unknown.
 export async function languageName(code: string): Promise<string> {
   return (await findVoiceLanguage(code, "any"))?.name ?? code;
+}
+
+// ---- What a category offers (0035) ----
+
+export type ListenMode = "off" | "all" | "chosen";
+export type CategoryListen = { mode: ListenMode; chosen: string[] };
+
+const readCategoryListen = cache(async (categoryId: string): Promise<CategoryListen | null> => {
+  const { rows } = await pool.query<{ listen_mode: ListenMode; chosen: string[] }>(
+    `select c.listen_mode, array(select cl.language from category_languages cl where cl.category_id = c.id order by cl.language) as chosen
+     from categories c where c.id = $1`,
+    [categoryId]
+  );
+  return rows[0] ? { mode: rows[0].listen_mode, chosen: rows[0].chosen } : null;
+});
+
+export async function categoryListen(categoryId: string): Promise<CategoryListen | null> {
+  return readCategoryListen(categoryId);
+}
+
+// Whether a category offers this language: never while Listen is off; English always; otherwise all, or its chosen ones.
+export function categoryOffers(listen: CategoryListen | null, code: string): boolean {
+  if (!listen || listen.mode === "off") return false;
+  return code === SOURCE_LANGUAGE || listen.mode === "all" || listen.chosen.includes(code);
+}
+
+// The live languages candidates in this category can choose (none while Listen is off).
+export async function offeredLanguages(categoryId: string): Promise<VoiceLanguage[]> {
+  const [listen, live] = await Promise.all([readCategoryListen(categoryId), loadVoiceLanguages("candidate")]);
+  return live.filter((language) => categoryOffers(listen, language.code));
+}
+
+// What a candidate hears in a category: their choice while it is live and offered there, otherwise English.
+export async function listeningLanguageIn(code: string | null | undefined, categoryId: string): Promise<VoiceLanguage> {
+  const listen = await readCategoryListen(categoryId);
+  if (code && categoryOffers(listen, code)) {
+    const found = await findVoiceLanguage(code, "candidate");
+    if (found) return found;
+  }
+  return sourceLanguage();
 }

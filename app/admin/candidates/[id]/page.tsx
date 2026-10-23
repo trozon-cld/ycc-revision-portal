@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
-import { listeningLanguage } from "@/lib/voice/language-store";
+import { categoryListen, languageName, listeningLanguageIn } from "@/lib/voice/language-store";
 import { accessEnded, customDateBounds, formatUkDate, formatUkDateTime } from "@/lib/candidates/access";
 import { loadCandidateDetail } from "@/lib/candidates/detail";
 import { candidateProgressPath } from "@/lib/candidates/paths";
@@ -71,7 +71,19 @@ export default async function CandidateProgressPage({ params, searchParams }: Pa
   if (!candidate) notFound();
   // A test left to run out of time counts as soon as staff look, not only once the candidate returns.
   await withTransaction((client) => settleMocks(client, [candidate.id]));
-  const listening = await listeningLanguage(candidate.language);
+  // Their choice, and what they hear in their current category when that differs (Listen off, or not offered there).
+  const current = candidate.current;
+  const [chosenName, hears, currentListen] = await Promise.all([
+    languageName(candidate.language),
+    listeningLanguageIn(candidate.language, current.id),
+    categoryListen(current.id),
+  ]);
+  const listeningLabel =
+    currentListen?.mode === "off"
+      ? `${chosenName} (Listen is off for ${current.name})`
+      : hears.code === candidate.language
+        ? hears.name
+        : `${chosenName} (hears ${hears.name} in ${current.name})`;
   const query = await searchParams;
 
   const asked = firstParam(query.category);
@@ -134,7 +146,7 @@ export default async function CandidateProgressPage({ params, searchParams }: Pa
             ["Last login", candidate.lastLoginAt ? formatUkDateTime(candidate.lastLoginAt) : "No logins recorded"],
             ["Assigned category", candidate.assigned.name],
             ["Current category", candidate.current.name],
-            ["Listening language", listening.name],
+            ["Listening language", listeningLabel],
             ...(session.role === "superadmin" ? [["Admin", <PersonLabel key="admin" name={candidate.admin.name} email={candidate.admin.email} />] as [string, ReactNode]] : []),
           ]}
         />

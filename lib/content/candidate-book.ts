@@ -2,7 +2,7 @@ import { pool } from "@/lib/db/pool";
 import { toTextSize, type BookPageData, type ResolvedMedia, type TextSize } from "./book";
 import type { BookCovers } from "./covers";
 import { loadPreviewBook } from "./preview";
-import { listeningLanguage } from "@/lib/voice/language-store";
+import { listeningLanguageIn } from "@/lib/voice/language-store";
 import { loadReadyAudio } from "@/lib/voice/listen";
 
 export type CandidateBook = {
@@ -28,11 +28,11 @@ export async function loadCandidateBook(userId: string): Promise<CandidateBook |
     back_id: string | null;
     reader_text_size: number | null;
     preferred_language: string;
-    listen_enabled: boolean;
+    listen_mode: string;
     item_id: string | null;
   }>(
     `select c.id as category_id, c.name as category_name, c.front_cover_media_id as front_id,
-            c.back_cover_media_id as back_id, u.reader_text_size, u.preferred_language, c.listen_enabled, hp.item_id
+            c.back_cover_media_id as back_id, u.reader_text_size, u.preferred_language, c.listen_mode, hp.item_id
      from users u
      join categories c on c.id = u.current_category_id
      left join handbook_progress hp on hp.user_id = u.id and hp.category_id = u.current_category_id
@@ -43,10 +43,10 @@ export async function loadCandidateBook(userId: string): Promise<CandidateBook |
   if (!row) return null;
 
   const coverIds = [row.front_id, row.back_id].filter((id): id is string => Boolean(id));
-  const language = await listeningLanguage(row.preferred_language);
+  const language = await listeningLanguageIn(row.preferred_language, row.category_id);
   const [book, durations] = await Promise.all([
     loadPreviewBook({ chapterId: null, categoryId: row.category_id, includeDrafts: false }, { ids: coverIds, thumbIds: coverIds }),
-    row.listen_enabled ? loadReadyAudio(row.category_id, language.code) : null,
+    row.listen_mode !== "off" ? loadReadyAudio(row.category_id, language.code) : null,
   ]);
   return {
     categoryId: row.category_id,

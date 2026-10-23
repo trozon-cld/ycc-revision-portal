@@ -9,11 +9,14 @@ import { isUuid } from "@/lib/ids";
 import { CATEGORY_NAME_MAX_LENGTH } from "@/lib/limits";
 import { cleanLine } from "@/lib/text";
 import type { FormState } from "@/lib/forms";
+import type { ListenMode } from "@/lib/voice/language-store";
 
 export type CategoryActionState = FormState;
 
 const DUPLICATE_NAME = "A category with this name already exists.";
 const MAX_LINKED_CHAPTERS = 1000;
+// More than any real list of languages; stops a crafted request sending thousands.
+const MAX_LISTEN_LANGUAGES = 100;
 const GROUP_GONE = "That group no longer exists. Close this panel and open it again.";
 const COVER_PICTURE_GONE = "That picture is no longer in the Media library. Choose another one.";
 const CHAPTERS_CHANGED = "The chapter list has changed. Close this panel and open it again.";
@@ -379,32 +382,61 @@ function blockedMessage(candidateCount: number) {
   }. Their Admins need to move them to another category before it can be deleted.`;
 }
 
-// Listen on or off for one category's candidates (translations, audio and their language choices are kept).
+// Listen for one category's candidates (0035): off, all languages, or English plus chosen ones. Translations, audio
+// and candidates' language choices are kept. One log entry per change: on/off, or which languages.
 export async function setCategoryListen(_prevState: CategoryActionState | undefined, formData: FormData): Promise<CategoryActionState> {
   const session = await requireRole(["superadmin"]);
 
   const categoryId = String(formData.get("categoryId") ?? "");
-  const listen = formData.get("listen");
+  const mode = formData.get("mode");
   if (!isUuid(categoryId)) return { error: "Category not found." };
-  if (listen !== "on" && listen !== "off") return { error: "Choose on or off." };
-  const enabled = listen === "on";
+  if (mode !== "off" && mode !== "all" && mode !== "chosen") return { error: "Choose how Listen works for this category." };
+  const asked = [...new Set(formData.getAll("languages").map(String))].slice(0, MAX_LISTEN_LANGUAGES);
 
   const result = await withTransaction<CategoryActionState>(async (client) => {
-    const { rows } = await client.query<{ name: string; listen_enabled: boolean }>(
-      `select name, listen_enabled from categories where id = $1 for update`,
+    const { rows } = await client.query<{ name: string; listen_mode: ListenMode; chosen: string[] }>(
+      `select name, listen_mode, array(select language from category_languages where category_id = $1) as chosen
+       from categories where id = $1 for update`,
       [categoryId]
     );
     const category = rows[0];
     if (!category) return { error: "This category no longer exists." };
-    if (category.listen_enabled === enabled) return { success: true };
-    await client.query(`update categories set listen_enabled = $2 where id = $1`, [categoryId, enabled]);
-    await logActivity(client, session, "category.listen_changed", { type: "category", id: categoryId, label: category.name }, {
-      from: category.listen_enabled ? "On" : "Off",
-      to: enabled ? "On" : "Off",
-    });
+    // Only languages that exist and aren't hidden can be ticked (drafts can, so a category is ready when they go live).
+    const { rows: known } = await client.query<{ code: string; name: string; status: string }>(
+      `select code, name, status from voice_languages where code <> 'en'`
+    );
+    const chosen = mode === "chosen" ? asked : category.chosen;
+    if (mode === "chosen" && chosen.some((code) => !known.some((language) => language.code === code && language.status !== "hidden"))) {
+      return { error: "The language list has changed. Close this panel and open it again." };
+    }
+    const before = listenOffer(category.listen_mode, category.chosen, known);
+    const after = listenOffer(mode, chosen, known);
+    if (mode === "chosen") {
+      await client.query(`delete from category_languages where category_id = $1 and not (language = any($2::text[]))`, [categoryId, chosen]);
+      await client.query(
+        `insert into category_languages (category_id, language) select $1, unnest($2::text[]) on conflict do nothing`,
+        [categoryId, chosen]
+      );
+    }
+    if (category.listen_mode !== mode) await client.query(`update categories set listen_mode = $2 where id = $1`, [categoryId, mode]);
+    if (before === after) return { success: true };
+    const target = { type: "category" as const, id: categoryId, label: category.name };
+    if (category.listen_mode === "off" || mode === "off") {
+      await logActivity(client, session, "category.listen_changed", target, { from: before, to: after });
+    } else {
+      await logActivity(client, session, "category.listen_languages_changed", target, { from: before, to: after });
+    }
     return { success: true };
   });
 
   revalidatePath("/admin/categories");
   return result;
+}
+
+// How a category's Listen reads in the log: "Off", "All languages", or "English, Polish, Welsh".
+function listenOffer(mode: ListenMode, chosen: string[], known: { code: string; name: string }[]): string {
+  if (mode === "off") return "Off";
+  if (mode === "all") return "All languages";
+  const names = chosen.map((code) => known.find((language) => language.code === code)?.name ?? code).sort((a, b) => a.localeCompare(b, "en"));
+  return ["English", ...names].join(", ");
 }

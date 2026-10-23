@@ -25,6 +25,7 @@ export const ACTIVITY_ACTIONS = {
   "category.group_changed": "Moved category to another group",
   "category.chapters_changed": "Changed category chapters",
   "category.listen_changed": "Turned Listen on or off for category",
+  "category.listen_languages_changed": "Changed Listen languages for category",
   "category.covers_changed": "Changed Handbook covers",
   "category.deleted": "Deleted category",
   "section.created": "Created section",
