@@ -225,7 +225,7 @@ export function PhrasesEditor({ view }: { view: LanguagePhrases }) {
                     <input
                       id={id}
                       lang={language.code}
-                      dir={language.rtl ? "rtl" : "auto"}
+                      dir="auto"
                       type="text"
                       value={texts[key] ?? ""}
                       maxLength={VOICE_PHRASE_MAX_LENGTH}

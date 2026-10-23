@@ -17,7 +17,6 @@ export type ManagedLanguage = {
   name: string;
   nativeName: string;
   status: LanguageStatus;
-  rtl: boolean;
   translatorNote: string | null;
   phrases: number;
   checked: number;
@@ -53,7 +52,6 @@ function toManaged(row: LanguageDbRow & { phrases: number; checked: number; cand
     name: row.name,
     nativeName: row.native_name,
     status: row.status,
-    rtl: Boolean(catalogueEntry(row.code)?.rtl),
     translatorNote: row.translator_note,
     phrases: row.phrases,
     checked: row.checked,

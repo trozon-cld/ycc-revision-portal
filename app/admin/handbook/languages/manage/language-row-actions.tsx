@@ -27,7 +27,7 @@ export function AddLanguageButton({ options }: { options: { code: string; label:
             <Field
               id="add-language"
               label="Language"
-              hint="Every language the voice service can speak that people in England use, most-spoken first (Census 2021, main language of residents aged 3 and over)."
+              hint="The languages the platform offers. More can be added on request."
             >
               <select id="add-language" name="code" required className={inputClass}>
                 {options.map((option) => (

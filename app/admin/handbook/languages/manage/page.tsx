@@ -7,7 +7,7 @@ import { Cell, Row, Table } from "@/components/admin/table";
 import { CONTENT_EDITORS } from "@/lib/auth/content-editors";
 import { requireRole } from "@/lib/auth/guard";
 import { countOf } from "@/lib/format";
-import { LANGUAGE_CATALOGUE, speakerShare } from "@/lib/voice/language-catalogue";
+import { LANGUAGE_CATALOGUE } from "@/lib/voice/language-catalogue";
 import { listManagedLanguages, type ManagedLanguage } from "@/lib/voice/language-admin";
 import { LANGUAGE_TABS, LANGUAGES_MANAGE_PATH } from "@/lib/voice/language-tabs";
 import { phraseKeysFor, type LanguageStatus } from "@/lib/voice/languages";
@@ -28,7 +28,7 @@ export default async function ManageLanguagesPage() {
   const added = new Set(languages.map((language) => language.code));
   const addable = LANGUAGE_CATALOGUE.filter((language) => !added.has(language.code)).map((language) => ({
     code: language.code,
-    label: `${language.name} (${language.nativeName}) · ${speakerShare(language)}`,
+    label: `${language.name} (${language.nativeName})`,
   }));
   const live = languages.filter((language) => language.status === "live").length;
 
