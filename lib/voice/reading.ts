@@ -1,6 +1,7 @@
 import type { Block } from "@/lib/content/blocks";
 import { plainText } from "@/lib/content/inline";
 import { SPEECH_PART_CHARS } from "./limits";
+import type { SpeechPartLimit } from "./services";
 import type { VoiceLanguage } from "./languages";
 
 // What is read aloud for each block, in page order: headings and paragraphs, list items one by one,
@@ -71,18 +72,46 @@ function sentence(text: string): string {
     .join("\n");
 }
 
-// The text sent to the voice service, in parts of about SPEECH_PART_CHARS, split only between blocks
-// (a single longer block becomes its own part).
-export function speechChunks(parts: string[], maxChars = SPEECH_PART_CHARS): string[] {
+// The text sent to the voice service, in parts within its limit (characters, or UTF-8 bytes for Google), split
+// between blocks; a block over the limit is split at sentence ends, then between words, then (rarely) anywhere.
+export function speechChunks(parts: string[], limit: SpeechPartLimit = { chars: SPEECH_PART_CHARS }): string[] {
+  const size = "bytes" in limit ? (text: string) => utf8.encode(text).length : (text: string) => text.length;
+  const max = "bytes" in limit ? limit.bytes : limit.chars;
   const chunks: string[] = [];
   let current = "";
-  for (const part of parts) {
-    if (current && current.length + 2 + part.length > maxChars) {
+  for (const piece of parts.flatMap((part) => (size(part) > max ? splitLong(part, max, size) : [part]))) {
+    const joined = current ? `${current}\n\n${piece}` : piece;
+    if (current && size(joined) > max) {
       chunks.push(current);
-      current = "";
-    }
-    current = current ? `${current}\n\n${part}` : part;
+      current = piece;
+    } else current = joined;
   }
   if (current) chunks.push(current);
   return chunks;
+}
+
+const utf8 = new TextEncoder();
+
+// One block too long for a request: whole sentences where they fit, then words, then characters.
+function splitLong(text: string, max: number, size: (text: string) => number): string[] {
+  const pieces: string[] = [];
+  let current = "";
+  const add = (unit: string, glue: string) => {
+    const joined = current ? `${current}${glue}${unit}` : unit;
+    if (size(joined) <= max) current = joined;
+    else {
+      if (current) pieces.push(current);
+      current = unit;
+    }
+  };
+  for (const sentence of text.split(/(?<=[.!?।…])\s+|\n+/).filter(Boolean)) {
+    if (size(sentence) <= max) add(sentence, " ");
+    else
+      for (const word of sentence.split(/\s+/).filter(Boolean)) {
+        if (size(word) <= max) add(word, " ");
+        else for (const char of word) add(char, "");
+      }
+  }
+  if (current) pieces.push(current);
+  return pieces;
 }

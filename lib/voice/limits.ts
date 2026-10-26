@@ -13,3 +13,5 @@ export const GOOGLE_REQUEST_TIMEOUT_MS = 30_000;
 // Translation requests stay within Google's recommended size: about 5,000 characters, and at most this many texts.
 export const TRANSLATE_BATCH_CHARS = 5_000;
 export const TRANSLATE_BATCH_TEXTS = 100;
+// Google Text-to-Speech takes at most 5,000 bytes a request (Punjabi uses 3 bytes a character): parts stay under this.
+export const SPEECH_PART_BYTES = 4_500;

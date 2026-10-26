@@ -1,3 +1,4 @@
+import { SPEECH_PART_CHARS } from "./limits";
 import { VoiceError, type SpeechMaker, type Translator, type VoiceErrorKind } from "./services";
 
 // Stand-in services for tests and local trials without a key (VOICE_PROVIDER=fake; refused in production).
@@ -22,6 +23,7 @@ export function fakeSpeech(): SpeechMaker {
   return {
     name: "fake",
     voice: "tone",
+    partLimit: { chars: SPEECH_PART_CHARS },
     async speak({ text }) {
       failIfAsked(text);
       const rate = 24000;

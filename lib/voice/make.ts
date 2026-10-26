@@ -2,7 +2,7 @@ import type { Block } from "@/lib/content/blocks";
 import { encodeMp3, joinPcm, readSpeechAudio, durationMs, AudioFormatError, type Pcm } from "./audio";
 import { fakeSpeech, fakeTranslator } from "./fake";
 import { geminiSpeech, geminiTranslator } from "./gemini";
-import { googleTranslator } from "./google";
+import { googleSpeech, googleTranslator } from "./google";
 import { findVoiceLanguage } from "./language-store";
 import { SOURCE_LANGUAGE, type VoiceLanguage } from "./languages";
 import { VOICE_REQUEST_TIMEOUT_MS } from "./limits";
@@ -14,11 +14,11 @@ import { applyTranslation, matchTranslation, toTranslatable, type TranslatableBl
 // The editors' two jobs: translate a page or question, and turn one (English or translated) into one MP3.
 // Each call to the service counts toward the editor's hourly cap; nothing is saved here.
 
-// google (the default): Google Cloud translates; Gemini still speaks until Google's speech is added (G2).
+// google (the default): Google Cloud Translation and Text-to-Speech; gemini and fake as before.
 function services(): { translator: Translator; speech: SpeechMaker } {
   const provider = (process.env.VOICE_PROVIDER?.trim() || "google").toLowerCase();
   if (provider === "fake" && process.env.NODE_ENV !== "production") return { translator: fakeTranslator(), speech: fakeSpeech() };
-  if (provider === "google") return { translator: googleTranslator(), speech: geminiSpeech() };
+  if (provider === "google") return { translator: googleTranslator(), speech: googleSpeech() };
   if (provider !== "gemini") throw new VoiceError("not_set_up", `unknown VOICE_PROVIDER "${provider}"`);
   return { translator: geminiTranslator(), speech: geminiSpeech() };
 }
@@ -89,13 +89,17 @@ export async function speakPage(userId: string, blocks: Block[], code: string): 
 // One MP3 from the parts read aloud, in order, sent to the voice service in chunks.
 export async function speakParts(userId: string, readParts: string[], code: string): Promise<PageSpeech> {
   const lang = await language(code);
-  const chunks = speechChunks(readParts);
-  if (chunks.length === 0) throw new VoiceError("failed", "there is nothing to read aloud");
   const { speech } = services();
+  const chunks = speechChunks(readParts, speech.partLimit);
+  if (chunks.length === 0) throw new VoiceError("failed", "there is nothing to read aloud");
+  // A language the service can't speak is refused before anything is counted toward the cap.
+  if (speech.checkLanguage) await withTimeout((signal) => speech.checkLanguage!(lang, signal));
   await takeVoiceRequests(userId, "speech", chunks.length);
   const parts: Pcm[] = [];
+  let voice = speech.voice;
   for (const text of chunks) {
     const audio = await withTimeout((signal) => speech.speak({ text, language: lang }, signal));
+    voice = audio.voice ?? voice;
     try {
       parts.push(readSpeechAudio(audio.bytes, audio.mimeType));
     } catch (error) {
@@ -105,5 +109,5 @@ export async function speakParts(userId: string, readParts: string[], code: stri
   }
   const pcm = joinPcm(parts);
   if (pcm.samples.length === 0) throw new VoiceError("bad_reply", "audio is empty");
-  return { mp3: encodeMp3(pcm), durationMs: durationMs(pcm), provider: speech.name, voice: speech.voice };
+  return { mp3: encodeMp3(pcm), durationMs: durationMs(pcm), provider: speech.name, voice };
 }

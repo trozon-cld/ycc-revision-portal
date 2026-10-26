@@ -1,4 +1,5 @@
 import { isRecord } from "@/lib/text";
+import { SPEECH_PART_CHARS } from "./limits";
 import { VoiceError, type SpeechMaker, type Translator } from "./services";
 
 // Gemini over plain fetch (Interactions API, no SDK). Server only: it reads GEMINI_API_KEY.
@@ -178,6 +179,7 @@ export function geminiSpeech(): SpeechMaker {
   return {
     name: `gemini:${model}`,
     voice,
+    partLimit: { chars: SPEECH_PART_CHARS },
     async speak({ text, language }, signal) {
       // One line per part in the server window, like translations (no text or key).
       const started = Date.now();
