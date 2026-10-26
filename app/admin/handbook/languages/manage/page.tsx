@@ -11,6 +11,8 @@ import { AUDIO_SERVICE_LABELS, LANGUAGE_CATALOGUE, audioService } from "@/lib/vo
 import { listManagedLanguages, type ManagedLanguage } from "@/lib/voice/language-admin";
 import { LANGUAGE_TABS, LANGUAGES_MANAGE_PATH } from "@/lib/voice/language-tabs";
 import { phraseKeysFor, type LanguageStatus } from "@/lib/voice/languages";
+import { voiceUsageSummary } from "@/lib/voice/quota";
+import { VoiceUsage } from "../voice-usage";
 import { AddLanguageButton, LanguageRowActions } from "./language-row-actions";
 
 export const metadata: Metadata = { title: "Languages" };
@@ -23,8 +25,8 @@ const STATUS: Record<LanguageStatus, { label: string; tone: BadgeTone }> = {
 
 // The Languages tab: the languages Listen offers, their spoken phrases, and adding, going live, hiding.
 export default async function ManageLanguagesPage() {
-  await requireRole(CONTENT_EDITORS);
-  const languages = await listManagedLanguages();
+  const session = await requireRole(CONTENT_EDITORS);
+  const [languages, usage] = await Promise.all([listManagedLanguages(), voiceUsageSummary(session.sub)]);
   const added = new Set(languages.map((language) => language.code));
   const addable = LANGUAGE_CATALOGUE.filter((language) => !added.has(language.code)).map((language) => ({
     code: language.code,
@@ -45,6 +47,7 @@ export default async function ManageLanguagesPage() {
         actions={<AddLanguageButton options={addable} />}
       />
       <PageTabs label="Languages and audio" tabs={LANGUAGE_TABS} current={LANGUAGES_MANAGE_PATH} />
+      <VoiceUsage usage={usage} />
 
       <p className="mb-4 max-w-3xl text-sm text-slate-600">
         Candidates choose from the live languages on their Account page. A new language starts as a draft: draft its spoken phrases, check them,
@@ -82,6 +85,7 @@ export default async function ManageLanguagesPage() {
                 status={language.status}
                 candidates={language.candidates}
                 ready={language.phrases === phraseKeysFor(language.code).length && language.checked === phraseKeysFor(language.code).length}
+                canDelete={session.role === "superadmin"}
               />
             </Cell>
           </Row>

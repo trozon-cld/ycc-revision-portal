@@ -11,8 +11,6 @@ export type CatalogueLanguage = {
   name: string;
   // Its own name, as shown in lists (capital first letter).
   nativeName: string;
-  // Extra instruction for the translator (sent with every translation into this language).
-  translatorNote?: string;
   // Google Cloud Translation's code when it differs from ours (e.g. European Portuguese).
   googleTranslate?: string;
   // Google Text-to-Speech region whose voices read this language (its WaveNet voice, else Standard).
@@ -27,7 +25,7 @@ export const LANGUAGE_CATALOGUE: readonly CatalogueLanguage[] = [
   { code: "lt", name: "Lithuanian", nativeName: "Lietuvių", googleVoice: "lt-LT" },
   { code: "pl", name: "Polish", nativeName: "Polski", googleVoice: "pl-PL" },
   { code: "pt", name: "Portuguese", nativeName: "Português", googleTranslate: "pt-PT", googleVoice: "pt-PT" },
-  { code: "pa", name: "Punjabi", nativeName: "ਪੰਜਾਬੀ", translatorNote: "Use Gurmukhi script.", googleVoice: "pa-IN" },
+  { code: "pa", name: "Punjabi", nativeName: "ਪੰਜਾਬੀ", googleVoice: "pa-IN" },
   { code: "ro", name: "Romanian", nativeName: "Română", googleVoice: "ro-RO" },
   { code: "ru", name: "Russian", nativeName: "Русский", googleVoice: "ru-RU" },
   { code: "bg", name: "Bulgarian", nativeName: "Български", googleVoice: "bg-BG" },

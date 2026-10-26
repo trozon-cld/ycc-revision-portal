@@ -13,12 +13,12 @@ const STATUSES: Record<LanguageScope, LanguageStatus[]> = {
   any: ["draft", "live", "hidden"],
 };
 
-type LanguageRow = { code: string; name: string; native_name: string; status: LanguageStatus; translator_note: string | null; phrases: Record<string, string> };
+type LanguageRow = { code: string; name: string; native_name: string; status: LanguageStatus; phrases: Record<string, string> };
 
 // English first, then A–Z by name. A language missing any phrase is left out (it can't be read aloud).
 const readLanguages = cache(async (scope: LanguageScope): Promise<VoiceLanguage[]> => {
   const { rows } = await pool.query<LanguageRow>(
-    `select l.code, l.name, l.native_name, l.status, l.translator_note,
+    `select l.code, l.name, l.native_name, l.status,
             coalesce(json_object_agg(p.phrase, p.text) filter (where p.phrase is not null), '{}') as phrases
      from voice_languages l
      left join voice_phrases p on p.language = l.code

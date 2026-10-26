@@ -7,6 +7,7 @@ import type { FormState } from "@/lib/forms";
 import {
   addLanguage,
   checkPhrases,
+  deleteLanguage,
   draftPhrases,
   hideLanguage,
   publishLanguage,
@@ -55,6 +56,15 @@ export async function hideLanguageAction(_prev: LanguageActionState | undefined,
   const session = await requireRole(CONTENT_EDITORS);
   const code = codeFrom(formData);
   const result = await hideLanguage(session, code);
+  refresh(code, result);
+  return asFormState(result);
+}
+
+// Superadmin only (not CONTENT_EDITORS): deleting a language can't be undone.
+export async function deleteLanguageAction(_prev: LanguageActionState | undefined, formData: FormData): Promise<LanguageActionState> {
+  const session = await requireRole(["superadmin"]);
+  const code = codeFrom(formData);
+  const result = await deleteLanguage(session, code);
   refresh(code, result);
   return asFormState(result);
 }

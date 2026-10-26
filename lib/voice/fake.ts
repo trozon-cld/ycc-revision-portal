@@ -11,8 +11,10 @@ function failIfAsked(text: string) {
 export function fakeTranslator(): Translator {
   return {
     name: "fake",
-    async translate({ to, blocks }) {
+    characters: (texts) => texts.reduce((sum, text) => sum + [...text].length, 0),
+    async translate({ to, blocks }, _signal, onSent) {
       failIfAsked(JSON.stringify(blocks));
+      onSent?.(blocks.flatMap((block) => block.texts).reduce((sum, text) => sum + [...text].length, 0));
       return blocks.map((block) => ({ id: block.id, texts: block.texts.map((text) => `[${to.code}] ${text}`) }));
     },
   };

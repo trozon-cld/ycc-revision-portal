@@ -541,15 +541,27 @@ create table page_audio (
   primary key (content_page_id, language)
 );
 
--- One row per call to the voice service, for the hourly cap; rows older than a day are removed as new ones come.
-create table voice_requests (
+-- Voice service usage (0036): each staff member's hourly allowance in characters, and monthly totals per service.
+-- One row per job: the characters reserved, then kept as the characters actually sent. Rows older than a day go as new ones come.
+create table voice_usage (
   id bigint generated always as identity primary key,
   user_id uuid not null references users (id) on delete cascade,
   kind varchar(12) not null check (kind in ('translate', 'speech')),
+  service varchar(20) not null check (length(btrim(service)) > 0),
+  characters integer not null check (characters >= 0),
   created_at timestamptz not null default now()
 );
 
-create index voice_requests_user_idx on voice_requests (user_id, created_at);
+create index voice_usage_user_idx on voice_usage (user_id, kind, created_at);
+
+-- Everyone's characters sent per service each month (UK time), to compare with what the provider bills. A few rows a month.
+create table voice_usage_months (
+  month date not null check (extract(day from month) = 1),
+  kind varchar(12) not null check (kind in ('translate', 'speech')),
+  service varchar(20) not null check (length(btrim(service)) > 0),
+  characters bigint not null default 0 check (characters >= 0),
+  primary key (month, kind, service)
+);
 
 -- Listen for Handbook question pages (V6a): translations of what is read aloud, and audio.
 create table question_translations (
@@ -595,13 +607,11 @@ alter table categories add column listen_mode varchar(10) not null default 'all'
 
 -- Listen's languages and their fixed spoken phrases (0033); managed in the app from L2.
 -- One row per language. Only live languages are offered to candidates; staff can prepare draft ones; hidden ones
--- are kept (never deleted) with their translations and audio. English is the source and is always live.
+-- keep their translations and audio until the Superadmin deletes the language. English is the source and is always live.
 create table voice_languages (
   code varchar(10) primary key check (code ~ '^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$'),
   name varchar(60) not null check (length(btrim(name)) > 0),
   native_name varchar(60) not null check (length(btrim(native_name)) > 0),
-  -- Extra instruction sent with every translation into this language (e.g. the script to use).
-  translator_note varchar(200) check (translator_note is null or length(btrim(translator_note)) > 0),
   status varchar(10) not null default 'draft' check (status in ('draft', 'live', 'hidden')),
   created_by uuid references users (id) on delete set null,
   created_at timestamptz not null default now(),
@@ -627,40 +637,22 @@ create table voice_phrases (
   constraint voice_phrases_counted_english_only check (language = 'en' or phrase not in ('choose', 'choose_area'))
 );
 
-insert into voice_languages (code, name, native_name, translator_note, status) values
-  ('en', 'English', 'English', null, 'live'),
-  ('hi', 'Hindi', 'हिन्दी', null, 'live'),
-  ('pa', 'Punjabi', 'ਪੰਜਾਬੀ', 'Use Gurmukhi script.', 'live');
+-- A fresh database starts with English only; staff add the other languages on Languages and audio → Languages.
+insert into voice_languages (code, name, native_name, status) values ('en', 'English', 'English', 'live');
 
--- English is checked; the Hindi and Punjabi wording still waits for a reader's check (a go-live item).
 insert into voice_phrases (language, phrase, text, status, checked_at)
-select v.language, v.phrase, v.text, case when v.language = 'en' then 'checked' else 'draft' end,
-       case when v.language = 'en' then now() end
+select 'en', v.phrase, v.text, 'checked', now()
 from (values
-  ('en', 'key_point', 'Key point'),
-  ('en', 'remember', 'Remember'),
-  ('en', 'question', 'Question'),
-  ('en', 'option', 'Option'),
-  ('en', 'choose', 'Choose {n} answers'),
-  ('en', 'choose_area', 'Choose one of the {n} outlined areas on the picture'),
-  ('en', 'tap_area', 'Look at the picture and tap the place that answers the question'),
-  ('en', 'match_boxes', 'Put each picture in the box it belongs to'),
-  ('en', 'boxes_are', 'The boxes are:'),
-  ('hi', 'key_point', 'मुख्य बात'),
-  ('hi', 'remember', 'याद रखें'),
-  ('hi', 'question', 'प्रश्न'),
-  ('hi', 'option', 'विकल्प'),
-  ('hi', 'tap_area', 'चित्र को देखें और उस जगह पर टैप करें जो प्रश्न का उत्तर है'),
-  ('hi', 'match_boxes', 'हर चित्र को उस बॉक्स में रखें जिससे वह मेल खाता है'),
-  ('hi', 'boxes_are', 'बॉक्स ये हैं:'),
-  ('pa', 'key_point', 'ਮੁੱਖ ਗੱਲ'),
-  ('pa', 'remember', 'ਯਾਦ ਰੱਖੋ'),
-  ('pa', 'question', 'ਸਵਾਲ'),
-  ('pa', 'option', 'ਵਿਕਲਪ'),
-  ('pa', 'tap_area', 'ਤਸਵੀਰ ਨੂੰ ਦੇਖੋ ਅਤੇ ਉਸ ਥਾਂ ''ਤੇ ਟੈਪ ਕਰੋ ਜੋ ਸਵਾਲ ਦਾ ਜਵਾਬ ਹੈ'),
-  ('pa', 'match_boxes', 'ਹਰ ਤਸਵੀਰ ਨੂੰ ਉਸ ਡੱਬੇ ਵਿੱਚ ਰੱਖੋ ਜਿਸ ਨਾਲ ਉਹ ਮੇਲ ਖਾਂਦੀ ਹੈ'),
-  ('pa', 'boxes_are', 'ਡੱਬੇ ਇਹ ਹਨ:')
-) as v (language, phrase, text);
+  ('key_point', 'Key point'),
+  ('remember', 'Remember'),
+  ('question', 'Question'),
+  ('option', 'Option'),
+  ('choose', 'Choose {n} answers'),
+  ('choose_area', 'Choose one of the {n} outlined areas on the picture'),
+  ('tap_area', 'Look at the picture and tap the place that answers the question'),
+  ('match_boxes', 'Put each picture in the box it belongs to'),
+  ('boxes_are', 'The boxes are:')
+) as v (phrase, text);
 
 -- Translations, audio and each candidate's listening language must name a known language.
 alter table page_translations add foreign key (language) references voice_languages (code);

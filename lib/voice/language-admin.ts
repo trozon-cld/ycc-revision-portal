@@ -7,6 +7,7 @@ import { countOf } from "@/lib/format";
 import { LANGUAGE_CATALOGUE, type CatalogueLanguage } from "./language-catalogue";
 import { phraseKeysFor, SOURCE_LANGUAGE, type LanguageStatus, type PhraseKey } from "./languages";
 import { translateItems, voiceFailure } from "./make";
+import { deleteAudioFilesQuietly } from "./page-audio";
 import { checkPhraseTexts, PHRASE_INFO, type PhraseTexts } from "./phrases";
 
 // Server-only: Manage languages (L2). Reads the database directly (not the per-request language cache), so a page
@@ -17,7 +18,6 @@ export type ManagedLanguage = {
   name: string;
   nativeName: string;
   status: LanguageStatus;
-  translatorNote: string | null;
   phrases: number;
   checked: number;
   // Candidates whose listening language this is.
@@ -44,7 +44,7 @@ export function catalogueEntry(code: string): CatalogueLanguage | null {
   return LANGUAGE_CATALOGUE.find((language) => language.code === code) ?? null;
 }
 
-type LanguageDbRow = { code: string; name: string; native_name: string; status: LanguageStatus; translator_note: string | null };
+type LanguageDbRow = { code: string; name: string; native_name: string; status: LanguageStatus };
 
 function toManaged(row: LanguageDbRow & { phrases: number; checked: number; candidates: number }): ManagedLanguage {
   return {
@@ -52,7 +52,6 @@ function toManaged(row: LanguageDbRow & { phrases: number; checked: number; cand
     name: row.name,
     nativeName: row.native_name,
     status: row.status,
-    translatorNote: row.translator_note,
     phrases: row.phrases,
     checked: row.checked,
     candidates: row.candidates,
@@ -60,7 +59,7 @@ function toManaged(row: LanguageDbRow & { phrases: number; checked: number; cand
 }
 
 const MANAGED_SELECT = `
-  select l.code, l.name, l.native_name, l.status, l.translator_note,
+  select l.code, l.name, l.native_name, l.status,
          (select count(*) from voice_phrases p where p.language = l.code)::int as phrases,
          (select count(*) from voice_phrases p where p.language = l.code and p.status = 'checked')::int as checked,
          (select count(*) from users u where u.role = 'candidate' and u.preferred_language = l.code)::int as candidates
@@ -97,7 +96,7 @@ export async function loadLanguagePhrases(code: string): Promise<LanguagePhrases
 
 async function lockLanguage(client: PoolClient, code: string): Promise<LanguageDbRow | null> {
   const { rows } = await client.query<LanguageDbRow>(
-    `select code, name, native_name, status, translator_note from voice_languages where code = $1 for update`,
+    `select code, name, native_name, status from voice_languages where code = $1 for update`,
     [code]
   );
   return rows[0] ?? null;
@@ -137,9 +136,9 @@ export async function addLanguage(session: SessionPayload, code: string): Promis
   if (!entry) return { ok: false, error: "Choose a language from the list." };
   return withTransaction<LanguageResult>(async (client) => {
     const { rowCount } = await client.query(
-      `insert into voice_languages (code, name, native_name, translator_note, status, created_by)
-       values ($1, $2, $3, $4, 'draft', $5) on conflict (code) do nothing`,
-      [entry.code, entry.name, entry.nativeName, entry.translatorNote ?? null, session.sub]
+      `insert into voice_languages (code, name, native_name, status, created_by)
+       values ($1, $2, $3, 'draft', $4) on conflict (code) do nothing`,
+      [entry.code, entry.name, entry.nativeName, session.sub]
     );
     if (!rowCount) return { ok: false, error: `${entry.name} has already been added.` };
     await logActivity(client, session, "language.added", target(entry), {});
@@ -161,7 +160,7 @@ export async function draftPhrases(session: SessionPayload, code: string, expect
     const { items } = await translateItems(
       session.sub,
       keys.map((key) => ({ id: key, texts: [view.english[key] ?? ""] })),
-      { code, name: view.language.name, nativeName: view.language.nativeName, translatorNote: view.language.translatorNote },
+      { code, name: view.language.name, nativeName: view.language.nativeName },
       "phrases"
     );
     const checked = checkPhraseTexts(Object.fromEntries(items.map((item) => [item.id, item.texts[0]])), keys);
@@ -268,4 +267,37 @@ export async function restoreLanguage(session: SessionPayload, code: string): Pr
     await logActivity(client, session, "language.restored", target(language), {});
     return { ok: true, message: `${language.name} is back as a draft. Make it live when it's ready.` };
   });
+}
+
+// Superadmin only: a hidden language and everything made for it (phrases, translations, audio rows and files) go for
+// good. Anyone still set to it moves to English; categories stop listing it. Files are removed after the commit.
+export async function deleteLanguage(session: SessionPayload, code: string): Promise<LanguageResult> {
+  if (code === SOURCE_LANGUAGE) return { ok: false, error: "English can't be deleted." };
+  const outcome = await withTransaction<{ result: LanguageResult; paths: string[] }>(async (client) => {
+    const language = await lockLanguage(client, code);
+    if (!language) return { result: { ok: false, error: NOT_FOUND }, paths: [] };
+    if (language.status !== "hidden") return { result: { ok: false, error: `Hide ${language.name} before deleting it.` }, paths: [] };
+    const { rows: files } = await client.query<{ storage_path: string }>(
+      `select storage_path from page_audio where language = $1 union all select storage_path from question_audio where language = $1`,
+      [code]
+    );
+    const { rows: counted } = await client.query<{ translations: number }>(
+      `select ((select count(*) from page_translations where language = $1) + (select count(*) from question_translations where language = $1))::int as translations`,
+      [code]
+    );
+    const moved = (await client.query(`update users set preferred_language = $2 where preferred_language = $1`, [code, SOURCE_LANGUAGE])).rowCount ?? 0;
+    for (const table of ["category_languages", "page_audio", "question_audio", "page_translations", "question_translations", "voice_phrases"]) {
+      await client.query(`delete from ${table} where language = $1`, [code]);
+    }
+    await client.query(`delete from voice_languages where code = $1`, [code]);
+    const removed = [
+      countOf(counted[0].translations, "translation"),
+      countOf(files.length, "audio file"),
+      ...(moved > 0 ? [`${countOf(moved, "person", "people")} moved to English`] : []),
+    ].join(", ");
+    await logActivity(client, session, "language.deleted", target(language), { items: `Removed ${removed}` });
+    return { result: { ok: true, message: `${language.name} deleted (${removed}).` }, paths: files.map((file) => file.storage_path) };
+  });
+  await deleteAudioFilesQuietly(outcome.paths);
+  return outcome.result;
 }

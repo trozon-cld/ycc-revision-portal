@@ -74,6 +74,7 @@ export const ACTIVITY_ACTIONS = {
   "language.published": "Made Listen language live",
   "language.hidden": "Hid Listen language",
   "language.restored": "Showed Listen language again",
+  "language.deleted": "Deleted Listen language",
   "media.uploaded": "Uploaded picture",
   "media.alt_text_changed": "Changed picture description",
   "media.deleted": "Deleted picture",

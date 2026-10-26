@@ -20,7 +20,7 @@ export function HomeLogo({ showName = true }: { showName?: boolean }) {
       href="/dashboard"
       className="flex min-h-12 items-center gap-2 rounded-lg text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary"
     >
-      <Image src={LOGO.src} width={LOGO.width} height={LOGO.height} alt="YCC" unoptimized className="h-8 w-auto max-w-[157px] object-contain object-left" />
+      <Image src={LOGO.src} width={LOGO.width} height={LOGO.height} alt="YCC" unoptimized loading="eager" className="h-8 w-auto max-w-[157px] object-contain object-left" />
       {showName ? (
         <>
           <span className="hidden text-base font-semibold min-[420px]:inline">Revision Portal</span>
@@ -71,7 +71,7 @@ export function CandidateHeader() {
           className="flex min-h-11 min-w-0 items-center gap-2 rounded-lg text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           {/* Room for a wide logo (about 5:1, up to 157 x 32). */}
-          <Image src={LOGO.src} width={LOGO.width} height={LOGO.height} alt="YCC" unoptimized className="h-8 w-auto max-w-[157px] object-contain object-left" />
+          <Image src={LOGO.src} width={LOGO.width} height={LOGO.height} alt="YCC" unoptimized loading="eager" className="h-8 w-auto max-w-[157px] object-contain object-left" />
           <span className="hidden text-base font-semibold lg:inline">Revision Portal</span>
           <span className="sr-only lg:hidden">Revision Portal, home</span>
         </Link>

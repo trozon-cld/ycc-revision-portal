@@ -1,7 +1,7 @@
 import { isRecord } from "@/lib/text";
 import { googleTranslateCode, googleVoiceRegion } from "./language-catalogue";
 import { GOOGLE_REQUEST_TIMEOUT_MS, SPEECH_PART_BYTES, TRANSLATE_BATCH_CHARS, TRANSLATE_BATCH_TEXTS } from "./limits";
-import { VoiceError, type SpeechMaker, type Translator } from "./services";
+import { networkError, VoiceError, type SpeechMaker, type Translator } from "./services";
 
 // Google Cloud Translation (Basic, v2) and Text-to-Speech over plain fetch. Server only: GOOGLE_CLOUD_API_KEY, sent
 // in a header. Texts go as HTML so bold (**…**) and line breaks survive; Google keeps their order, so no ids are sent.
@@ -132,7 +132,7 @@ async function callGoogle(url: string, key: string, body: unknown, parent: Abort
     });
   } catch (error) {
     if (controller.signal.aborted) throw new VoiceError("timeout", "no reply within the time limit");
-    throw new VoiceError("failed", `network: ${String(error)}`);
+    throw networkError(error, "Google");
   } finally {
     clearTimeout(timer);
     parent.removeEventListener("abort", stop);
@@ -156,10 +156,18 @@ async function translateRequest(key: string, texts: string[], target: string, pa
   });
 }
 
+// What Google counts: the HTML sent, empty texts left out.
+function sendableHtml(texts: string[]): string[] {
+  return texts.map(toGoogleHtml).filter((html) => html.trim() !== "");
+}
+
+const characterCount = (texts: string[]) => texts.reduce((sum, text) => sum + [...text].length, 0);
+
 export function googleTranslator(): Translator {
   return {
     name: "google:translate-v2",
-    async translate({ to, blocks, kind = "page" }, signal) {
+    characters: (texts) => characterCount(sendableHtml(texts)),
+    async translate({ to, blocks, kind = "page" }, signal, onSent) {
       const key = apiKey();
       const target = googleTranslateCode(to.code);
       // Every text of every block, in order; empty ones aren't sent (nothing to translate, and they'd still be charged).
@@ -169,9 +177,12 @@ export function googleTranslator(): Translator {
       const started = Date.now();
       const translated: string[] = [];
       try {
-        for (const batch of batches) translated.push(...(await translateRequest(key, batch, target, signal)));
+        for (const batch of batches) {
+          translated.push(...(await translateRequest(key, batch, target, signal)));
+          onSent?.(characterCount(batch));
+        }
       } finally {
-        const characters = sendable.reduce((sum, item) => sum + [...item.html].length, 0);
+        const characters = characterCount(sendable.map((item) => item.html));
         console.info(
           `Voice service: ${kind} translation into ${to.name}, ${flat.length} parts, ${batches.length} request${batches.length === 1 ? "" : "s"}, ${characters} characters, google translate v2, ${Date.now() - started} ms`
         );

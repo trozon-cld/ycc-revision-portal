@@ -30,14 +30,16 @@ import { PageHeader } from "@/components/admin/page-header";
 import { Pagination, pageFromParam } from "@/components/admin/pagination";
 import { cardClass } from "@/components/admin/styles";
 import { Cell, Row, Table } from "@/components/admin/table";
+import { voiceUsageSummary } from "@/lib/voice/quota";
 import { AudioBadge, TranslationBadge } from "../pages/translation-badge";
+import { VoiceUsage } from "./voice-usage";
 
 export const metadata: Metadata = { title: "Languages and audio" };
 
 const BASE_PATH = LANGUAGES_PAGES_PATH;
 
 export default async function LanguagesPage({ searchParams }: PageProps<"/admin/handbook/languages">) {
-  await requireRole(CONTENT_EDITORS);
+  const session = await requireRole(CONTENT_EDITORS);
   const params = await searchParams;
   const languages = await loadVoiceLanguages();
 
@@ -53,11 +55,12 @@ export default async function LanguagesPage({ searchParams }: PageProps<"/admin/
   };
   const isFiltered = Boolean(filters.search || filters.chapterId || filters.language || filters.need || filters.kind);
 
-  const [matching, counts, totals, sections] = await Promise.all([
+  const [matching, counts, totals, sections, usage] = await Promise.all([
     countLanguageItems(filters),
     countAllLanguageItems(),
     languageTotals(),
     listChapterOptions(),
+    voiceUsageSummary(session.sub),
   ]);
   const page = pageFromParam(firstParam(params.page), matching, LANGUAGE_LIST_PAGE_SIZE);
   const rows = await listLanguageItems(filters, page);
@@ -78,6 +81,7 @@ export default async function LanguagesPage({ searchParams }: PageProps<"/admin/
         description={isFiltered ? `${matching.toLocaleString("en-GB")} of ${plural(total, "page")} match your filters` : pagesLabel}
       />
       <PageTabs label="Languages and audio" tabs={LANGUAGE_TABS} current={LANGUAGES_PAGES_PATH} />
+      <VoiceUsage usage={usage} />
 
       <ul aria-label="Totals" className="mb-2 grid gap-2 sm:grid-cols-3">
         {languages.map((language) => {
