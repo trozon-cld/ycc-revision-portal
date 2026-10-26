@@ -17,6 +17,7 @@ import { translationState } from "@/lib/voice/status";
 import type { TranslationSummary } from "@/lib/voice/page-translations";
 import { toTranslatable } from "@/lib/voice/translation";
 import { checkTranslation, saveTranslation, translatePageLanguage } from "../../translation-actions";
+import { TranslationLanguagePicker } from "../../translation-language-picker";
 import { TranslationBadge } from "../../translation-badge";
 
 type Texts = Record<string, string[]>;
@@ -137,25 +138,15 @@ export function TranslationsEditor({
         Translations are drafted by the voice service from the saved English page. Read each one through and correct it, then mark it as checked.
       </p>
 
-      <div role="group" aria-label="Language" className="mt-4 flex flex-wrap gap-2">
-        {translatedLanguages(languages).map((item) => {
-          const isCurrent = item.code === language;
-          const itemState = translationState(pageVersion, summaries.find((row) => row.language === item.code) ?? null);
-          return (
-            <Link
-              key={item.code}
-              href={`/admin/handbook/pages/${pageId}/translations?lang=${item.code}`}
-              aria-current={isCurrent ? "page" : undefined}
-              className={`inline-flex min-h-9 items-center gap-2 rounded-md border px-3 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
-                isCurrent ? "border-primary bg-primary/10 text-ink" : "border-slate-300 bg-white text-ink hover:bg-slate-100"
-              }`}
-            >
-              {item.name}
-              <TranslationBadge state={itemState} />
-            </Link>
-          );
-        })}
-      </div>
+      <TranslationLanguagePicker
+        languages={translatedLanguages(languages)}
+        states={Object.fromEntries(
+          translatedLanguages(languages).map((item) => [item.code, translationState(pageVersion, summaries.find((row) => row.language === item.code) ?? null)])
+        )}
+        current={language}
+        hrefFor={(code) => `/admin/handbook/pages/${pageId}/translations?lang=${code}`}
+        go={(to) => (dirty ? setLeaveTo(to) : router.push(to))}
+      />
 
       <div className={`${cardClass} mt-4 flex flex-wrap items-center gap-3 p-3`}>
         <div className="mr-auto min-w-0 text-sm text-slate-700">

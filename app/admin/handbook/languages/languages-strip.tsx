@@ -14,7 +14,11 @@ import { deletePageAudio, generatePageAudio, pageAudioLink } from "../pages/audi
 import { translatePageLanguage } from "../pages/translation-actions";
 import { AudioBadge, TranslationBadge } from "../pages/translation-badge";
 
-type Job = { kind: "translate" | "audio"; code: string };
+// `index` of `total`: where a "Translate all" or "Generate all audio" run has got to.
+type Job = { kind: "translate" | "audio"; code: string; index: number; total: number };
+
+// From this many languages (English included) the list starts closed, with a summary line; fewer stay open.
+const CLOSED_FROM = 5;
 
 // What the strip is for: a Handbook page, or a question (whose version is QUESTION_CURRENT_VERSION).
 export type VoiceTarget = { kind: "page" | "question"; id: string; version: number };
@@ -77,6 +81,7 @@ export function LanguagesStrip({
   const [deleting, setDeleting] = useState<string | null>(null);
   const [players, setPlayers] = useState<Record<string, string>>({});
   const [opening, setOpening] = useState<string | null>(null);
+  const [open, setOpen] = useState(languages.length < CLOSED_FROM);
 
   const isSource = (code: string) => code === SOURCE_LANGUAGE;
   const stateOf = (code: string) => translationState(version, rows[code] ?? null);
@@ -87,7 +92,11 @@ export function LanguagesStrip({
     (language) => ["missing", "outdated"].includes(audioOf(language.code)) && canMakeAudio(language.code)
   ).map((language) => language.code);
 
-  const say = (code: string, text: string) => setMessages((current) => ({ ...current, [code]: text }));
+  // A message opens the list, so it's never hidden.
+  const say = (code: string, text: string) => {
+    setMessages((current) => ({ ...current, [code]: text }));
+    if (text) setOpen(true);
+  };
   const closePlayer = (code: string) =>
     setPlayers((current) => {
       const next = { ...current };
@@ -97,8 +106,8 @@ export function LanguagesStrip({
 
   async function translate(codes: string[]) {
     setConfirming(null);
-    for (const code of codes) {
-      setBusy({ kind: "translate", code });
+    for (const [index, code] of codes.entries()) {
+      setBusy({ kind: "translate", code, index: index + 1, total: codes.length });
       say(code, "");
       const result = await reachServer(() => kind.translate(itemId, code));
       if (!result) say(code, NOT_THROUGH_MESSAGE);
@@ -119,8 +128,8 @@ export function LanguagesStrip({
   }
 
   async function makeAudio(codes: string[]) {
-    for (const code of codes) {
-      setBusy({ kind: "audio", code });
+    for (const [index, code] of codes.entries()) {
+      setBusy({ kind: "audio", code, index: index + 1, total: codes.length });
       say(code, "");
       const result = await reachServer(() => kind.makeAudio(itemId, code));
       if (!result) say(code, NOT_THROUGH_MESSAGE);
@@ -136,7 +145,7 @@ export function LanguagesStrip({
 
   async function removeAudio(code: string) {
     setDeleting(null);
-    setBusy({ kind: "audio", code });
+    setBusy({ kind: "audio", code, index: 1, total: 1 });
     say(code, "");
     const result = await reachServer(() => kind.deleteAudio(itemId, code));
     if (!result) say(code, NOT_THROUGH_MESSAGE);
@@ -170,6 +179,11 @@ export function LanguagesStrip({
   const locked = dirty || unavailable !== null;
   const disabledReason = unavailable ?? (dirty ? `Save the ${kind.noun} first` : undefined);
   const translationsHref = kind.translations(itemId);
+  const translated = translatedLanguages(languages);
+  const checkedCount = translated.filter((language) => stateOf(language.code) === "checked").length;
+  const readyCount = languages.filter((language) => audioOf(language.code) === "ready").length;
+  const run = busy && busy.total > 1 ? busy : null;
+  const runName = run ? (languages.find((language) => language.code === run.code)?.name ?? run.code) : "";
 
   if (unavailable && initial.length === 0 && initialAudio.length === 0) {
     return (
@@ -184,9 +198,23 @@ export function LanguagesStrip({
   return (
     <section aria-labelledby="languages-title" className={`${cardClass} mb-4 p-3`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 id="languages-title" className="text-sm font-semibold text-ink">
-          Languages
-        </h2>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <h2 id="languages-title" className="text-sm font-semibold text-ink">
+            Languages
+          </h2>
+          <p className="text-sm text-slate-700">
+            {translated.length > 0 && `Text: ${checkedCount} of ${translated.length} checked · `}Audio: {readyCount} of {languages.length} ready
+          </p>
+          <button
+            type="button"
+            onClick={() => setOpen(!open)}
+            aria-expanded={open}
+            aria-controls={`languages-list-${itemId}`}
+            className={buttonClass("ghost", "sm")}
+          >
+            {open ? "Hide languages" : `Show all ${languages.length} languages`}
+          </button>
+        </div>
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
@@ -195,7 +223,7 @@ export function LanguagesStrip({
             title={disabledReason ?? (needed.length === 0 ? "Every translation is up to date" : undefined)}
             className={buttonClass("secondary", "sm")}
           >
-            {busy?.kind === "translate" ? "Translating…" : "Translate all"}
+            {busy?.kind === "translate" ? (run ? `Translating ${run.index} of ${run.total}…` : "Translating…") : "Translate all"}
           </button>
           <button
             type="button"
@@ -204,19 +232,25 @@ export function LanguagesStrip({
             title={disabledReason ?? (audioNeeded.length === 0 ? "No audio can be made or updated right now" : undefined)}
             className={buttonClass("secondary", "sm")}
           >
-            {busy?.kind === "audio" ? "Generating…" : "Generate all audio"}
+            {busy?.kind === "audio" ? (run ? `Generating ${run.index} of ${run.total}…` : "Generating…") : "Generate all audio"}
           </button>
           <Link href={translationsHref} className={buttonClass("secondary", "sm")}>
             Open translations
           </Link>
         </div>
       </div>
+      <p aria-live="polite" className="text-xs text-slate-600 empty:hidden">
+        {run &&
+          (run.kind === "translate"
+            ? `Translating ${runName} (${run.index} of ${run.total})… each can take up to a minute.`
+            : `Working on the ${runName} audio (${run.index} of ${run.total})… ${kind.audioWait}.`)}
+      </p>
       {unavailable ? (
         <p className="mt-1 text-xs text-slate-600">{unavailable}</p>
       ) : (
         dirty && <p className="mt-1 text-xs text-slate-600">Translations and audio are made from the saved {kind.noun}. Save your changes first.</p>
       )}
-      <ul className="mt-2 divide-y divide-slate-100">
+      <ul id={`languages-list-${itemId}`} hidden={!open} className="mt-2 divide-y divide-slate-100">
         {languages.map((language) => {
           const code = language.code;
           const source = isSource(code);
@@ -335,7 +369,7 @@ export function LanguagesStrip({
                 </div>
               )}
               <p aria-live="polite" className="text-xs empty:hidden md:col-span-3">
-                {isBusy ? (
+                {isBusy && !run ? (
                   <span className="text-slate-600">
                     {busy?.kind === "translate"
                       ? `Translating ${language.name}… this can take up to a minute.`

@@ -46,14 +46,19 @@ export default async function LanguagesPage({ searchParams }: PageProps<"/admin/
   const chapterParam = firstParam(params.chapter);
   const needParam = firstParam(params.need);
   const kindParam = firstParam(params.kind);
+  // One language at a time beside English (14 columns don't fit); the first A–Z until another is chosen.
+  const others = languages.filter((language) => language.code !== SOURCE_LANGUAGE);
+  const shown = others.find((language) => language.code === firstParam(params.language)) ?? others[0] ?? null;
+  const english = languages.filter((language) => language.code === SOURCE_LANGUAGE);
+  const columns = shown ? [...english, shown] : english;
   const filters: LanguageFilters = {
     search: (firstParam(params.q) ?? "").trim().slice(0, 100),
     chapterId: chapterParam && isUuid(chapterParam) ? chapterParam : null,
-    language: languages.find((language) => language.code === firstParam(params.language))?.code ?? null,
+    language: shown?.code ?? null,
     need: isLanguageNeed(needParam) ? needParam : null,
     kind: isLanguageKind(kindParam) ? kindParam : null,
   };
-  const isFiltered = Boolean(filters.search || filters.chapterId || filters.language || filters.need || filters.kind);
+  const isFiltered = Boolean(filters.search || filters.chapterId || filters.need || filters.kind);
 
   const [matching, counts, totals, sections, usage] = await Promise.all([
     countLanguageItems(filters),
@@ -65,6 +70,9 @@ export default async function LanguagesPage({ searchParams }: PageProps<"/admin/
   const page = pageFromParam(firstParam(params.page), matching, LANGUAGE_LIST_PAGE_SIZE);
   const rows = await listLanguageItems(filters, page);
   const query = { q: filters.search, chapter: filters.chapterId ?? "", language: filters.language ?? "", need: filters.need ?? "", kind: filters.kind ?? "" };
+  // The same filters with another language shown.
+  const showHref = (code: string) => `${BASE_PATH}?${new URLSearchParams({ ...query, language: code }).toString()}`;
+  const languageOnly = shown ? `${BASE_PATH}?language=${shown.code}` : BASE_PATH;
   const total = counts.pages + counts.questions;
   const pagesLabel = `${plural(counts.pages, "text page")} and ${plural(counts.questions, "question page")}`;
   const later = counts.pages + counts.questions - counts.listenable;
@@ -83,20 +91,45 @@ export default async function LanguagesPage({ searchParams }: PageProps<"/admin/
       <PageTabs label="Languages and audio" tabs={LANGUAGE_TABS} current={LANGUAGES_PAGES_PATH} />
       <VoiceUsage usage={usage} />
 
-      <ul aria-label="Totals" className="mb-2 grid gap-2 sm:grid-cols-3">
-        {languages.map((language) => {
-          const done = totals.find((row) => row.language === language.code);
-          return (
-            <li key={language.code} className={`${cardClass} px-3 py-2 text-sm`}>
-              <p className="font-medium text-ink">{language.name}</p>
-              <p className="text-slate-700">
-                {language.code === SOURCE_LANGUAGE ? "The page itself" : `Checked: ${done?.checked ?? 0} of ${counts.listenable}`}
-                {" · "}Audio ready: {done?.audioReady ?? 0} of {counts.listenable}
-              </p>
-            </li>
-          );
-        })}
-      </ul>
+      <section aria-labelledby="language-totals" className="mb-2">
+        <h2 id="language-totals" className="sr-only">
+          Totals per language
+        </h2>
+        <Table
+          columns={["Language", "Checked", "To check", "Out of date", "Audio ready"]}
+          widths={["", "md:w-40", "md:w-28", "md:w-28", "md:w-32"]}
+          isEmpty={false}
+          emptyMessage=""
+        >
+          {languages.map((language) => {
+            const done = totals.find((row) => row.language === language.code);
+            const isSource = language.code === SOURCE_LANGUAGE;
+            const isShown = language.code === shown?.code;
+            return (
+              <Row key={language.code}>
+                <Cell kind="primary">
+                  {isSource ? (
+                    <span>English</span>
+                  ) : (
+                    <Link
+                      href={showHref(language.code)}
+                      aria-current={isShown ? "true" : undefined}
+                      className="text-primary underline underline-offset-2 hover:text-ink"
+                    >
+                      {language.name}
+                    </Link>
+                  )}{" "}
+                  {isShown && <Badge tone="info">Shown below</Badge>}
+                </Cell>
+                <Cell label="Checked">{isSource ? "The page itself" : `${done?.checked ?? 0} of ${counts.listenable}`}</Cell>
+                <Cell label="To check">{isSource ? "—" : (done?.toCheck ?? 0)}</Cell>
+                <Cell label="Out of date">{done?.outdated ?? 0}</Cell>
+                <Cell label="Audio ready">{`${done?.audioReady ?? 0} of ${counts.listenable}`}</Cell>
+              </Row>
+            );
+          })}
+        </Table>
+      </section>
 
       <p className="mb-4 text-xs text-slate-600">
         {later > 0
@@ -104,7 +137,7 @@ export default async function LanguagesPage({ searchParams }: PageProps<"/admin/
           : "Totals count every page that can have Listen."}
       </p>
 
-      <FilterBar action={BASE_PATH} clearHref={BASE_PATH} isFiltered={isFiltered}>
+      <FilterBar action={BASE_PATH} clearHref={languageOnly} isFiltered={isFiltered}>
         <FilterSearch name="q" label="Search titles, questions or Q numbers" defaultValue={filters.search} />
         <FilterSelect name="kind" label="Pages" defaultValue={filters.kind ?? ""}>
           <option value="">Text and question pages</option>
@@ -128,14 +161,15 @@ export default async function LanguagesPage({ searchParams }: PageProps<"/admin/
               </optgroup>
             ))}
         </FilterSelect>
-        <FilterSelect name="language" label="Language" defaultValue={filters.language ?? ""}>
-          <option value="">All languages</option>
-          {languages.map((language) => (
-            <option key={language.code} value={language.code}>
-              {language.name}
-            </option>
-          ))}
-        </FilterSelect>
+        {shown && (
+          <FilterSelect name="language" label="Language shown beside English" defaultValue={shown.code}>
+            {others.map((language) => (
+              <option key={language.code} value={language.code}>
+                {language.name}
+              </option>
+            ))}
+          </FilterSelect>
+        )}
         <FilterSelect name="need" label="Show" defaultValue={filters.need ?? ""}>
           <option value="">Any state</option>
           {LANGUAGE_NEEDS.map((need) => (
@@ -147,7 +181,8 @@ export default async function LanguagesPage({ searchParams }: PageProps<"/admin/
       </FilterBar>
 
       <Table
-        columns={["Page", "Status", ...languages.map((language) => language.name)]}
+        columns={["Page", "Status", ...columns.map((language) => language.name)]}
+        widths={["", "md:w-28", ...columns.map(() => "md:w-48")]}
         isEmpty={rows.length === 0}
         emptyMessage={total === 0 ? "No pages yet. Add pages to chapters in the Handbook." : "No pages match these filters."}
       >
@@ -166,11 +201,11 @@ export default async function LanguagesPage({ searchParams }: PageProps<"/admin/
               <Badge tone={row.status === "published" ? "success" : "neutral"}>{row.status === "published" ? "Published" : "Draft"}</Badge>
             </Cell>
             {!row.states && (
-              <Cell label="Languages" colSpan={languages.length}>
+              <Cell label="Languages" colSpan={columns.length}>
                 <span className="text-xs text-slate-600">Listen for this question type comes later</span>
               </Cell>
             )}
-            {row.states && languages.map((language) => {
+            {row.states && columns.map((language) => {
               const state = row.states![language.code];
               return (
                 <Cell key={language.code} label={language.name}>
