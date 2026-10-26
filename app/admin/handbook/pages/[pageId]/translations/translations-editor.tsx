@@ -7,10 +7,9 @@ import type { Block } from "@/lib/content/blocks";
 import type { BookPageData, ResolvedMedia } from "@/lib/content/book";
 import type { ChapterContext } from "@/lib/content/pages";
 import { BookPreview } from "@/components/admin/book-preview";
-import { buttonClass, cardClass, inputClass, textareaClass } from "@/components/admin/styles";
+import { cardClass, inputClass, textareaClass } from "@/components/admin/styles";
 import { useToast } from "@/components/admin/toast";
 import { LeaveDialog, useLeaveGuard } from "@/components/admin/leave-guard";
-import { formatUkDateTime } from "@/lib/candidates/access";
 import { NOT_THROUGH_MESSAGE, reachServer } from "@/lib/forms";
 import { translatedLanguages, type VoiceLanguage } from "@/lib/voice/languages";
 import { translationState } from "@/lib/voice/status";
@@ -18,7 +17,7 @@ import type { TranslationSummary } from "@/lib/voice/page-translations";
 import { toTranslatable } from "@/lib/voice/translation";
 import { checkTranslation, saveTranslation, translatePageLanguage } from "../../translation-actions";
 import { TranslationLanguagePicker } from "../../translation-language-picker";
-import { TranslationBadge } from "../../translation-badge";
+import { TranslationToolbar, type TranslationProblem } from "../../translation-toolbar";
 
 type Texts = Record<string, string[]>;
 
@@ -55,8 +54,7 @@ export function TranslationsEditor({
   const lang = languages.find((item) => item.code === language)!;
   const initialTexts = useMemo(() => textsOf(current?.blocks ?? []), [current]);
   const [texts, setTexts] = useState<Texts>(initialTexts);
-  const [problem, setProblem] = useState<{ message: string; conflict?: boolean } | null>(null);
-  const [confirmAgain, setConfirmAgain] = useState(false);
+  const [problem, setProblem] = useState<TranslationProblem | null>(null);
   const [view, setView] = useState<"edit" | "preview">("edit");
   const [isSaving, startSaving] = useTransition();
   const [isChecking, startChecking] = useTransition();
@@ -65,13 +63,11 @@ export function TranslationsEditor({
   const summary = current?.summary ?? null;
   const state = translationState(pageVersion, summary);
   const dirty = JSON.stringify(texts) !== JSON.stringify(initialTexts);
-  const busy = isSaving || isChecking || isTranslating;
   const translatable = useMemo(() => new Set(toTranslatable(english).map((block) => block.id)), [english]);
   const [leaveTo, setLeaveTo] = useLeaveGuard(dirty);
   const missingBlocks = current ? english.filter((block) => translatable.has(block.id) && !current.blocks.some((b) => b.id === block.id)).length : 0;
 
   function translate() {
-    setConfirmAgain(false);
     setProblem(null);
     startTranslating(async () => {
       const result = await reachServer(() => translatePageLanguage(pageId, language));
@@ -148,75 +144,22 @@ export function TranslationsEditor({
         go={(to) => (dirty ? setLeaveTo(to) : router.push(to))}
       />
 
-      <div className={`${cardClass} mt-4 flex flex-wrap items-center gap-3 p-3`}>
-        <div className="mr-auto min-w-0 text-sm text-slate-700">
-          <p className="flex flex-wrap items-center gap-2">
-            <span className="font-medium text-ink">
-              {lang.name} <span lang={lang.code}>{lang.nativeName}</span>
-            </span>
-            <TranslationBadge state={state} />
-          </p>
-          <p className="mt-0.5 text-xs text-slate-600" aria-live="polite">
-            {busy
-              ? isTranslating
-                ? `Translating into ${lang.name}… this can take up to a minute.`
-                : "Saving…"
-              : dirty
-                ? "Unsaved changes"
-                : summary
-                  ? stateLine(state, summary)
-                  : "No translation yet."}
-          </p>
-        </div>
-        {summary ? (
-          <>
-            <button type="button" onClick={() => setConfirmAgain(true)} disabled={busy} className={buttonClass("secondary")}>
-              {isTranslating ? "Translating…" : "Translate again"}
-            </button>
-            <button
-              type="button"
-              onClick={check}
-              disabled={busy || dirty || state !== "draft"}
-              title={dirty ? "Save your changes first" : state === "outdated" ? "The English page changed: translate again or edit and save first" : undefined}
-              className={buttonClass("secondary")}
-            >
-              {isChecking ? "Saving…" : state === "checked" ? "Checked" : "Mark as checked"}
-            </button>
-            <button type="button" onClick={save} disabled={busy || !dirty} className={buttonClass("primary")}>
-              {isSaving ? "Saving…" : "Save"}
-            </button>
-          </>
-        ) : (
-          <button type="button" onClick={translate} disabled={busy || english.length === 0} className={buttonClass("primary")}>
-            {isTranslating ? "Translating…" : `Translate into ${lang.name}`}
-          </button>
-        )}
-      </div>
-
-      {problem && (
-        <div role="alert" className="mt-3 flex flex-wrap items-center gap-3 rounded-md bg-danger-bg px-3 py-2 text-sm text-danger-strong">
-          <p className="min-w-0 flex-1">{problem.message}</p>
-          {problem.conflict && (
-            <button type="button" onClick={() => window.location.reload()} className={buttonClass("secondary", "sm")}>
-              Reload page
-            </button>
-          )}
-        </div>
-      )}
-      {confirmAgain && (
-        <div role="alertdialog" aria-labelledby="again-title" className="mt-3 rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25">
-          <p id="again-title" className="font-medium">Translate the page into {lang.name} again?</p>
-          <p className="mt-0.5">This replaces the current text, including any corrections. The new translation starts as a draft.</p>
-          <div className="mt-2 flex gap-2">
-            <button type="button" onClick={translate} className={buttonClass("primary", "sm")}>
-              Translate again
-            </button>
-            <button type="button" onClick={() => setConfirmAgain(false)} className={buttonClass("secondary", "sm")}>
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
+      <TranslationToolbar
+        what="page"
+        language={lang}
+        state={state}
+        summary={summary}
+        outdatedLine="The English page has changed since this was translated."
+        dirty={dirty}
+        isTranslating={isTranslating}
+        isChecking={isChecking}
+        isSaving={isSaving}
+        unavailable={english.length === 0 ? "This page has no content to translate yet." : null}
+        problem={problem}
+        onTranslate={translate}
+        onCheck={check}
+        onSave={save}
+      />
       {missingBlocks > 0 && (
         <p className="mt-3 rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25">
           The English page has {missingBlocks} new block{missingBlocks === 1 ? "" : "s"} that {missingBlocks === 1 ? "isn't" : "aren't"} translated yet. Fill {missingBlocks === 1 ? "it" : "them"} in below, or translate the page again.
@@ -355,10 +298,4 @@ function isShowable(block: Block): boolean {
   if (block.type === "list") return block.items.some((item) => item.trim());
   if (block.type === "picture") return true;
   return block.text.trim() !== "";
-}
-
-function stateLine(state: ReturnType<typeof translationState>, summary: TranslationSummary): string {
-  if (state === "checked") return `Checked ${formatUkDateTime(summary.checkedAt ?? summary.updatedAt)}.`;
-  if (state === "outdated") return "The English page has changed since this was translated.";
-  return `Draft, last changed ${formatUkDateTime(summary.updatedAt)}. Not checked yet.`;
 }
