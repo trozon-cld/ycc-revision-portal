@@ -1,13 +1,13 @@
+import { formatCount } from "@/lib/format";
 import { GOOGLE_FREE_CHARACTERS_PER_MONTH, VOICE_CHARACTERS_PER_HOUR } from "@/lib/voice/limits";
 import type { VoiceUsageKind, VoiceUsageSummary } from "@/lib/voice/quota";
+import { VOICE_SERVICE_NAMES } from "@/lib/voice/services";
 
-const SERVICE_NAMES: Record<string, string> = { google: "Google", gemini: "Gemini", fake: "the test service" };
 const LINES: { kind: VoiceUsageKind; label: string }[] = [
   { kind: "translate", label: "Translation" },
   { kind: "speech", label: "Audio" },
 ];
 
-const number = (n: number) => n.toLocaleString("en-GB");
 
 // Both Languages and audio tabs: this staff member's hourly allowance, and everyone's characters this month per service.
 export function VoiceUsage({ usage }: { usage: VoiceUsageSummary }) {
@@ -21,13 +21,13 @@ export function VoiceUsage({ usage }: { usage: VoiceUsageSummary }) {
             : month
                 .map((row) =>
                   row.service === "google"
-                    ? `${number(row.characters)} with Google (${number(GOOGLE_FREE_CHARACTERS_PER_MONTH[kind])} free)`
-                    : `${number(row.characters)} with ${SERVICE_NAMES[row.service] ?? row.service}`
+                    ? `${formatCount(row.characters)} with Google (${formatCount(GOOGLE_FREE_CHARACTERS_PER_MONTH[kind])} free)`
+                    : `${formatCount(row.characters)} with ${VOICE_SERVICE_NAMES[row.service] ?? row.service}`
                 )
                 .join(", ");
         return (
           <li key={kind}>
-            <span className="font-medium text-ink">{label} this hour:</span> {number(usage.hour[kind])} of {number(VOICE_CHARACTERS_PER_HOUR[kind])}{" "}
+            <span className="font-medium text-ink">{label} this hour:</span> {formatCount(usage.hour[kind])} of {formatCount(VOICE_CHARACTERS_PER_HOUR[kind])}{" "}
             characters (you) · <span className="font-medium text-ink">This month:</span> {monthText} (everyone)
           </li>
         );

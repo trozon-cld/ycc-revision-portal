@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireRole } from "@/lib/auth/guard";
 import { CONTENT_EDITORS } from "@/lib/auth/content-editors";
-import { formatClock } from "@/lib/format";
+import { formatClock, formatCount } from "@/lib/format";
 import { isUuid } from "@/lib/ids";
 import { firstParam } from "@/lib/params";
 import { listChapterOptions } from "@/lib/questions/queries";
@@ -28,7 +28,6 @@ import { Badge } from "@/components/admin/badge";
 import { FilterBar, FilterSearch, FilterSelect } from "@/components/admin/filter-bar";
 import { PageHeader } from "@/components/admin/page-header";
 import { Pagination, pageFromParam } from "@/components/admin/pagination";
-import { cardClass } from "@/components/admin/styles";
 import { Cell, Row, Table } from "@/components/admin/table";
 import { voiceUsageSummary } from "@/lib/voice/quota";
 import { AudioBadge, TranslationBadge } from "../pages/translation-badge";
@@ -74,7 +73,7 @@ export default async function LanguagesPage({ searchParams }: PageProps<"/admin/
   const showHref = (code: string) => `${BASE_PATH}?${new URLSearchParams({ ...query, language: code }).toString()}`;
   const languageOnly = shown ? `${BASE_PATH}?language=${shown.code}` : BASE_PATH;
   const total = counts.pages + counts.questions;
-  const pagesLabel = `${plural(counts.pages, "text page")} and ${plural(counts.questions, "question page")}`;
+  const pagesLabel = `${formatCount(counts.pages, "text page")} and ${formatCount(counts.questions, "question page")}`;
   const later = counts.pages + counts.questions - counts.listenable;
 
   return (
@@ -86,7 +85,7 @@ export default async function LanguagesPage({ searchParams }: PageProps<"/admin/
       </nav>
       <PageHeader
         title="Languages and audio"
-        description={isFiltered ? `${matching.toLocaleString("en-GB")} of ${plural(total, "page")} match your filters` : pagesLabel}
+        description={isFiltered ? `${formatCount(matching)} of ${formatCount(total, "page")} match your filters` : pagesLabel}
       />
       <PageTabs label="Languages and audio" tabs={LANGUAGE_TABS} current={LANGUAGES_PAGES_PATH} />
       <VoiceUsage usage={usage} />
@@ -133,7 +132,7 @@ export default async function LanguagesPage({ searchParams }: PageProps<"/admin/
 
       <p className="mb-4 text-xs text-slate-600">
         {later > 0
-          ? `Totals count every page that can have Listen. ${plural(later, "question page")} ${later === 1 ? "is a type" : "are types"} that Listen comes to later.`
+          ? `Totals count every page that can have Listen. ${formatCount(later, "question page")} ${later === 1 ? "is a type" : "are types"} that Listen comes to later.`
           : "Totals count every page that can have Listen."}
       </p>
 
@@ -247,8 +246,4 @@ export default async function LanguagesPage({ searchParams }: PageProps<"/admin/
 
 function editorHref(kind: "page" | "question", id: string): string {
   return kind === "page" ? `/admin/handbook/pages/${id}` : `/admin/questions/${id}`;
-}
-
-function plural(count: number, noun: string): string {
-  return `${count.toLocaleString("en-GB")} ${noun}${count === 1 ? "" : "s"}`;
 }

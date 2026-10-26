@@ -1,4 +1,5 @@
 import type { Block } from "@/lib/content/blocks";
+import { characterCount } from "@/lib/text";
 import { encodeMp3, joinPcm, readSpeechAudio, durationMs, AudioFormatError, type Pcm } from "./audio";
 import { fakeSpeech, fakeTranslator } from "./fake";
 import { geminiSpeech } from "./gemini";
@@ -17,7 +18,7 @@ import { applyTranslation, matchTranslation, toTranslatable, type TranslatableBl
 
 // google (the default): Google Cloud Translation, and audio from the service the language list names for each
 // language (Google Text-to-Speech, or Gemini for Welsh). fake: the stand-in for local trials and tests.
-function useFake(): boolean {
+function standInRequested(): boolean {
   const name = (process.env.VOICE_PROVIDER?.trim() || "google").toLowerCase();
   if (name === "fake" && process.env.NODE_ENV !== "production") return true;
   if (name === "google") return false;
@@ -25,11 +26,11 @@ function useFake(): boolean {
 }
 
 function translatorFor(): Translator {
-  return useFake() ? fakeTranslator() : googleTranslator();
+  return standInRequested() ? fakeTranslator() : googleTranslator();
 }
 
 function speechFor(code: string): SpeechMaker {
-  if (useFake()) return fakeSpeech();
+  if (standInRequested()) return fakeSpeech();
   return audioService(code) === "gemini" ? geminiSpeech() : googleSpeech();
 }
 
@@ -110,15 +111,14 @@ export async function speakParts(userId: string, readParts: string[], code: stri
   if (chunks.length === 0) throw new VoiceError("failed", "there is nothing to read aloud");
   // A language the service can't speak is refused before anything is counted toward the cap.
   if (speech.checkLanguage) await withTimeout((signal) => speech.checkLanguage!(lang, signal));
-  const length = (text: string) => [...text].length;
-  const reservation = await reserveVoiceUsage(userId, "speech", serviceOf(speech.name), chunks.reduce((sum, text) => sum + length(text), 0));
+  const reservation = await reserveVoiceUsage(userId, "speech", serviceOf(speech.name), characterCount(chunks));
   const parts: Pcm[] = [];
   let voice = speech.voice;
   let accepted = 0;
   try {
     for (const text of chunks) {
       const audio = await withTimeout((signal) => speech.speak({ text, language: lang }, signal));
-      accepted += length(text);
+      accepted += characterCount(text);
       voice = audio.voice ?? voice;
       try {
         parts.push(readSpeechAudio(audio.bytes, audio.mimeType));

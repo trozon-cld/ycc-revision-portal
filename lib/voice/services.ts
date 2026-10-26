@@ -1,10 +1,10 @@
 import type { VoiceLanguage } from "./languages";
 import type { TranslatableBlock } from "./translation";
 
-// The two services behind translation and audio, chosen in make.ts: Google Cloud (google.ts), Gemini (gemini.ts)
-// or the stand-in (fake.ts). Another provider is one new file implementing these.
-// What is being translated: a Handbook page's blocks, a question page (the question, then its options), or a
-// language's fixed spoken phrases (Manage languages).
+// The services behind translation (Google) and audio (Google; Gemini for Welsh), chosen in make.ts; fake.ts stands
+// in for tests. Another provider is one new file implementing these.
+
+// What is being translated: a page's blocks, a question page, or a language's spoken phrases (Manage languages).
 export type TranslationKind = "page" | "question" | "phrases";
 
 // What the translator needs to know about a language (a new one may not have its phrases yet).
@@ -21,6 +21,9 @@ export interface Translator {
     onSent?: (characters: number) => void
   ): Promise<unknown>;
 }
+
+// How each service is named to staff (Languages tab "Audio by", usage lines).
+export const VOICE_SERVICE_NAMES: Record<string, string> = { google: "Google", gemini: "Gemini", fake: "the test service" };
 
 // The service part of a provider's name ("google:tts-v1" → "google"), for the usage counters.
 export function serviceOf(name: string): string {

@@ -1,3 +1,4 @@
+import { characterCount } from "@/lib/text";
 import { SPEECH_PART_CHARS } from "./limits";
 import { VoiceError, type SpeechMaker, type Translator, type VoiceErrorKind } from "./services";
 
@@ -11,10 +12,10 @@ function failIfAsked(text: string) {
 export function fakeTranslator(): Translator {
   return {
     name: "fake",
-    characters: (texts) => texts.reduce((sum, text) => sum + [...text].length, 0),
+    characters: (texts) => characterCount(texts),
     async translate({ to, blocks }, _signal, onSent) {
       failIfAsked(JSON.stringify(blocks));
-      onSent?.(blocks.flatMap((block) => block.texts).reduce((sum, text) => sum + [...text].length, 0));
+      onSent?.(characterCount(blocks.flatMap((block) => block.texts)));
       return blocks.map((block) => ({ id: block.id, texts: block.texts.map((text) => `[${to.code}] ${text}`) }));
     },
   };

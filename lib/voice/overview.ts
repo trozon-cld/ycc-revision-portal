@@ -8,9 +8,8 @@ import { QUESTION_CURRENT_VERSION, VOICE_QUESTION_TYPES } from "./question-liste
 import { QUESTION_SOURCE_SQL, TRANSLATION_SOURCE_SQL } from "./question-voice";
 import { audioState, translationState, type AudioState, type TranslationState } from "./status";
 
-// Server-only: the Handbook-wide list of text pages and question pages with each language's translation and
-// audio state (V4, questions from V6a). Filtering happens in SQL so the list can be paged; the states shown come
-// from status.ts. The two must agree (checked by the tests). Question types without Listen yet show "Comes later".
+// Server-only: the Handbook-wide list of pages with each language's translation and audio state. Filtering is in
+// SQL so the list can be paged; the states shown come from status.ts, and the two must agree (the tests check).
 
 export const LANGUAGE_LIST_PAGE_SIZE = 50;
 

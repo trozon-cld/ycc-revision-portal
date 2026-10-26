@@ -1,4 +1,4 @@
-import { isRecord } from "@/lib/text";
+import { characterCount, isRecord } from "@/lib/text";
 import { googleTranslateCode, googleVoiceRegion } from "./language-catalogue";
 import { GOOGLE_REQUEST_TIMEOUT_MS, SPEECH_PART_BYTES, TRANSLATE_BATCH_CHARS, TRANSLATE_BATCH_TEXTS } from "./limits";
 import { networkError, VoiceError, type SpeechMaker, type Translator } from "./services";
@@ -58,7 +58,7 @@ export function translateBatches(texts: string[], maxChars = TRANSLATE_BATCH_CHA
   let current: string[] = [];
   let size = 0;
   for (const text of texts) {
-    const length = [...text].length;
+    const length = characterCount(text);
     if (current.length > 0 && (size + length > maxChars || current.length >= maxTexts)) {
       batches.push(current);
       current = [];
@@ -161,8 +161,6 @@ function sendableHtml(texts: string[]): string[] {
   return texts.map(toGoogleHtml).filter((html) => html.trim() !== "");
 }
 
-const characterCount = (texts: string[]) => texts.reduce((sum, text) => sum + [...text].length, 0);
-
 export function googleTranslator(): Translator {
   return {
     name: "google:translate-v2",
@@ -256,7 +254,7 @@ export function googleSpeech(): SpeechMaker {
           SPEECH_API
         );
       } finally {
-        console.info(`Voice service: speech in ${language.name}, ${[...text].length} characters, google tts ${voice.name}, ${Date.now() - started} ms`);
+        console.info(`Voice service: speech in ${language.name}, ${characterCount(text)} characters, google tts ${voice.name}, ${Date.now() - started} ms`);
       }
       const audio = isRecord(json) && typeof json.audioContent === "string" ? json.audioContent : "";
       const bytes = Buffer.from(audio, "base64");

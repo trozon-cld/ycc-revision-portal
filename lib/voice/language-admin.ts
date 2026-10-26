@@ -4,10 +4,10 @@ import { logActivity } from "@/lib/audit/log";
 import { pool } from "@/lib/db/pool";
 import { withTransaction } from "@/lib/db/transaction";
 import { countOf } from "@/lib/format";
-import { LANGUAGE_CATALOGUE, type CatalogueLanguage } from "./language-catalogue";
+import { catalogueEntry } from "./language-catalogue";
 import { phraseKeysFor, SOURCE_LANGUAGE, type LanguageStatus, type PhraseKey } from "./languages";
 import { translateItems, voiceFailure } from "./make";
-import { deleteAudioFilesQuietly } from "./page-audio";
+import { deleteAudioFilesQuietly } from "./audio-files";
 import { checkPhraseTexts, PHRASE_INFO, type PhraseTexts } from "./phrases";
 
 // Server-only: Manage languages (L2). Reads the database directly (not the per-request language cache), so a page
@@ -39,10 +39,6 @@ export type LanguageResult = { ok: true; message?: string } | { ok: false; error
 
 const NOT_FOUND = "This language isn't in the list any more.";
 const CONFLICT = "Someone else changed these phrases meanwhile. Reload the page to see their version.";
-
-export function catalogueEntry(code: string): CatalogueLanguage | null {
-  return LANGUAGE_CATALOGUE.find((language) => language.code === code) ?? null;
-}
 
 type LanguageDbRow = { code: string; name: string; native_name: string; status: LanguageStatus };
 

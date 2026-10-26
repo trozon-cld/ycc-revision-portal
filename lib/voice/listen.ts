@@ -15,9 +15,8 @@ import { QUESTION_SOURCE_SQL, TRANSLATION_SOURCE_SQL } from "./question-voice";
 // How long the private link to one page's audio lasts (it's fetched again on the next Listen).
 const LISTEN_LINK_SECONDS = 10 * 60;
 
-// The language candidate `u` hears in their current category `cat` (0035), the same rule as listeningLanguageIn:
-// their choice while it is live and the category offers it (English, all languages, or one of its chosen ones),
-// otherwise English. Their saved choice is never changed, so it comes back in a category that offers it.
+// What candidate `u` hears in category `cat` (as listeningLanguageIn): their choice while it's live and offered there,
+// otherwise English. The saved choice is kept, so it comes back in a category that offers it.
 const HEARS = `
   (case when exists (select 1 from voice_languages hl where hl.code = u.preferred_language and hl.status = 'live')
              and (u.preferred_language = '${SOURCE_LANGUAGE}' or cat.listen_mode = 'all'

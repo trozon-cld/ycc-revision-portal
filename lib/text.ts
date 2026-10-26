@@ -26,3 +26,8 @@ export function firstName(fullName: string | null): string | null {
   const first = fullName?.trim().split(/\s+/)[0];
   return first ? first : null;
 }
+
+// Characters as the voice services count them: by code point, so an emoji is 1 (string length would say 2).
+export function characterCount(text: string | readonly string[]): number {
+  return typeof text === "string" ? [...text].length : text.reduce((sum, item) => sum + [...item].length, 0);
+}

@@ -2,9 +2,8 @@ import { cache } from "react";
 import { pool } from "@/lib/db/pool";
 import { SOURCE_LANGUAGE, toVoiceLanguage, type LanguageStatus, type VoiceLanguage } from "./languages";
 
-// Server-only. Which languages a part of the app works with:
-// candidate = live (what candidates can choose and hear); staff = draft and live (translations and audio can be
-// prepared before a language goes live); any = every language, hidden too (names in logs and details, deleting audio).
+// Server-only. candidate = live (what candidates choose and hear); staff = draft and live (prepared before going
+// live); any = hidden too (names in logs and details, deleting audio).
 export type LanguageScope = "candidate" | "staff" | "any";
 
 const STATUSES: Record<LanguageScope, LanguageStatus[]> = {

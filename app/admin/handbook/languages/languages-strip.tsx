@@ -7,7 +7,7 @@ import { formatClock } from "@/lib/format";
 import { NOT_THROUGH_MESSAGE, reachServer } from "@/lib/forms";
 import { SOURCE_LANGUAGE, translatedLanguages, type LanguageName } from "@/lib/voice/languages";
 import { audioSourceVersion, audioState, translationState } from "@/lib/voice/status";
-import type { AudioSummary } from "@/lib/voice/page-audio";
+import type { AudioSummary } from "@/lib/voice/audio-files";
 import type { TranslationSummary } from "@/lib/voice/page-translations";
 import { deleteQuestionAudioFile, generateQuestionAudioFile, questionAudioLink, translateQuestionLanguage } from "@/app/admin/questions/voice-actions";
 import { deletePageAudio, generatePageAudio, pageAudioLink } from "../pages/audio-actions";

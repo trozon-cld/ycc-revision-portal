@@ -1,6 +1,7 @@
 import { pool } from "@/lib/db/pool";
 import { withTransaction } from "@/lib/db/transaction";
 import { formatUkTime } from "@/lib/candidates/access";
+import { formatCount } from "@/lib/format";
 import { VOICE_CHARACTERS_PER_HOUR } from "./limits";
 
 // Each staff member's hourly allowance of characters sent to the voice services (translation and audio counted
@@ -25,7 +26,7 @@ export async function reserveVoiceUsage(userId: string, kind: VoiceUsageKind, se
   const words = KIND_WORDS[kind];
   if (amount > limit) {
     throw new VoiceQuotaError(
-      `This is longer than the hourly ${words} limit (${amount.toLocaleString("en-GB")} of ${limit.toLocaleString("en-GB")} characters), so it can't be sent in one go.`
+      `This is longer than the hourly ${words} limit (${formatCount(amount)} of ${formatCount(limit)} characters), so it can't be sent in one go.`
     );
   }
   return withTransaction(async (client) => {
@@ -43,7 +44,7 @@ export async function reserveVoiceUsage(userId: string, kind: VoiceUsageKind, se
       let freed = 0;
       const next = rows.find((row) => (freed += row.characters) >= used + amount - limit);
       throw new VoiceQuotaError(
-        `This would go over your hourly ${words} limit (${used.toLocaleString("en-GB")} of ${limit.toLocaleString("en-GB")} characters used; this needs ${amount.toLocaleString("en-GB")}). You can do it at ${formatUkTime(next?.at ?? new Date(Date.now() + 60 * 60 * 1000))}.`
+        `This would go over your hourly ${words} limit (${formatCount(used)} of ${formatCount(limit)} characters used; this needs ${formatCount(amount)}). You can do it at ${formatUkTime(next?.at ?? new Date(Date.now() + 60 * 60 * 1000))}.`
       );
     }
     const inserted = await client.query<{ id: number }>(

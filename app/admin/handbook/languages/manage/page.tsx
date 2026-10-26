@@ -7,7 +7,8 @@ import { Cell, Row, Table } from "@/components/admin/table";
 import { CONTENT_EDITORS } from "@/lib/auth/content-editors";
 import { requireRole } from "@/lib/auth/guard";
 import { countOf } from "@/lib/format";
-import { AUDIO_SERVICE_LABELS, LANGUAGE_CATALOGUE, audioService } from "@/lib/voice/language-catalogue";
+import { LANGUAGE_CATALOGUE, audioService } from "@/lib/voice/language-catalogue";
+import { VOICE_SERVICE_NAMES } from "@/lib/voice/services";
 import { listManagedLanguages, type ManagedLanguage } from "@/lib/voice/language-admin";
 import { LANGUAGE_TABS, LANGUAGES_MANAGE_PATH } from "@/lib/voice/language-tabs";
 import { phraseKeysFor, type LanguageStatus } from "@/lib/voice/languages";
@@ -76,7 +77,7 @@ export default async function ManageLanguagesPage() {
             <Cell label="Spoken phrases">
               <PhraseState language={language} />
             </Cell>
-            <Cell label="Audio by">{AUDIO_SERVICE_LABELS[audioService(language.code)]}</Cell>
+            <Cell label="Audio by">{VOICE_SERVICE_NAMES[audioService(language.code)]}</Cell>
             <Cell label="Candidates">{language.candidates}</Cell>
             <Cell kind="actions">
               <LanguageRowActions
