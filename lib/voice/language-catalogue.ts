@@ -1,5 +1,9 @@
 import { SOURCE_LANGUAGE } from "./languages";
 
+// Which service reads a language aloud: Google Text-to-Speech unless the list says otherwise (translation is always Google).
+export type AudioService = "google" | "gemini";
+export const AUDIO_SERVICE_LABELS: Record<AudioService, string> = { google: "Google", gemini: "Gemini" };
+
 // The languages staff can add for Listen (user's list, 23 Oct), in this order. Adding one is one line here.
 // English is the source and is always there, so it isn't listed.
 export type CatalogueLanguage = {
@@ -13,11 +17,12 @@ export type CatalogueLanguage = {
   googleTranslate?: string;
   // Google Text-to-Speech region whose voices read this language (its WaveNet voice, else Standard).
   googleVoice: string;
+  // Set only when another service reads it (Welsh: Google has no Welsh voice; Gemini reads it, user 26 Oct).
+  audio?: AudioService;
 };
 
 export const LANGUAGE_CATALOGUE: readonly CatalogueLanguage[] = [
-  // Google has no Welsh voice (23 Oct): translation works; audio is refused with a clear message.
-  { code: "cy", name: "Welsh", nativeName: "Cymraeg", googleVoice: "cy-GB" },
+  { code: "cy", name: "Welsh", nativeName: "Cymraeg", googleVoice: "cy-GB", audio: "gemini" },
   { code: "de", name: "German (Germany)", nativeName: "Deutsch (Deutschland)", googleVoice: "de-DE" },
   { code: "lt", name: "Lithuanian", nativeName: "Lietuvių", googleVoice: "lt-LT" },
   { code: "pl", name: "Polish", nativeName: "Polski", googleVoice: "pl-PL" },
@@ -43,4 +48,9 @@ export function googleTranslateCode(code: string): string {
 export function googleVoiceRegion(code: string): string {
   if (code === SOURCE_LANGUAGE) return "en-GB";
   return LANGUAGE_CATALOGUE.find((language) => language.code === code)?.googleVoice ?? code;
+}
+
+// The service that reads this language aloud (English and languages not in the list: Google).
+export function audioService(code: string): AudioService {
+  return LANGUAGE_CATALOGUE.find((language) => language.code === code)?.audio ?? "google";
 }

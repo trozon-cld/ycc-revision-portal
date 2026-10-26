@@ -7,7 +7,7 @@ import { Cell, Row, Table } from "@/components/admin/table";
 import { CONTENT_EDITORS } from "@/lib/auth/content-editors";
 import { requireRole } from "@/lib/auth/guard";
 import { countOf } from "@/lib/format";
-import { LANGUAGE_CATALOGUE } from "@/lib/voice/language-catalogue";
+import { AUDIO_SERVICE_LABELS, LANGUAGE_CATALOGUE, audioService } from "@/lib/voice/language-catalogue";
 import { listManagedLanguages, type ManagedLanguage } from "@/lib/voice/language-admin";
 import { LANGUAGE_TABS, LANGUAGES_MANAGE_PATH } from "@/lib/voice/language-tabs";
 import { phraseKeysFor, type LanguageStatus } from "@/lib/voice/languages";
@@ -52,8 +52,8 @@ export default async function ManageLanguagesPage() {
       </p>
 
       <Table
-        columns={["Language", "Status", "Spoken phrases", "Candidates", ""]}
-        widths={["", "md:w-28", "md:w-56", "md:w-28", "md:w-14"]}
+        columns={["Language", "Status", "Spoken phrases", "Audio by", "Candidates", ""]}
+        widths={["", "md:w-28", "md:w-56", "md:w-28", "md:w-28", "md:w-14"]}
         isEmpty={languages.length === 0}
         emptyMessage="No languages yet."
       >
@@ -73,6 +73,7 @@ export default async function ManageLanguagesPage() {
             <Cell label="Spoken phrases">
               <PhraseState language={language} />
             </Cell>
+            <Cell label="Audio by">{AUDIO_SERVICE_LABELS[audioService(language.code)]}</Cell>
             <Cell label="Candidates">{language.candidates}</Cell>
             <Cell kind="actions">
               <LanguageRowActions

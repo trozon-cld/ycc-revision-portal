@@ -1,8 +1,8 @@
 import type { VoiceLanguage } from "./languages";
 import type { TranslatableBlock } from "./translation";
 
-// The two services behind translation and audio, chosen with VOICE_PROVIDER: Google Cloud (google.ts), Gemini
-// (gemini.ts) or the stand-in (fake.ts). Another provider is one new file implementing these.
+// The two services behind translation and audio, chosen in make.ts: Google Cloud (google.ts), Gemini (gemini.ts)
+// or the stand-in (fake.ts). Another provider is one new file implementing these.
 // What is being translated: a Handbook page's blocks, a question page (the question, then its options), or a
 // language's fixed spoken phrases (Manage languages).
 export type TranslationKind = "page" | "question" | "phrases";

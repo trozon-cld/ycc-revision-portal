@@ -8,7 +8,7 @@ Status: in active development.
 
 - Next.js 16 (App Router, TypeScript, Tailwind CSS v4)
 - PostgreSQL on Supabase (raw SQL via `pg`), plus Supabase Storage for pictures, log archives and Handbook audio
-- Handbook translations and audio through the Gemini API (plain `fetch`); MP3 encoding with `@breezystack/lamejs`
+- Handbook translations and audio through Google Cloud Translation and Text-to-Speech, Welsh audio through the Gemini API (plain `fetch`); MP3 encoding with `@breezystack/lamejs`
 - Custom JWT auth (jose + bcryptjs, HTTP-only cookies)
 
 ## Roles
@@ -34,7 +34,7 @@ Status: in active development.
    - Add `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (Project Settings → API; the secret or legacy service_role key) to `.env.local`. They are server-only; never prefix them with `NEXT_PUBLIC_`.
    - **Storage → New bucket**, name `log-archives`, **Public bucket off**, for archived login records (Activity → Archives). Leave its allowed file types open, or allow `application/gzip`.
    - **Storage → New bucket**, name `handbook-audio`, **Public bucket off**, for Handbook audio (MP3). Leave its allowed file types open, or allow `audio/mpeg`.
-   - For Handbook translations and audio, add `GEMINI_API_KEY` to `.env.local` (server only; see `.env.example`). A free Gemini key is for building and testing only; use a billed key before candidates hear any audio.
+   - For Handbook translations and audio, add `GOOGLE_CLOUD_API_KEY` to `.env.local`, and `GEMINI_API_KEY` for Welsh audio (server only; see `.env.example`). Use billed keys before candidates hear any audio.
 
 5. Generate the Superadmin password hash, paste it and the email into `supabase/seed.sql`, then run that file:
 
@@ -75,7 +75,7 @@ Status: in active development.
 - `lib/faq/` — General queries: questions in order and the support contact details (`types.ts` safe in forms)
 - `lib/progress/` — candidates' progress per category (Handbook pages done, question results), the My progress overview and the readiness score (`readiness.ts`, pure); not activity-log data
 - `lib/storage/` — the only code that talks to the storage provider (upload, delete, signed links; pictures, archive and audio buckets) and the total stored (`usage.ts`, for the storage cap)
-- `lib/voice/` — Handbook translations and audio: languages (kept in the database, read through `language-store.ts`; the list of languages that can be added is `language-catalogue.ts` (one line each); managing them is `language-admin.ts`, the spoken phrases' rules `phrases.ts`), what is read aloud, translation checks, saving translations (`page-translations.ts`), page audio (`page-audio.ts`), question pages' translations and audio (`question-voice.ts`, shared parts in `question-listen.ts`), the Handbook-wide list (`overview.ts`), what candidates hear and their listening language (`listen.ts`), the voice services behind `services.ts` (Google Cloud Translation and Text-to-Speech in `google.ts`; Gemini in `gemini.ts` until it is removed; a stand-in in `fake.ts`), MP3 encoding and the hourly request cap
+- `lib/voice/` — Handbook translations and audio: languages (kept in the database, read through `language-store.ts`; the list of languages that can be added is `language-catalogue.ts` (one line each); managing them is `language-admin.ts`, the spoken phrases' rules `phrases.ts`), what is read aloud, translation checks, saving translations (`page-translations.ts`), page audio (`page-audio.ts`), question pages' translations and audio (`question-voice.ts`, shared parts in `question-listen.ts`), the Handbook-wide list (`overview.ts`), what candidates hear and their listening language (`listen.ts`), the voice services behind `services.ts` (Google Cloud Translation and Text-to-Speech in `google.ts`; Gemini in `gemini.ts` for languages the list gives to it (Welsh audio); a stand-in in `fake.ts`), MP3 encoding and the hourly request cap
 - `lib/media/` — image checks (real type and size from the file), in-browser WebP conversion, saving uploads and the storage cap (`upload.ts`)
 - `lib/ids.ts`, `lib/text.ts`, `lib/format.ts`, `lib/limits.ts`, `lib/forms.ts`, `lib/params.ts` — small shared helpers (id checks, text clean-up, display formats, length limits, form results, URL parameters)
 - `lib/brand.ts`, `lib/layout.ts` — logo and phone screen sizes

@@ -180,6 +180,12 @@ export function geminiSpeech(): SpeechMaker {
     name: `gemini:${model}`,
     voice,
     partLimit: { chars: SPEECH_PART_CHARS },
+    // A missing key is said before anything is counted, naming the language (Welsh audio comes from Gemini).
+    async checkLanguage(language) {
+      if (!process.env.GEMINI_API_KEY?.trim()) {
+        throw new VoiceError("not_set_up", "GEMINI_API_KEY missing", `${language.name} audio uses Gemini. Add GEMINI_API_KEY to the server settings.`);
+      }
+    },
     async speak({ text, language }, signal) {
       // One line per part in the server window, like translations (no text or key).
       const started = Date.now();

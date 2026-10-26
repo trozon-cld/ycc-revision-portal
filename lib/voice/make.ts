@@ -3,6 +3,7 @@ import { encodeMp3, joinPcm, readSpeechAudio, durationMs, AudioFormatError, type
 import { fakeSpeech, fakeTranslator } from "./fake";
 import { geminiSpeech, geminiTranslator } from "./gemini";
 import { googleSpeech, googleTranslator } from "./google";
+import { audioService } from "./language-catalogue";
 import { findVoiceLanguage } from "./language-store";
 import { SOURCE_LANGUAGE, type VoiceLanguage } from "./languages";
 import { VOICE_REQUEST_TIMEOUT_MS } from "./limits";
@@ -14,13 +15,24 @@ import { applyTranslation, matchTranslation, toTranslatable, type TranslatableBl
 // The editors' two jobs: translate a page or question, and turn one (English or translated) into one MP3.
 // Each call to the service counts toward the editor's hourly cap; nothing is saved here.
 
-// google (the default): Google Cloud Translation and Text-to-Speech; gemini and fake as before.
-function services(): { translator: Translator; speech: SpeechMaker } {
-  const provider = (process.env.VOICE_PROVIDER?.trim() || "google").toLowerCase();
-  if (provider === "fake" && process.env.NODE_ENV !== "production") return { translator: fakeTranslator(), speech: fakeSpeech() };
-  if (provider === "google") return { translator: googleTranslator(), speech: googleSpeech() };
-  if (provider !== "gemini") throw new VoiceError("not_set_up", `unknown VOICE_PROVIDER "${provider}"`);
-  return { translator: geminiTranslator(), speech: geminiSpeech() };
+// google (the default): Google Cloud Translation, and audio from the service the language list names for each
+// language (Google Text-to-Speech, or Gemini for Welsh); gemini: everything from Gemini; fake: the test stand-in.
+function provider(): "google" | "gemini" | "fake" {
+  const name = (process.env.VOICE_PROVIDER?.trim() || "google").toLowerCase();
+  if (name === "fake" && process.env.NODE_ENV !== "production") return "fake";
+  if (name === "google" || name === "gemini") return name;
+  throw new VoiceError("not_set_up", `unknown VOICE_PROVIDER "${name}"`);
+}
+
+function translatorFor(): Translator {
+  const name = provider();
+  return name === "fake" ? fakeTranslator() : name === "gemini" ? geminiTranslator() : googleTranslator();
+}
+
+function speechFor(code: string): SpeechMaker {
+  const name = provider();
+  if (name === "fake") return fakeSpeech();
+  return name === "gemini" || audioService(code) === "gemini" ? geminiSpeech() : googleSpeech();
 }
 
 // What staff see when the voice service fails or the hourly cap is reached (the service's own words go to the log).
@@ -60,7 +72,7 @@ export async function translateItems(
   const target = typeof to === "string" ? await language(to) : to;
   if (target.code === SOURCE_LANGUAGE) throw new VoiceError("failed", "English is the source and isn't translated");
   if (items.length === 0) throw new VoiceError("failed", "there is no text to translate");
-  const { translator } = services();
+  const translator = translatorFor();
   await takeVoiceRequests(userId, "translate", 1);
   const sent = items.map((item, index) => ({ id: String(index + 1), texts: item.texts }));
   const from = await language(SOURCE_LANGUAGE);
@@ -89,7 +101,7 @@ export async function speakPage(userId: string, blocks: Block[], code: string): 
 // One MP3 from the parts read aloud, in order, sent to the voice service in chunks.
 export async function speakParts(userId: string, readParts: string[], code: string): Promise<PageSpeech> {
   const lang = await language(code);
-  const { speech } = services();
+  const speech = speechFor(code);
   const chunks = speechChunks(readParts, speech.partLimit);
   if (chunks.length === 0) throw new VoiceError("failed", "there is nothing to read aloud");
   // A language the service can't speak is refused before anything is counted toward the cap.
