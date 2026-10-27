@@ -5,9 +5,18 @@ import { parseBlocks, type Block } from "@/lib/content/blocks";
 import { pool } from "@/lib/db/pool";
 import { withTransaction } from "@/lib/db/transaction";
 import { formatDuration } from "@/lib/format";
-import { STORAGE_LIMIT_BYTES } from "@/lib/media/limits";
-import { StorageConfigError, deleteObjects, getSignedUrls, isStorageConfigured, storeObject } from "@/lib/storage/storage";
-import { storedBytes } from "@/lib/storage/usage";
+import { isStorageConfigured } from "@/lib/storage/storage";
+import {
+  AUDIO_NOT_CONFIGURED,
+  audioCanStart,
+  audioFileLink,
+  deleteAudioFilesQuietly,
+  storeAudioFile,
+  type AudioDeleteResult,
+  type AudioLinkResult,
+  type AudioResult,
+  type AudioSummary,
+} from "./audio-files";
 import { findVoiceLanguage } from "./language-store";
 import { SOURCE_LANGUAGE } from "./languages";
 import { speakPage, voiceFailure, type PageSpeech } from "./make";
@@ -16,20 +25,8 @@ import { audioSourceVersion, type TranslationRow } from "./status";
 // Server-only: a page's audio (V3), one MP3 per page and language. English is read from the saved page,
 // other languages from a checked, up-to-date translation. Files are stored first, then recorded and logged.
 
-export type AudioSummary = { language: string; sourceVersion: number; durationMs: number; byteSize: number; createdAt: string };
-export type AudioResult = { ok: true; audio: AudioSummary } | { ok: false; error: string };
-export type AudioDeleteResult = { ok: true } | { ok: false; error: string };
-export type AudioLinkResult = { ok: true; url: string } | { ok: false; error: string };
-
 const NOT_FOUND = "This page no longer exists.";
-const NOT_CONFIGURED = "Audio storage isn't set up yet. Add the Supabase settings to the server's environment.";
-const STORAGE_FULL = "Storage is full, so no new audio can be made. Delete pictures in Media or audio you no longer need, then try again.";
-const SAVE_FAILED = "The audio couldn't be saved. Please try again.";
-const MISSING = "This audio no longer exists. Reload the page.";
 const SUMMARY_COLUMNS = `language, source_version, duration_ms, byte_size, created_at`;
-// Long enough to listen to a page or question in the editor.
-const PREVIEW_LINK_SECONDS = 30 * 60;
-
 type SummaryRow = { language: string; source_version: number; duration_ms: number; byte_size: number; created_at: Date };
 
 function toSummary(row: SummaryRow): AudioSummary {
@@ -51,49 +48,6 @@ export async function loadAudioSummaries(pageId: string): Promise<AudioSummary[]
 export async function pageAudioPaths(client: PoolClient, pageId: string): Promise<string[]> {
   const { rows } = await client.query<{ storage_path: string }>(`select storage_path from page_audio where content_page_id = $1`, [pageId]);
   return rows.map((row) => row.storage_path);
-}
-
-export async function deleteAudioFilesQuietly(paths: string[]) {
-  if (paths.length === 0 || !isStorageConfigured()) return;
-  try {
-    await deleteObjects(paths, "audio");
-  } catch (error) {
-    console.error("Audio file cleanup failed", paths, error);
-  }
-}
-
-// Shared by page and question audio: checks before the voice service is called, and room for the new file.
-export async function audioCanStart(): Promise<string | null> {
-  if (!isStorageConfigured()) return NOT_CONFIGURED;
-  return (await storedBytes()) >= STORAGE_LIMIT_BYTES ? STORAGE_FULL : null;
-}
-
-// Stores a new MP3 at `path`; on failure nothing is left behind.
-export async function storeAudioFile(path: string, mp3: Uint8Array<ArrayBuffer>): Promise<string | null> {
-  if ((await storedBytes()) + mp3.byteLength > STORAGE_LIMIT_BYTES) return STORAGE_FULL;
-  try {
-    await storeObject(path, new Blob([mp3], { type: "audio/mpeg" }), "audio/mpeg", { area: "audio" });
-    return null;
-  } catch (error) {
-    await deleteAudioFilesQuietly([path]);
-    if (error instanceof StorageConfigError) return NOT_CONFIGURED;
-    console.error("Audio upload failed", error);
-    return SAVE_FAILED;
-  }
-}
-
-// A short-lived link for listening in an editor (the bucket is private).
-export async function audioFileLink(path: string | undefined): Promise<AudioLinkResult> {
-  if (!path) return { ok: false, error: MISSING };
-  if (!isStorageConfigured()) return { ok: false, error: NOT_CONFIGURED };
-  try {
-    const urls = await getSignedUrls([path], PREVIEW_LINK_SECONDS, "audio");
-    const url = urls.get(path);
-    return url ? { ok: true, url } : { ok: false, error: "The audio file is missing from storage. Make it again." };
-  } catch (error) {
-    console.error("Audio link failed", error);
-    return { ok: false, error: "The audio couldn't be opened. Please try again." };
-  }
 }
 
 type Source = { title: string; blocks: Block[]; version: number } | { error: string };
@@ -129,7 +83,7 @@ async function readSource(client: PoolClient | typeof pool, pageId: string, lang
 export async function generateAudio(session: SessionPayload, pageId: string, language: string): Promise<AudioResult> {
   const lang = await findVoiceLanguage(language);
   if (!lang) return { ok: false, error: "Choose a language." };
-  if (!isStorageConfigured()) return { ok: false, error: NOT_CONFIGURED };
+  if (!isStorageConfigured()) return { ok: false, error: AUDIO_NOT_CONFIGURED };
   const source = await readSource(pool, pageId, lang.code);
   if ("error" in source) return { ok: false, error: source.error };
   const blocked = await audioCanStart();

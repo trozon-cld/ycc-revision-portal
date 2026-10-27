@@ -5,7 +5,7 @@ import { requireRole } from "@/lib/auth/guard";
 import { SESSION_ENDED_LOGIN } from "@/lib/auth/constants";
 import { formatUkDate } from "@/lib/candidates/access";
 import { loadCandidateHome } from "@/lib/candidates/home";
-import { listeningLanguage, loadVoiceLanguages } from "@/lib/voice/language-store";
+import { findVoiceLanguage, listeningLanguageIn, offeredLanguages } from "@/lib/voice/language-store";
 import { languageNames } from "@/lib/voice/languages";
 import { PageBody } from "@/components/candidate/page-body";
 import { CARD, ERROR_BOX, NOTE_BOX, PAGE_TITLE, PRIMARY_BUTTON, SECONDARY_BUTTON, SECTION_TITLE } from "@/components/candidate/buttons";
@@ -35,7 +35,13 @@ export default async function AccountPage() {
   const session = await requireRole(["candidate"]);
   const home = await loadCandidateHome(session.sub);
   if (!home) redirect(SESSION_ENDED_LOGIN);
-  const [languages, listening] = await Promise.all([loadVoiceLanguages("candidate"), listeningLanguage(home.language)]);
+  // Only what the current category offers; a choice it doesn't offer is kept, and English is used here (0035).
+  const [languages, listening, chosen] = await Promise.all([
+    offeredLanguages(home.current.id),
+    listeningLanguageIn(home.language, home.current.id),
+    findVoiceLanguage(home.language, "candidate"),
+  ]);
+  const notOffered = chosen && chosen.code !== listening.code ? chosen : null;
 
   return (
     <PageBody>
@@ -84,6 +90,12 @@ export default async function AccountPage() {
             <p className="mt-2 text-base leading-relaxed text-ink">
               Listen reads Handbook pages aloud in this language when audio is available.
             </p>
+            {notOffered && (
+              <p className={`${NOTE_BOX} mt-3 p-4 text-base leading-relaxed text-ink`}>
+                {notOffered.name} isn&apos;t available for {home.current.name}, so Listen uses English here. Your choice comes back in a
+                category that has {notOffered.name}.
+              </p>
+            )}
             <LanguageForm current={listening.code} languages={languageNames(languages)} />
           </section>
         )}

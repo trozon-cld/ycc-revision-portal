@@ -21,14 +21,14 @@ export async function loadCandidateHome(userId: string): Promise<CandidateHome |
     current_id: string;
     current_name: string;
     group_name: string;
-    listen_enabled: boolean;
+    listen_mode: string;
     assigned_id: string;
     assigned_name: string;
     choices: number;
     preferred_language: string;
   }>(
     `select u.email, u.full_name, u.access_expires_at,
-            cur.id as current_id, cur.name as current_name, g.name as group_name, cur.listen_enabled,
+            cur.id as current_id, cur.name as current_name, g.name as group_name, cur.listen_mode,
             asg.id as assigned_id, asg.name as assigned_name,
             (select count(*)::int from categories c where c.group_id = asg.group_id) as choices,
             u.preferred_language
@@ -45,7 +45,7 @@ export async function loadCandidateHome(userId: string): Promise<CandidateHome |
     email: row.email,
     name: row.full_name,
     accessExpiresAt: row.access_expires_at ? row.access_expires_at.toISOString() : null,
-    current: { id: row.current_id, name: row.current_name, groupName: row.group_name, listenEnabled: row.listen_enabled },
+    current: { id: row.current_id, name: row.current_name, groupName: row.group_name, listenEnabled: row.listen_mode !== "off" },
     assigned: { id: row.assigned_id, name: row.assigned_name },
     choices: row.choices,
     language: row.preferred_language,

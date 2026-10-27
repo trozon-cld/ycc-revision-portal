@@ -11,7 +11,7 @@ import { readQuestionForUpdate } from "@/lib/questions/queries";
 import { questionTypeLabel } from "@/lib/questions/registry";
 import { parseQuestion, type ParsedQuestion } from "@/lib/questions/validate";
 import { isUuid } from "@/lib/ids";
-import { deleteAudioFilesQuietly } from "@/lib/voice/page-audio";
+import { deleteAudioFilesQuietly } from "@/lib/voice/audio-files";
 import { questionAudioPaths } from "@/lib/voice/question-voice";
 import type { FormState } from "@/lib/forms";
 

@@ -1,6 +1,8 @@
 import type { Block } from "@/lib/content/blocks";
 import { plainText } from "@/lib/content/inline";
+import { characterCount } from "@/lib/text";
 import { SPEECH_PART_CHARS } from "./limits";
+import type { SpeechPartLimit } from "./services";
 import type { VoiceLanguage } from "./languages";
 
 // What is read aloud for each block, in page order: headings and paragraphs, list items one by one,
@@ -27,13 +29,12 @@ export function readingParts(blocks: Block[], language: VoiceLanguage): string[]
   return parts.filter(Boolean);
 }
 
-// A question page: the question, "Choose 2 answers" for Multiple answers, then each option with its letter as shown ("Option A. …"). Not the explanation,
-// which only appears after the answer is checked, and not the picture.
-// `say`: Multiple answers and Choose the area, the instruction sentence with its number, already in the language
-// (English from its fixed wording, others translated with the question); `tap`: Tap the area; `boxes`: Match pictures
-// (the options are then its box labels, read as a list).
+// `say`: the instruction sentence with its number, already in the language; `tap`: Tap the area; `boxes`: Match
+// pictures (the options are then its box labels, read as a list).
 export type QuestionInstruction = { say?: string; tap?: boolean; boxes?: boolean };
 
+// A question page: the question, its instruction, then each option with its letter ("Option A. …"); never the
+// explanation (shown only after checking) or the picture.
 export function questionReadingParts(
   stem: string,
   options: string[],
@@ -71,18 +72,46 @@ function sentence(text: string): string {
     .join("\n");
 }
 
-// The text sent to the voice service, in parts of about SPEECH_PART_CHARS, split only between blocks
-// (a single longer block becomes its own part).
-export function speechChunks(parts: string[], maxChars = SPEECH_PART_CHARS): string[] {
+// The text sent to the voice service, in parts within its limit (characters, or UTF-8 bytes for Google), split
+// between blocks; a block over the limit is split at sentence ends, then between words, then (rarely) anywhere.
+export function speechChunks(parts: string[], limit: SpeechPartLimit = { chars: SPEECH_PART_CHARS }): string[] {
+  const size = "bytes" in limit ? (text: string) => utf8.encode(text).length : characterCount;
+  const max = "bytes" in limit ? limit.bytes : limit.chars;
   const chunks: string[] = [];
   let current = "";
-  for (const part of parts) {
-    if (current && current.length + 2 + part.length > maxChars) {
+  for (const piece of parts.flatMap((part) => (size(part) > max ? splitLong(part, max, size) : [part]))) {
+    const joined = current ? `${current}\n\n${piece}` : piece;
+    if (current && size(joined) > max) {
       chunks.push(current);
-      current = "";
-    }
-    current = current ? `${current}\n\n${part}` : part;
+      current = piece;
+    } else current = joined;
   }
   if (current) chunks.push(current);
   return chunks;
+}
+
+const utf8 = new TextEncoder();
+
+// One block too long for a request: whole sentences where they fit, then words, then characters.
+function splitLong(text: string, max: number, size: (text: string) => number): string[] {
+  const pieces: string[] = [];
+  let current = "";
+  const add = (unit: string, glue: string) => {
+    const joined = current ? `${current}${glue}${unit}` : unit;
+    if (size(joined) <= max) current = joined;
+    else {
+      if (current) pieces.push(current);
+      current = unit;
+    }
+  };
+  for (const sentence of text.split(/(?<=[.!?।…])\s+|\n+/).filter(Boolean)) {
+    if (size(sentence) <= max) add(sentence, " ");
+    else
+      for (const word of sentence.split(/\s+/).filter(Boolean)) {
+        if (size(word) <= max) add(word, " ");
+        else for (const char of word) add(char, "");
+      }
+  }
+  if (current) pieces.push(current);
+  return pieces;
 }

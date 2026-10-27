@@ -1,23 +1,37 @@
 import type { Block } from "@/lib/content/blocks";
+import { characterCount } from "@/lib/text";
 import { encodeMp3, joinPcm, readSpeechAudio, durationMs, AudioFormatError, type Pcm } from "./audio";
 import { fakeSpeech, fakeTranslator } from "./fake";
-import { geminiSpeech, geminiTranslator } from "./gemini";
+import { geminiSpeech } from "./gemini";
+import { googleSpeech, googleTranslator } from "./google";
+import { audioService } from "./language-catalogue";
 import { findVoiceLanguage } from "./language-store";
 import { SOURCE_LANGUAGE, type VoiceLanguage } from "./languages";
 import { VOICE_REQUEST_TIMEOUT_MS } from "./limits";
-import { takeVoiceRequests, VoiceQuotaError } from "./quota";
+import { reserveVoiceUsage, settleVoiceUsage, VoiceQuotaError } from "./quota";
 import { readingParts, speechChunks } from "./reading";
-import { VoiceError, type SpeechMaker, type TranslationKind, type Translator, type TranslatorLanguage } from "./services";
+import { serviceOf, VoiceError, type SpeechMaker, type TranslationKind, type Translator, type TranslatorLanguage } from "./services";
 import { applyTranslation, matchTranslation, toTranslatable, type TranslatableBlock } from "./translation";
 
 // The editors' two jobs: translate a page or question, and turn one (English or translated) into one MP3.
-// Each call to the service counts toward the editor's hourly cap; nothing is saved here.
+// Each job's characters are reserved from the editor's hourly allowance before it starts; nothing is saved here.
 
-function services(): { translator: Translator; speech: SpeechMaker } {
-  const provider = (process.env.VOICE_PROVIDER?.trim() || "gemini").toLowerCase();
-  if (provider === "fake" && process.env.NODE_ENV !== "production") return { translator: fakeTranslator(), speech: fakeSpeech() };
-  if (provider !== "gemini") throw new VoiceError("not_set_up", `unknown VOICE_PROVIDER "${provider}"`);
-  return { translator: geminiTranslator(), speech: geminiSpeech() };
+// google (the default): Google Cloud Translation, and audio from the service the language list names for each
+// language (Google Text-to-Speech, or Gemini for Welsh). fake: the stand-in for local trials and tests.
+function standInRequested(): boolean {
+  const name = (process.env.VOICE_PROVIDER?.trim() || "google").toLowerCase();
+  if (name === "fake" && process.env.NODE_ENV !== "production") return true;
+  if (name === "google") return false;
+  throw new VoiceError("not_set_up", `unknown VOICE_PROVIDER "${name}"`);
+}
+
+function translatorFor(): Translator {
+  return standInRequested() ? fakeTranslator() : googleTranslator();
+}
+
+function speechFor(code: string): SpeechMaker {
+  if (standInRequested()) return fakeSpeech();
+  return audioService(code) === "gemini" ? geminiSpeech() : googleSpeech();
 }
 
 // What staff see when the voice service fails or the hourly cap is reached (the service's own words go to the log).
@@ -57,11 +71,17 @@ export async function translateItems(
   const target = typeof to === "string" ? await language(to) : to;
   if (target.code === SOURCE_LANGUAGE) throw new VoiceError("failed", "English is the source and isn't translated");
   if (items.length === 0) throw new VoiceError("failed", "there is no text to translate");
-  const { translator } = services();
-  await takeVoiceRequests(userId, "translate", 1);
+  const translator = translatorFor();
   const sent = items.map((item, index) => ({ id: String(index + 1), texts: item.texts }));
   const from = await language(SOURCE_LANGUAGE);
-  const reply = await withTimeout((signal) => translator.translate({ from, to: target, blocks: sent, kind }, signal));
+  const reservation = await reserveVoiceUsage(userId, "translate", serviceOf(translator.name), translator.characters(items.flatMap((item) => item.texts)));
+  let accepted = 0;
+  let reply: unknown;
+  try {
+    reply = await withTimeout((signal) => translator.translate({ from, to: target, blocks: sent, kind }, signal, (characters) => (accepted += characters)));
+  } finally {
+    await settleVoiceUsage(reservation, accepted);
+  }
   const result = matchTranslation(sent, reply);
   if (!result.ok) throw new VoiceError("bad_reply", result.error);
   return { items: result.items.map((item, index) => ({ id: items[index].id, texts: item.texts })), provider: translator.name };
@@ -86,21 +106,31 @@ export async function speakPage(userId: string, blocks: Block[], code: string): 
 // One MP3 from the parts read aloud, in order, sent to the voice service in chunks.
 export async function speakParts(userId: string, readParts: string[], code: string): Promise<PageSpeech> {
   const lang = await language(code);
-  const chunks = speechChunks(readParts);
+  const speech = speechFor(code);
+  const chunks = speechChunks(readParts, speech.partLimit);
   if (chunks.length === 0) throw new VoiceError("failed", "there is nothing to read aloud");
-  const { speech } = services();
-  await takeVoiceRequests(userId, "speech", chunks.length);
+  // A language the service can't speak is refused before anything is counted toward the cap.
+  if (speech.checkLanguage) await withTimeout((signal) => speech.checkLanguage!(lang, signal));
+  const reservation = await reserveVoiceUsage(userId, "speech", serviceOf(speech.name), characterCount(chunks));
   const parts: Pcm[] = [];
-  for (const text of chunks) {
-    const audio = await withTimeout((signal) => speech.speak({ text, language: lang }, signal));
-    try {
-      parts.push(readSpeechAudio(audio.bytes, audio.mimeType));
-    } catch (error) {
-      if (error instanceof AudioFormatError) throw new VoiceError("bad_reply", error.message);
-      throw error;
+  let voice = speech.voice;
+  let accepted = 0;
+  try {
+    for (const text of chunks) {
+      const audio = await withTimeout((signal) => speech.speak({ text, language: lang }, signal));
+      accepted += characterCount(text);
+      voice = audio.voice ?? voice;
+      try {
+        parts.push(readSpeechAudio(audio.bytes, audio.mimeType));
+      } catch (error) {
+        if (error instanceof AudioFormatError) throw new VoiceError("bad_reply", error.message);
+        throw error;
+      }
     }
+  } finally {
+    await settleVoiceUsage(reservation, accepted);
   }
   const pcm = joinPcm(parts);
   if (pcm.samples.length === 0) throw new VoiceError("bad_reply", "audio is empty");
-  return { mp3: encodeMp3(pcm), durationMs: durationMs(pcm), provider: speech.name, voice: speech.voice };
+  return { mp3: encodeMp3(pcm), durationMs: durationMs(pcm), provider: speech.name, voice };
 }

@@ -18,7 +18,7 @@ import {
   type AudioLinkResult,
   type AudioResult,
   type AudioSummary,
-} from "./page-audio";
+} from "./audio-files";
 import type { TranslationResult, TranslationSummary } from "./page-translations";
 import { englishInstruction, questionReadingParts } from "./reading";
 import { VoiceError } from "./services";
@@ -33,20 +33,18 @@ import {
   type QuestionVoice,
 } from "./question-listen";
 
-// Server-only: Listen for Handbook question pages (V6a). Only what the page shows before the answer is checked
-// is translated and read: the question and its options. A translation or audio is up to date while the English
-// question and options are the same as when it was made (`source`), so answer or explanation edits don't matter.
+// Server-only: Listen for Handbook question pages. Only the question and options are translated and read; a copy is
+// up to date while they match what it was made from (`source`), so answer or explanation edits don't matter.
 
-// The English question and options of question `q`, built in SQL so stored copies compare exactly.
-// What is said for option `o`: its text, or for a picture option (or a Match pictures box) its label, else the
+// What is said for option `o`: its text, or for a picture option (or Match pictures box) its label, else the
 // picture's description in Media.
 const OPTION_LABEL_SQL = `nullif(btrim(o->>'label'), '')`;
 const OPTION_SPOKEN_SQL = `coalesce(o->>'text', ${OPTION_LABEL_SQL}, (select m.alt_text from media m where m.id = nullif(o->>'mediaId', '')::uuid))`;
 // Picture options also say where their words come from (shown in the Translations page); text options add nothing.
 const OPTION_FROM_SQL = `case when o ? 'mediaId' then jsonb_build_object('from', case when ${OPTION_LABEL_SQL} is null then 'description' else 'label' end) else '{}'::jsonb end`;
 
-// Multiple answers adds how many to choose ("pick"), Choose the area how many areas ("areas"), Tap the area "tap",
-// Match pictures "boxes" (its box labels are the options); other types have none of these keys, so their copies are unchanged.
+// The English question and options of question `q`, built in SQL so stored copies compare exactly; per type also
+// "pick", "areas", "tap" or "boxes" (other types have none, so their copies are unchanged).
 export const QUESTION_SOURCE_SQL = `(jsonb_build_object(
     'stem', q.stem_text,
     'options', coalesce((select jsonb_agg(jsonb_build_object('id', o->>'id', 'text', ${OPTION_SPOKEN_SQL}) || ${OPTION_FROM_SQL} order by n)
@@ -56,9 +54,8 @@ export const QUESTION_SOURCE_SQL = `(jsonb_build_object(
   || case when q.type = 'hotspot' then jsonb_build_object('tap', true) else '{}'::jsonb end
   || case when q.type = 'match_pictures' then jsonb_build_object('boxes', true) else '{}'::jsonb end)`;
 
-// What a translation is made from: the English copy, plus for Multiple answers and Choose the area a mark that the
-// instruction sentence was translated with it (0034). Translations from before that show as out of date; audio keeps
-// comparing with QUESTION_SOURCE_SQL, so English audio is unaffected.
+// What a translation is made from: the English copy plus, for Multiple answers and Choose the area, a mark that the
+// instruction was translated with it (older translations show as out of date; audio still uses QUESTION_SOURCE_SQL).
 export const TRANSLATION_SOURCE_SQL = `(${QUESTION_SOURCE_SQL}
   || case when q.content ? 'pick' or q.content ? 'areas' then jsonb_build_object('instruction', true) else '{}'::jsonb end)`;
 

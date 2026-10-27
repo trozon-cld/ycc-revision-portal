@@ -1,3 +1,5 @@
+import { characterCount } from "@/lib/text";
+import { SPEECH_PART_CHARS } from "./limits";
 import { VoiceError, type SpeechMaker, type Translator, type VoiceErrorKind } from "./services";
 
 // Stand-in services for tests and local trials without a key (VOICE_PROVIDER=fake; refused in production).
@@ -10,8 +12,10 @@ function failIfAsked(text: string) {
 export function fakeTranslator(): Translator {
   return {
     name: "fake",
-    async translate({ to, blocks }) {
+    characters: (texts) => characterCount(texts),
+    async translate({ to, blocks }, _signal, onSent) {
       failIfAsked(JSON.stringify(blocks));
+      onSent?.(characterCount(blocks.flatMap((block) => block.texts)));
       return blocks.map((block) => ({ id: block.id, texts: block.texts.map((text) => `[${to.code}] ${text}`) }));
     },
   };
@@ -22,6 +26,7 @@ export function fakeSpeech(): SpeechMaker {
   return {
     name: "fake",
     voice: "tone",
+    partLimit: { chars: SPEECH_PART_CHARS },
     async speak({ text }) {
       failIfAsked(text);
       const rate = 24000;

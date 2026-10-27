@@ -4,14 +4,8 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/guard";
 import { CONTENT_EDITORS } from "@/lib/auth/content-editors";
 import { isUuid } from "@/lib/ids";
-import {
-  audioPreviewLink,
-  deleteAudio,
-  generateAudio,
-  type AudioDeleteResult,
-  type AudioLinkResult,
-  type AudioResult,
-} from "@/lib/voice/page-audio";
+import type { AudioDeleteResult, AudioLinkResult, AudioResult } from "@/lib/voice/audio-files";
+import { audioPreviewLink, deleteAudio, generateAudio } from "@/lib/voice/page-audio";
 
 const NOT_FOUND = { ok: false, error: "This page no longer exists." } as const;
 

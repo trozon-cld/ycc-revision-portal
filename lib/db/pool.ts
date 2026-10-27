@@ -62,21 +62,32 @@ function createPool() {
       return run();
     }
   };
-  const rawQuery = created.query.bind(created) as (...args: unknown[]) => Promise<unknown>;
   const rawConnect = created.connect.bind(created) as (callback?: unknown) => Promise<PoolClient>;
+  // pool.query: borrow a connection, run, give it back (as pg does; a failed query's connection is replaced). The slow
+  // line splits waiting for a connection (busy pool, slow network, opening one) from the query itself.
   (created as unknown as { query: unknown }).query = async (...args: unknown[]) => {
     const started = Date.now();
+    const client = await retryConnect(() => rawConnect());
+    const connected = Date.now();
+    let failed: Error | undefined;
     try {
-      return await retryConnect(() => rawQuery(...args));
+      return await (client.query as (...queryArgs: unknown[]) => Promise<unknown>)(...args);
+    } catch (error) {
+      failed = error instanceof Error ? error : new Error(String(error));
+      throw error;
     } finally {
+      client.release(failed);
       const took = Date.now() - started;
       if (took > SLOW_QUERY_MS) {
         const sql = typeof args[0] === "string" ? args[0] : "";
-        console.warn(`Database: slow query (${(took / 1000).toFixed(1)} s): ${sql.replace(/\s+/g, " ").trim().slice(0, 100)}`);
+        const seconds = (ms: number) => `${(ms / 1000).toFixed(1)} s`;
+        console.warn(
+          `Database: slow query (${seconds(took)}: waited ${seconds(connected - started)} for a connection, query ${seconds(Date.now() - connected)}): ${sql.replace(/\s+/g, " ").trim().slice(0, 100)}`
+        );
       }
     }
   };
-  // pg's own query() calls connect with a callback: that form is passed straight through (query retries above).
+  // A connect with a callback is passed straight through; the promise form tries once more on a timeout.
   (created as unknown as { connect: unknown }).connect = (callback?: unknown) =>
     typeof callback === "function" ? rawConnect(callback) : retryConnect(() => rawConnect());
   return created;

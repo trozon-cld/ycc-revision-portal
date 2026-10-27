@@ -8,8 +8,6 @@ export type VoiceLanguage = {
   // The language's own name, in its own script.
   nativeName: string;
   status: LanguageStatus;
-  // Extra instruction for the translator (e.g. "Use Gurmukhi script.").
-  translatorNote: string | null;
   // How a Key point / Remember box starts when read aloud.
   boxLabels: { "key-point": string; remember: string };
   // How a question page's question and each option start when read aloud ("Option A"); `tapArea` is Tap the area's
@@ -36,7 +34,7 @@ export function phraseKeysFor(code: string): PhraseKey[] {
 
 // A language from its database row and phrases, or null when a phrase is missing.
 export function toVoiceLanguage(
-  row: { code: string; name: string; native_name: string; status: LanguageStatus; translator_note: string | null },
+  row: { code: string; name: string; native_name: string; status: LanguageStatus },
   phrases: Partial<Record<string, string>>
 ): VoiceLanguage | null {
   const p = (key: PhraseKey) => phrases[key]?.trim() ?? "";
@@ -46,7 +44,6 @@ export function toVoiceLanguage(
     name: row.name,
     nativeName: row.native_name,
     status: row.status,
-    translatorNote: row.translator_note,
     boxLabels: { "key-point": p("key_point"), remember: p("remember") },
     questionLabels: {
       question: p("question"),

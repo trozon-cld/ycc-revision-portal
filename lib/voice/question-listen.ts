@@ -1,7 +1,7 @@
 import { optionLetter, SINGLE_TEXT_LIMITS } from "@/lib/questions/types/single-text";
 import { QUESTION_LIMITS } from "@/lib/questions/validate";
 import { cleanLine, cleanText, isRecord } from "@/lib/text";
-import type { AudioSummary } from "./page-audio";
+import type { AudioSummary } from "./audio-files";
 import type { TranslationSummary } from "./page-translations";
 
 // Listen for question pages, shared by the server and the editors (no database code here).
@@ -13,20 +13,20 @@ export function questionTypeHasListen(type: string): boolean {
   return (VOICE_QUESTION_TYPES as readonly string[]).includes(type);
 }
 
-// `pick`: Multiple answers only, how many to choose.
-// `from`: picture options only, whether the words are the option's label or the picture's description in Media.
-// `areas`: Choose the area only, how many outlined areas (the areas themselves aren't read).
-// `instruction`: Multiple answers and Choose the area, the sentence read after the question ("Choose 2 answers"): in
-// English from the fixed wording, in other languages translated with the question (so the words fit the number).
-// `tap`: Tap the area only (its instruction is fixed wording; the answer spot is never shown or read).
-// `boxes`: Match pictures only; `options` are then its boxes' labels (the pictures aren't read).
+// What a question page reads aloud. Match pictures: `options` are its boxes' labels (the pictures aren't read).
 export type QuestionText = {
   stem: string;
+  // `from` (picture options): the words are the option's label, or the picture's description in Media.
   options: { id: string; text: string; from?: "label" | "description" }[];
+  // Multiple answers: how many to choose.
   pick?: number;
+  // Choose the area: how many outlined areas (the areas themselves aren't read).
   areas?: number;
+  // Tap the area (fixed wording; the answer spot is never shown or read).
   tap?: boolean;
+  // Match pictures.
   boxes?: boolean;
+  // Multiple answers and Choose the area: "Choose 2 answers"; English from the fixed wording, others translated with the question.
   instruction?: string;
 };
 

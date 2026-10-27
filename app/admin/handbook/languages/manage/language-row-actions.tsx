@@ -7,7 +7,7 @@ import { inputClass } from "@/components/admin/styles";
 import { countOf } from "@/lib/format";
 import { LANGUAGES_MANAGE_PATH } from "@/lib/voice/language-tabs";
 import { SOURCE_LANGUAGE, type LanguageStatus } from "@/lib/voice/languages";
-import { addLanguageAction, hideLanguageAction, publishLanguageAction, restoreLanguageAction } from "./actions";
+import { addLanguageAction, deleteLanguageAction, hideLanguageAction, publishLanguageAction, restoreLanguageAction } from "./actions";
 
 export function AddLanguageButton({ options }: { options: { code: string; label: string }[] }) {
   return (
@@ -27,7 +27,7 @@ export function AddLanguageButton({ options }: { options: { code: string; label:
             <Field
               id="add-language"
               label="Language"
-              hint="Every language the voice service can speak that people in England use, most-spoken first (Census 2021, main language of residents aged 3 and over)."
+              hint="The languages the platform offers. More can be added on request."
             >
               <select id="add-language" name="code" required className={inputClass}>
                 {options.map((option) => (
@@ -51,6 +51,7 @@ export function LanguageRowActions({
   status,
   candidates,
   ready,
+  canDelete,
 }: {
   code: string;
   name: string;
@@ -58,6 +59,8 @@ export function LanguageRowActions({
   candidates: number;
   // All its spoken phrases written and checked.
   ready: boolean;
+  // Superadmin: a hidden language can be deleted.
+  canDelete: boolean;
 }) {
   const hidden = { code };
   const actions: RowAction[] = [{ label: "Spoken phrases", href: `${LANGUAGES_MANAGE_PATH}/${code}` }];
@@ -120,6 +123,32 @@ export function LanguageRowActions({
 
   if (status === "hidden") {
     actions.push({ label: "Show again", run: () => restoreLanguageAction(code), successMessage: "Language is back as a draft." });
+  }
+
+  if (status === "hidden" && canDelete) {
+    actions.push({
+      label: "Delete",
+      danger: true,
+      title: `Delete ${name}?`,
+      variant: "confirm",
+      render: (close) => (
+        <ActionForm
+          action={deleteLanguageAction}
+          hidden={hidden}
+          submitLabel="Delete for good"
+          pendingLabel="Deleting…"
+          variant="danger"
+          successMessage="Language deleted."
+          onSuccess={close}
+          onCancel={close}
+        >
+          <p className="text-sm">
+            This removes {name}&apos;s spoken phrases and every {name} translation and audio file, for good. It can&apos;t be undone. You can add{" "}
+            {name} again later, but its translations and audio would have to be made again.
+          </p>
+        </ActionForm>
+      ),
+    });
   }
 
   return <RowActions label={`Actions for ${name}`} actions={actions} />;

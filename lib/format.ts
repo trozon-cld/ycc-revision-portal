@@ -18,6 +18,12 @@ export function formatClock(ms: number): string {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
+// "12,400", or with a noun: "1 page", "12,400 pages" (pass the plural when it isn't just an added "s").
+export function formatCount(n: number, singular?: string, plural = `${singular}s`): string {
+  const number = n.toLocaleString("en-GB");
+  return singular === undefined ? number : `${number} ${n === 1 ? singular : plural}`;
+}
+
 // "1 chapter", "3 chapters"; pass the plural when it isn't just an added "s" ("categories").
 export function countOf(n: number, singular: string, plural = `${singular}s`): string {
   return `${n} ${n === 1 ? singular : plural}`;

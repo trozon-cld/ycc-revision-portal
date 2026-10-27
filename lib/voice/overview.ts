@@ -8,9 +8,8 @@ import { QUESTION_CURRENT_VERSION, VOICE_QUESTION_TYPES } from "./question-liste
 import { QUESTION_SOURCE_SQL, TRANSLATION_SOURCE_SQL } from "./question-voice";
 import { audioState, translationState, type AudioState, type TranslationState } from "./status";
 
-// Server-only: the Handbook-wide list of text pages and question pages with each language's translation and
-// audio state (V4, questions from V6a). Filtering happens in SQL so the list can be paged; the states shown come
-// from status.ts. The two must agree (checked by the tests). Question types without Listen yet show "Comes later".
+// Server-only: the Handbook-wide list of pages with each language's translation and audio state. Filtering is in
+// SQL so the list can be paged; the states shown come from status.ts, and the two must agree (the tests check).
 
 export const LANGUAGE_LIST_PAGE_SIZE = 50;
 
@@ -44,7 +43,8 @@ export type LanguageListRow = {
   // null: a question type without Listen yet.
   states: Record<string, PageLanguageState> | null;
 };
-export type LanguageTotals = { language: string; checked: number; audioReady: number };
+// toCheck: draft translations; outdated: translation or audio older than the English.
+export type LanguageTotals = { language: string; checked: number; toCheck: number; outdated: number; audioReady: number };
 export type LanguageCounts = { pages: number; questions: number; listenable: number };
 
 export function isLanguageNeed(value: unknown): value is LanguageNeed {
@@ -148,11 +148,13 @@ function where(filters: LanguageFilters, params: unknown[]): string {
   return parts.join(" and ");
 }
 
-// The staff languages (or just the one filtered on) and the question types with Listen.
+// The languages a list looks at: English and the one shown (every staff language for the totals), and the
+// question types with Listen.
 async function baseParams(filters: LanguageFilters | null): Promise<unknown[]> {
   const codes = (await loadVoiceLanguages()).map((language) => language.code);
-  const chosen = filters?.language && codes.includes(filters.language) ? filters.language : null;
-  return [chosen ? [chosen] : codes, [...VOICE_QUESTION_TYPES]];
+  if (!filters) return [codes, [...VOICE_QUESTION_TYPES]];
+  const chosen = filters.language && filters.language !== SOURCE_LANGUAGE && codes.includes(filters.language) ? filters.language : null;
+  return [chosen ? [SOURCE_LANGUAGE, chosen] : [SOURCE_LANGUAGE], [...VOICE_QUESTION_TYPES]];
 }
 
 export async function countLanguageItems(filters: LanguageFilters): Promise<number> {
@@ -176,15 +178,16 @@ export async function countAllLanguageItems(): Promise<LanguageCounts> {
 
 // How many items have a checked, up-to-date translation and ready audio, per language (whole Handbook).
 export async function languageTotals(): Promise<LanguageTotals[]> {
-  const { rows } = await pool.query<{ code: string; checked: number; ready: number }>(
+  const { rows } = await pool.query<{ code: string; checked: number; to_check: number; outdated: number; ready: number }>(
     `${STATES}
-     select code, count(*) filter (where t = 'checked')::int as checked, count(*) filter (where a = 'ready')::int as ready
+     select code, count(*) filter (where t = 'checked')::int as checked, count(*) filter (where t = 'draft')::int as to_check,
+            count(*) filter (where t = 'outdated' or a = 'outdated')::int as outdated, count(*) filter (where a = 'ready')::int as ready
      from states group by code`,
     await baseParams(null)
   );
   return (await loadVoiceLanguages()).map((language) => {
     const row = rows.find((found) => found.code === language.code);
-    return { language: language.code, checked: row?.checked ?? 0, audioReady: row?.ready ?? 0 };
+    return { language: language.code, checked: row?.checked ?? 0, toCheck: row?.to_check ?? 0, outdated: row?.outdated ?? 0, audioReady: row?.ready ?? 0 };
   });
 }
 

@@ -18,7 +18,7 @@ import { NOT_THROUGH_MESSAGE, reachServer } from "@/lib/forms";
 import { getPreviewMedia, listPickerMedia, savePageContent, setPageStatus, type PickerItem } from "../actions";
 import { BlockEditor } from "./block-editor";
 import { LanguagesStrip } from "../../languages/languages-strip";
-import type { AudioSummary } from "@/lib/voice/page-audio";
+import type { AudioSummary } from "@/lib/voice/audio-files";
 import type { LanguageName } from "@/lib/voice/languages";
 import type { TranslationSummary } from "@/lib/voice/page-translations";
 

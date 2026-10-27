@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/guard";
 import { CONTENT_EDITORS } from "@/lib/auth/content-editors";
 import { isUuid } from "@/lib/ids";
-import type { AudioDeleteResult, AudioLinkResult, AudioResult } from "@/lib/voice/page-audio";
+import type { AudioDeleteResult, AudioLinkResult, AudioResult } from "@/lib/voice/audio-files";
 import type { TranslationResult } from "@/lib/voice/page-translations";
 import {
   deleteQuestionAudio,
