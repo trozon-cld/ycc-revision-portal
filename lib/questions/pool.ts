@@ -1,6 +1,6 @@
 import { randomInt } from "node:crypto";
 import type { PoolClient } from "pg";
-import { chapterNumber } from "@/lib/handbook/structure";
+import { chapterLabel, numberedChapters } from "@/lib/handbook/structure";
 import { availableQuestionTypes } from "./registry";
 import { isQuestionType, type QuestionType } from "./types";
 import { parseQuestion, type ParsedQuestion } from "./validate";
@@ -13,13 +13,6 @@ export type PoolUse = "practice" | "mock";
 export type PoolQuestion = { id: string; chapterId: string; type: QuestionType };
 export type LoadedQuestion = ParsedQuestion & { chapterId: string; chapterLabel: string };
 
-// Chapters numbered across the whole Handbook ("01", "02"…), as the book shows them.
-export const NUMBERED = `numbered as (
-  select c.id, c.title, c.status, s.position as section_position, s.title as section_title,
-         (row_number() over (order by s.position, c.position))::int as number
-  from chapters c join sections s on s.id = c.section_id
-)`;
-
 // Pool rule: published question, switched on for that use, in a published chapter of the test type.
 const USE_COLUMN: Record<PoolUse, string> = { practice: "q.in_practice", mock: "q.in_mock" };
 export const inPool = (use: PoolUse, testTypeParam: string) => `q.status = 'published' and ${USE_COLUMN[use]}
@@ -28,8 +21,6 @@ export const inPool = (use: PoolUse, testTypeParam: string) => `q.status = 'publ
 
 // Unpredictable randomness for drawing questions.
 export const drawRandom = () => randomInt(0, 2 ** 32) / 2 ** 32;
-
-export const chapterLabel = (row: { number: number; title: string }) => `${chapterNumber(row.number)} ${row.title}`;
 
 export async function currentTestType(db: Db, userId: string): Promise<{ id: string; name: string } | null> {
   const { rows } = await db.query<{ id: string; name: string }>(
@@ -52,7 +43,7 @@ type QuestionRow = {
   id: string;
   chapter_id: string;
   chapter_title: string;
-  chapter_number: number;
+  chapter_number: number | null;
   type: string;
   stem_text: string;
   stem_media_id: string | null;
@@ -63,16 +54,17 @@ type QuestionRow = {
   explanation: string | null;
 };
 
-// Questions by id, parsed. With `within`, only those still in that pool; ids that don't qualify are simply missing.
-export async function loadQuestions(db: Db, ids: string[], within?: { use: PoolUse; testTypeId: string }): Promise<Map<string, LoadedQuestion>> {
+// Questions by id, parsed, with chapters numbered in that test type's book. With `use`, only those still in
+// that pool; ids that don't qualify are simply missing.
+export async function loadQuestions(db: Db, ids: string[], book: { testTypeId: string; use?: PoolUse }): Promise<Map<string, LoadedQuestion>> {
   if (ids.length === 0) return new Map();
   const { rows } = await db.query<QuestionRow>(
-    `with ${NUMBERED}
+    `with ${numberedChapters("$2")}
      select q.id, q.chapter_id, n.title as chapter_title, n.number as chapter_number, q.type, q.stem_text, q.stem_media_id,
             q.stem_media_size, q.stem_media_align, q.content, q.answer, q.explanation
      from questions q join numbered n on n.id = q.chapter_id
-     where q.id = any($1::uuid[])${within ? ` and ${inPool(within.use, "$2")}` : ""}`,
-    within ? [ids, within.testTypeId] : [ids]
+     where q.id = any($1::uuid[])${book.use ? ` and ${inPool(book.use, "$2")}` : ""}`,
+    [ids, book.testTypeId]
   );
   const map = new Map<string, LoadedQuestion>();
   for (const row of rows) {

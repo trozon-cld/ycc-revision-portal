@@ -4,8 +4,9 @@ import { formatUkTime } from "@/lib/candidates/access";
 import { resolveMedia } from "@/lib/content/pages";
 import { pool } from "@/lib/db/pool";
 import { withTransaction } from "@/lib/db/transaction";
+import { chapterLabel, numberedChapters } from "@/lib/handbook/structure";
 import { checkAnswer, isOversizedResponse } from "@/lib/questions/check";
-import { NUMBERED, chapterLabel, currentTestType, drawRandom, loadPool, loadQuestions, type PoolQuestion } from "@/lib/questions/pool";
+import { currentTestType, drawRandom, loadPool, loadQuestions, type PoolQuestion } from "@/lib/questions/pool";
 import { toClientQuestion } from "@/lib/questions/public";
 import { drawMock } from "./draw";
 import { nextStep, weakestTopics, type TopicResult } from "./results";
@@ -170,7 +171,7 @@ async function readMockRun(userId: string, attemptId: string): Promise<MockView>
       await finish(client, row, "moved");
       return { kind: "ended" as const };
     }
-    return { kind: "open" as const, row, questions: await loadQuestions(client, row.question_ids) };
+    return { kind: "open" as const, row, questions: await loadQuestions(client, row.question_ids, { testTypeId: row.test_type_id }) };
   });
   if (outcome.kind !== "open") return outcome;
   const { row, questions } = outcome;
@@ -220,9 +221,9 @@ export async function loadMockResults(userId: string, attemptId: string): Promis
   const row = rows[0];
   if (!row) return null;
   const summary = row.chapter_summary ?? {};
-  const { rows: chapters } = await pool.query<{ id: string; title: string; number: number }>(
-    `with ${NUMBERED} select id, title, number from numbered where id = any($1::uuid[]) order by number`,
-    [Object.keys(summary)]
+  const { rows: chapters } = await pool.query<{ id: string; title: string; number: number | null }>(
+    `with ${numberedChapters("$2")} select id, title, number from numbered where id = any($1::uuid[]) order by place`,
+    [Object.keys(summary), row.test_type_id]
   );
   const known = new Set(chapters.map((chapter) => chapter.id));
   const topics: TopicResult[] = [
@@ -325,7 +326,7 @@ export async function loadMockReview(userId: string, attemptId: string): Promise
   if (!row) return null;
   if (!row.question_ids || !row.responses || !row.flags || !row.marks) return { kept: false, total: row.total, items: [], media: {} };
   const ids = row.question_ids;
-  const questions = await loadQuestions(pool, ids);
+  const questions = await loadQuestions(pool, ids, { testTypeId: row.test_type_id });
   // Practice flags only for questions in the current test type's Practice (as on the Practice report).
   const inPractice = new Set<string>();
   const flagged = new Set<string>();
@@ -425,7 +426,7 @@ async function finish(client: Db, row: AttemptRow, how: MockEnd) {
     await client.query(`delete from mock_attempts where id = $1`, [row.id]);
     return;
   }
-  const questions = await loadQuestions(client, row.question_ids);
+  const questions = await loadQuestions(client, row.question_ids, { testTypeId: row.test_type_id });
   const summary: Record<string, [number, number]> = {};
   let marks = "";
   row.question_ids.forEach((id, index) => {

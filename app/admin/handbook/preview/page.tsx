@@ -25,8 +25,10 @@ export default async function BookPreviewPage({ searchParams }: PageProps<"/admi
   ]);
 
   const chapter = options.chapters.find((item) => item.id === chapterId);
+  // With a test type the reader numbers chapters in that book; the summary follows it.
+  const chapterInBook = testTypeId ? book.pages[0]?.chapterLabel : undefined;
   const summary = [
-    chapter ? chapter.label : countOf(book.chapterCount, "chapter"),
+    chapter ? (chapterInBook ?? chapter.label) : countOf(book.chapterCount, "chapter"),
     countOf(book.pages.length, "item"),
     ...(includeDrafts && book.drafts > 0 ? [`${book.drafts} marked Draft`] : []),
   ].join(" · ");

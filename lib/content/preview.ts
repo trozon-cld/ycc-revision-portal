@@ -1,5 +1,5 @@
 import { pool } from "@/lib/db/pool";
-import { chapterNumber, sectionLetter } from "@/lib/handbook/structure";
+import { chapterLabel, numberedChapters, sectionLetter } from "@/lib/handbook/structure";
 import { questionRef } from "@/lib/questions/labels";
 import { toClientQuestion } from "@/lib/questions/public";
 import { parseQuestion } from "@/lib/questions/validate";
@@ -11,7 +11,7 @@ import type { BookCovers } from "./covers";
 import { resolveMedia } from "./pages";
 
 // The book as the reader shows it, for the admin preview: every chapter or one, in Handbook order;
-// optionally only a test type's chapters, and only what candidates see.
+// optionally only a test type's chapters (numbered in that book, as candidates see it), and only what candidates see.
 
 export type PreviewScope = { chapterId: string | null; testTypeId: string | null; includeDrafts: boolean };
 export type PreviewBook = {
@@ -26,7 +26,7 @@ export type PreviewBook = {
 type Row = {
   chapter_id: string;
   chapter_title: string;
-  chapter_number: number;
+  chapter_number: number | null;
   section_position: number;
   section_title: string;
   item_id: string;
@@ -54,11 +54,7 @@ export async function loadPreviewBook(
   const chapterId = scope.chapterId && isUuid(scope.chapterId) ? scope.chapterId : null;
   const testTypeId = scope.testTypeId && isUuid(scope.testTypeId) ? scope.testTypeId : null;
   const { rows } = await pool.query<Row>(
-    `with numbered as (
-       select c.id, c.title, c.status, s.position as section_position, s.title as section_title,
-              (row_number() over (order by s.position, c.position))::int as number
-       from chapters c join sections s on s.id = c.section_id
-     )
+    `with ${numberedChapters(testTypeId ? "$2" : undefined)}
      select n.id as chapter_id, n.title as chapter_title, n.number as chapter_number,
             n.section_position, n.section_title,
             i.id as item_id,
@@ -72,7 +68,7 @@ export async function loadPreviewBook(
      where ($1::uuid is null or n.id = $1)
        and ($2::uuid is null or exists (select 1 from test_type_chapters cc where cc.test_type_id = $2 and cc.chapter_id = n.id))
        and ($3 or (n.status = 'published' and coalesce(p.status, q.status) = 'published'))
-     order by n.number, i.position`,
+     order by n.place, i.position`,
     [chapterId, testTypeId, scope.includeDrafts]
   );
 
@@ -85,7 +81,7 @@ export async function loadPreviewBook(
       id: row.item_id,
       chapterId: row.chapter_id,
       sectionLabel: `${sectionLetter(row.section_position)} · ${row.section_title}`,
-      chapterLabel: `${chapterNumber(row.chapter_number)} ${row.chapter_title}`,
+      chapterLabel: chapterLabel({ number: row.chapter_number, title: row.chapter_title }),
     };
     const status = row.page_status ?? row.question_status;
     const badge = status === "draft" ? { badge: "Draft" } : {};
@@ -154,10 +150,7 @@ export type PreviewOptions = {
 export async function loadPreviewOptions(): Promise<PreviewOptions> {
   const [{ rows: chapters }, { rows: testTypes }] = await Promise.all([
     pool.query<{ id: string; title: string; number: number; section_position: number; section_title: string }>(
-      `select c.id, c.title, s.position as section_position, s.title as section_title,
-              (row_number() over (order by s.position, c.position))::int as number
-       from chapters c join sections s on s.id = c.section_id
-       order by s.position, c.position`
+      `with ${numberedChapters()} select id, title, number, section_position, section_title from numbered order by place`
     ),
     pool.query<{ id: string; name: string; test_area_name: string }>(
       `select c.id, c.name, g.name as test_area_name
@@ -168,7 +161,7 @@ export async function loadPreviewOptions(): Promise<PreviewOptions> {
   return {
     chapters: chapters.map((row) => ({
       id: row.id,
-      label: `${chapterNumber(row.number)} ${row.title}`,
+      label: chapterLabel(row),
       sectionLabel: `${sectionLetter(row.section_position)} · ${row.section_title}`,
     })),
     testTypes: testTypes.map((row) => ({ id: row.id, label: `${row.name} (${row.test_area_name})` })),

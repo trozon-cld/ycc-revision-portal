@@ -4,12 +4,12 @@ import type { ResolvedMedia } from "@/lib/content/book";
 import { resolveMedia } from "@/lib/content/pages";
 import { pool } from "@/lib/db/pool";
 import { withTransaction } from "@/lib/db/transaction";
-import { sectionLetter } from "@/lib/handbook/structure";
+import { chapterLabel, numberedChapters, sectionLetter } from "@/lib/handbook/structure";
 import { mockMissesForPractice } from "@/lib/mock/attempts";
 import { recordQuestionResult } from "@/lib/progress/question-results";
 import { checkAnswer, isOversizedResponse } from "@/lib/questions/check";
 import { shuffle } from "@/lib/questions/shuffle";
-import { NUMBERED, chapterLabel, currentTestType, drawRandom as random, inPool, loadPool, loadQuestions, type LoadedQuestion, type PoolQuestion } from "@/lib/questions/pool";
+import { currentTestType, drawRandom as random, inPool, loadPool, loadQuestions, type LoadedQuestion, type PoolQuestion } from "@/lib/questions/pool";
 import { toClientQuestion, type ClientQuestion } from "@/lib/questions/public";
 import { availableQuestionTypes } from "@/lib/questions/registry";
 import { isQuestionType, type QuestionType } from "@/lib/questions/types";
@@ -79,9 +79,9 @@ export async function loadPracticeOptions(userId: string): Promise<PracticeOptio
   const history = await loadHistory(pool, userId, testType.id);
   const weak = findWeak(questions, history);
   const weakSet = new Set(weak.map((item) => item.chapterId));
-  const { rows } = await pool.query<{ id: string; title: string; number: number; section_position: number; section_title: string }>(
-    `with ${NUMBERED} select id, title, number, section_position, section_title from numbered where id = any($1::uuid[]) order by number`,
-    [[...perChapter.keys()]]
+  const { rows } = await pool.query<{ id: string; title: string; number: number | null; section_position: number; section_title: string }>(
+    `with ${numberedChapters("$2")} select id, title, number, section_position, section_title from numbered where id = any($1::uuid[]) order by place`,
+    [[...perChapter.keys()], testType.id]
   );
   const labels = new Map(rows.map((row) => [row.id, chapterLabel(row)]));
   const sections: PracticeOptions["sections"] = [];
@@ -289,7 +289,7 @@ async function settle(client: Db, session: SessionRow): Promise<Settled> {
   let current: (LoadedQuestion) | undefined;
   while (position < ids.length) {
     if (position >= loadedTo) {
-      for (const [id, question] of await loadQuestions(client, ids.slice(position, position + LOOK_AHEAD), { use: "practice", testTypeId: session.test_type_id })) questions.set(id, question);
+      for (const [id, question] of await loadQuestions(client, ids.slice(position, position + LOOK_AHEAD), { testTypeId: session.test_type_id, use: "practice" })) questions.set(id, question);
       loadedTo = position + LOOK_AHEAD;
     }
     const mark = results[position];
@@ -299,7 +299,7 @@ async function settle(client: Db, session: SessionRow): Promise<Settled> {
     }
     // An answered question stays on screen until Next, even if it left the pool meanwhile.
     if (mark === "R" || mark === "W") {
-      current = questions.get(ids[position]) ?? (await loadAnyQuestion(client, ids[position]));
+      current = questions.get(ids[position]) ?? (await loadAnyQuestion(client, ids[position], session.test_type_id));
       if (current) break;
     }
     if (mark === ".") results = setChar(results, position, "S");
@@ -321,7 +321,7 @@ async function settle(client: Db, session: SessionRow): Promise<Settled> {
 }
 
 // Answered questions, whether or not still in the pool (shown once more with their answer, or on the report).
-const loadAnyQuestion = async (db: Db, id: string) => (await loadQuestions(db, [id])).get(id);
+const loadAnyQuestion = async (db: Db, id: string, testTypeId: string) => (await loadQuestions(db, [id], { testTypeId })).get(id);
 
 async function buildStep(session: SessionRow, question: LoadedQuestion): Promise<PracticeStep> {
   const id = (session.question_ids ?? [])[session.position];
@@ -363,10 +363,10 @@ export async function checkPractice(userId: string, sessionId: string, position:
     if (position !== session.position || position >= ids.length) return { ok: false, reason: "invalid" };
     const questionId = ids[position];
     const mark = session.results?.[position];
-    const question = (await loadQuestions(client, [questionId], { use: "practice", testTypeId: session.test_type_id })).get(questionId);
+    const question = (await loadQuestions(client, [questionId], { testTypeId: session.test_type_id, use: "practice" })).get(questionId);
     // Already marked (e.g. a second tap): the same result again, counted once.
     if (mark === "R" || mark === "W") {
-      const shown = question ?? (await loadAnyQuestion(client, questionId));
+      const shown = question ?? (await loadAnyQuestion(client, questionId, session.test_type_id));
       if (!shown) return { ok: false, reason: "gone" };
       return { ok: true, checked: { answered: true, correct: mark === "R", answer: shown.answer, explanation: shown.explanation } };
     }
@@ -493,18 +493,18 @@ export async function loadPracticeReport(userId: string, sessionId: string): Pro
   if (!session) return null;
 
   const summary = session.chapter_summary ?? {};
-  const { rows: chapterRows } = await pool.query<{ id: string; title: string; number: number }>(
-    `with ${NUMBERED} select id, title, number from numbered where id = any($1::uuid[]) order by number`,
-    [Object.keys(summary)]
+  const { rows: chapterRows } = await pool.query<{ id: string; title: string; number: number | null }>(
+    `with ${numberedChapters("$2")} select id, title, number from numbered where id = any($1::uuid[]) order by place`,
+    [Object.keys(summary), session.test_type_id]
   );
   const chapters = chapterRows.map((row) => ({ label: chapterLabel(row), right: summary[row.id][0], answered: summary[row.id][1] }));
 
   let choiceNames: string[] = [];
   if (session.mode === "types") choiceNames = session.choices.filter(isQuestionType).map((type) => PRACTICE_TYPE_NAMES[type]);
   if (session.mode === "chapters" || session.mode === "weak") {
-    const { rows: chosen } = await pool.query<{ title: string; number: number }>(
-      `with ${NUMBERED} select title, number from numbered where id::text = any($1::text[]) order by number`,
-      [session.choices]
+    const { rows: chosen } = await pool.query<{ title: string; number: number | null }>(
+      `with ${numberedChapters("$2")} select title, number from numbered where id::text = any($1::text[]) order by place`,
+      [session.choices, session.test_type_id]
     );
     choiceNames = chosen.map(chapterLabel);
   }
@@ -515,7 +515,7 @@ export async function loadPracticeReport(userId: string, sessionId: string): Pro
     // Only questions still in Practice: never a draft, and the same ones "Practise these again" uses.
     const inPractice = new Set((await loadPool(pool, "practice", session.test_type_id)).map((question) => question.id));
     const wrongIds = session.question_ids.filter((id, index) => session.results?.[index] === "W" && inPractice.has(id));
-    const questions = await loadQuestions(pool, wrongIds);
+    const questions = await loadQuestions(pool, wrongIds, { testTypeId: session.test_type_id });
     const list = wrongIds.flatMap((id) => {
       const question = questions.get(id);
       return question ? [{ id, question }] : [];

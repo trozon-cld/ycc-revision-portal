@@ -1,8 +1,9 @@
 import { pool } from "@/lib/db/pool";
+import { chapterLabel, numberedChapters } from "@/lib/handbook/structure";
 import { loadMockHistory } from "@/lib/mock/attempts";
 import { isWeakArea } from "@/lib/practice/pick";
 import { STRONG_FROM, WEAK_BELOW, WEAK_MIN_ANSWERED } from "@/lib/practice/types";
-import { NUMBERED, chapterLabel, currentTestType, loadPool } from "@/lib/questions/pool";
+import { currentTestType, loadPool } from "@/lib/questions/pool";
 import type { MockHistory } from "@/lib/mock/types";
 import { readinessScore, type Readiness } from "./readiness";
 
@@ -62,9 +63,9 @@ export async function loadProgress(userId: string, testTypeId?: string): Promise
   ]);
 
   const chapterIds = [...new Set([...book.rows.map((row) => row.chapter_id), ...questions.map((question) => question.chapterId)])];
-  const { rows: chapters } = await pool.query<{ id: string; title: string; number: number }>(
-    `with ${NUMBERED} select id, title, number from numbered where id = any($1::uuid[]) order by number`,
-    [chapterIds]
+  const { rows: chapters } = await pool.query<{ id: string; title: string; number: number | null }>(
+    `with ${numberedChapters("$2")} select id, title, number from numbered where id = any($1::uuid[]) order by place`,
+    [chapterIds, testType.id]
   );
   const bookBy = new Map(book.rows.map((row) => [row.chapter_id, row]));
   const practiceBy = new Map(practised.rows.map((row) => [row.chapter_id, row]));
