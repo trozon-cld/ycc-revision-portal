@@ -103,7 +103,8 @@ create trigger test_types_area_move_check
 drop function check_category_group_move();
 
 -- An Admin's Activity page: new switches use the new key; older entries keep the old one (the log is never rewritten).
-drop index activity_logs_switch_target_idx;
+-- "if exists": databases that skipped 0019 never had this index; it is created either way.
+drop index if exists activity_logs_switch_target_idx;
 create index activity_logs_switch_target_idx on activity_logs (target_id, created_at desc)
   where action in ('candidate.test_type_switched', 'candidate.category_switched');
 
