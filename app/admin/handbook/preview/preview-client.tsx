@@ -47,7 +47,7 @@ export function PreviewControls({
       </div>
       <div className="min-w-0 space-y-1">
         <label htmlFor="preview-test-type" className={labelClass}>
-          As category
+          As test type
         </label>
         <select
           id="preview-test-type"

@@ -88,9 +88,9 @@ export default async function BookPreviewPage({ searchParams }: PageProps<"/admi
 }
 
 function emptyMessage(oneChapter: boolean, byTestType: boolean, includeDrafts: boolean): string {
-  if (byTestType && oneChapter) return "This chapter isn't included in that category, or it has nothing to show yet.";
+  if (byTestType && oneChapter) return "This chapter isn't included in that test type, or it has nothing to show yet.";
   if (!includeDrafts) return "Nothing here is published yet. Choose \"Include drafts\" to preview drafts too.";
-  if (byTestType) return "That category doesn't include any chapter with pages or questions yet.";
+  if (byTestType) return "That test type doesn't include any chapter with pages or questions yet.";
   return oneChapter ? "This chapter has no pages or questions yet." : "The Handbook has no pages or questions yet.";
 }
 

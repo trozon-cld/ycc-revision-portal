@@ -99,8 +99,8 @@ export default async function ActivityPage({ searchParams }: PageProps<"/admin/a
         title={isSuperadmin ? "Activity" : "My activity"}
         description={
           isSuperadmin
-            ? "Everything Admins and the Superadmin have changed, candidates' category and language changes, and every login."
-            : "Changes you have made, category and language changes by your current candidates, and your logins."
+            ? "Everything Admins and the Superadmin have changed, candidates' test type and language changes, and every login."
+            : "Changes you have made, test type and language changes by your current candidates, and your logins."
         }
       />
 
@@ -453,7 +453,7 @@ function describeDetails(details: Record<string, string>): string | null {
   if (details.previousCurrent) parts.push(`Was working in: ${details.previousCurrent}`);
   // Entries before 0037 use the old detail names (group, category…); both are read.
   const testArea = details.testArea ?? details.group;
-  if (testArea) parts.push(`Group: ${testArea}`);
+  if (testArea) parts.push(`Test area: ${testArea}`);
   if (details.section) parts.push(`Section: ${details.section}`);
   if (details.chapter) parts.push(`Chapter: ${details.chapter}`);
   if (details.language) parts.push(`Language: ${details.language}`);
@@ -470,11 +470,11 @@ function describeDetails(details: Record<string, string>): string | null {
   const added = details.addedTestTypes ?? details.addedCategories;
   const removed = details.removedTestTypes ?? details.removedCategories;
   const testTypeTotal = details.testTypeTotal ?? details.categoryTotal;
-  if (testType) parts.push(`Category: ${testType}`);
-  if (testTypes) parts.push(`Categories: ${testTypes}`);
+  if (testType) parts.push(`Test type: ${testType}`);
+  if (testTypes) parts.push(`Test types: ${testTypes}`);
   if (added) parts.push(`Added: ${added}`);
   if (removed) parts.push(`Removed: ${removed}`);
-  if (testTypeTotal !== undefined) parts.push(`In ${testTypeTotal} categor${testTypeTotal === "1" ? "y" : "ies"}`);
+  if (testTypeTotal !== undefined) parts.push(`In ${testTypeTotal} test type${testTypeTotal === "1" ? "" : "s"}`);
   if (details.frontCover) parts.push(`Front cover: ${details.frontCover}`);
   if (details.backCover) parts.push(`Back cover: ${details.backCover}`);
   if (details.accessUntil) parts.push(`Access until ${details.accessUntil}`);

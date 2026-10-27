@@ -109,7 +109,7 @@ export default async function HandbookPage() {
                     {withoutTestType > 0 && (
                       <span className="font-medium text-warn-strong">
                         {" · "}
-                        {withoutTestType === 1 ? "1 chapter isn't" : `${withoutTestType} chapters aren't`} in any category
+                        {withoutTestType === 1 ? "1 chapter isn't" : `${withoutTestType} chapters aren't`} in any test type
                       </span>
                     )}
                   </p>
@@ -125,7 +125,7 @@ export default async function HandbookPage() {
               </div>
 
               <Table
-                columns={["Chapter", "Pages", "Questions", "Categories", "Status", ""]}
+                columns={["Chapter", "Pages", "Questions", "Test types", "Status", ""]}
                 widths={["", "md:w-20", "md:w-24", "md:w-28", "md:w-44", "md:w-14"]}
                 isEmpty={sectionChapters.length === 0}
                 emptyMessage="No chapters in this section yet."
@@ -143,7 +143,7 @@ export default async function HandbookPage() {
                     </Cell>
                     <Cell label="Pages">{chapter.page_count}</Cell>
                     <Cell label="Questions">{chapter.question_count}</Cell>
-                    <Cell label="Categories">
+                    <Cell label="Test types">
                       <TestTypeCount linked={chapterTestTypes.get(chapter.id)?.length ?? 0} total={testTypeTotal} />
                     </Cell>
                     <Cell label="Status">

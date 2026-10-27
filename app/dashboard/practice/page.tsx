@@ -14,7 +14,7 @@ export const metadata: Metadata = { title: "Practice" };
 // Why the candidate was brought back here from a practice (see practice-runner.tsx).
 const ENDED: Record<string, string> = {
   empty: "Your practice ended with no questions answered, so there are no results to show.",
-  closed: "That practice was closed, for example in another window or after a category change. Your answers so far are kept.",
+  closed: "That practice was closed, for example in another window or after a test type change. Your answers so far are kept.",
 };
 
 export default async function PracticePage({ searchParams }: PageProps<"/dashboard/practice">) {

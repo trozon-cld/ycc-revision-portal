@@ -21,7 +21,7 @@ export function TestTypeForm({ testTypes }: { testTypes: SwitchableTestType[] })
   return (
     <form method="post" onSubmit={submitKeepingChoices(action)} className="mt-5 lg:mt-6">
       <fieldset>
-        <legend className="mb-3 text-xl font-bold text-ink">Choose a category</legend>
+        <legend className="mb-3 text-xl font-bold text-ink">Choose a test type</legend>
         <div className="flex flex-col gap-3">
           {testTypes.map((testType) => (
             <label key={testType.id} className={CHOICE_ROW}>
@@ -38,7 +38,7 @@ export function TestTypeForm({ testTypes }: { testTypes: SwitchableTestType[] })
                 <span className="text-base font-semibold text-ink [overflow-wrap:anywhere]">{testType.name}</span>
                 {(testType.isCurrent || testType.isAssigned) && (
                   <span className="text-base text-muted">
-                    {[testType.isCurrent && "Studying now", testType.isAssigned && "Your starting category"].filter(Boolean).join(" · ")}
+                    {[testType.isCurrent && "Studying now", testType.isAssigned && "Your starting test type"].filter(Boolean).join(" · ")}
                   </span>
                 )}
               </span>

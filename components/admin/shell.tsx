@@ -34,7 +34,7 @@ const NAV: Record<Role, NavGroup[]> = {
       items: [
         { href: "/admin/admins", label: "Admins", icon: "admins" },
         { href: "/admin/candidates", label: "Candidates", icon: "candidates" },
-        { href: "/admin/test-types", label: "Categories", icon: "testTypes" },
+        { href: "/admin/test-types", label: "Test types", icon: "testTypes" },
       ],
     },
     ...contentFor("superadmin"),

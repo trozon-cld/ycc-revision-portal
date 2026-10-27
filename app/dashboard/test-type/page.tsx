@@ -10,12 +10,12 @@ import { loadPracticeInProgress } from "@/lib/practice/sessions";
 import { ERROR_BOX, PAGE_TITLE, PRIMARY_BUTTON, SECONDARY_BUTTON, WARN_BOX } from "@/components/candidate/buttons";
 import { TestTypeForm } from "./test-type-form";
 
-export const metadata: Metadata = { title: "Change category" };
+export const metadata: Metadata = { title: "Change test type" };
 
 const ERRORS: Record<string, string> = {
-  choose: "Please choose a category.",
-  unavailable: "That category isn’t available to you. Please choose one from the list.",
-  mock: "Please finish your mock test before changing category.",
+  choose: "Please choose a test type.",
+  unavailable: "That test type isn’t available to you. Please choose one from the list.",
+  mock: "Please finish your mock test before changing test type.",
 };
 
 export default async function ChangeTestTypePage({ searchParams }: PageProps<"/dashboard/test-type">) {
@@ -34,16 +34,16 @@ export default async function ChangeTestTypePage({ searchParams }: PageProps<"/d
   return (
     <PageBody>
       <div className="max-w-3xl">
-        <h1 className={`${PAGE_TITLE}`}>Change category</h1>
+        <h1 className={`${PAGE_TITLE}`}>Change test type</h1>
         <p className="mt-3 text-base leading-relaxed text-ink">
-          Your Handbook, Practice questions and mock tests follow the category you choose. You can change it again at
+          Your Handbook, Practice questions and mock tests follow the test type you choose. You can change it again at
           any time.
         </p>
 
         {mock ? (
           <div className="mt-5 lg:mt-6">
             <p role="status" className={`${WARN_BOX} p-4 text-base leading-relaxed`}>
-              <span className="font-bold">You have a mock test in progress.</span> Please finish it before changing category.
+              <span className="font-bold">You have a mock test in progress.</span> Please finish it before changing test type.
             </p>
             <div className="mt-5 lg:mt-6 flex flex-col gap-3 sm:flex-row">
               <Link href={`/dashboard/mock/${mock.id}`} className={PRIMARY_BUTTON}>
@@ -66,7 +66,7 @@ export default async function ChangeTestTypePage({ searchParams }: PageProps<"/d
                 <span className="font-bold">
                   You have a practice in progress (question {Math.min(practice.position + 1, practice.total)} of {practice.total}).
                 </span>{" "}
-                Changing category ends it. Your answers so far are kept.
+                Changing test type ends it. Your answers so far are kept.
               </p>
             )}
 

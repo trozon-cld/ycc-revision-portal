@@ -9,17 +9,17 @@ import { createTestArea, deleteTestArea, moveTestArea, renameTestArea } from "./
 
 export function NewTestAreaButton() {
   return (
-    <PanelButton label="New group" title="New group" variant="secondary">
+    <PanelButton label="New test area" title="New test area" variant="secondary">
       {(close) => (
         <ActionForm
           action={createTestArea}
-          submitLabel="Add group"
+          submitLabel="Add test area"
           pendingLabel="Adding…"
-          successMessage="Group added."
+          successMessage="Test area added."
           onSuccess={close}
           onCancel={close}
         >
-          <Field id="new-test-area-name" label="Group name" hint="It's added at the end. You can move it afterwards.">
+          <Field id="new-test-area-name" label="Test area name" hint="It's added at the end. You can move it afterwards.">
             <input id="new-test-area-name" name="name" type="text" required maxLength={TEST_TYPE_NAME_MAX_LENGTH} className={inputClass} />
           </Field>
         </ActionForm>
@@ -46,14 +46,14 @@ export function TestAreaRowActions({
   const actions: RowAction[] = [
     {
       label: "Rename",
-      title: "Rename group",
+      title: "Rename test area",
       description: name,
       render: (close) => (
         <ActionForm
           action={renameTestArea}
           hidden={hidden}
           submitLabel="Save name"
-          successMessage="Group renamed."
+          successMessage="Test area renamed."
           onSuccess={close}
           onCancel={close}
         >
@@ -73,22 +73,22 @@ export function TestAreaRowActions({
     },
   ];
 
-  if (!isFirst) actions.push({ label: "Move up", run: () => moveTestArea(id, "up"), successMessage: "Group moved up." });
+  if (!isFirst) actions.push({ label: "Move up", run: () => moveTestArea(id, "up"), successMessage: "Test area moved up." });
   if (!isLast) {
-    actions.push({ label: "Move down", run: () => moveTestArea(id, "down"), successMessage: "Group moved down." });
+    actions.push({ label: "Move down", run: () => moveTestArea(id, "down"), successMessage: "Test area moved down." });
   }
 
   actions.push({
     label: "Delete",
     danger: true,
-    title: testTypeCount > 0 ? "Can't delete this group" : "Delete group?",
+    title: testTypeCount > 0 ? "Can't delete this test area" : "Delete test area?",
     variant: "confirm",
     render: (close) =>
       testTypeCount > 0 ? (
         <div>
           <p className="px-5 py-4 text-sm">
-            <strong className="font-medium">{name}</strong> still has {testTypeCount} categor
-            {testTypeCount === 1 ? "y" : "ies"}. Move them to another group or delete them first.
+            <strong className="font-medium">{name}</strong> still has {testTypeCount} test type
+            {testTypeCount === 1 ? "" : "s"}. Move them to another test area or delete them first.
           </p>
           <div className="flex justify-end border-t border-slate-200 px-5 py-3">
             <button type="button" onClick={close} className={buttonClass("secondary")}>
@@ -103,7 +103,7 @@ export function TestAreaRowActions({
           submitLabel="Delete"
           pendingLabel="Deleting…"
           variant="danger"
-          successMessage="Group deleted."
+          successMessage="Test area deleted."
           onSuccess={close}
           onCancel={close}
         >
@@ -114,5 +114,5 @@ export function TestAreaRowActions({
       ),
   });
 
-  return <RowActions label={`Actions for group ${name}`} actions={actions} />;
+  return <RowActions label={`Actions for test area ${name}`} actions={actions} />;
 }

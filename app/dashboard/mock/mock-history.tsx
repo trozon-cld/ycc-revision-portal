@@ -9,7 +9,7 @@ import { Accordion } from "@/components/candidate/accordion";
 const ENDED: Partial<Record<MockEnd, string>> = {
   time_up: "Time ran out",
   away: "Time ran out while away",
-  moved: "Ended when your category changed",
+  moved: "Ended when your test type changed",
 };
 
 const score = (entry: MockHistoryEntry) => scoreText(entry.rightCount, entry.outOf);

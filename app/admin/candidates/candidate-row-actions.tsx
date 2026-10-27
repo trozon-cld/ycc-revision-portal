@@ -126,23 +126,23 @@ export function AdminCandidateActions({
       ),
     },
     {
-      label: "Change category",
-      title: "Change category",
+      label: "Change test type",
+      title: "Change test type",
       description: email,
       render: (close) => (
         <ActionForm
           action={updateCandidateTestType}
           hidden={hidden}
-          submitLabel="Save category"
-          successMessage="Category updated."
+          submitLabel="Save test type"
+          successMessage="Test type updated."
           onSuccess={close}
           onCancel={close}
         >
           <p className="text-sm text-slate-600">Currently: {candidate.testTypeLabel}</p>
           <Field
             id={`test-type-${id}`}
-            label="Assigned category"
-            hint="The candidate is moved to this category now. They can switch to others in the same group. If they're in a mock test, it ends now with the answers saved so far."
+            label="Assigned test type"
+            hint="The candidate is moved to this test type now. They can switch to others in the same test area. If they're in a mock test, it ends now with the answers saved so far."
           >
             <select
               id={`test-type-${id}`}

@@ -150,11 +150,11 @@ export default async function CandidateHomePage({ searchParams }: PageProps<"/da
               You’re studying
             </h2>
             <p className="text-lg font-bold text-ink [overflow-wrap:anywhere]">{home.current.name}</p>
-            <p className="text-base text-muted">Group: {home.current.testAreaName}</p>
+            <p className="text-base text-muted">Test area: {home.current.testAreaName}</p>
           </div>
           {home.choices > 1 && (
             <Link href="/dashboard/test-type" className={`${SECONDARY_BUTTON} shrink-0`}>
-              Change<span className="sr-only"> category</span>
+              Change<span className="sr-only"> test type</span>
             </Link>
           )}
         </section>

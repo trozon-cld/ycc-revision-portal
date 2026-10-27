@@ -12,7 +12,7 @@ const ENDINGS: Record<MockEnd, { title: string; text: string }> = {
   submitted: { title: "Test submitted", text: "Your mock test has been submitted." },
   time_up: { title: "Time ran out", text: "Time ran out. Your test has been submitted automatically." },
   away: { title: "Time ran out", text: "Time ran out while you were away. Your test was submitted with the answers you’d saved." },
-  moved: { title: "Test ended", text: "Your category was changed, so this test was ended with the answers you’d saved." },
+  moved: { title: "Test ended", text: "Your test type was changed, so this test was ended with the answers you’d saved." },
 };
 
 // A mock test's results: score, readiness, counts, time, the recommended next step and results by chapter.

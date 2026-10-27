@@ -71,13 +71,13 @@ export default async function AccountPage() {
 
         <section aria-labelledby="test-type-heading" className={`${CARD} p-4 lg:p-5`}>
           <h2 id="test-type-heading" className={`${SECTION_TITLE}`}>
-            Your category
+            Your test type
           </h2>
           <p className="mt-2 text-xl font-bold text-ink [overflow-wrap:anywhere]">{home.current.name}</p>
-          <p className="mt-1 text-base text-muted">Group: {home.current.testAreaName}</p>
+          <p className="mt-1 text-base text-muted">Test area: {home.current.testAreaName}</p>
           {home.choices > 1 && (
             <Link href="/dashboard/test-type" className={`${SECONDARY_BUTTON} mt-4 w-full sm:w-auto`}>
-              Change category
+              Change test type
             </Link>
           )}
         </section>
@@ -93,7 +93,7 @@ export default async function AccountPage() {
             {notOffered && (
               <p className={`${NOTE_BOX} mt-3 p-4 text-base leading-relaxed text-ink`}>
                 {notOffered.name} isn&apos;t available for {home.current.name}, so Listen uses English here. Your choice comes back in a
-                category that has {notOffered.name}.
+                test type that has {notOffered.name}.
               </p>
             )}
             <LanguageForm current={listening.code} languages={languageNames(languages)} />

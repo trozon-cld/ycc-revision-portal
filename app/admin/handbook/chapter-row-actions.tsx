@@ -21,7 +21,7 @@ import { TITLE_MAX_LENGTH } from "@/lib/limits";
 import { TestTypePicker } from "./test-type-picker";
 import type { SectionOption } from "./section-row-actions";
 
-const TEST_TYPE_HINT = "Candidates studying these categories see this chapter in Prepare, Practice and the Mock test once it's published.";
+const TEST_TYPE_HINT = "Candidates studying these test types see this chapter in Prepare, Practice and the Mock test once it's published.";
 
 export function NewChapterButton({ sections, testAreas }: { sections: SectionOption[]; testAreas: TestAreaOption[] }) {
   return (
@@ -49,7 +49,7 @@ export function NewChapterButton({ sections, testAreas }: { sections: SectionOpt
             <Field id="new-chapter-section" label="Section" hint="It's added at the end of this section.">
               <SectionSelect id="new-chapter-section" options={sections} />
             </Field>
-            <TestTypePicker testAreas={testAreas} legend="Categories (optional)" hint={TEST_TYPE_HINT} />
+            <TestTypePicker testAreas={testAreas} legend="Test types (optional)" hint={TEST_TYPE_HINT} />
           </ActionForm>
         )
       }
@@ -120,8 +120,8 @@ export function ChapterRowActions({
   ];
 
   actions.push({
-    label: "Categories",
-    title: "Categories",
+    label: "Test types",
+    title: "Test types",
     description,
     render: (close) => <ChapterTestTypesForm chapterId={id} testAreas={testAreas} initialSelected={testTypeIds} onClose={close} />,
   });
@@ -194,7 +194,7 @@ export function ChapterRowActions({
             {number} {title}
           </strong>{" "}
           will be removed and the chapters after it will move up one number. It&apos;s also removed from any
-          categories that include it. This can&apos;t be undone.
+          test types that include it. This can&apos;t be undone.
         </p>
       </ActionForm>
       ),
@@ -218,8 +218,8 @@ function ChapterTestTypesForm({
     <ActionForm
       action={saveChapterTestTypes}
       hidden={{ chapterId }}
-      submitLabel="Save categories"
-      successMessage="Categories updated."
+      submitLabel="Save test types"
+      successMessage="Test types updated."
       onSuccess={onClose}
       onCancel={onClose}
     >
@@ -230,7 +230,7 @@ function ChapterTestTypesForm({
 
 export function ChapterTestTypesButton(props: { chapterId: string; testAreas: TestAreaOption[]; initialSelected: string[] }) {
   return (
-    <PanelButton label="Categories" title="Categories" variant="secondary" icon={false}>
+    <PanelButton label="Test types" title="Test types" variant="secondary" icon={false}>
       {(close) => <ChapterTestTypesForm {...props} onClose={close} />}
     </PanelButton>
   );
@@ -322,7 +322,7 @@ function chapterStatusAction({ id, number, title, status, itemCount, draftCount,
         onCancel={close}
       >
         <p className="text-sm [overflow-wrap:anywhere]">
-          {name} isn&apos;t in any category yet, so no candidate will see it. Add it to categories with the Categories
+          {name} isn&apos;t in any test type yet, so no candidate will see it. Add it to test types with the Test types
           {onChapterPage ? " button" : " action"}.
         </p>
       </ActionForm>

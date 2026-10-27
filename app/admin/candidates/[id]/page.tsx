@@ -34,7 +34,7 @@ const ENDED: Record<MockEnd, string> = {
   submitted: "Submitted",
   time_up: "Time ran out",
   away: "Time ran out while away",
-  moved: "Ended by a category change",
+  moved: "Ended by a test type change",
 };
 
 const score = (entry: Pick<MockHistoryEntry, "rightCount" | "outOf">) => scoreText(entry.rightCount, entry.outOf);
@@ -144,8 +144,8 @@ export default async function CandidateProgressPage({ params, searchParams }: Pa
             ["Status", <CandidateStatusBadge key="status" isBlocked={candidate.isBlocked} isExpired={isExpired} />],
             ["Access until", candidate.accessExpiresAt ? formatUkDate(candidate.accessExpiresAt) : "No expiry"],
             ["Last login", candidate.lastLoginAt ? formatUkDateTime(candidate.lastLoginAt) : "No logins recorded"],
-            ["Assigned category", candidate.assigned.name],
-            ["Current category", candidate.current.name],
+            ["Assigned test type", candidate.assigned.name],
+            ["Current test type", candidate.current.name],
             ["Listening language", listeningLabel],
             ...(session.role === "superadmin" ? [["Admin", <PersonLabel key="admin" name={candidate.admin.name} email={candidate.admin.email} />] as [string, ReactNode]] : []),
           ]}
@@ -155,7 +155,7 @@ export default async function CandidateProgressPage({ params, searchParams }: Pa
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="mr-2 text-lg font-semibold text-ink">Progress in {testType.name}</h2>
             {candidate.testAreaTestTypes.length > 1 && (
-              <nav aria-label="Choose a category" className="flex flex-wrap gap-2">
+              <nav aria-label="Choose a test type" className="flex flex-wrap gap-2">
                 {candidate.testAreaTestTypes.map((item) => (
                   <Link
                     key={item.id}
@@ -164,14 +164,14 @@ export default async function CandidateProgressPage({ params, searchParams }: Pa
                     className={buttonClass(item.id === testType.id ? "primary" : "secondary", "sm")}
                   >
                     {item.name}
-                    {item.isCurrent && <span className="sr-only"> (current category)</span>}
+                    {item.isCurrent && <span className="sr-only"> (current test type)</span>}
                     {item.isCurrent && <span aria-hidden="true">·&nbsp;current</span>}
                   </Link>
                 ))}
               </nav>
             )}
           </div>
-          <p className="text-sm text-slate-600">Each category has its own Handbook progress, Practice results and mock tests.</p>
+          <p className="text-sm text-slate-600">Each test type has its own Handbook progress, Practice results and mock tests.</p>
         </div>
 
         <Section id="readiness-heading" title="Readiness">
@@ -192,13 +192,13 @@ export default async function CandidateProgressPage({ params, searchParams }: Pa
               </dl>
             </div>
           ) : (
-            <p className="text-sm text-slate-600">No readiness score yet: it appears after the first mock test in this category.</p>
+            <p className="text-sm text-slate-600">No readiness score yet: it appears after the first mock test in this test type.</p>
           )}
         </Section>
 
         <Section id="handbook-heading" title="Handbook">
           {handbook.total === 0 ? (
-            <p className="text-sm text-slate-600">This category has no Handbook yet.</p>
+            <p className="text-sm text-slate-600">This test type has no Handbook yet.</p>
           ) : (
             <>
               <p className="text-sm text-ink">
@@ -220,7 +220,7 @@ export default async function CandidateProgressPage({ params, searchParams }: Pa
 
         <Section id="practice-heading" title="Practice">
           {practice.pool === 0 ? (
-            <p className="text-sm text-slate-600">This category has no practice questions yet.</p>
+            <p className="text-sm text-slate-600">This test type has no practice questions yet.</p>
           ) : (
             <>
               <p className="text-sm text-ink">
@@ -250,7 +250,7 @@ export default async function CandidateProgressPage({ params, searchParams }: Pa
 
         <Section id="mock-heading" title="Mock tests">
           {mock.count === 0 ? (
-            <p className="text-sm text-slate-600">No mock tests in this category yet.</p>
+            <p className="text-sm text-slate-600">No mock tests in this test type yet.</p>
           ) : (
             <>
               <Summary

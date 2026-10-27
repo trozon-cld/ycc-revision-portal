@@ -15,7 +15,7 @@ import type { CoverChoice } from "./test-type-covers-form";
 import { TestTypeRowActions, NewTestTypeButton, type TestAreaOption } from "./test-type-row-actions";
 import { TestAreaRowActions, NewTestAreaButton } from "./test-area-row-actions";
 
-export const metadata: Metadata = { title: "Categories" };
+export const metadata: Metadata = { title: "Test types" };
 
 interface TestAreaRow {
   id: string;
@@ -127,8 +127,8 @@ export default async function TestTypesPage() {
   return (
     <>
       <PageHeader
-        title="Categories"
-        description={`${countOf(testAreas.length, "group", "groups")} · ${countOf(testTypes.length, "category", "categories")}`}
+        title="Test types"
+        description={`${countOf(testAreas.length, "test area", "test areas")} · ${countOf(testTypes.length, "test type", "test types")}`}
         actions={
           <>
             <NewTestAreaButton />
@@ -138,7 +138,7 @@ export default async function TestTypesPage() {
       />
 
       <p className="mb-6 text-sm text-slate-600">
-        Candidates can switch to any category in the same group as the one their Admin assigned.
+        Candidates can switch to any test type in the same test area as the one their Admin assigned.
       </p>
 
       <div className="space-y-8">
@@ -152,7 +152,7 @@ export default async function TestTypesPage() {
                   <h2 id={headingId} className="text-base font-semibold text-ink [overflow-wrap:anywhere]">
                     {testArea.name}
                   </h2>
-                  <p className="text-sm text-slate-600">{countOf(testAreaTestTypes.length, "category", "categories")}</p>
+                  <p className="text-sm text-slate-600">{countOf(testAreaTestTypes.length, "test type", "test types")}</p>
                 </div>
                 <TestAreaRowActions
                   id={testArea.id}
@@ -167,7 +167,7 @@ export default async function TestTypesPage() {
                 columns={["Name", "Candidates", "Chapters", "Covers", "Listen", ""]}
                 widths={["", "md:w-32", "md:w-32", "md:w-40", "md:w-32", "md:w-14"]}
                 isEmpty={testAreaTestTypes.length === 0}
-                emptyMessage="No categories in this group yet."
+                emptyMessage="No test types in this test area yet."
               >
                 {testAreaTestTypes.map((testType) => {
                   const linked = linkedByTestType.get(testType.id) ?? [];

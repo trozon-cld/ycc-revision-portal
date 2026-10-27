@@ -95,8 +95,8 @@ select * from (values
  E'Log in with the email address and password your Admin gave you.\n\nIf you forget your password, please ask your Admin to set a new one for you.'),
 (2, 'When does my access end?',
  E'Your Home page shows the date your revision access ends. Please complete your study and mock tests before this date.\n\nIf you need more time, please ask your Admin.'),
-(3, 'How do I change category?',
- E'If your group has more than one category, tap Change category on your Home page and choose another one.\n\nYour progress is kept separately for each category, so you can switch back at any time. You can’t change category while a mock test is in progress.'),
+(3, 'How do I change test type?',
+ E'If your test area has more than one test type, tap Change test type on your Home page and choose another one.\n\nYour progress is kept separately for each test type, so you can switch back at any time. You can’t change test type while a mock test is in progress.'),
 (4, 'What is the difference between Prepare, Practice and Mock test?',
  E'Prepare is the Handbook: read it chapter by chapter, with questions along the way.\n\nPractice lets you answer questions with no time limit and see the answer straight away.\n\nMock test is like the real test: up to 50 questions in 45 minutes, with your results at the end.'),
 (5, 'What happens if the mock test time runs out or I lose my connection?',
@@ -106,6 +106,6 @@ select * from (values
 (7, 'What does my readiness score mean?',
  E'Your readiness score appears on My progress after your first mock test. It is worked out from your latest mock test score, your average mock test score, how much of the Handbook you have done and how many of your practised chapters are not weak areas.\n\nIt is a guide to help you prepare, not a prediction of your official result.'),
 (8, 'Who do I contact for help?',
- E'Your Admin can help with your login, your access dates and your category. You can also use the support details on this page.')
+ E'Your Admin can help with your login, your access dates and your test type. You can also use the support details on this page.')
 ) as starter (position, question, answer)
 where not exists (select 1 from faq_items);

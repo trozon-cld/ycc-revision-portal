@@ -105,7 +105,7 @@ function CoverSlot({
             <span className="font-medium text-ink">{choice.name}</span> · {choice.width} × {choice.height}
           </>
         ) : (
-          "Standard cover: the logo and the category name in brand colours."
+          "Standard cover: the logo and the test type name in brand colours."
         )}
       </p>
 

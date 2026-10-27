@@ -112,8 +112,8 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
   }
 
   const columns = isSuperadmin
-    ? ["Candidate", "Category", "Admin", "Status", "Access until", "Recent activity", ""]
-    : ["Candidate", "Category", "Status", "Access until", "Recent activity", ""];
+    ? ["Candidate", "Test type", "Admin", "Status", "Access until", "Recent activity", ""]
+    : ["Candidate", "Test type", "Status", "Access until", "Recent activity", ""];
   const countLabel = `${total.toLocaleString("en-GB")} candidate${total === 1 ? "" : "s"}`;
   const query: Record<string, string> = {
     q: search,
@@ -142,8 +142,8 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
 
       <FilterBar action="/admin/candidates" clearHref="/admin/candidates" isFiltered={isFiltered}>
         <FilterSearch name="q" label="Search by name or email" defaultValue={search} />
-        <FilterSelect name="testType" label="Category" defaultValue={testTypeFilter ?? ""}>
-          <option value="">All categories</option>
+        <FilterSelect name="testType" label="Test type" defaultValue={testTypeFilter ?? ""}>
+          <option value="">All test types</option>
           <TestTypeOptions testTypes={testTypes} />
         </FilterSelect>
         <FilterSelect name="status" label="Status" defaultValue={status ?? ""}>
@@ -190,7 +190,7 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
               <Cell kind="primary">
                 <PersonLabel name={candidate.full_name} email={candidate.email} href={candidateProgressPath(candidate.id)} />
               </Cell>
-              <Cell label="Category">
+              <Cell label="Test type">
                 {candidate.current_test_type_name}
                 {candidate.current_test_type_name !== candidate.test_type_name && (
                   <span className="block text-xs text-slate-600">Assigned: {candidate.test_type_name}</span>

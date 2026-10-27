@@ -34,7 +34,7 @@ export function TestTypePicker({
   }
 
   if (total === 0) {
-    return <p className="text-sm text-slate-600">There are no categories yet. Add them on the Categories page.</p>;
+    return <p className="text-sm text-slate-600">There are no test types yet. Add them on the Test types page.</p>;
   }
 
   return (
@@ -42,7 +42,7 @@ export function TestTypePicker({
       {legend && <legend className={`${labelClass} mb-1.5`}>{legend}</legend>}
       {hint && <p className="text-sm text-slate-600">{hint}</p>}
       <p aria-live="polite" className="text-sm text-slate-600">
-        {selected.size} of {total} categor{total === 1 ? "y" : "ies"} selected
+        {selected.size} of {total} test type{total === 1 ? "" : "s"} selected
       </p>
       {testAreas
         .filter((testArea) => testArea.testTypes.length > 0)
@@ -92,7 +92,7 @@ function TestAreaCheckbox({ label, state, onChange }: { label: string; state: "n
         type="checkbox"
         checked={state === "all"}
         onChange={(event) => onChange(event.target.checked)}
-        aria-label={`Whole group: ${label}`}
+        aria-label={`Whole test area: ${label}`}
         className={checkboxClass}
       />
       <span className="min-w-0 [overflow-wrap:anywhere]">{label}</span>

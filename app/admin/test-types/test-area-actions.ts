@@ -12,8 +12,8 @@ import type { FormState } from "@/lib/forms";
 export type TestAreaActionState = FormState;
 
 const MAX_TEST_AREAS = 20;
-const DUPLICATE_NAME = "A group with this name already exists.";
-const NOT_FOUND = "This group no longer exists.";
+const DUPLICATE_NAME = "A test area with this name already exists.";
+const NOT_FOUND = "This test area no longer exists.";
 
 export async function createTestArea(_prevState: TestAreaActionState, formData: FormData): Promise<TestAreaActionState> {
   const session = await requireRole(["superadmin"]);
@@ -31,7 +31,7 @@ export async function createTestArea(_prevState: TestAreaActionState, formData: 
       const { rows: counts } = await client.query<{ count: number }>(
         `select count(*)::int as count from test_areas`
       );
-      if (counts[0].count >= MAX_TEST_AREAS) return { error: `You can have up to ${MAX_TEST_AREAS} groups.` };
+      if (counts[0].count >= MAX_TEST_AREAS) return { error: `You can have up to ${MAX_TEST_AREAS} test areas.` };
 
       const { rows } = await client.query<{ id: string }>(
         `insert into test_areas (position, name)
@@ -119,7 +119,7 @@ export async function moveTestArea(id: string, direction: "up" | "down"): Promis
         [to]
       );
       if (!neighbours[0]) {
-        return { error: direction === "up" ? "This group is already first." : "This group is already last." };
+        return { error: direction === "up" ? "This test area is already first." : "This test area is already last." };
       }
 
       await client.query(
@@ -167,7 +167,7 @@ export async function deleteTestArea(_prevState: TestAreaActionState, formData: 
         `delete from test_areas where id = $1 returning position, name`,
         [testAreaId]
       );
-      if (!rows[0]) return { error: "This group has already been deleted." };
+      if (!rows[0]) return { error: "This test area has already been deleted." };
 
       await client.query(
         `update test_areas set position = position - 1, updated_at = now() where position > $1`,
@@ -205,15 +205,15 @@ async function nameTaken(client: PoolClient, name: string, exceptId: string | nu
 }
 
 function validateName(name: string): string | null {
-  if (!name) return "Group name is required.";
-  if (name.length > TEST_TYPE_NAME_MAX_LENGTH) return `Group name must be ${TEST_TYPE_NAME_MAX_LENGTH} characters or fewer.`;
+  if (!name) return "Test area name is required.";
+  if (name.length > TEST_TYPE_NAME_MAX_LENGTH) return `Test area name must be ${TEST_TYPE_NAME_MAX_LENGTH} characters or fewer.`;
   return null;
 }
 
 function blockedMessage(testTypeCount: number) {
-  return `This group still has ${testTypeCount} categor${
-    testTypeCount === 1 ? "y" : "ies"
-  }. Move or delete them before deleting the group.`;
+  return `This test area still has ${testTypeCount} test type${
+    testTypeCount === 1 ? "" : "s"
+  }. Move or delete them before deleting the test area.`;
 }
 
 function revalidateTestAreaPages() {

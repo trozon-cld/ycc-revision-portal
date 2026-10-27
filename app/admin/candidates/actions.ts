@@ -18,7 +18,7 @@ import type { FormState } from "@/lib/forms";
 export type CandidateActionState = FormState;
 
 const NOT_FOUND = "Candidate not found. The page has been refreshed.";
-const INVALID_TEST_TYPE = "Selected category is invalid.";
+const INVALID_TEST_TYPE = "Selected test type is invalid.";
 
 interface OwnedCandidate {
   email: string;
@@ -47,7 +47,7 @@ export async function createCandidate(
   const invalidName = validateName(name);
   if (invalidName) return { error: invalidName };
   if (!email || !password || !testTypeId) {
-    return { error: "Email, password and category are required." };
+    return { error: "Email, password and test type are required." };
   }
   if (!EMAIL_PATTERN.test(email)) {
     return { error: "Enter a valid email address." };
@@ -194,7 +194,7 @@ export async function updateCandidateTestType(
   const testTypeId = String(formData.get("testTypeId") ?? "");
 
   if (!testTypeId) {
-    return { error: "Choose a category." };
+    return { error: "Choose a test type." };
   }
   if (!isUuid(testTypeId)) return { error: INVALID_TEST_TYPE };
 
@@ -404,7 +404,7 @@ async function testTypeName(client: PoolClient, testTypeId: string): Promise<str
     [testTypeId]
   );
   if (!rows[0]) {
-    throw Object.assign(new Error("Category not found"), { code: "23503" });
+    throw Object.assign(new Error("Test type not found"), { code: "23503" });
   }
   return rows[0].name;
 }

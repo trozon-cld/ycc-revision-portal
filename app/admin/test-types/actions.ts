@@ -13,11 +13,11 @@ import type { ListenMode } from "@/lib/voice/language-store";
 
 export type TestTypeActionState = FormState;
 
-const DUPLICATE_NAME = "A category with this name already exists.";
+const DUPLICATE_NAME = "A test type with this name already exists.";
 const MAX_LINKED_CHAPTERS = 1000;
 // More than any real list of languages; stops a crafted request sending thousands.
 const MAX_LISTEN_LANGUAGES = 100;
-const TEST_AREA_GONE = "That group no longer exists. Close this panel and open it again.";
+const TEST_AREA_GONE = "That test area no longer exists. Close this panel and open it again.";
 const COVER_PICTURE_GONE = "That picture is no longer in the Media library. Choose another one.";
 const CHAPTERS_CHANGED = "The chapter list has changed. Close this panel and open it again.";
 
@@ -31,7 +31,7 @@ export async function createTestType(
   const testAreaId = String(formData.get("testAreaId") ?? "");
   const invalid = validateName(name);
   if (invalid) return { error: invalid };
-  if (!testAreaId) return { error: "Choose a group." };
+  if (!testAreaId) return { error: "Choose a test area." };
 
   try {
     const result = await withTransaction<TestTypeActionState>(async (client) => {
@@ -83,7 +83,7 @@ export async function renameTestType(
   try {
     result = await withTransaction<TestTypeActionState>(async (client) => {
       const testType = await lockTestType(client, testTypeId);
-      if (!testType) return { error: "This category no longer exists." };
+      if (!testType) return { error: "This test type no longer exists." };
       if (testType.name === name) return { success: true };
       if (await nameTaken(client, name, testTypeId)) return { error: DUPLICATE_NAME };
 
@@ -100,7 +100,7 @@ export async function renameTestType(
   } catch (error) {
     const code = getErrorCode(error);
     if (code === "23505") return { error: DUPLICATE_NAME };
-    if (code === "22P02") return { error: "Category not found." };
+    if (code === "22P02") return { error: "Test type not found." };
     throw error;
   }
 
@@ -117,7 +117,7 @@ export async function deleteTestType(
 
   const testTypeId = String(formData.get("testTypeId") ?? "");
   if (!testTypeId) {
-    return { error: "Category not found." };
+    return { error: "Test type not found." };
   }
 
   let result: TestTypeActionState;
@@ -125,7 +125,7 @@ export async function deleteTestType(
     // The row lock makes the candidate count final: new candidates in this test type must wait.
     result = await withTransaction<TestTypeActionState>(async (client) => {
       const testType = await lockTestType(client, testTypeId);
-      if (!testType) return { error: "This category has already been deleted." };
+      if (!testType) return { error: "This test type has already been deleted." };
 
       const { rows } = await client.query<{ count: number }>(
         `select count(*)::int as count from users where test_type_id = $1 or current_test_type_id = $1`,
@@ -144,7 +144,7 @@ export async function deleteTestType(
   } catch (error) {
     const code = getErrorCode(error);
     if (code === "23503") return { error: blockedMessage(1) };
-    if (code === "22P02") return { error: "Category not found." };
+    if (code === "22P02") return { error: "Test type not found." };
     throw error;
   }
 
@@ -162,14 +162,14 @@ export async function moveTestTypeToTestArea(
 
   const testTypeId = String(formData.get("testTypeId") ?? "");
   const testAreaId = String(formData.get("testAreaId") ?? "");
-  if (!testTypeId) return { error: "Category not found." };
-  if (!testAreaId) return { error: "Choose a group." };
+  if (!testTypeId) return { error: "Test type not found." };
+  if (!testAreaId) return { error: "Choose a test area." };
 
   let result: TestTypeActionState;
   try {
     result = await withTransaction<TestTypeActionState>(async (client) => {
       const testType = await lockTestType(client, testTypeId);
-      if (!testType) return { error: "This category no longer exists." };
+      if (!testType) return { error: "This test type no longer exists." };
       if (testType.test_area_id === testAreaId) return { success: true };
 
       const { rows: counts } = await client.query<{ count: number }>(
@@ -217,14 +217,14 @@ export async function saveTestTypeChapters(
 
   const testTypeId = String(formData.get("testTypeId") ?? "");
   const chapterIds = [...new Set(formData.getAll("chapterId").map(String))];
-  if (!testTypeId) return { error: "Category not found." };
+  if (!testTypeId) return { error: "Test type not found." };
   if (chapterIds.length > MAX_LINKED_CHAPTERS) return { error: "Too many chapters selected." };
 
   let result: TestTypeActionState;
   try {
     result = await withTransaction<TestTypeActionState>(async (client) => {
       const testType = await lockTestType(client, testTypeId);
-      if (!testType) return { error: "This category no longer exists." };
+      if (!testType) return { error: "This test type no longer exists." };
 
       // FOR SHARE keeps these chapters from being deleted until this save commits.
       const { rows } = await client.query(`select id from chapters where id = any($1::uuid[]) for share`, [
@@ -275,7 +275,7 @@ export async function saveTestTypeCovers(
   const testTypeId = String(formData.get("testTypeId") ?? "");
   const frontId = String(formData.get("frontMediaId") ?? "") || null;
   const backId = String(formData.get("backMediaId") ?? "") || null;
-  if (!isUuid(testTypeId)) return { error: "Category not found." };
+  if (!isUuid(testTypeId)) return { error: "Test type not found." };
   if ((frontId && !isUuid(frontId)) || (backId && !isUuid(backId))) return { error: COVER_PICTURE_GONE };
 
   let result: TestTypeActionState;
@@ -298,7 +298,7 @@ export async function saveTestTypeCovers(
         [testTypeId]
       );
       const testType = rows[0];
-      if (!testType) return { error: "This category no longer exists." };
+      if (!testType) return { error: "This test type no longer exists." };
       if (testType.front_id === frontId && testType.back_id === backId) return { success: true };
 
       // FOR KEY SHARE keeps the chosen pictures from being deleted until this save commits.
@@ -363,23 +363,23 @@ async function nameTaken(client: PoolClient, name: string, exceptId: string | nu
 }
 
 function validateName(name: string): string | null {
-  if (!name) return "Category name is required.";
+  if (!name) return "Test type name is required.";
   if (name.length > TEST_TYPE_NAME_MAX_LENGTH) {
-    return `Category name must be ${TEST_TYPE_NAME_MAX_LENGTH} characters or fewer.`;
+    return `Test type name must be ${TEST_TYPE_NAME_MAX_LENGTH} characters or fewer.`;
   }
   return null;
 }
 
 function moveBlockedMessage(candidateCount: number) {
-  return `This category has ${candidateCount} candidate${
+  return `This test type has ${candidateCount} candidate${
     candidateCount === 1 ? "" : "s"
-  }. Candidates can only switch within their group, so it can't move while they use it.`;
+  }. Candidates can only switch within their test area, so it can't move while they use it.`;
 }
 
 function blockedMessage(candidateCount: number) {
-  return `This category still has ${candidateCount} candidate${
+  return `This test type still has ${candidateCount} candidate${
     candidateCount === 1 ? "" : "s"
-  }. Their Admins need to move them to another category before it can be deleted.`;
+  }. Their Admins need to move them to another test type before it can be deleted.`;
 }
 
 // Listen for one test type's candidates (0035): off, all languages, or English plus chosen ones. Translations, audio
@@ -389,8 +389,8 @@ export async function setTestTypeListen(_prevState: TestTypeActionState | undefi
 
   const testTypeId = String(formData.get("testTypeId") ?? "");
   const mode = formData.get("mode");
-  if (!isUuid(testTypeId)) return { error: "Category not found." };
-  if (mode !== "off" && mode !== "all" && mode !== "chosen") return { error: "Choose how Listen works for this category." };
+  if (!isUuid(testTypeId)) return { error: "Test type not found." };
+  if (mode !== "off" && mode !== "all" && mode !== "chosen") return { error: "Choose how Listen works for this test type." };
   const asked = [...new Set(formData.getAll("languages").map(String))].slice(0, MAX_LISTEN_LANGUAGES);
 
   const result = await withTransaction<TestTypeActionState>(async (client) => {
@@ -400,7 +400,7 @@ export async function setTestTypeListen(_prevState: TestTypeActionState | undefi
       [testTypeId]
     );
     const testType = rows[0];
-    if (!testType) return { error: "This category no longer exists." };
+    if (!testType) return { error: "This test type no longer exists." };
     // Only languages that exist and aren't hidden can be ticked (drafts can, so a test type is ready when they go live).
     const { rows: known } = await client.query<{ code: string; name: string; status: string }>(
       `select code, name, status from voice_languages where code <> 'en'`

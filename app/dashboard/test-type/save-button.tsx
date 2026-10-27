@@ -6,7 +6,7 @@ import { PRIMARY_BUTTON } from "@/components/candidate/buttons";
 export function SaveTestTypeButton({ pending }: { pending: boolean }) {
   return (
     <button type="submit" disabled={pending} className={PRIMARY_BUTTON}>
-      {pending ? "Saving…" : "Save category"}
+      {pending ? "Saving…" : "Save test type"}
     </button>
   );
 }

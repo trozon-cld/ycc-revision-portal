@@ -101,8 +101,8 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
               </optgroup>
             ))}
         </FilterSelect>
-        <FilterSelect name="testType" label="Category" defaultValue={filters.testTypeId ?? ""}>
-          <option value="">All categories</option>
+        <FilterSelect name="testType" label="Test type" defaultValue={filters.testTypeId ?? ""}>
+          <option value="">All test types</option>
           {testAreas
             .filter((testArea) => testArea.testTypes.length > 0)
             .map((testArea) => (

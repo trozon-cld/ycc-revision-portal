@@ -24,7 +24,7 @@ export function formatCount(n: number, singular?: string, plural = `${singular}s
   return singular === undefined ? number : `${number} ${n === 1 ? singular : plural}`;
 }
 
-// "1 chapter", "3 chapters"; pass the plural when it isn't just an added "s" ("categories").
+// "1 chapter", "3 chapters"; pass the plural when it isn't just an added "s" ("matches").
 export function countOf(n: number, singular: string, plural = `${singular}s`): string {
   return `${n} ${n === 1 ? singular : plural}`;
 }

@@ -32,7 +32,7 @@ export function NewCandidateButton({
         >
           {testTypes.length === 0 && (
             <p className="rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong">
-              No categories are available yet. A category is needed before a candidate can be created.
+              No test types are available yet. A test type is needed before a candidate can be created.
             </p>
           )}
           <Field id="new-candidate-name" label="Name">
@@ -55,12 +55,12 @@ export function NewCandidateButton({
           </Field>
           <Field
             id="new-candidate-test-type"
-            label="Category"
-            hint="The candidate starts here and can switch to others in the same group."
+            label="Test type"
+            hint="The candidate starts here and can switch to others in the same test area."
           >
             <select id="new-candidate-test-type" name="testTypeId" required defaultValue="" className={inputClass}>
               <option value="" disabled>
-                Select a category
+                Select a test type
               </option>
               <TestTypeOptions testTypes={testTypes} />
             </select>

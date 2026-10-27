@@ -21,7 +21,7 @@ const DUPLICATE_TITLE = "A chapter with this title already exists.";
 const NOT_FOUND = "This chapter no longer exists.";
 const SECTION_NOT_FOUND = "The chosen section no longer exists.";
 const PAGE_PATH = "/admin/handbook";
-const TEST_TYPES_CHANGED = "The list of categories has changed. Close this panel and open it again.";
+const TEST_TYPES_CHANGED = "The list of test types has changed. Close this panel and open it again.";
 const MAX_TEST_TYPES = 500;
 
 export async function createChapter(
@@ -36,7 +36,7 @@ export async function createChapter(
   const invalid = validateTitle(title, "Chapter");
   if (invalid) return { error: invalid };
   if (!sectionId) return { error: "Choose a section." };
-  if (testTypeIds.length > MAX_TEST_TYPES) return { error: "Too many categories selected." };
+  if (testTypeIds.length > MAX_TEST_TYPES) return { error: "Too many test types selected." };
 
   let result: StructureActionState;
   let chapterId = "";
@@ -95,7 +95,7 @@ export async function saveChapterTestTypes(
 
   const chapterId = String(formData.get("chapterId") ?? "");
   const testTypeIds = testTypeIdsFrom(formData);
-  if (testTypeIds.length > MAX_TEST_TYPES) return { error: "Too many categories selected." };
+  if (testTypeIds.length > MAX_TEST_TYPES) return { error: "Too many test types selected." };
 
   let result: StructureActionState;
   try {

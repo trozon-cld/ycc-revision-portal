@@ -16,20 +16,20 @@ export type TestAreaOption = { id: string; name: string };
 
 export function NewTestTypeButton({ testAreas }: { testAreas: TestAreaOption[] }) {
   return (
-    <PanelButton label="New category" title="New category">
+    <PanelButton label="New test type" title="New test type">
       {(close) => (
         <ActionForm
           action={createTestType}
-          submitLabel="Add category"
+          submitLabel="Add test type"
           pendingLabel="Adding…"
-          successMessage="Category added."
+          successMessage="Test type added."
           onSuccess={close}
           onCancel={close}
         >
-          <Field id="new-test-type-name" label="Category name">
+          <Field id="new-test-type-name" label="Test type name">
             <input id="new-test-type-name" name="name" type="text" required maxLength={TEST_TYPE_NAME_MAX_LENGTH} className={inputClass} />
           </Field>
-          <Field id="new-test-type-area" label="Group">
+          <Field id="new-test-type-area" label="Test area">
             <select id="new-test-type-area" name="testAreaId" required className={inputClass}>
               {testAreas.map((testArea) => (
                 <option key={testArea.id} value={testArea.id}>
@@ -76,7 +76,7 @@ export function TestTypeRowActions({
     {
       label: "Chapters",
       title: `Chapters for ${name}`,
-      description: "Tick the chapters candidates studying this category see in Prepare, Practice and the Mock test.",
+      description: "Tick the chapters candidates studying this test type see in Prepare, Practice and the Mock test.",
       render: (close) => (
         <TestTypeChaptersForm testTypeId={id} outline={outline} initialSelected={linkedChapterIds} onClose={close} />
       ),
@@ -84,7 +84,7 @@ export function TestTypeRowActions({
     {
       label: "Covers",
       title: `Covers for ${name}`,
-      description: "The front and back of this category's Handbook.",
+      description: "The front and back of this test type's Handbook.",
       render: (close) => (
         <TestTypeCoversForm
           testTypeId={id}
@@ -98,18 +98,18 @@ export function TestTypeRowActions({
     },
     {
       label: "Rename",
-      title: "Rename category",
+      title: "Rename test type",
       description: name,
       render: (close) => (
         <ActionForm
           action={renameTestType}
           hidden={hidden}
           submitLabel="Save name"
-          successMessage="Category renamed."
+          successMessage="Test type renamed."
           onSuccess={close}
           onCancel={close}
         >
-          <Field id={`rename-${id}`} label="New name" hint="Candidates in this category stay in it; only the name changes.">
+          <Field id={`rename-${id}`} label="New name" hint="Candidates in this test type stay in it; only the name changes.">
             <input
               id={`rename-${id}`}
               name="name"
@@ -126,7 +126,7 @@ export function TestTypeRowActions({
     {
       label: "Listen",
       title: `Listen for ${name}`,
-      description: "Whether candidates in this category can listen, and in which languages.",
+      description: "Whether candidates in this test type can listen, and in which languages.",
       render: (close) => (
         <TestTypeListenForm
           testTypeId={id}
@@ -142,14 +142,14 @@ export function TestTypeRowActions({
     {
       label: "Delete",
       danger: true,
-      title: candidateCount > 0 ? "Can't delete this category" : "Delete category?",
+      title: candidateCount > 0 ? "Can't delete this test type" : "Delete test type?",
       variant: "confirm",
       render: (close) =>
         candidateCount > 0 ? (
           <div>
             <p className="px-5 py-4 text-sm">
               <strong className="font-medium">{name}</strong> has {countLabel}. Their Admins need to move them to
-              another category first.
+              another test type first.
             </p>
             <div className="flex justify-end gap-2 border-t border-slate-200 px-5 py-3">
               <button type="button" onClick={close} className={buttonClass("secondary")}>
@@ -167,7 +167,7 @@ export function TestTypeRowActions({
             submitLabel="Delete"
             pendingLabel="Deleting…"
             variant="danger"
-            successMessage="Category deleted."
+            successMessage="Test type deleted."
             onSuccess={close}
             onCancel={close}
           >
@@ -182,8 +182,8 @@ export function TestTypeRowActions({
 
   function moveToTestAreaAction(): RowAction {
     return {
-      label: "Move to group",
-      title: candidateCount > 0 ? "Can't move this category" : "Move to group",
+      label: "Move to test area",
+      title: candidateCount > 0 ? "Can't move this test type" : "Move to test area",
       description: candidateCount > 0 ? undefined : name,
       variant: candidateCount > 0 ? "confirm" : "panel",
       render: (close) =>
@@ -191,7 +191,7 @@ export function TestTypeRowActions({
           <div>
             <p className="px-5 py-4 text-sm">
               <strong className="font-medium">{name}</strong> has {countLabel}. Candidates can only switch within their
-              group, so it can&apos;t move while they use it.
+              test area, so it can&apos;t move while they use it.
             </p>
             <div className="flex justify-end gap-2 border-t border-slate-200 px-5 py-3">
               <button type="button" onClick={close} className={buttonClass("secondary")}>
@@ -208,7 +208,7 @@ export function TestTypeRowActions({
             hidden={hidden}
             submitLabel="Move"
             pendingLabel="Moving…"
-            successMessage="Category moved."
+            successMessage="Test type moved."
             onSuccess={close}
             onCancel={close}
           >

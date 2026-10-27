@@ -155,11 +155,11 @@ export default async function ChapterPagesPage({ params }: PageProps<"/admin/han
 
       {testTypeNames.length > 0 ? (
         <p className="mb-3 text-sm text-slate-700 [overflow-wrap:anywhere]">
-          <span className="font-medium text-ink">In categories:</span> {listNames(testTypeNames, 12)}
+          <span className="font-medium text-ink">In test types:</span> {listNames(testTypeNames, 12)}
         </p>
       ) : (
         <p className="mb-3 rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25">
-          Not in any category yet. Candidates won&apos;t see this chapter until it&apos;s added to one with Categories.
+          Not in any test type yet. Candidates won&apos;t see this chapter until it&apos;s added to one with Test types.
         </p>
       )}
 
