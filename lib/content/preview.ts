@@ -155,7 +155,7 @@ export async function loadPreviewOptions(): Promise<PreviewOptions> {
     pool.query<{ id: string; name: string; test_area_name: string }>(
       `select c.id, c.name, g.name as test_area_name
        from test_types c join test_areas g on g.id = c.test_area_id
-       order by g.position, c.name`
+       order by g.position, c.position`
     ),
   ]);
   return {

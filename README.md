@@ -21,6 +21,8 @@ Status: in active development.
 
 - **Test area** (`test_areas`, e.g. General, Specialist): candidates switch only between test types of the same test area.
 - **Test type** (`test_types`, e.g. Operative, Supervisory): what a candidate is assigned and studies. Their Handbook, Practice, mock tests, progress, covers and Listen all follow their current test type.
+  Test types keep a set order within their test area (`position`, Move up / Move down on the Test types page), used wherever they are listed.
+- **Numbers on screen** are never stored in titles: section letters come from section order; chapter numbers are fixed (01–28) in staff lists and counted within the book a candidate studies (`numberedChapters` in `lib/handbook/structure.ts`), so a specialist chapter is 17.
 - **Chapter** (`chapters`, in `sections` A–E): a topic in the book, linked to every test type that includes it (`test_type_chapters`). The core chapters (A–D) are in every test type; each specialist chapter (E) only in its own.
 - Before migration 0037 test areas were "category groups" and test types "categories". Activity entries written before it keep their old action keys (`category.*`, `category_group.*`); `lib/audit/actions.ts` maps them to today's.
 

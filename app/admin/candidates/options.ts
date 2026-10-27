@@ -8,7 +8,7 @@ export async function loadTestTypeChoices(): Promise<TestTypeChoice[]> {
   const { rows } = await pool.query<TestTypeChoice>(
     `select c.id, c.name, g.name as "testArea"
      from test_types c join test_areas g on g.id = c.test_area_id
-     order by g.position, c.name`
+     order by g.position, c.position`
   );
   return rows;
 }

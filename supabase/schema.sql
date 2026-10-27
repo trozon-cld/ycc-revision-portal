@@ -606,6 +606,10 @@ create table question_audio (
 -- live language (including ones added later); chosen offers English plus test_type_languages (added below).
 alter table test_types add column listen_mode varchar(10) not null default 'all' check (listen_mode in ('off', 'all', 'chosen'));
 
+-- Order within the test area (0038), shown everywhere test types are listed. Deferred so a reorder can swap two positions.
+alter table test_types add column position integer not null check (position > 0);
+alter table test_types add constraint test_types_area_position_key unique (test_area_id, position) deferrable initially deferred;
+
 -- Listen's languages and their fixed spoken phrases (0033); managed in the app from L2.
 -- One row per language. Only live languages are offered to candidates; staff can prepare draft ones; hidden ones
 -- keep their translations and audio until the Superadmin deletes the language. English is the source and is always live.

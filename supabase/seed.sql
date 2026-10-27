@@ -12,23 +12,23 @@ select position, name
 from (values (1, 'General'), (2, 'Specialist')) as seed (position, name)
 where not exists (select 1 from test_areas);
 
-insert into test_types (name, test_area_id)
-select seed.name, a.id
+insert into test_types (name, test_area_id, position)
+select seed.name, a.id, seed.position
 from (values
-  (1, 'Operative'),
-  (2, 'Supervisory'),
-  (2, 'Demolition'),
-  (2, 'Plumbing (JIB)'),
-  (2, 'Highway works'),
-  (2, 'Specialist working at height'),
-  (2, 'Lifts and escalators'),
-  (2, 'Tunnelling'),
-  (2, 'Heating and plumbing services'),
-  (2, 'Pipefitting and welding'),
-  (2, 'Ductwork'),
-  (2, 'Refrigeration and air conditioning'),
-  (2, 'Services and facilities maintenance')
-) as seed (area_position, name)
+  (1, 1, 'Operative'),
+  (2, 1, 'Supervisory'),
+  (2, 2, 'Demolition'),
+  (2, 3, 'Plumbing (JIB)'),
+  (2, 4, 'Highway works'),
+  (2, 5, 'Specialist working at height'),
+  (2, 6, 'Lifts and escalators'),
+  (2, 7, 'Tunnelling'),
+  (2, 8, 'Heating and plumbing services'),
+  (2, 9, 'Pipefitting and welding'),
+  (2, 10, 'Ductwork'),
+  (2, 11, 'Refrigeration and air conditioning'),
+  (2, 12, 'Services and facilities maintenance')
+) as seed (area_position, position, name)
 join test_areas a on a.position = seed.area_position
 where not exists (select 1 from test_types);
 

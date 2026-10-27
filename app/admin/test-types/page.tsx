@@ -67,7 +67,7 @@ export default async function TestTypesPage() {
               (select count(*) from users u where u.test_type_id = c.id or u.current_test_type_id = c.id)::int
                 as candidate_count
        from test_types c
-       order by c.name`
+       order by c.position`
     ),
     pool.query<OutlineRow>(
       `select s.id as section_id, s.position as section_position, s.title as section_title,
@@ -169,7 +169,7 @@ export default async function TestTypesPage() {
                 isEmpty={testAreaTestTypes.length === 0}
                 emptyMessage="No test types in this test area yet."
               >
-                {testAreaTestTypes.map((testType) => {
+                {testAreaTestTypes.map((testType, testTypeIndex) => {
                   const linked = linkedByTestType.get(testType.id) ?? [];
                   const covers = coversByTestType.get(testType.id) ?? { front: null, back: null };
                   return (
@@ -211,6 +211,8 @@ export default async function TestTypesPage() {
                           listenMode={testType.listen_mode}
                           listenChosen={testType.chosen}
                           listenLanguages={listenLanguages}
+                          isFirst={testTypeIndex === 0}
+                          isLast={testTypeIndex === testAreaTestTypes.length - 1}
                         />
                       </Cell>
                     </Row>

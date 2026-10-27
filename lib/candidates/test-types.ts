@@ -10,7 +10,7 @@ export async function loadSwitchableTestTypes(userId: string): Promise<Switchabl
      join test_types asg on asg.id = u.test_type_id
      join test_types c on c.test_area_id = asg.test_area_id
      where u.id = $1 and u.role = 'candidate'
-     order by c.name`,
+     order by c.position`,
     [userId]
   );
   return rows.map((row) => ({ id: row.id, name: row.name, isCurrent: row.is_current, isAssigned: row.is_assigned }));

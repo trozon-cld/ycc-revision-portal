@@ -8,7 +8,7 @@ export async function loadTestAreas(): Promise<TestAreaOption[]> {
     `select g.id as test_area_id, g.name as test_area_name, c.id, c.name
      from test_areas g
      left join test_types c on c.test_area_id = g.id
-     order by g.position, lower(c.name)`
+     order by g.position, c.position`
   );
   const testAreas: TestAreaOption[] = [];
   for (const row of rows) {

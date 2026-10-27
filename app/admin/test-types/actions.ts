@@ -35,6 +35,7 @@ export async function createTestType(
 
   try {
     const result = await withTransaction<TestTypeActionState>(async (client) => {
+      await lockTestTypeOrder(client);
       if (await nameTaken(client, name, null)) return { error: DUPLICATE_NAME };
 
       const { rows: testAreas } = await client.query<{ name: string }>(
@@ -44,7 +45,9 @@ export async function createTestType(
       if (!testAreas[0]) return { error: TEST_AREA_GONE };
 
       const { rows } = await client.query<{ id: string }>(
-        `insert into test_types (name, test_area_id) values ($1, $2) returning id`,
+        `insert into test_types (name, test_area_id, position)
+         select $1, $2, coalesce(max(position), 0) + 1 from test_types where test_area_id = $2
+         returning id`,
         [name, testAreaId]
       );
       await logActivity(
@@ -124,6 +127,7 @@ export async function deleteTestType(
   try {
     // The row lock makes the candidate count final: new candidates in this test type must wait.
     result = await withTransaction<TestTypeActionState>(async (client) => {
+      await lockTestTypeOrder(client);
       const testType = await lockTestType(client, testTypeId);
       if (!testType) return { error: "This test type has already been deleted." };
 
@@ -134,6 +138,7 @@ export async function deleteTestType(
       if (rows[0].count > 0) return { error: blockedMessage(rows[0].count) };
 
       await client.query(`delete from test_types where id = $1`, [testTypeId]);
+      await closeGap(client, testType.test_area_id, testType.position);
       await logActivity(client, session, "test_type.deleted", {
         type: "test_type",
         id: testTypeId,
@@ -147,6 +152,48 @@ export async function deleteTestType(
     if (code === "22P02") return { error: "Test type not found." };
     throw error;
   }
+
+  revalidatePath("/admin/test-types");
+  revalidatePath("/admin/candidates");
+  return result;
+}
+
+// Swaps with the neighbour in the same test area.
+export async function moveTestType(id: string, direction: "up" | "down"): Promise<TestTypeActionState> {
+  const session = await requireRole(["superadmin"]);
+
+  const testTypeId = String(id ?? "");
+  if (direction !== "up" && direction !== "down") return { error: "Unknown direction." };
+  if (!isUuid(testTypeId)) return { error: "This test type no longer exists." };
+
+  const result = await withTransaction<TestTypeActionState>(async (client) => {
+    await lockTestTypeOrder(client);
+    const testType = await lockTestType(client, testTypeId);
+    if (!testType) return { error: "This test type no longer exists." };
+
+    const from = testType.position;
+    const to = direction === "up" ? from - 1 : from + 1;
+    const { rows: neighbours } = await client.query<{ id: string }>(
+      `select id from test_types where test_area_id = $1 and position = $2`,
+      [testType.test_area_id, to]
+    );
+    if (!neighbours[0]) {
+      return { error: direction === "up" ? "This test type is already first." : "This test type is already last." };
+    }
+
+    await client.query(
+      `update test_types set position = case when id = $1 then $3::int else $4::int end where id in ($1, $2)`,
+      [testTypeId, neighbours[0].id, to, from]
+    );
+    await logActivity(
+      client,
+      session,
+      "test_type.reordered",
+      { type: "test_type", id: testTypeId, label: testType.name },
+      { from: `Position ${from}`, to: `Position ${to}` }
+    );
+    return { success: true };
+  });
 
   revalidatePath("/admin/test-types");
   revalidatePath("/admin/candidates");
@@ -168,6 +215,7 @@ export async function moveTestTypeToTestArea(
   let result: TestTypeActionState;
   try {
     result = await withTransaction<TestTypeActionState>(async (client) => {
+      await lockTestTypeOrder(client);
       const testType = await lockTestType(client, testTypeId);
       if (!testType) return { error: "This test type no longer exists." };
       if (testType.test_area_id === testAreaId) return { success: true };
@@ -186,7 +234,13 @@ export async function moveTestTypeToTestArea(
       const to = testAreas.find((testArea) => testArea.id === testAreaId);
       if (!to) return { error: TEST_AREA_GONE };
 
-      await client.query(`update test_types set test_area_id = $2 where id = $1`, [testTypeId, testAreaId]);
+      await client.query(
+        `update test_types
+         set test_area_id = $2, position = (select coalesce(max(position), 0) + 1 from test_types where test_area_id = $2)
+         where id = $1`,
+        [testTypeId, testAreaId]
+      );
+      await closeGap(client, testType.test_area_id, testType.position);
       await logActivity(
         client,
         session,
@@ -346,9 +400,19 @@ function describeCoverChange(before: string | null, after: string | null): strin
   return before ? `“${after}” (was “${before}”)` : `“${after}”`;
 }
 
+// Serialises changes to test type order, taken before any row lock; renames and other edits are not blocked.
+async function lockTestTypeOrder(client: PoolClient) {
+  await client.query(`select pg_advisory_xact_lock(hashtext('test_types:order'))`);
+}
+
+// After a test type leaves a test area, the ones after it move up one place.
+async function closeGap(client: PoolClient, testAreaId: string, position: number) {
+  await client.query(`update test_types set position = position - 1 where test_area_id = $1 and position > $2`, [testAreaId, position]);
+}
+
 async function lockTestType(client: PoolClient, testTypeId: string) {
-  const { rows } = await client.query<{ name: string; test_area_id: string }>(
-    `select name, test_area_id from test_types where id = $1 for update`,
+  const { rows } = await client.query<{ name: string; test_area_id: string; position: number }>(
+    `select name, test_area_id, position from test_types where id = $1 for update`,
     [testTypeId]
   );
   return rows[0];

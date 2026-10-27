@@ -22,6 +22,7 @@ export const ACTIVITY_ACTIONS = {
   "test_area.deleted": "Deleted test area",
   "test_type.created": "Created test type",
   "test_type.renamed": "Renamed test type",
+  "test_type.reordered": "Reordered test type",
   "test_type.area_changed": "Moved test type to another test area",
   "test_type.chapters_changed": "Changed test type chapters",
   "test_type.listen_changed": "Turned Listen on or off for test type",

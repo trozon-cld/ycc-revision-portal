@@ -7,7 +7,7 @@ import { PanelButton, RowActions, type RowAction } from "@/components/admin/row-
 import { buttonClass, inputClass } from "@/components/admin/styles";
 import { TEST_TYPE_NAME_MAX_LENGTH } from "@/lib/limits";
 import type { ListenMode } from "@/lib/voice/language-store";
-import { createTestType, deleteTestType, moveTestTypeToTestArea, renameTestType } from "./actions";
+import { createTestType, deleteTestType, moveTestType, moveTestTypeToTestArea, renameTestType } from "./actions";
 import { TestTypeListenForm, type ListenLanguageOption } from "./test-type-listen-form";
 import { TestTypeChaptersForm, type ChapterOutline } from "./test-type-chapters-form";
 import { TestTypeCoversForm, type CoverChoice } from "./test-type-covers-form";
@@ -56,6 +56,8 @@ export function TestTypeRowActions({
   listenMode,
   listenChosen,
   listenLanguages,
+  isFirst,
+  isLast,
 }: {
   id: string;
   name: string;
@@ -68,6 +70,8 @@ export function TestTypeRowActions({
   listenMode: ListenMode;
   listenChosen: string[];
   listenLanguages: ListenLanguageOption[];
+  isFirst: boolean;
+  isLast: boolean;
 }) {
   const hidden = { testTypeId: id };
   const countLabel = `${candidateCount} candidate${candidateCount === 1 ? "" : "s"}`;
@@ -138,6 +142,8 @@ export function TestTypeRowActions({
         />
       ),
     },
+    ...(isFirst ? [] : [{ label: "Move up", run: () => moveTestType(id, "up"), successMessage: "Test type moved up." }]),
+    ...(isLast ? [] : [{ label: "Move down", run: () => moveTestType(id, "down"), successMessage: "Test type moved down." }]),
     ...(otherTestAreas.length > 0 ? [moveToTestAreaAction()] : []),
     {
       label: "Delete",
