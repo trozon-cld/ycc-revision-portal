@@ -16,11 +16,11 @@ export function weakestTopics(topics: readonly TopicResult[]): TopicResult[] {
 }
 
 // What to do next: practise the weakest topics; otherwise Smart practice below the target; otherwise
-// another mock test. Practice links only make sense while the test's category is still the current one.
+// another mock test. Practice links only make sense while the test's test type is still the current one.
 export type NextStep = { kind: "chapters"; chapterIds: string[] } | { kind: "smart" } | { kind: "mock" };
 
-export function nextStep(weak: readonly TopicResult[], share: number, target: number, sameCategory: boolean): NextStep {
-  if (!sameCategory) return { kind: "mock" };
+export function nextStep(weak: readonly TopicResult[], share: number, target: number, sameTestType: boolean): NextStep {
+  if (!sameTestType) return { kind: "mock" };
   if (weak.length > 0) return { kind: "chapters", chapterIds: weak.map((topic) => topic.id) };
   return share < target ? { kind: "smart" } : { kind: "mock" };
 }

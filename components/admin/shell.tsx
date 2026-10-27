@@ -10,7 +10,7 @@ import { ToastProvider } from "./toast";
 import { Icon, type IconName } from "@/components/icons";
 
 type Role = "admin" | "superadmin";
-type NavIconName = "admins" | "candidates" | "categories" | "handbook" | "questions" | "media" | "faq" | "languages" | "activity" | "account";
+type NavIconName = "admins" | "candidates" | "testTypes" | "handbook" | "questions" | "media" | "faq" | "languages" | "activity" | "account";
 type NavItem = { href: string; label: string; icon: NavIconName };
 type NavGroup = { heading?: string; items: NavItem[] };
 
@@ -34,7 +34,7 @@ const NAV: Record<Role, NavGroup[]> = {
       items: [
         { href: "/admin/admins", label: "Admins", icon: "admins" },
         { href: "/admin/candidates", label: "Candidates", icon: "candidates" },
-        { href: "/admin/categories", label: "Categories", icon: "categories" },
+        { href: "/admin/test-types", label: "Categories", icon: "testTypes" },
       ],
     },
     ...contentFor("superadmin"),
@@ -231,7 +231,7 @@ function MobileDrawer({ onClose, children }: { onClose: () => void; children: Re
 const NAV_ICONS: Record<NavIconName, IconName> = {
   admins: "admins",
   candidates: "candidates",
-  categories: "categories",
+  testTypes: "testTypes",
   handbook: "book",
   questions: "help",
   media: "picture",

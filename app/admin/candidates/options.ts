@@ -1,13 +1,13 @@
 import { pool } from "@/lib/db/pool";
-import type { CategoryChoice } from "./category-options";
+import type { TestTypeChoice } from "./test-type-options";
 
 export type AdminOption = { id: string; label: string };
 
-// Every category, grouped for the category selects (sorted by group, then name).
-export async function loadCategoryChoices(): Promise<CategoryChoice[]> {
-  const { rows } = await pool.query<CategoryChoice>(
-    `select c.id, c.name, g.name as "group"
-     from categories c join category_groups g on g.id = c.group_id
+// Every test type, grouped for the test type selects (sorted by test area, then name).
+export async function loadTestTypeChoices(): Promise<TestTypeChoice[]> {
+  const { rows } = await pool.query<TestTypeChoice>(
+    `select c.id, c.name, g.name as "testArea"
+     from test_types c join test_areas g on g.id = c.test_area_id
      order by g.position, c.name`
   );
   return rows;

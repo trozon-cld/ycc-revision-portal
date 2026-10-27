@@ -19,11 +19,11 @@ const ENDED: Record<string, string> = {
 
 export default async function PracticePage({ searchParams }: PageProps<"/dashboard/practice">) {
   const session = await requireRole(["candidate"]);
-  // A run from another category is closed first, so the setup below always matches the open one.
+  // A run from another test type is closed first, so the setup below always matches the open one.
   const open = await loadOpenPractice(session.sub);
   const options = await loadPracticeOptions(session.sub);
   if (!options) redirect(SESSION_ENDED_LOGIN);
-  // ?chapter=…&chapter=… (from mock test results) ticks those chapters, if they're in this category's Practice.
+  // ?chapter=…&chapter=… (from mock test results) ticks those chapters, if they're in this test type's Practice.
   const query = await searchParams;
   const asked = query.chapter;
   const ended = ENDED[String(query.ended)] ?? null;
@@ -38,7 +38,7 @@ export default async function PracticePage({ searchParams }: PageProps<"/dashboa
           <p className="mt-3 text-base leading-relaxed text-ink">
             Answer questions at your own pace. After each one you’ll see the right answer and why.
           </p>
-          <p className="mt-1 text-base text-muted [overflow-wrap:anywhere]">Questions for {options.categoryName}</p>
+          <p className="mt-1 text-base text-muted [overflow-wrap:anywhere]">Questions for {options.testTypeName}</p>
 
           {ended && (
             <p role="status" className={`mt-5 lg:mt-6 ${WARN_BOX} p-4 text-base leading-relaxed`}>
@@ -63,7 +63,7 @@ export default async function PracticePage({ searchParams }: PageProps<"/dashboa
 
           {options.total === 0 ? (
             <div className="mt-5 lg:mt-6">
-              <p className="text-base leading-relaxed text-ink">There are no practice questions for {options.categoryName} yet. Please check back soon.</p>
+              <p className="text-base leading-relaxed text-ink">There are no practice questions for {options.testTypeName} yet. Please check back soon.</p>
               <Link href="/dashboard" className={`${PRIMARY_BUTTON} mt-5 lg:mt-6 w-full sm:w-auto`}>
                 Back to home
               </Link>

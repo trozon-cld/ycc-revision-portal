@@ -74,7 +74,7 @@ const ICONS = {
   picture: ImageIcon,
   admins: UserGearIcon,
   candidates: UsersIcon,
-  categories: TagIcon,
+  testTypes: TagIcon,
   faq: ChatCircleTextIcon,
   activity: ClockCounterClockwiseIcon,
   account: GearSixIcon,

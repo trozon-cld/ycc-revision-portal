@@ -18,14 +18,14 @@ import type { FormState } from "@/lib/forms";
 export type CandidateActionState = FormState;
 
 const NOT_FOUND = "Candidate not found. The page has been refreshed.";
-const INVALID_CATEGORY = "Selected category is invalid.";
+const INVALID_TEST_TYPE = "Selected category is invalid.";
 
 interface OwnedCandidate {
   email: string;
   full_name: string | null;
-  category_id: string;
-  category_name: string;
-  current_category_name: string;
+  test_type_id: string;
+  test_type_name: string;
+  current_test_type_name: string;
   access_expires_at: string | null;
   is_blocked: boolean;
 }
@@ -41,12 +41,12 @@ export async function createCandidate(
     .trim()
     .toLowerCase();
   const password = String(formData.get("password") ?? "");
-  const categoryId = String(formData.get("categoryId") ?? "");
+  const testTypeId = String(formData.get("testTypeId") ?? "");
   const name = normaliseName(formData.get("name"));
 
   const invalidName = validateName(name);
   if (invalidName) return { error: invalidName };
-  if (!email || !password || !categoryId) {
+  if (!email || !password || !testTypeId) {
     return { error: "Email, password and category are required." };
   }
   if (!EMAIL_PATTERN.test(email)) {
@@ -72,12 +72,12 @@ export async function createCandidate(
     await withTransaction(async (client) => {
       const { rows } = await client.query<{ id: string; access_expires_at: string }>(
         `insert into users
-           (email, password_hash, role, category_id, current_category_id, admin_id,
+           (email, password_hash, role, test_type_id, current_test_type_id, admin_id,
             access_start_at, access_expires_at, is_blocked, full_name)
          values
            ($1, $2, 'candidate', $3, $3, $4, now(), ${accessEndSql("$5")}, false, $6)
          returning id, access_expires_at`,
-        [email, passwordHash, categoryId, session.sub, access.date, name]
+        [email, passwordHash, testTypeId, session.sub, access.date, name]
       );
       await logActivity(
         client,
@@ -86,7 +86,7 @@ export async function createCandidate(
         { type: "candidate", id: rows[0].id, label: email },
         {
           name,
-          category: await categoryName(client, categoryId),
+          testType: await testTypeName(client, testTypeId),
           accessUntil: formatUkDate(rows[0].access_expires_at),
         }
       );
@@ -94,7 +94,7 @@ export async function createCandidate(
   } catch (error) {
     const code = getErrorCode(error);
     if (code === "23505") return { error: DUPLICATE_EMAIL };
-    if (code === "23503" || code === "22P02") return { error: INVALID_CATEGORY };
+    if (code === "23503" || code === "22P02") return { error: INVALID_TEST_TYPE };
     throw error;
   }
 
@@ -186,42 +186,42 @@ export async function updateCandidatePassword(
   });
 }
 
-export async function updateCandidateCategory(
+export async function updateCandidateTestType(
   _prevState: CandidateActionState,
   formData: FormData
 ): Promise<CandidateActionState> {
   const session = await requireRole(["admin"]);
-  const categoryId = String(formData.get("categoryId") ?? "");
+  const testTypeId = String(formData.get("testTypeId") ?? "");
 
-  if (!categoryId) {
+  if (!testTypeId) {
     return { error: "Choose a category." };
   }
-  if (!isUuid(categoryId)) return { error: INVALID_CATEGORY };
+  if (!isUuid(testTypeId)) return { error: INVALID_TEST_TYPE };
 
-  // A new assigned category also becomes the current one, so the candidate starts there.
+  // A new assigned test type also becomes the current one, so the candidate starts there.
   const result = await changeOwnCandidate(session, formData, async (client, id, candidate) => {
-    const newName = await categoryName(client, categoryId);
-    if (categoryId === candidate.category_id) return;
-    await client.query(`update users set category_id = $2, current_category_id = $2 where id = $1`, [
+    const newName = await testTypeName(client, testTypeId);
+    if (testTypeId === candidate.test_type_id) return;
+    await client.query(`update users set test_type_id = $2, current_test_type_id = $2 where id = $1`, [
       id,
-      categoryId,
+      testTypeId,
     ]);
-    // A test open in the old category ends now with what was saved, as agreed for mock tests.
+    // A test open in the old test type ends now with what was saved, as agreed for mock tests.
     await settleMocks(client, [id]);
-    const details: Record<string, string> = { from: candidate.category_name, to: newName };
-    if (candidate.current_category_name !== candidate.category_name) {
-      details.previousCurrent = candidate.current_category_name;
+    const details: Record<string, string> = { from: candidate.test_type_name, to: newName };
+    if (candidate.current_test_type_name !== candidate.test_type_name) {
+      details.previousCurrent = candidate.current_test_type_name;
     }
     await logActivity(
       client,
       session,
-      "candidate.category_changed",
+      "candidate.test_type_changed",
       { type: "candidate", id, label: candidate.email },
       details
     );
   });
   if (result.success) {
-    revalidatePath("/admin/categories");
+    revalidatePath("/admin/test-types");
   }
   return result;
 }
@@ -288,11 +288,11 @@ export async function deleteCandidate(
       session,
       "candidate.deleted",
       { type: "candidate", id, label: candidate.email },
-      { category: candidate.category_name }
+      { testType: candidate.test_type_name }
     );
   });
 
-  revalidatePath("/admin/categories");
+  revalidatePath("/admin/test-types");
   revalidatePath("/admin/admins");
   // Deleted from their Progress page: that page is gone, so go back to the list.
   if (result.success && formData.get("back") === "list") redirect("/admin/candidates?done=deleted");
@@ -371,11 +371,11 @@ async function changeOwnCandidate(
   try {
     result = await withTransaction<CandidateActionState>(async (client) => {
       const { rows } = await client.query<OwnedCandidate>(
-        `select u.email, u.full_name, u.category_id, c.name as category_name, cc.name as current_category_name,
+        `select u.email, u.full_name, u.test_type_id, c.name as test_type_name, cc.name as current_test_type_name,
                 u.access_expires_at, u.is_blocked
          from users u
-         join categories c on c.id = u.category_id
-         join categories cc on cc.id = u.current_category_id
+         join test_types c on c.id = u.test_type_id
+         join test_types cc on cc.id = u.current_test_type_id
          where u.id = $1 and u.role = 'candidate' and u.admin_id = $2
          for update of u`,
         [candidateId, session.sub]
@@ -388,7 +388,7 @@ async function changeOwnCandidate(
   } catch (error) {
     const code = getErrorCode(error);
     if (code === "23505") return { error: DUPLICATE_EMAIL };
-    if (code === "23503") return { error: INVALID_CATEGORY };
+    if (code === "23503") return { error: INVALID_TEST_TYPE };
     if (code === "22P02") return { error: NOT_FOUND };
     throw error;
   }
@@ -397,11 +397,11 @@ async function changeOwnCandidate(
   return result;
 }
 
-// Throws a foreign-key-style error for an unknown id so callers map it to INVALID_CATEGORY.
-async function categoryName(client: PoolClient, categoryId: string): Promise<string> {
+// Throws a foreign-key-style error for an unknown id so callers map it to INVALID_TEST_TYPE.
+async function testTypeName(client: PoolClient, testTypeId: string): Promise<string> {
   const { rows } = await client.query<{ name: string }>(
-    `select name from categories where id = $1`,
-    [categoryId]
+    `select name from test_types where id = $1`,
+    [testTypeId]
   );
   if (!rows[0]) {
     throw Object.assign(new Error("Category not found"), { code: "23503" });

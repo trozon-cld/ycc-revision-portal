@@ -79,7 +79,7 @@ export function BookPreview({
   onTextSizeChange?: (size: TextSize) => void;
   // The reader shows its own bar (Contents, Go to page, A−/A+), so the admin text size buttons go.
   readerTools?: boolean;
-  // The whole book for one category: its front and back covers too.
+  // The whole book for one test type: its front and back covers too.
   covers?: BookCovers;
   // Adds "Full window": the reader fills the space below the toolbar.
   allowFullWindow?: boolean;

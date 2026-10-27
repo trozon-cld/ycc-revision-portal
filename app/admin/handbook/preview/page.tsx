@@ -16,12 +16,12 @@ export default async function BookPreviewPage({ searchParams }: PageProps<"/admi
   const params = await searchParams;
   const options = await loadPreviewOptions();
   const chapterId = pick(params.chapter, options.chapters.map((chapter) => chapter.id));
-  const categoryId = pick(params.category, options.categories.map((category) => category.id));
+  const testTypeId = pick(params.testType, options.testTypes.map((testType) => testType.id));
   const includeDrafts = firstParam(params.content) !== "published";
-  // Covers belong to a category's whole book, not to a single chapter.
+  // Covers belong to a test type's whole book, not to a single chapter.
   const [book, covers] = await Promise.all([
-    loadPreviewBook({ chapterId, categoryId, includeDrafts }),
-    categoryId && !chapterId ? loadBookCovers(categoryId) : null,
+    loadPreviewBook({ chapterId, testTypeId, includeDrafts }),
+    testTypeId && !chapterId ? loadBookCovers(testTypeId) : null,
   ]);
 
   const chapter = options.chapters.find((item) => item.id === chapterId);
@@ -52,9 +52,9 @@ export default async function BookPreviewPage({ searchParams }: PageProps<"/admi
 
       <PreviewControls
         chapters={options.chapters}
-        categories={options.categories}
+        testTypes={options.testTypes}
         chapterId={chapterId}
-        categoryId={categoryId}
+        testTypeId={testTypeId}
         includeDrafts={includeDrafts}
       />
 
@@ -75,7 +75,7 @@ export default async function BookPreviewPage({ searchParams }: PageProps<"/admi
 
       {book.pages.length === 0 ? (
         <p className="rounded-lg border border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-600">
-          {emptyMessage(Boolean(chapterId), Boolean(categoryId), includeDrafts)}
+          {emptyMessage(Boolean(chapterId), Boolean(testTypeId), includeDrafts)}
         </p>
       ) : (
         <>
@@ -87,10 +87,10 @@ export default async function BookPreviewPage({ searchParams }: PageProps<"/admi
   );
 }
 
-function emptyMessage(oneChapter: boolean, byCategory: boolean, includeDrafts: boolean): string {
-  if (byCategory && oneChapter) return "This chapter isn't included in that category, or it has nothing to show yet.";
+function emptyMessage(oneChapter: boolean, byTestType: boolean, includeDrafts: boolean): string {
+  if (byTestType && oneChapter) return "This chapter isn't included in that category, or it has nothing to show yet.";
   if (!includeDrafts) return "Nothing here is published yet. Choose \"Include drafts\" to preview drafts too.";
-  if (byCategory) return "That category doesn't include any chapter with pages or questions yet.";
+  if (byTestType) return "That category doesn't include any chapter with pages or questions yet.";
   return oneChapter ? "This chapter has no pages or questions yet." : "The Handbook has no pages or questions yet.";
 }
 

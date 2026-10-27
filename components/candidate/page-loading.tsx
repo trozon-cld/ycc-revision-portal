@@ -1,4 +1,4 @@
-// Shown under the header while Home, Change category, Help or My progress opens (app/dashboard/loading.tsx).
+// Shown under the header while Home, Change test type, Help or My progress opens (app/dashboard/loading.tsx).
 export function PageLoading() {
   return (
     <div role="status" className="candidate-loading flex flex-1 flex-col items-center justify-center gap-4 bg-page p-6 text-center">

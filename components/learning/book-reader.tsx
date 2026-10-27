@@ -227,7 +227,7 @@ export function BookReader({
   // Extra items at the ends of the reader bar on laptops and desktops (e.g. the logo, Help, Log out).
   barStart?: ReactNode;
   barEnd?: ReactNode;
-  // A category's whole book: unnumbered front and back covers. A new reader opens on the front cover.
+  // A test type's whole book: unnumbered front and back covers. A new reader opens on the front cover.
   covers?: BookCovers;
   // Candidate page on phones: the header is hidden, so the bar gets a Home button and Settings gets
   // Back to home plus these links (Help, Log out).
@@ -1392,10 +1392,10 @@ function CoverSheet({
   return (
     <article aria-label={side === "front" ? "Front cover" : "Back cover"} className={`relative shrink-0 overflow-hidden ${shape}`} style={style}>
       {side === "front" ? (
-        <FrontCoverFace categoryName={covers.categoryName} picture={picture} />
+        <FrontCoverFace testTypeName={covers.testTypeName} picture={picture} />
       ) : (
         <BackCoverFace
-          categoryName={covers.categoryName}
+          testTypeName={covers.testTypeName}
           picture={picture}
           actions={
             <>

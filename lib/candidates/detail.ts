@@ -1,7 +1,7 @@
 import { pool } from "@/lib/db/pool";
 import { isUuid } from "@/lib/ids";
 import type { SessionPayload } from "@/lib/auth/jwt";
-import { loadSwitchableCategories, type SwitchableCategory } from "./categories";
+import { loadSwitchableTestTypes, type SwitchableTestType } from "./test-types";
 
 // One candidate as staff see them on the Progress page. Admins only reach their own candidates.
 
@@ -12,8 +12,8 @@ export type CandidateDetail = {
   admin: { id: string; name: string | null; email: string };
   assigned: { id: string; name: string };
   current: { id: string; name: string };
-  // The categories they can switch between (their group).
-  groupCategories: SwitchableCategory[];
+  // The test types they can switch between (their test area).
+  testAreaTestTypes: SwitchableTestType[];
   isBlocked: boolean;
   accessExpiresAt: Date | null;
   lastLoginAt: Date | null;
@@ -48,14 +48,14 @@ export async function loadCandidateDetail(candidateId: string, viewer: SessionPa
             ${LAST_LOGIN_SQL} as last_login_at
      from users u
      join users a on a.id = u.admin_id
-     join categories asg on asg.id = u.category_id
-     join categories cur on cur.id = u.current_category_id
+     join test_types asg on asg.id = u.test_type_id
+     join test_types cur on cur.id = u.current_test_type_id
      where u.id = $1 and u.role = 'candidate' and ($2::uuid is null or u.admin_id = $2::uuid)`,
     [candidateId, viewer.role === "superadmin" ? null : viewer.sub]
   );
   const row = rows[0];
   if (!row) return null;
-  const group = await loadSwitchableCategories(row.id);
+  const testArea = await loadSwitchableTestTypes(row.id);
   return {
     id: row.id,
     email: row.email,
@@ -63,7 +63,7 @@ export async function loadCandidateDetail(candidateId: string, viewer: SessionPa
     admin: { id: row.admin_id, name: row.admin_name, email: row.admin_email },
     assigned: { id: row.assigned_id, name: row.assigned_name },
     current: { id: row.current_id, name: row.current_name },
-    groupCategories: group,
+    testAreaTestTypes: testArea,
     isBlocked: row.is_blocked,
     accessExpiresAt: row.access_expires_at,
     lastLoginAt: row.last_login_at,

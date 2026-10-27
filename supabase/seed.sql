@@ -6,24 +6,33 @@ insert into users (email, password_hash, role, access_start_at, access_expires_a
 values ('REPLACE_WITH_EMAIL', 'REPLACE_WITH_BCRYPT_HASH', 'superadmin', null, null, false)
 on conflict (email) do update set password_hash = excluded.password_hash;
 
--- Placeholder category groups and categories, renameable by the Superadmin.
-insert into category_groups (position, name)
+-- Test areas and test types (renameable by the Superadmin). Each only seeds an empty table.
+insert into test_areas (position, name)
 select position, name
-from (values (1, 'General'), (2, 'Special')) as seed (position, name)
-where not exists (select 1 from category_groups);
+from (values (1, 'General'), (2, 'Specialist')) as seed (position, name)
+where not exists (select 1 from test_areas);
 
-insert into categories (name, group_id)
-select name, (select id from category_groups order by position limit 1)
+insert into test_types (name, test_area_id)
+select seed.name, a.id
 from (values
-  ('General Operative'),
-  ('Skilled Trade'),
-  ('Supervisor'),
-  ('Site Manager'),
-  ('Specialist Role')
-) as seed (name)
-on conflict ((lower(name))) do nothing;
+  (1, 'Operative'),
+  (2, 'Supervisory'),
+  (2, 'Demolition'),
+  (2, 'Plumbing (JIB)'),
+  (2, 'Highway works'),
+  (2, 'Specialist working at height'),
+  (2, 'Lifts and escalators'),
+  (2, 'Tunnelling'),
+  (2, 'Heating and plumbing services'),
+  (2, 'Pipefitting and welding'),
+  (2, 'Ductwork'),
+  (2, 'Refrigeration and air conditioning'),
+  (2, 'Services and facilities maintenance')
+) as seed (area_position, name)
+join test_areas a on a.position = seed.area_position
+where not exists (select 1 from test_types);
 
--- Placeholder sections and chapters, all renameable. Each only seeds an empty table.
+-- Sections and chapters, all renameable. Each only seeds an empty table.
 insert into sections (position, title)
 select position, title
 from (values
@@ -53,10 +62,31 @@ from (values
   (4, 1, 'Site transport and lifting operations'),
   (4, 2, 'Working at height'),
   (4, 3, 'Excavations and confined spaces'),
-  (4, 4, 'Hazardous substances')
+  (4, 4, 'Hazardous substances'),
+  (5, 1, 'Supervisory'),
+  (5, 2, 'Demolition'),
+  (5, 3, 'Plumbing (JIB)'),
+  (5, 4, 'Highway works'),
+  (5, 5, 'Specialist working at height'),
+  (5, 6, 'Lifts and escalators'),
+  (5, 7, 'Tunnelling'),
+  (5, 8, 'Heating and plumbing services'),
+  (5, 9, 'Pipefitting and welding'),
+  (5, 10, 'Ductwork'),
+  (5, 11, 'Refrigeration and air conditioning'),
+  (5, 12, 'Services and facilities maintenance')
 ) as seed (section_position, position, title)
 join sections s on s.position = seed.section_position
 where not exists (select 1 from chapters);
+
+-- Every test type's book: the core chapters (sections A–D) and, in section E, the chapter named like the test type.
+insert into test_type_chapters (test_type_id, chapter_id)
+select t.id, c.id
+from test_types t
+join chapters c on true
+join sections s on s.id = c.section_id
+where (s.position <= 4 or c.title = t.name)
+  and not exists (select 1 from test_type_chapters);
 
 -- Starter General queries (hidden), as migration 0027 adds them.
 insert into faq_items (position, question, answer)

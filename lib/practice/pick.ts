@@ -3,7 +3,7 @@ import { shuffle } from "@/lib/questions/shuffle";
 
 // Choosing and ordering practice questions. Pure functions (randomness passed in), so they can be tested.
 
-// This category's Practice history for one question (Handbook answers don't count), and its flag.
+// This test type's Practice history for one question (Handbook answers don't count), and its flag.
 export type PracticeHistory = { tries: number; right: number; lastRight: boolean | null; flagged: boolean };
 export type Random = () => number;
 
@@ -88,7 +88,7 @@ function pickInTiers(tiers: PoolQuestion[][], count: number, random: Random): Po
   return spreadOrder(picked, random);
 }
 
-// Smart practice: not practised yet in this category, then wrong last time, then flagged, then weak
+// Smart practice: not practised yet in this test type, then wrong last time, then flagged, then weak
 // chapters, then the rest.
 export function smartPick(
   pool: readonly PoolQuestion[],

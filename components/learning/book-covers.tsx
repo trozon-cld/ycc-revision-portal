@@ -58,12 +58,12 @@ export function CoverPicture({
 
 // Sizes are in em, so the same cover works on a page and in a small preview (set its font size).
 export function FrontCoverFace({
-  categoryName,
+  testTypeName,
   picture,
   blur,
   decorative,
 }: {
-  categoryName: string;
+  testTypeName: string;
   picture: CoverImage | null;
   blur?: number;
   decorative?: boolean;
@@ -78,7 +78,7 @@ export function FrontCoverFace({
           <p className="text-[max(14px,0.85em)] font-semibold uppercase tracking-[0.18em] text-white/90">Revision Portal</p>
           <p className="mt-[0.2em] text-[2.6em] font-bold leading-tight">Handbook</p>
           <div aria-hidden="true" className="my-[0.9em] h-[0.3em] w-[4em] rounded-full bg-accent" />
-          <p className="text-[1.5em] font-semibold leading-snug [overflow-wrap:anywhere]">{categoryName}</p>
+          <p className="text-[1.5em] font-semibold leading-snug [overflow-wrap:anywhere]">{testTypeName}</p>
         </div>
         <p className="text-[1em] leading-snug text-white/95">Designed to help you prepare with confidence.</p>
       </div>
@@ -87,13 +87,13 @@ export function FrontCoverFace({
 }
 
 export function BackCoverFace({
-  categoryName,
+  testTypeName,
   picture,
   blur,
   decorative,
   actions,
 }: {
-  categoryName: string;
+  testTypeName: string;
   picture: CoverImage | null;
   blur?: number;
   decorative?: boolean;
@@ -107,7 +107,7 @@ export function BackCoverFace({
         ) : (
           <div className="flex size-full flex-col items-center justify-center gap-[1em] overflow-hidden bg-primary p-[2em] text-center text-white">
             <Logo centred />
-            <p className="text-[1.3em] font-semibold leading-snug [overflow-wrap:anywhere]">{categoryName}</p>
+            <p className="text-[1.3em] font-semibold leading-snug [overflow-wrap:anywhere]">{testTypeName}</p>
             <p className="text-[1em] leading-snug text-white/95">Designed to help you prepare with confidence.</p>
           </div>
         )}

@@ -266,7 +266,7 @@ export async function restoreLanguage(session: SessionPayload, code: string): Pr
 }
 
 // Superadmin only: a hidden language and everything made for it (phrases, translations, audio rows and files) go for
-// good. Anyone still set to it moves to English; categories stop listing it. Files are removed after the commit.
+// good. Anyone still set to it moves to English; test types stop listing it. Files are removed after the commit.
 export async function deleteLanguage(session: SessionPayload, code: string): Promise<LanguageResult> {
   if (code === SOURCE_LANGUAGE) return { ok: false, error: "English can't be deleted." };
   const outcome = await withTransaction<{ result: LanguageResult; paths: string[] }>(async (client) => {
@@ -282,7 +282,7 @@ export async function deleteLanguage(session: SessionPayload, code: string): Pro
       [code]
     );
     const moved = (await client.query(`update users set preferred_language = $2 where preferred_language = $1`, [code, SOURCE_LANGUAGE])).rowCount ?? 0;
-    for (const table of ["category_languages", "page_audio", "question_audio", "page_translations", "question_translations", "voice_phrases"]) {
+    for (const table of ["test_type_languages", "page_audio", "question_audio", "page_translations", "question_translations", "voice_phrases"]) {
       await client.query(`delete from ${table} where language = $1`, [code]);
     }
     await client.query(`delete from voice_languages where code = $1`, [code]);

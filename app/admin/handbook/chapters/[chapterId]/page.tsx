@@ -5,7 +5,7 @@ import { requireRole } from "@/lib/auth/guard";
 import { CONTENT_EDITORS } from "@/lib/auth/content-editors";
 import { pool } from "@/lib/db/pool";
 import { getChapterContext } from "@/lib/content/pages";
-import { listNames, loadCategoryGroups, loadChapterCategoryIds } from "@/lib/handbook/categories";
+import { listNames, loadTestAreas, loadChapterTestTypeIds } from "@/lib/handbook/test-types";
 import { questionLogLabel, questionRef } from "@/lib/questions/labels";
 import { plainText } from "@/lib/content/inline";
 import { questionTypeLabel } from "@/lib/questions/registry";
@@ -15,7 +15,7 @@ import { buttonClass } from "@/components/admin/styles";
 import { countOf } from "@/lib/format";
 import { AddQuestionsButton, ChapterOrder, type AddableQuestion, type OrderItem } from "./chapter-order";
 import { NewPageButton } from "./page-row-actions";
-import { ChapterCategoriesButton, ChapterStatusButton } from "../../chapter-row-actions";
+import { ChapterTestTypesButton, ChapterStatusButton } from "../../chapter-row-actions";
 import { Badge } from "@/components/admin/badge";
 
 export const metadata: Metadata = { title: "Chapter" };
@@ -49,7 +49,7 @@ export default async function ChapterPagesPage({ params }: PageProps<"/admin/han
   const chapter = await getChapterContext(chapterId);
   if (!chapter) notFound();
 
-  const [{ rows }, { rows: unplaced }, categoryGroups, links] = await Promise.all([
+  const [{ rows }, { rows: unplaced }, testAreas, links] = await Promise.all([
     pool.query<ItemRow>(
       `select i.id, i.position,
               p.id as page_id, p.title as page_title, p.status as page_status,
@@ -71,11 +71,11 @@ export default async function ChapterPagesPage({ params }: PageProps<"/admin/han
        order by q.ref_no`,
       [chapter.id]
     ),
-    loadCategoryGroups(),
-    loadChapterCategoryIds([chapter.id]),
+    loadTestAreas(),
+    loadChapterTestTypeIds([chapter.id]),
   ]);
-  const categoryIds = links.get(chapter.id) ?? [];
-  const categoryNames = categoryGroups.flatMap((group) => group.categories).filter((category) => categoryIds.includes(category.id)).map((category) => category.name);
+  const testTypeIds = links.get(chapter.id) ?? [];
+  const testTypeNames = testAreas.flatMap((testArea) => testArea.testTypes).filter((testType) => testTypeIds.includes(testType.id)).map((testType) => testType.name);
 
   const items: OrderItem[] = rows.map((row) =>
     row.page_id
@@ -137,7 +137,7 @@ export default async function ChapterPagesPage({ params }: PageProps<"/admin/han
             <Link href={`/admin/handbook/preview?chapter=${chapter.id}`} className={buttonClass("secondary")}>
               Preview chapter
             </Link>
-            <ChapterCategoriesButton chapterId={chapter.id} groups={categoryGroups} initialSelected={categoryIds} />
+            <ChapterTestTypesButton chapterId={chapter.id} testAreas={testAreas} initialSelected={testTypeIds} />
             <AddQuestionsButton chapterId={chapter.id} questions={addable} />
             <NewPageButton chapterId={chapter.id} />
             <ChapterStatusButton
@@ -147,15 +147,15 @@ export default async function ChapterPagesPage({ params }: PageProps<"/admin/han
               status={chapter.status}
               itemCount={items.length}
               draftCount={drafts}
-              hasCategories={categoryIds.length > 0}
+              hasTestTypes={testTypeIds.length > 0}
             />
           </>
         }
       />
 
-      {categoryNames.length > 0 ? (
+      {testTypeNames.length > 0 ? (
         <p className="mb-3 text-sm text-slate-700 [overflow-wrap:anywhere]">
-          <span className="font-medium text-ink">In categories:</span> {listNames(categoryNames, 12)}
+          <span className="font-medium text-ink">In categories:</span> {listNames(testTypeNames, 12)}
         </p>
       ) : (
         <p className="mb-3 rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25">

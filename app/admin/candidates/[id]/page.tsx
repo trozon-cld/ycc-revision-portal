@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
-import { categoryListen, languageName, listeningLanguageIn } from "@/lib/voice/language-store";
+import { testTypeListen, languageName, listeningLanguageIn } from "@/lib/voice/language-store";
 import { accessEnded, customDateBounds, formatUkDate, formatUkDateTime } from "@/lib/candidates/access";
 import { loadCandidateDetail } from "@/lib/candidates/detail";
 import { candidateProgressPath } from "@/lib/candidates/paths";
@@ -22,7 +22,7 @@ import { buttonClass, cardClass } from "@/components/admin/styles";
 import { Cell, Row, Table } from "@/components/admin/table";
 import { CandidateStatusBadge } from "../status-badge";
 import { AdminCandidateActions, SuperadminCandidateActions } from "../candidate-row-actions";
-import { loadAdminOptions, loadCategoryChoices } from "../options";
+import { loadAdminOptions, loadTestTypeChoices } from "../options";
 import { toRowCandidate } from "../row-candidate";
 
 export const metadata: Metadata = { title: "Candidate" };
@@ -71,12 +71,12 @@ export default async function CandidateProgressPage({ params, searchParams }: Pa
   if (!candidate) notFound();
   // A test left to run out of time counts as soon as staff look, not only once the candidate returns.
   await withTransaction((client) => settleMocks(client, [candidate.id]));
-  // Their choice, and what they hear in their current category when that differs (Listen off, or not offered there).
+  // Their choice, and what they hear in their current test type when that differs (Listen off, or not offered there).
   const current = candidate.current;
   const [chosenName, hears, currentListen] = await Promise.all([
     languageName(candidate.language),
     listeningLanguageIn(candidate.language, current.id),
-    categoryListen(current.id),
+    testTypeListen(current.id),
   ]);
   const listeningLabel =
     currentListen?.mode === "off"
@@ -86,18 +86,18 @@ export default async function CandidateProgressPage({ params, searchParams }: Pa
         : `${chosenName} (hears ${hears.name} in ${current.name})`;
   const query = await searchParams;
 
-  const asked = firstParam(query.category);
-  const category = candidate.groupCategories.find((item) => item.id === asked) ?? candidate.groupCategories.find((item) => item.isCurrent)!;
+  const asked = firstParam(query.testType);
+  const testType = candidate.testAreaTestTypes.find((item) => item.id === asked) ?? candidate.testAreaTestTypes.find((item) => item.isCurrent)!;
   const historyPage = (page: number) =>
-    loadMockHistory(candidate.id, HISTORY_PAGE_SIZE, { categoryId: category.id, offset: (page - 1) * HISTORY_PAGE_SIZE });
+    loadMockHistory(candidate.id, HISTORY_PAGE_SIZE, { testTypeId: testType.id, offset: (page - 1) * HISTORY_PAGE_SIZE });
   // Loaded together; the history page is loaded again only if the asked page is past the end.
   const askedPage = pageFromParam(firstParam(query.page), Number.MAX_SAFE_INTEGER, HISTORY_PAGE_SIZE);
   const isSuperadmin = session.role === "superadmin";
-  const [progress, askedHistory, admins, categories] = await Promise.all([
-    loadProgress(candidate.id, category.id),
+  const [progress, askedHistory, admins, testTypes] = await Promise.all([
+    loadProgress(candidate.id, testType.id),
     historyPage(askedPage),
     isSuperadmin ? loadAdminOptions() : Promise.resolve([]),
-    isSuperadmin ? Promise.resolve([]) : loadCategoryChoices(),
+    isSuperadmin ? Promise.resolve([]) : loadTestTypeChoices(),
   ]);
   if (!progress) notFound();
   const { handbook, practice, mock, readiness } = progress;
@@ -106,16 +106,16 @@ export default async function CandidateProgressPage({ params, searchParams }: Pa
 
   const isExpired = accessEnded(candidate.accessExpiresAt);
   const path = candidateProgressPath(candidate.id);
-  const categoryQuery: Record<string, string> = { category: category.isCurrent ? "" : category.id };
+  const testTypeQuery: Record<string, string> = { testType: testType.isCurrent ? "" : testType.id };
   const last = mock.items[0];
   const { min: minDate, max: maxDate } = customDateBounds();
   const rowCandidate = toRowCandidate({
     id: candidate.id,
     email: candidate.email,
     name: candidate.name,
-    categoryId: candidate.assigned.id,
-    categoryName: candidate.assigned.name,
-    currentCategoryName: candidate.current.name,
+    testTypeId: candidate.assigned.id,
+    testTypeName: candidate.assigned.name,
+    currentTestTypeName: candidate.current.name,
     adminId: candidate.admin.id,
     isBlocked: candidate.isBlocked,
     accessExpiresAt: candidate.accessExpiresAt,
@@ -133,7 +133,7 @@ export default async function CandidateProgressPage({ params, searchParams }: Pa
           isSuperadmin ? (
             <SuperadminCandidateActions candidate={rowCandidate} admins={admins} onProgressPage />
           ) : (
-            <AdminCandidateActions candidate={rowCandidate} categories={categories} minDate={minDate} maxDate={maxDate} onProgressPage />
+            <AdminCandidateActions candidate={rowCandidate} testTypes={testTypes} minDate={minDate} maxDate={maxDate} onProgressPage />
           )
         }
       />
@@ -153,15 +153,15 @@ export default async function CandidateProgressPage({ params, searchParams }: Pa
 
         <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="mr-2 text-lg font-semibold text-ink">Progress in {category.name}</h2>
-            {candidate.groupCategories.length > 1 && (
+            <h2 className="mr-2 text-lg font-semibold text-ink">Progress in {testType.name}</h2>
+            {candidate.testAreaTestTypes.length > 1 && (
               <nav aria-label="Choose a category" className="flex flex-wrap gap-2">
-                {candidate.groupCategories.map((item) => (
+                {candidate.testAreaTestTypes.map((item) => (
                   <Link
                     key={item.id}
-                    href={item.isCurrent ? path : `${path}?category=${item.id}`}
-                    aria-current={item.id === category.id ? "page" : undefined}
-                    className={buttonClass(item.id === category.id ? "primary" : "secondary", "sm")}
+                    href={item.isCurrent ? path : `${path}?testType=${item.id}`}
+                    aria-current={item.id === testType.id ? "page" : undefined}
+                    className={buttonClass(item.id === testType.id ? "primary" : "secondary", "sm")}
                   >
                     {item.name}
                     {item.isCurrent && <span className="sr-only"> (current category)</span>}
@@ -287,7 +287,7 @@ export default async function CandidateProgressPage({ params, searchParams }: Pa
                 basePath={path}
                 page={page}
                 hasMore={page * HISTORY_PAGE_SIZE < mock.count}
-                query={categoryQuery}
+                query={testTypeQuery}
                 total={mock.count}
                 pageSize={HISTORY_PAGE_SIZE}
               />

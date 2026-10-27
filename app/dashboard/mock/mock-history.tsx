@@ -14,7 +14,7 @@ const ENDED: Partial<Record<MockEnd, string>> = {
 
 const score = (entry: MockHistoryEntry) => scoreText(entry.rightCount, entry.outOf);
 
-// The candidate's past mock tests in this category, newest first; each opens its results.
+// The candidate's past mock tests in this test type, newest first; each opens its results.
 export function MockHistoryList({
   history,
   moreHref,

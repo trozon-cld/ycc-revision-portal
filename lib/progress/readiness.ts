@@ -17,7 +17,7 @@ export const READINESS_LABELS = [
   { from: 0, label: "Needs more practice" },
 ] as const;
 
-// Each part as a share (0–1); null where the category has nothing for it (left out, its weight shared).
+// Each part as a share (0–1); null where the test type has nothing for it (left out, its weight shared).
 export type ReadinessInput = { latest: number; average: number; handbook: number | null; areas: number | null };
 export type ReadinessPart = { key: ReadinessKey; name: string; weight: number; percent: number };
 export type Readiness = { score: number; label: string; parts: ReadinessPart[] };

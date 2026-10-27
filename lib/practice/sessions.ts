@@ -9,7 +9,7 @@ import { mockMissesForPractice } from "@/lib/mock/attempts";
 import { recordQuestionResult } from "@/lib/progress/question-results";
 import { checkAnswer, isOversizedResponse } from "@/lib/questions/check";
 import { shuffle } from "@/lib/questions/shuffle";
-import { NUMBERED, chapterLabel, currentCategory, drawRandom as random, inPool, loadPool, loadQuestions, type LoadedQuestion, type PoolQuestion } from "@/lib/questions/pool";
+import { NUMBERED, chapterLabel, currentTestType, drawRandom as random, inPool, loadPool, loadQuestions, type LoadedQuestion, type PoolQuestion } from "@/lib/questions/pool";
 import { toClientQuestion, type ClientQuestion } from "@/lib/questions/public";
 import { availableQuestionTypes } from "@/lib/questions/registry";
 import { isQuestionType, type QuestionType } from "@/lib/questions/types";
@@ -39,7 +39,7 @@ import {
   type PracticeWay,
 } from "./types";
 
-// Practice runs for the candidate's current category. Answers are marked here and recorded in
+// Practice runs for the candidate's current test type. Answers are marked here and recorded in
 // question_results; nothing goes to the activity log (agreed 1 Oct).
 
 // Finished runs kept per candidate (totals only, except the latest).
@@ -50,14 +50,14 @@ const LOOK_AHEAD = 10;
 
 type Db = Pick<PoolClient, "query">;
 
-// Practice results and flags in this category, by question.
-async function loadHistory(db: Db, userId: string, categoryId: string): Promise<Map<string, PracticeHistory>> {
+// Practice results and flags in this test type, by question.
+async function loadHistory(db: Db, userId: string, testTypeId: string): Promise<Map<string, PracticeHistory>> {
   const { rows } = await db.query<{ question_id: string; tries: number; right: number; last_right: boolean | null; flagged: boolean }>(
     `select coalesce(r.question_id, f.question_id) as question_id, coalesce(r.practice_tries, 0)::int as tries,
             coalesce(r.practice_right, 0)::int as right, r.practice_last_right as last_right, f.question_id is not null as flagged
-     from (select * from question_results where user_id = $1 and category_id = $2 and practice_tries > 0) r
-     full join (select * from question_flags where user_id = $1 and category_id = $2) f on f.question_id = r.question_id`,
-    [userId, categoryId]
+     from (select * from question_results where user_id = $1 and test_type_id = $2 and practice_tries > 0) r
+     full join (select * from question_flags where user_id = $1 and test_type_id = $2) f on f.question_id = r.question_id`,
+    [userId, testTypeId]
   );
   return new Map(rows.map((row) => [row.question_id, { tries: row.tries, right: row.right, lastRight: row.last_right, flagged: row.flagged }]));
 }
@@ -67,16 +67,16 @@ const findWeak = (questions: PoolQuestion[], history: Map<string, PracticeHistor
 // --- Setup page
 
 export async function loadPracticeOptions(userId: string): Promise<PracticeOptions | null> {
-  const category = await currentCategory(pool, userId);
-  if (!category) return null;
-  const questions = await loadPool(pool, "practice", category.id);
+  const testType = await currentTestType(pool, userId);
+  if (!testType) return null;
+  const questions = await loadPool(pool, "practice", testType.id);
   const perChapter = new Map<string, number>();
   const perType = new Map<QuestionType, number>();
   for (const q of questions) {
     perChapter.set(q.chapterId, (perChapter.get(q.chapterId) ?? 0) + 1);
     perType.set(q.type, (perType.get(q.type) ?? 0) + 1);
   }
-  const history = await loadHistory(pool, userId, category.id);
+  const history = await loadHistory(pool, userId, testType.id);
   const weak = findWeak(questions, history);
   const weakSet = new Set(weak.map((item) => item.chapterId));
   const { rows } = await pool.query<{ id: string; title: string; number: number; section_position: number; section_title: string }>(
@@ -95,7 +95,7 @@ export async function loadPracticeOptions(userId: string): Promise<PracticeOptio
     section.chapters.push({ id: row.id, label: chapterLabel(row), count: perChapter.get(row.id) ?? 0 });
   }
   return {
-    categoryName: category.name,
+    testTypeName: testType.name,
     total: questions.length,
     sections,
     types: availableQuestionTypes()
@@ -113,17 +113,17 @@ export async function loadPracticeOptions(userId: string): Promise<PracticeOptio
 
 export type OpenPractice = { id: string; position: number; total: number; answered: number };
 
-// The run in progress, if it belongs to the current category; one from another category is closed.
+// The run in progress, if it belongs to the current test type; one from another test type is closed.
 export async function loadOpenPractice(userId: string): Promise<OpenPractice | null> {
   return withTransaction(async (client) => {
-    const { rows } = await client.query<SessionRow & { current_category_id: string }>(
-      `select s.*, u.current_category_id from practice_sessions s join users u on u.id = s.user_id
+    const { rows } = await client.query<SessionRow & { current_test_type_id: string }>(
+      `select s.*, u.current_test_type_id from practice_sessions s join users u on u.id = s.user_id
        where s.user_id = $1 and s.finished_at is null for update of s`,
       [userId]
     );
     const open = rows[0];
     if (!open) return null;
-    if (open.category_id !== open.current_category_id) {
+    if (open.test_type_id !== open.current_test_type_id) {
       await closeOpen(client, open);
       return null;
     }
@@ -147,9 +147,9 @@ export async function startPractice(userId: string, request: StartRequest): Prom
   if (request.size !== "all" && !PRACTICE_SIZES.some((size) => size === request.size)) return { ok: false, error: "Choose how many questions." };
   return withTransaction(async (client) => {
     await client.query(`select 1 from users where id = $1 for update`, [userId]);
-    const category = await currentCategory(client, userId);
-    if (!category) return { ok: false, error: "Your account isn’t available." };
-    let questions = await loadPool(client, "practice", category.id);
+    const testType = await currentTestType(client, userId);
+    if (!testType) return { ok: false, error: "Your account isn’t available." };
+    let questions = await loadPool(client, "practice", testType.id);
     let choices: string[] = [];
     if (request.way === "chapters") {
       choices = [...new Set(request.choices)].filter((id) => questions.some((q) => q.chapterId === id));
@@ -160,7 +160,7 @@ export async function startPractice(userId: string, request: StartRequest): Prom
       if (choices.length === 0) return { ok: false, error: "Choose at least one type of question." };
       questions = questions.filter((q) => choices.includes(q.type));
     }
-    const history = await loadHistory(client, userId, category.id);
+    const history = await loadHistory(client, userId, testType.id);
     const weak = new Set(findWeak(questions, history).map((item) => item.chapterId));
     const focus = FOCUS[request.way as keyof typeof FOCUS];
     if (focus) {
@@ -179,7 +179,7 @@ export async function startPractice(userId: string, request: StartRequest): Prom
     else if (request.way === "weak") picked = weakPick(questions, history, weak, Math.min(count, questions.filter((q) => weak.has(q.chapterId)).length), random);
     else picked = spreadOrder(spreadPick(questions, count, random), random);
     if (picked.length === 0) return { ok: false, error: "There are no practice questions for this choice yet." };
-    return { ok: true, id: await createSession(client, userId, category.id, request.way, choices, picked) };
+    return { ok: true, id: await createSession(client, userId, testType.id, request.way, choices, picked) };
   });
 }
 
@@ -187,18 +187,18 @@ export async function startPractice(userId: string, request: StartRequest): Prom
 export async function startRetry(userId: string, sessionId: string): Promise<StartReply> {
   return withTransaction(async (client) => {
     await client.query(`select 1 from users where id = $1 for update`, [userId]);
-    const category = await currentCategory(client, userId);
-    if (!category) return { ok: false, error: "Your account isn’t available." };
+    const testType = await currentTestType(client, userId);
+    if (!testType) return { ok: false, error: "Your account isn’t available." };
     const { rows } = await client.query<SessionRow>(
       `select * from practice_sessions where id = $1 and user_id = $2 and finished_at is not null and question_ids is not null`,
       [sessionId, userId]
     );
     const source = rows[0];
-    if (!source || source.category_id !== category.id) return { ok: false, error: "These questions can’t be practised again from here." };
+    if (!source || source.test_type_id !== testType.id) return { ok: false, error: "These questions can’t be practised again from here." };
     const wrong = (source.question_ids ?? []).filter((_, index) => source.results?.[index] === "W");
-    const questions = (await loadPool(client, "practice", category.id)).filter((q) => wrong.includes(q.id));
+    const questions = (await loadPool(client, "practice", testType.id)).filter((q) => wrong.includes(q.id));
     if (questions.length === 0) return { ok: false, error: "These questions are no longer available for practice." };
-    return { ok: true, id: await createSession(client, userId, category.id, "retry", [], shuffle(questions, random)) };
+    return { ok: true, id: await createSession(client, userId, testType.id, "retry", [], shuffle(questions, random)) };
   });
 }
 
@@ -209,17 +209,17 @@ export async function startFromMock(userId: string, attemptId: string): Promise<
     const missed = await mockMissesForPractice(client, userId, attemptId);
     if (!missed) return { ok: false, error: "These questions can’t be practised from here." };
     if (missed.questions.length === 0) return { ok: false, error: "These questions are no longer available for practice." };
-    return { ok: true, id: await createSession(client, userId, missed.categoryId, "mock", [attemptId], shuffle(missed.questions, random)) };
+    return { ok: true, id: await createSession(client, userId, missed.testTypeId, "mock", [attemptId], shuffle(missed.questions, random)) };
   });
 }
 
-async function createSession(client: Db, userId: string, categoryId: string, mode: PracticeMode, choices: string[], picked: PoolQuestion[]) {
+async function createSession(client: Db, userId: string, testTypeId: string, mode: PracticeMode, choices: string[], picked: PoolQuestion[]) {
   const { rows: open } = await client.query<SessionRow>(`select * from practice_sessions where user_id = $1 and finished_at is null for update`, [userId]);
   if (open[0]) await closeOpen(client, open[0]);
   const { rows } = await client.query<{ id: string }>(
-    `insert into practice_sessions (user_id, category_id, mode, choices, question_ids, results, total)
+    `insert into practice_sessions (user_id, test_type_id, mode, choices, question_ids, results, total)
      values ($1, $2, $3, $4, $5, $6, $7) returning id`,
-    [userId, categoryId, mode, choices, picked.map((q) => q.id), ".".repeat(picked.length), picked.length]
+    [userId, testTypeId, mode, choices, picked.map((q) => q.id), ".".repeat(picked.length), picked.length]
   );
   return rows[0].id;
 }
@@ -229,7 +229,7 @@ async function createSession(client: Db, userId: string, categoryId: string, mod
 type SessionRow = {
   id: string;
   user_id: string;
-  category_id: string;
+  test_type_id: string;
   mode: PracticeMode;
   choices: string[];
   question_ids: string[] | null;
@@ -255,15 +255,15 @@ export const loadPracticeView = cache(readPracticeView);
 
 async function readPracticeView(userId: string, sessionId: string): Promise<PracticeView> {
   const outcome = await withTransaction(async (client) => {
-    const { rows } = await client.query<SessionRow & { current_category_id: string }>(
-      `select s.*, u.current_category_id from practice_sessions s join users u on u.id = s.user_id
+    const { rows } = await client.query<SessionRow & { current_test_type_id: string }>(
+      `select s.*, u.current_test_type_id from practice_sessions s join users u on u.id = s.user_id
        where s.id = $1 and s.user_id = $2 for update of s`,
       [sessionId, userId]
     );
     const session = rows[0];
     if (!session) return { kind: "missing" as const };
     if (session.finished_at) return { kind: "report" as const };
-    if (session.category_id !== session.current_category_id) {
+    if (session.test_type_id !== session.current_test_type_id) {
       await closeOpen(client, session);
       return { kind: "closed" as const };
     }
@@ -289,7 +289,7 @@ async function settle(client: Db, session: SessionRow): Promise<Settled> {
   let current: (LoadedQuestion) | undefined;
   while (position < ids.length) {
     if (position >= loadedTo) {
-      for (const [id, question] of await loadQuestions(client, ids.slice(position, position + LOOK_AHEAD), { use: "practice", categoryId: session.category_id })) questions.set(id, question);
+      for (const [id, question] of await loadQuestions(client, ids.slice(position, position + LOOK_AHEAD), { use: "practice", testTypeId: session.test_type_id })) questions.set(id, question);
       loadedTo = position + LOOK_AHEAD;
     }
     const mark = results[position];
@@ -328,7 +328,7 @@ async function buildStep(session: SessionRow, question: LoadedQuestion): Promise
   const mark = session.results?.[session.position];
   const [media, flags] = await Promise.all([
     resolveMedia(question.mediaIds),
-    pool.query(`select 1 from question_flags where user_id = $1 and category_id = $2 and question_id = $3`, [session.user_id, session.category_id, id]),
+    pool.query(`select 1 from question_flags where user_id = $1 and test_type_id = $2 and question_id = $3`, [session.user_id, session.test_type_id, id]),
   ]);
   const client: ClientQuestion = toClientQuestion({ ...question, id }, "practice");
   return {
@@ -346,8 +346,8 @@ async function buildStep(session: SessionRow, question: LoadedQuestion): Promise
 }
 
 async function lockOpen(client: Db, userId: string, sessionId: string) {
-  const { rows } = await client.query<SessionRow & { current_category_id: string }>(
-    `select s.*, u.current_category_id from practice_sessions s join users u on u.id = s.user_id
+  const { rows } = await client.query<SessionRow & { current_test_type_id: string }>(
+    `select s.*, u.current_test_type_id from practice_sessions s join users u on u.id = s.user_id
      where s.id = $1 and s.user_id = $2 and s.finished_at is null for update of s`,
     [sessionId, userId]
   );
@@ -358,12 +358,12 @@ export async function checkPractice(userId: string, sessionId: string, position:
   if (isOversizedResponse(response)) return { ok: false, reason: "invalid" };
   return withTransaction(async (client): Promise<PracticeCheckReply> => {
     const session = await lockOpen(client, userId, sessionId);
-    if (!session || session.category_id !== session.current_category_id) return { ok: false, reason: "moved" };
+    if (!session || session.test_type_id !== session.current_test_type_id) return { ok: false, reason: "moved" };
     const ids = session.question_ids ?? [];
     if (position !== session.position || position >= ids.length) return { ok: false, reason: "invalid" };
     const questionId = ids[position];
     const mark = session.results?.[position];
-    const question = (await loadQuestions(client, [questionId], { use: "practice", categoryId: session.category_id })).get(questionId);
+    const question = (await loadQuestions(client, [questionId], { use: "practice", testTypeId: session.test_type_id })).get(questionId);
     // Already marked (e.g. a second tap): the same result again, counted once.
     if (mark === "R" || mark === "W") {
       const shown = question ?? (await loadAnyQuestion(client, questionId));
@@ -385,7 +385,7 @@ export async function checkPractice(userId: string, sessionId: string, position:
        where id = $1`,
       [session.id, setChar(session.results ?? "", position, result.correct ? "R" : "W"), result.correct ? 1 : 0]
     );
-    await recordQuestionResult(client, { userId, categoryId: session.category_id, questionId }, { source: "practice", correct: result.correct });
+    await recordQuestionResult(client, { userId, testTypeId: session.test_type_id, questionId }, { source: "practice", correct: result.correct });
     return { ok: true, checked: { ...result, answer: question.answer, explanation: question.explanation } };
   });
 }
@@ -393,7 +393,7 @@ export async function checkPractice(userId: string, sessionId: string, position:
 export async function nextPractice(userId: string, sessionId: string, position: number): Promise<PracticeNextReply> {
   const outcome = await withTransaction(async (client) => {
     const session = await lockOpen(client, userId, sessionId);
-    if (!session || session.category_id !== session.current_category_id) return { kind: "moved" as const };
+    if (!session || session.test_type_id !== session.current_test_type_id) return { kind: "moved" as const };
     // Only from an answered (or skipped) question; otherwise the current one is sent again.
     if (position === session.position && session.results?.[position] !== ".") {
       await client.query(
@@ -464,7 +464,7 @@ async function finish(client: Db, session: SessionRow) {
 
 export type PracticeReport = {
   id: string;
-  categoryName: string;
+  testTypeName: string;
   mode: PracticeMode;
   choiceNames: string[];
   total: number;
@@ -483,9 +483,9 @@ export type PracticeReport = {
 };
 
 export async function loadPracticeReport(userId: string, sessionId: string): Promise<PracticeReport | null> {
-  const { rows } = await pool.query<SessionRow & { category_name: string; current_category_id: string }>(
-    `select s.*, c.name as category_name, u.current_category_id
-     from practice_sessions s join categories c on c.id = s.category_id join users u on u.id = s.user_id
+  const { rows } = await pool.query<SessionRow & { test_type_name: string; current_test_type_id: string }>(
+    `select s.*, c.name as test_type_name, u.current_test_type_id
+     from practice_sessions s join test_types c on c.id = s.test_type_id join users u on u.id = s.user_id
      where s.id = $1 and s.user_id = $2 and s.finished_at is not null`,
     [sessionId, userId]
   );
@@ -513,7 +513,7 @@ export async function loadPracticeReport(userId: string, sessionId: string): Pro
   let media: ResolvedMedia = {};
   if (session.question_ids && session.results) {
     // Only questions still in Practice: never a draft, and the same ones "Practise these again" uses.
-    const inPractice = new Set((await loadPool(pool, "practice", session.category_id)).map((question) => question.id));
+    const inPractice = new Set((await loadPool(pool, "practice", session.test_type_id)).map((question) => question.id));
     const wrongIds = session.question_ids.filter((id, index) => session.results?.[index] === "W" && inPractice.has(id));
     const questions = await loadQuestions(pool, wrongIds);
     const list = wrongIds.flatMap((id) => {
@@ -522,8 +522,8 @@ export async function loadPracticeReport(userId: string, sessionId: string): Pro
     });
     media = await resolveMedia(list.flatMap((item) => item.question.mediaIds));
     const { rows: flagRows } = await pool.query<{ question_id: string }>(
-      `select question_id from question_flags where user_id = $1 and category_id = $2 and question_id = any($3::uuid[])`,
-      [userId, session.category_id, wrongIds]
+      `select question_id from question_flags where user_id = $1 and test_type_id = $2 and question_id = any($3::uuid[])`,
+      [userId, session.test_type_id, wrongIds]
     );
     const flagged = new Set(flagRows.map((row) => row.question_id));
     wrong = list.map(({ id, question }) => ({
@@ -536,7 +536,7 @@ export async function loadPracticeReport(userId: string, sessionId: string): Pro
 
   return {
     id: session.id,
-    categoryName: session.category_name,
+    testTypeName: session.test_type_name,
     mode: session.mode,
     choiceNames,
     total: session.total,
@@ -549,35 +549,35 @@ export async function loadPracticeReport(userId: string, sessionId: string): Pro
     chapters,
     wrong,
     media,
-    canRetry: Boolean(wrong && wrong.length > 0 && session.category_id === session.current_category_id),
+    canRetry: Boolean(wrong && wrong.length > 0 && session.test_type_id === session.current_test_type_id),
   };
 }
 
-// Home card: the run in progress in the current category, read only.
+// Home card: the run in progress in the current test type, read only.
 export async function loadPracticeInProgress(userId: string): Promise<{ id: string; position: number; total: number } | null> {
   const { rows } = await pool.query<{ id: string; position: number; total: number }>(
     `select s.id, s.position, s.total from practice_sessions s join users u on u.id = s.user_id
-     where s.user_id = $1 and s.finished_at is null and s.category_id = u.current_category_id`,
+     where s.user_id = $1 and s.finished_at is null and s.test_type_id = u.current_test_type_id`,
     [userId]
   );
   return rows[0] ?? null;
 }
 
-// Flag for review, on or off, for a question in the current category's practice pool.
+// Flag for review, on or off, for a question in the current test type's practice pool.
 export async function setFlag(userId: string, questionId: string, flagged: boolean): Promise<boolean | null> {
-  const category = await currentCategory(pool, userId);
-  if (!category) return null;
+  const testType = await currentTestType(pool, userId);
+  if (!testType) return null;
   if (!flagged) {
-    await pool.query(`delete from question_flags where user_id = $1 and category_id = $2 and question_id = $3`, [userId, category.id, questionId]);
+    await pool.query(`delete from question_flags where user_id = $1 and test_type_id = $2 and question_id = $3`, [userId, testType.id, questionId]);
     return false;
   }
   const { rowCount } = await pool.query(
-    `insert into question_flags (user_id, category_id, question_id)
+    `insert into question_flags (user_id, test_type_id, question_id)
      select $1, $2, q.id from questions q where q.id = $3 and ${inPool("practice", "$2")}
      on conflict do nothing`,
-    [userId, category.id, questionId]
+    [userId, testType.id, questionId]
   );
   if (rowCount) return true;
-  const { rows } = await pool.query(`select 1 from question_flags where user_id = $1 and category_id = $2 and question_id = $3`, [userId, category.id, questionId]);
+  const { rows } = await pool.query(`select 1 from question_flags where user_id = $1 and test_type_id = $2 and question_id = $3`, [userId, testType.id, questionId]);
   return rows.length > 0 ? true : null;
 }

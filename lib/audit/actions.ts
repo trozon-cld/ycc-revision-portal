@@ -9,25 +9,25 @@ export const ACTIVITY_ACTIONS = {
   "candidate.email_changed": "Changed candidate email",
   "candidate.name_changed": "Changed candidate name",
   "candidate.password_changed": "Changed candidate password",
-  "candidate.category_changed": "Changed candidate category",
+  "candidate.test_type_changed": "Changed candidate category",
   "candidate.access_changed": "Changed candidate access",
   "candidate.blocked": "Blocked candidate",
   "candidate.unblocked": "Unblocked candidate",
   "candidate.deleted": "Deleted candidate",
   "candidate.admin_changed": "Moved candidate to another Admin",
-  "candidate.category_switched": "Candidate switched category",
-  "category_group.created": "Created category group",
-  "category_group.renamed": "Renamed category group",
-  "category_group.reordered": "Reordered category group",
-  "category_group.deleted": "Deleted category group",
-  "category.created": "Created category",
-  "category.renamed": "Renamed category",
-  "category.group_changed": "Moved category to another group",
-  "category.chapters_changed": "Changed category chapters",
-  "category.listen_changed": "Turned Listen on or off for category",
-  "category.listen_languages_changed": "Changed Listen languages for category",
-  "category.covers_changed": "Changed Handbook covers",
-  "category.deleted": "Deleted category",
+  "candidate.test_type_switched": "Candidate switched category",
+  "test_area.created": "Created category group",
+  "test_area.renamed": "Renamed category group",
+  "test_area.reordered": "Reordered category group",
+  "test_area.deleted": "Deleted category group",
+  "test_type.created": "Created category",
+  "test_type.renamed": "Renamed category",
+  "test_type.area_changed": "Moved category to another group",
+  "test_type.chapters_changed": "Changed category chapters",
+  "test_type.listen_changed": "Turned Listen on or off for category",
+  "test_type.listen_languages_changed": "Changed Listen languages for category",
+  "test_type.covers_changed": "Changed Handbook covers",
+  "test_type.deleted": "Deleted category",
   "section.created": "Created section",
   "section.renamed": "Renamed section",
   "section.reordered": "Reordered section",
@@ -36,7 +36,7 @@ export const ACTIVITY_ACTIONS = {
   "chapter.renamed": "Renamed chapter",
   "chapter.reordered": "Reordered chapter",
   "chapter.section_changed": "Moved chapter to another section",
-  "chapter.categories_changed": "Changed chapter categories",
+  "chapter.test_types_changed": "Changed chapter categories",
   "chapter.deleted": "Deleted chapter",
   "chapter.published": "Published chapter",
   "chapter.unpublished": "Unpublished chapter",
@@ -102,7 +102,7 @@ export const ADMIN_ACTIONS = (Object.keys(ACTIVITY_ACTIONS) as ActivityAction[])
 export const ACTION_AREAS: { label: string; prefixes: string[] }[] = [
   { label: "Admins", prefixes: ["admin"] },
   { label: "Candidates", prefixes: ["candidate"] },
-  { label: "Categories", prefixes: ["category_group", "category"] },
+  { label: "Categories", prefixes: ["test_area", "test_type"] },
   { label: "Handbook", prefixes: ["section", "chapter", "content_page", "page_translation", "page_audio"] },
   { label: "Question bank", prefixes: ["question", "question_translation", "question_audio"] },
   { label: "Languages", prefixes: ["language"] },
@@ -111,6 +111,36 @@ export const ACTION_AREAS: { label: string; prefixes: string[] }[] = [
   { label: "Own account", prefixes: ["account"] },
   { label: "Log archives", prefixes: ["log"] },
 ];
+
+// Keys renamed in 0037 (groups became test areas, categories test types). Older log entries keep the old key.
+const RENAMED_ACTIONS: Record<string, ActivityAction> = {
+  "candidate.category_changed": "candidate.test_type_changed",
+  "candidate.category_switched": "candidate.test_type_switched",
+  "category_group.created": "test_area.created",
+  "category_group.renamed": "test_area.renamed",
+  "category_group.reordered": "test_area.reordered",
+  "category_group.deleted": "test_area.deleted",
+  "category.created": "test_type.created",
+  "category.renamed": "test_type.renamed",
+  "category.group_changed": "test_type.area_changed",
+  "category.chapters_changed": "test_type.chapters_changed",
+  "category.listen_changed": "test_type.listen_changed",
+  "category.listen_languages_changed": "test_type.listen_languages_changed",
+  "category.covers_changed": "test_type.covers_changed",
+  "category.deleted": "test_type.deleted",
+  "chapter.categories_changed": "chapter.test_types_changed",
+};
+
+// A stored key as today's action (old keys included), or null if it isn't one.
+export function currentAction(stored: string): ActivityAction | null {
+  if (isActivityAction(stored)) return stored;
+  return RENAMED_ACTIONS[stored] ?? null;
+}
+
+// Every stored key that means this action: itself and any older name for it.
+export function storedKeys(action: ActivityAction): string[] {
+  return [action, ...Object.keys(RENAMED_ACTIONS).filter((old) => RENAMED_ACTIONS[old] === action)];
+}
 
 export const AUTH_EVENTS = {
   login_success: "Logged in",

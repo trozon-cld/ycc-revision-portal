@@ -13,8 +13,8 @@ export type BankFilters = {
   search: string;
   sectionId: string | null;
   chapterId: string | null;
-  // Questions whose chapter this category includes.
-  categoryId: string | null;
+  // Questions whose chapter this test type includes.
+  testTypeId: string | null;
   type: QuestionType | null;
   status: QuestionStatus | null;
 };
@@ -50,11 +50,11 @@ const BANK_WHERE = `
     and ($3::text is null or q.type = $3)
     and ($4::content_status is null or q.status = $4)
     and ($5 = '' or q.stem_text ilike '%' || $5 || '%' escape '\\' or q.ref_no = $6::int)
-    and ($7::uuid is null or exists (select 1 from category_chapters cc where cc.category_id = $7 and cc.chapter_id = q.chapter_id))`;
+    and ($7::uuid is null or exists (select 1 from test_type_chapters cc where cc.test_type_id = $7 and cc.chapter_id = q.chapter_id))`;
 
 function bankValues(filters: BankFilters) {
   const search = filters.search.trim().slice(0, 100);
-  return [filters.sectionId, filters.chapterId, filters.type, filters.status, escapeLike(search), search ? parseQuestionRef(search) : null, filters.categoryId];
+  return [filters.sectionId, filters.chapterId, filters.type, filters.status, escapeLike(search), search ? parseQuestionRef(search) : null, filters.testTypeId];
 }
 
 export async function countBankQuestions(filters: BankFilters): Promise<number> {

@@ -6,9 +6,9 @@ export function toRowCandidate(candidate: {
   id: string;
   email: string;
   name: string | null;
-  categoryId: string;
-  categoryName: string;
-  currentCategoryName: string;
+  testTypeId: string;
+  testTypeName: string;
+  currentTestTypeName: string;
   adminId: string;
   isBlocked: boolean;
   accessExpiresAt: Date | string | null;
@@ -19,11 +19,11 @@ export function toRowCandidate(candidate: {
     id: candidate.id,
     email: candidate.email,
     name: candidate.name,
-    categoryId: candidate.categoryId,
-    categoryLabel:
-      candidate.currentCategoryName === candidate.categoryName
-        ? candidate.categoryName
-        : `${candidate.currentCategoryName} (assigned: ${candidate.categoryName})`,
+    testTypeId: candidate.testTypeId,
+    testTypeLabel:
+      candidate.currentTestTypeName === candidate.testTypeName
+        ? candidate.testTypeName
+        : `${candidate.currentTestTypeName} (assigned: ${candidate.testTypeName})`,
     adminId: candidate.adminId,
     isBlocked: candidate.isBlocked,
     expiryLabel: expiresAt ? `${isExpired ? "Expired on" : "Expires"} ${formatUkDate(expiresAt)}` : "No expiry set",

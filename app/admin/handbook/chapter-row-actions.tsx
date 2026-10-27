@@ -12,18 +12,18 @@ import {
   moveChapterToSection,
   publishChapterForm,
   renameChapter,
-  saveChapterCategories,
+  saveChapterTestTypes,
   setChapterStatus,
   unpublishChapterForm,
 } from "./chapter-actions";
-import type { CategoryGroupOption } from "@/lib/handbook/categories";
+import type { TestAreaOption } from "@/lib/handbook/test-types";
 import { TITLE_MAX_LENGTH } from "@/lib/limits";
-import { CategoryPicker } from "./category-picker";
+import { TestTypePicker } from "./test-type-picker";
 import type { SectionOption } from "./section-row-actions";
 
-const CATEGORY_HINT = "Candidates studying these categories see this chapter in Prepare, Practice and the Mock test once it's published.";
+const TEST_TYPE_HINT = "Candidates studying these categories see this chapter in Prepare, Practice and the Mock test once it's published.";
 
-export function NewChapterButton({ sections, categoryGroups }: { sections: SectionOption[]; categoryGroups: CategoryGroupOption[] }) {
+export function NewChapterButton({ sections, testAreas }: { sections: SectionOption[]; testAreas: TestAreaOption[] }) {
   return (
     <PanelButton label="New chapter" title="New chapter">
       {(close) =>
@@ -49,7 +49,7 @@ export function NewChapterButton({ sections, categoryGroups }: { sections: Secti
             <Field id="new-chapter-section" label="Section" hint="It's added at the end of this section.">
               <SectionSelect id="new-chapter-section" options={sections} />
             </Field>
-            <CategoryPicker groups={categoryGroups} legend="Categories (optional)" hint={CATEGORY_HINT} />
+            <TestTypePicker testAreas={testAreas} legend="Categories (optional)" hint={TEST_TYPE_HINT} />
           </ActionForm>
         )
       }
@@ -69,8 +69,8 @@ export function ChapterRowActions({
   itemCount,
   draftCount,
   status,
-  categoryGroups,
-  categoryIds,
+  testAreas,
+  testTypeIds,
 }: {
   id: string;
   title: string;
@@ -83,8 +83,8 @@ export function ChapterRowActions({
   itemCount: number;
   draftCount: number;
   status: "draft" | "published";
-  categoryGroups: CategoryGroupOption[];
-  categoryIds: string[];
+  testAreas: TestAreaOption[];
+  testTypeIds: string[];
 }) {
   const hidden = { chapterId: id };
   const description = `Chapter ${number} · ${title}`;
@@ -123,7 +123,7 @@ export function ChapterRowActions({
     label: "Categories",
     title: "Categories",
     description,
-    render: (close) => <ChapterCategoriesForm chapterId={id} groups={categoryGroups} initialSelected={categoryIds} onClose={close} />,
+    render: (close) => <ChapterTestTypesForm chapterId={id} testAreas={testAreas} initialSelected={testTypeIds} onClose={close} />,
   });
 
   if (!isFirst) {
@@ -156,7 +156,7 @@ export function ChapterRowActions({
     });
   }
 
-  actions.push(chapterStatusAction({ id, number, title, status, itemCount, draftCount, hasCategories: categoryIds.length > 0, onChapterPage: false }));
+  actions.push(chapterStatusAction({ id, number, title, status, itemCount, draftCount, hasTestTypes: testTypeIds.length > 0, onChapterPage: false }));
 
   actions.push({
     label: "Delete",
@@ -203,35 +203,35 @@ export function ChapterRowActions({
   return <RowActions label={`Actions for ${title}`} actions={actions} />;
 }
 
-function ChapterCategoriesForm({
+function ChapterTestTypesForm({
   chapterId,
-  groups,
+  testAreas,
   initialSelected,
   onClose,
 }: {
   chapterId: string;
-  groups: CategoryGroupOption[];
+  testAreas: TestAreaOption[];
   initialSelected: string[];
   onClose: () => void;
 }) {
   return (
     <ActionForm
-      action={saveChapterCategories}
+      action={saveChapterTestTypes}
       hidden={{ chapterId }}
       submitLabel="Save categories"
       successMessage="Categories updated."
       onSuccess={onClose}
       onCancel={onClose}
     >
-      <CategoryPicker groups={groups} initialSelected={initialSelected} hint={CATEGORY_HINT} />
+      <TestTypePicker testAreas={testAreas} initialSelected={initialSelected} hint={TEST_TYPE_HINT} />
     </ActionForm>
   );
 }
 
-export function ChapterCategoriesButton(props: { chapterId: string; groups: CategoryGroupOption[]; initialSelected: string[] }) {
+export function ChapterTestTypesButton(props: { chapterId: string; testAreas: TestAreaOption[]; initialSelected: string[] }) {
   return (
     <PanelButton label="Categories" title="Categories" variant="secondary" icon={false}>
-      {(close) => <ChapterCategoriesForm {...props} onClose={close} />}
+      {(close) => <ChapterTestTypesForm {...props} onClose={close} />}
     </PanelButton>
   );
 }
@@ -243,13 +243,13 @@ type ChapterStatusProps = {
   status: "draft" | "published";
   itemCount: number;
   draftCount: number;
-  hasCategories: boolean;
+  hasTestTypes: boolean;
   // On the chapter's own page the items are right below, so no "Open chapter" link.
   onChapterPage: boolean;
 };
 
 // Publish or Unpublish, shared by the Handbook row menu and the chapter page. A chapter that isn't ready says why.
-function chapterStatusAction({ id, number, title, status, itemCount, draftCount, hasCategories, onChapterPage }: ChapterStatusProps): PanelRowAction | InstantRowAction {
+function chapterStatusAction({ id, number, title, status, itemCount, draftCount, hasTestTypes, onChapterPage }: ChapterStatusProps): PanelRowAction | InstantRowAction {
   const name = (
     <strong className="font-medium">
       {number} {title}
@@ -304,7 +304,7 @@ function chapterStatusAction({ id, number, title, status, itemCount, draftCount,
       ),
     };
   }
-  if (hasCategories) {
+  if (hasTestTypes) {
     return { label: "Publish", run: () => setChapterStatus(id, "published"), successMessage: "Chapter published.", pendingLabel: "Publishing…" };
   }
   return {

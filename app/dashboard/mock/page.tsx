@@ -42,7 +42,7 @@ export default async function MockTestPage({ searchParams }: PageProps<"/dashboa
       <PageBody>
         <div className="max-w-3xl">
           <h1 className={`${PAGE_TITLE}`}>Mock test</h1>
-          <p className="mt-1 text-base text-muted [overflow-wrap:anywhere]">Questions for {home.categoryName}</p>
+          <p className="mt-1 text-base text-muted [overflow-wrap:anywhere]">Questions for {home.testTypeName}</p>
 
           {home.open ? (
             <section aria-labelledby="open-heading" className={`mt-5 lg:mt-6 ${NOTE_BOX} p-4 lg:p-5`}>
@@ -59,7 +59,7 @@ export default async function MockTestPage({ searchParams }: PageProps<"/dashboa
             </section>
           ) : home.size === 0 ? (
             <p className="mt-5 lg:mt-6 text-base leading-relaxed text-ink">
-              There are no mock test questions for {home.categoryName} yet. Please check back soon.
+              There are no mock test questions for {home.testTypeName} yet. Please check back soon.
             </p>
           ) : (
             <>
@@ -70,7 +70,7 @@ export default async function MockTestPage({ searchParams }: PageProps<"/dashboa
               {home.size < MOCK_QUESTIONS && (
                 <p className="mt-3 text-base leading-relaxed text-muted">
                   A full mock test has {MOCK_QUESTIONS} questions. This one is shorter because there are only {home.size} mock test
-                  questions for {home.categoryName} so far.
+                  questions for {home.testTypeName} so far.
                 </p>
               )}
               {/* Open until the first test is taken. */}

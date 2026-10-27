@@ -58,7 +58,7 @@ export async function deleteMedia(_prevState: MediaActionState, formData: FormDa
 
   let paths: string[];
   try {
-    // Pages, questions and category covers reference media with ON DELETE RESTRICT, so an in-use picture fails here.
+    // Pages, questions and test type covers reference media with ON DELETE RESTRICT, so an in-use picture fails here.
     const deleted = await withTransaction(async (client) => {
       const { rows } = await client.query<{ storage_path: string; thumb_path: string; original_name: string }>(
         `delete from media where id = $1 returning storage_path, thumb_path, original_name`,

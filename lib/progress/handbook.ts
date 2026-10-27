@@ -6,7 +6,7 @@ import { checkAnswer, isOversizedResponse } from "@/lib/questions/check";
 import type { QuestionType } from "@/lib/questions/types";
 import { recordQuestionResult } from "./question-results";
 
-// Candidate progress in the Handbook of their current category. Not activity-log data (agreed 1 Oct).
+// Candidate progress in the Handbook of their current test type. Not activity-log data (agreed 1 Oct).
 
 // Most items a browser may report in one save; one view shows at most two pages.
 export const DONE_BATCH_LIMIT = 100;
@@ -16,68 +16,68 @@ export const DONE_BATCH_LIMIT = 100;
 async function addDone(
   db: Pick<PoolClient, "query">,
   userId: string,
-  categoryId: string,
+  testTypeId: string,
   rows: { chapterId: string; itemIds: string[] }[]
 ) {
   if (rows.length === 0) return;
   await db.query(
-    `insert into handbook_chapter_progress (user_id, category_id, chapter_id, done_items, updated_at)
+    `insert into handbook_chapter_progress (user_id, test_type_id, chapter_id, done_items, updated_at)
      select $1, $2, r.chapter_id, r.item_ids, now()
      from jsonb_to_recordset($3::jsonb) as r (chapter_id uuid, item_ids uuid[])
-     on conflict (user_id, category_id, chapter_id) do update
+     on conflict (user_id, test_type_id, chapter_id) do update
        set done_items = array(
              select distinct x from unnest(handbook_chapter_progress.done_items || excluded.done_items) as x
              where exists (select 1 from handbook_items i where i.id = x and i.chapter_id = excluded.chapter_id)
            ),
            updated_at = excluded.updated_at
        where not (excluded.done_items <@ handbook_chapter_progress.done_items)`,
-    [userId, categoryId, JSON.stringify(rows.map((row) => ({ chapter_id: row.chapterId, item_ids: row.itemIds })))]
+    [userId, testTypeId, JSON.stringify(rows.map((row) => ({ chapter_id: row.chapterId, item_ids: row.itemIds })))]
   );
 }
 
 // Content pages the candidate has seen to the end. Anything not a published page of their current book
-// is ignored, and so is all of it once they've switched away from categoryId.
-export async function markPagesDone(userId: string, categoryId: string, itemIds: string[]): Promise<void> {
+// is ignored, and so is all of it once they've switched away from testTypeId.
+export async function markPagesDone(userId: string, testTypeId: string, itemIds: string[]): Promise<void> {
   if (itemIds.length === 0) return;
-  const { rows } = await pool.query<{ category_id: string; chapter_id: string; item_ids: string[] }>(
-    `select u.current_category_id as category_id, i.chapter_id, array_agg(i.id) as item_ids
+  const { rows } = await pool.query<{ test_type_id: string; chapter_id: string; item_ids: string[] }>(
+    `select u.current_test_type_id as test_type_id, i.chapter_id, array_agg(i.id) as item_ids
      from users u
      join handbook_items i on i.id = any($2::uuid[])
      join chapters ch on ch.id = i.chapter_id and ch.status = 'published'
-     join category_chapters cc on cc.chapter_id = ch.id and cc.category_id = u.current_category_id
+     join test_type_chapters cc on cc.chapter_id = ch.id and cc.test_type_id = u.current_test_type_id
      join content_pages p on p.id = i.content_page_id and p.status = 'published'
-     where u.id = $1 and u.role = 'candidate' and u.current_category_id = $3
-     group by u.current_category_id, i.chapter_id`,
-    [userId, itemIds, categoryId]
+     where u.id = $1 and u.role = 'candidate' and u.current_test_type_id = $3
+     group by u.current_test_type_id, i.chapter_id`,
+    [userId, itemIds, testTypeId]
   );
   if (rows.length === 0) return;
   await addDone(
     pool,
     userId,
-    rows[0].category_id,
+    rows[0].test_type_id,
     rows.map((row) => ({ chapterId: row.chapter_id, itemIds: row.item_ids }))
   );
 }
 
 // A Handbook question checked or revealed. The answer is marked here, never trusted from the browser.
-export async function recordHandbookQuestion(userId: string, categoryId: string, itemId: string, outcome: HandbookOutcome): Promise<void> {
+export async function recordHandbookQuestion(userId: string, testTypeId: string, itemId: string, outcome: HandbookOutcome): Promise<void> {
   if (outcome.kind === "check" && isOversizedResponse(outcome.response)) return;
   const { rows } = await pool.query<{
-    category_id: string;
+    test_type_id: string;
     chapter_id: string;
     question_id: string;
     type: QuestionType;
     content: unknown;
     answer: unknown;
   }>(
-    `select u.current_category_id as category_id, i.chapter_id, q.id as question_id, q.type, q.content, q.answer
+    `select u.current_test_type_id as test_type_id, i.chapter_id, q.id as question_id, q.type, q.content, q.answer
      from users u
      join handbook_items i on i.id = $2
      join chapters ch on ch.id = i.chapter_id and ch.status = 'published'
-     join category_chapters cc on cc.chapter_id = ch.id and cc.category_id = u.current_category_id
+     join test_type_chapters cc on cc.chapter_id = ch.id and cc.test_type_id = u.current_test_type_id
      join questions q on q.id = i.question_id and q.status = 'published'
-     where u.id = $1 and u.role = 'candidate' and u.current_category_id = $3`,
-    [userId, itemId, categoryId]
+     where u.id = $1 and u.role = 'candidate' and u.current_test_type_id = $3`,
+    [userId, itemId, testTypeId]
   );
   const row = rows[0];
   if (!row) return;
@@ -92,9 +92,9 @@ export async function recordHandbookQuestion(userId: string, categoryId: string,
   await withTransaction(async (client) => {
     await recordQuestionResult(
       client,
-      { userId, categoryId: row.category_id, questionId: row.question_id },
+      { userId, testTypeId: row.test_type_id, questionId: row.question_id },
       correct === null ? { source: "handbook", kind: "reveal" } : { source: "handbook", kind: "check", correct }
     );
-    await addDone(client, userId, row.category_id, [{ chapterId: row.chapter_id, itemIds: [itemId] }]);
+    await addDone(client, userId, row.test_type_id, [{ chapterId: row.chapter_id, itemIds: [itemId] }]);
   });
 }

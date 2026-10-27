@@ -8,7 +8,7 @@ import { questionRef } from "@/lib/questions/labels";
 import { BANK_PAGE_SIZE, countBankQuestions, countQuestions, listBankQuestions, listChapterOptions, type BankFilters, type BankRow } from "@/lib/questions/queries";
 import { availableQuestionTypes, QUESTION_TYPES } from "@/lib/questions/registry";
 import { isQuestionType, QUESTION_TYPE_KEYS } from "@/lib/questions/types";
-import { loadCategoryGroups } from "@/lib/handbook/categories";
+import { loadTestAreas } from "@/lib/handbook/test-types";
 import { isUuid } from "@/lib/ids";
 import { firstParam } from "@/lib/params";
 import { Badge } from "@/components/admin/badge";
@@ -31,19 +31,19 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
     search: (firstParam(params.q) ?? "").trim().slice(0, 100),
     sectionId: uuidOrNull(firstParam(params.section)),
     chapterId: uuidOrNull(firstParam(params.chapter)),
-    categoryId: uuidOrNull(firstParam(params.category)),
+    testTypeId: uuidOrNull(firstParam(params.testType)),
     type: isQuestionType(typeParam) ? typeParam : null,
     status: statusParam === "draft" || statusParam === "published" ? statusParam : null,
   };
   const isFiltered = Boolean(
-    filters.search || filters.sectionId || filters.chapterId || filters.categoryId || filters.type || filters.status
+    filters.search || filters.sectionId || filters.chapterId || filters.testTypeId || filters.type || filters.status
   );
 
-  const [matching, total, sections, categoryGroups] = await Promise.all([
+  const [matching, total, sections, testAreas] = await Promise.all([
     countBankQuestions(filters),
     countQuestions(),
     listChapterOptions(),
-    loadCategoryGroups(),
+    loadTestAreas(),
   ]);
   const totalLabel = `${total.toLocaleString("en-GB")} question${total === 1 ? "" : "s"}`;
   const page = pageFromParam(firstParam(params.page), matching, BANK_PAGE_SIZE);
@@ -53,7 +53,7 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
     q: filters.search,
     section: filters.sectionId ?? "",
     chapter: filters.chapterId ?? "",
-    category: filters.categoryId ?? "",
+    testType: filters.testTypeId ?? "",
     type: filters.type ?? "",
     status: filters.status ?? "",
   };
@@ -101,15 +101,15 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
               </optgroup>
             ))}
         </FilterSelect>
-        <FilterSelect name="category" label="Category" defaultValue={filters.categoryId ?? ""}>
+        <FilterSelect name="testType" label="Category" defaultValue={filters.testTypeId ?? ""}>
           <option value="">All categories</option>
-          {categoryGroups
-            .filter((group) => group.categories.length > 0)
-            .map((group) => (
-              <optgroup key={group.id} label={group.label}>
-                {group.categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
+          {testAreas
+            .filter((testArea) => testArea.testTypes.length > 0)
+            .map((testArea) => (
+              <optgroup key={testArea.id} label={testArea.label}>
+                {testArea.testTypes.map((testType) => (
+                  <option key={testType.id} value={testType.id}>
+                    {testType.name}
                   </option>
                 ))}
               </optgroup>

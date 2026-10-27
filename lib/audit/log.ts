@@ -6,8 +6,8 @@ import type { ActivityAction, AuthEvent } from "./actions";
 type TargetType =
   | "admin"
   | "candidate"
-  | "category"
-  | "category_group"
+  | "test_type"
+  | "test_area"
   | "section"
   | "chapter"
   | "page"

@@ -48,7 +48,7 @@ export function PracticeRunner({ initialStep, initialTextSize }: { initialStep: 
   }, [step.position]);
 
   // Back to the Practice page, which says why ("empty": ended with nothing answered; "closed": ended
-  // elsewhere, e.g. another tab or a category change).
+  // elsewhere, e.g. another tab or a test type change).
   function leave(why: "empty" | "closed") {
     router.push(`/dashboard/practice?ended=${why}`);
   }

@@ -14,8 +14,8 @@ import { RememberListPlace } from "@/components/admin/list-place";
 import { Cell, Row, Table } from "@/components/admin/table";
 import { NewCandidateButton } from "./create-candidate-form";
 import { AdminCandidateActions, SuperadminCandidateActions } from "./candidate-row-actions";
-import { CategoryOptions } from "./category-options";
-import { loadAdminOptions, loadCategoryChoices } from "./options";
+import { TestTypeOptions } from "./test-type-options";
+import { loadAdminOptions, loadTestTypeChoices } from "./options";
 import { toRowCandidate } from "./row-candidate";
 import { FlashToast } from "@/components/admin/flash-toast";
 import { CandidateStatusBadge } from "./status-badge";
@@ -31,15 +31,15 @@ interface CandidateRow {
   id: string;
   email: string;
   full_name: string | null;
-  category_id: string;
-  category_name: string;
-  current_category_name: string;
+  test_type_id: string;
+  test_type_name: string;
+  current_test_type_name: string;
   admin_id: string;
   admin_email: string;
   admin_name: string | null;
   access_expires_at: string | null;
   is_blocked: boolean;
-  // The latest ended mock test in the current category, if any.
+  // The latest ended mock test in the current test type, if any.
   mock_right: number | null;
   mock_out_of: number | null;
   last_login_at: Date | null;
@@ -57,27 +57,27 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
   const { min: minDate, max: maxDate } = customDateBounds();
 
   const search = (firstParam(params.q) ?? "").trim().slice(0, 100);
-  const categoryFilter = uuidOrNull(firstParam(params.category));
+  const testTypeFilter = uuidOrNull(firstParam(params.testType));
   const statusParam = firstParam(params.status) ?? "";
   const status = (STATUSES as readonly string[]).includes(statusParam) ? (statusParam as Status) : null;
   // Admins are always pinned to their own candidates, whatever the URL says.
   const ownerFilter = isSuperadmin ? uuidOrNull(firstParam(params.admin)) : session.sub;
-  const isFiltered = Boolean(search || categoryFilter || status || (isSuperadmin && ownerFilter));
+  const isFiltered = Boolean(search || testTypeFilter || status || (isSuperadmin && ownerFilter));
 
   // Shared by the count and the page, so both always use the same filters.
   const where = `u.role = 'candidate'
          and ($1::uuid is null or u.admin_id = $1::uuid)
          and ($2::text is null or u.email ilike '%' || $2::text || '%' or u.full_name ilike '%' || $2::text || '%')
-         and ($3::uuid is null or u.category_id = $3::uuid or u.current_category_id = $3::uuid)
+         and ($3::uuid is null or u.test_type_id = $3::uuid or u.current_test_type_id = $3::uuid)
          and ($4::text is null
               or ($4::text = 'blocked' and u.is_blocked)
               or ($4::text = 'expired' and not u.is_blocked and u.access_expires_at <= now())
               or ($4::text = 'active' and not u.is_blocked
                   and (u.access_expires_at is null or u.access_expires_at > now())))`;
-  const filterValues = [ownerFilter, search ? escapeLike(search) : null, categoryFilter, status];
-  const [{ rows: counted }, categories, admins] = await Promise.all([
+  const filterValues = [ownerFilter, search ? escapeLike(search) : null, testTypeFilter, status];
+  const [{ rows: counted }, testTypes, admins] = await Promise.all([
     pool.query<{ total: number }>(`select count(*)::int as total from users u where ${where}`, filterValues),
-    loadCategoryChoices(),
+    loadTestTypeChoices(),
     isSuperadmin ? loadAdminOptions() : Promise.resolve([]),
   ]);
   const total = counted[0].total;
@@ -86,17 +86,17 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
   // A test left to run out of time shows as the last mock straight away: such tests on this page end first.
   const loadPage = () =>
     pool.query<CandidateRow>(
-      `select u.id, u.email, u.full_name, u.category_id, c.name as category_name, cc.name as current_category_name,
+      `select u.id, u.email, u.full_name, u.test_type_id, c.name as test_type_name, cc.name as current_test_type_name,
               u.admin_id, a.email as admin_email, a.full_name as admin_name, u.access_expires_at, u.is_blocked,
               lm.right_count as mock_right, lm.out_of as mock_out_of, ${LAST_LOGIN_SQL} as last_login_at,
               exists (select 1 from mock_attempts a where a.user_id = u.id and ${STALE_MOCK_SQL}) as stale_mock
        from users u
-       join categories c on c.id = u.category_id
-       join categories cc on cc.id = u.current_category_id
+       join test_types c on c.id = u.test_type_id
+       join test_types cc on cc.id = u.current_test_type_id
        join users a on a.id = u.admin_id
        left join lateral (
          select m.right_count, m.out_of from mock_attempts m
-         where m.user_id = u.id and m.ended_at is not null and m.category_id = u.current_category_id
+         where m.user_id = u.id and m.ended_at is not null and m.test_type_id = u.current_test_type_id
          order by m.ended_at desc limit 1
        ) lm on true
        where ${where}
@@ -117,7 +117,7 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
   const countLabel = `${total.toLocaleString("en-GB")} candidate${total === 1 ? "" : "s"}`;
   const query: Record<string, string> = {
     q: search,
-    category: categoryFilter ?? "",
+    testType: testTypeFilter ?? "",
     status: status ?? "",
     admin: isSuperadmin ? (ownerFilter ?? "") : "",
   };
@@ -132,7 +132,7 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
         actions={
           !isSuperadmin && (
             <NewCandidateButton
-              categories={categories}
+              testTypes={testTypes}
               minDate={minDate}
               maxDate={maxDate}
             />
@@ -142,9 +142,9 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
 
       <FilterBar action="/admin/candidates" clearHref="/admin/candidates" isFiltered={isFiltered}>
         <FilterSearch name="q" label="Search by name or email" defaultValue={search} />
-        <FilterSelect name="category" label="Category" defaultValue={categoryFilter ?? ""}>
+        <FilterSelect name="testType" label="Category" defaultValue={testTypeFilter ?? ""}>
           <option value="">All categories</option>
-          <CategoryOptions categories={categories} />
+          <TestTypeOptions testTypes={testTypes} />
         </FilterSelect>
         <FilterSelect name="status" label="Status" defaultValue={status ?? ""}>
           <option value="">All statuses</option>
@@ -177,9 +177,9 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
             id: candidate.id,
             email: candidate.email,
             name: candidate.full_name,
-            categoryId: candidate.category_id,
-            categoryName: candidate.category_name,
-            currentCategoryName: candidate.current_category_name,
+            testTypeId: candidate.test_type_id,
+            testTypeName: candidate.test_type_name,
+            currentTestTypeName: candidate.current_test_type_name,
             adminId: candidate.admin_id,
             isBlocked: candidate.is_blocked,
             accessExpiresAt: expiresAt,
@@ -191,9 +191,9 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
                 <PersonLabel name={candidate.full_name} email={candidate.email} href={candidateProgressPath(candidate.id)} />
               </Cell>
               <Cell label="Category">
-                {candidate.current_category_name}
-                {candidate.current_category_name !== candidate.category_name && (
-                  <span className="block text-xs text-slate-600">Assigned: {candidate.category_name}</span>
+                {candidate.current_test_type_name}
+                {candidate.current_test_type_name !== candidate.test_type_name && (
+                  <span className="block text-xs text-slate-600">Assigned: {candidate.test_type_name}</span>
                 )}
               </Cell>
               {isSuperadmin && (
@@ -226,7 +226,7 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
                 ) : (
                   <AdminCandidateActions
                     candidate={rowCandidate}
-                    categories={categories}
+                    testTypes={testTypes}
                     minDate={minDate}
                     maxDate={maxDate}
                   />
