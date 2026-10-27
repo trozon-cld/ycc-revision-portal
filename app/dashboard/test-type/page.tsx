@@ -26,6 +26,8 @@ export default async function ChangeTestTypePage({ searchParams }: PageProps<"/d
     loadPracticeInProgress(session.sub),
   ]);
   if (testTypes.length === 0) redirect(SESSION_ENDED_LOGIN);
+  // Nothing to switch to (e.g. Operative is alone in General): the page is hidden, as its button is.
+  if (testTypes.length === 1) redirect("/dashboard");
 
   const params = await searchParams;
   const errorKey = Array.isArray(params.error) ? params.error[0] : params.error;
