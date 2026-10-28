@@ -76,3 +76,16 @@ export function parseQuestion(raw: unknown): QuestionParseResult {
     },
   };
 }
+
+// What candidates see: a change here raises the version. Chapter and usage are tracked separately.
+export function questionFingerprint(question: QuestionData): string {
+  return JSON.stringify([
+    question.stemText,
+    question.stemMediaId,
+    question.stemMediaSize,
+    question.stemMediaAlign,
+    question.content,
+    question.answer,
+    question.explanation,
+  ]);
+}

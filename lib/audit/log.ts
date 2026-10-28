@@ -17,7 +17,8 @@ type TargetType =
   | "language"
   | "support_contact"
   | "account"
-  | "log_archive";
+  | "log_archive"
+  | "batch";
 type Details = Record<string, string>;
 
 export function ipFromHeaders(requestHeaders: Headers): string | null {

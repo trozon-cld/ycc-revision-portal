@@ -21,6 +21,10 @@ export type CheckReport = {
   pages: ChangeCounts;
   questions: ChangeCounts;
   pictures: ChangeCounts;
+  // Each picture the items use, by its file name in the batch, and what importing would do with it.
+  pictureChanges: { file: string; change: Change }[];
+  // Published pages and questions the import would change (they stay published, so the change shows at once).
+  publishedChanges: number;
   errors: BatchIssue[];
   notes: BatchIssue[];
   skipped: Batch["skipped"];
@@ -35,7 +39,7 @@ const fakeId = (group: number, position: number) => `00000000-0000-4000-8000-${(
 
 export async function checkBatch(db: Db, raw: unknown, files: PictureFileInfo[]): Promise<CheckReport> {
   const report: CheckReport = {
-    ok: false, batchName: "", chapters: [], pages: zero(), questions: zero(), pictures: zero(), errors: [], notes: [], skipped: [], moreErrors: 0, moreNotes: 0,
+    ok: false, batchName: "", chapters: [], pages: zero(), questions: zero(), pictures: zero(), pictureChanges: [], publishedChanges: 0, errors: [], notes: [], skipped: [], moreErrors: 0, moreNotes: 0,
   };
   const error = (issue: BatchIssue) => (report.errors.length < MAX_REPORTED_ISSUES ? report.errors.push(issue) : report.moreErrors++);
   const note = (issue: BatchIssue) => (report.notes.length < MAX_REPORTED_ISSUES ? report.notes.push(issue) : report.moreNotes++);
@@ -106,12 +110,12 @@ export async function checkBatch(db: Db, raw: unknown, files: PictureFileInfo[])
   const keys = items.map(({ item }) => item.key);
   const existingQuestions = await db.query<QuestionRow>(
     `select q.id, q.source_key, q.chapter_id, q.type, q.stem_text, q.stem_media_id, q.stem_media_size, q.stem_media_align, q.content, q.answer,
-            q.explanation, q.in_practice, q.in_mock
+            q.explanation, q.in_practice, q.in_mock, q.status
      from questions q
      where q.source_key = any($1::varchar[])`,
     [keys]
   );
-  const existingPages = await db.query<PageRow>(`select id, source_key, chapter_id, title, blocks from content_pages where source_key = any($1::varchar[])`, [keys]);
+  const existingPages = await db.query<PageRow>(`select id, source_key, chapter_id, title, blocks, status from content_pages where source_key = any($1::varchar[])`, [keys]);
   const existingMedia = await db.query<{ id: string; name: string | null; sha256: string | null }>(
     `select id, lower(source_name) as name, source_sha256 as sha256 from media where lower(source_name) = any($1::varchar[])`,
     [[...used]]
@@ -150,6 +154,7 @@ export async function checkBatch(db: Db, raw: unknown, files: PictureFileInfo[])
       else if (parsed.ok) {
         const same = existing.title === title && sameJson(pageShape(parsed.blocks, (id) => nameOfFake.get(id)), pageShape(storedBlocks(existing.blocks), (id) => nameOfStored.get(id)));
         report.pages[same ? "same" : "update"]++;
+        if (!same && existing.status === "published") report.publishedChanges++;
       }
       continue;
     }
@@ -163,7 +168,9 @@ export async function checkBatch(db: Db, raw: unknown, files: PictureFileInfo[])
     else if (parsed.ok) {
       const batchShape = questionShape(parsed.question, (id) => nameOfFake.get(id), item.inPractice, item.inMock);
       const storedShape = questionShape(storedQuestion(existing), (id) => nameOfStored.get(id), existing.in_practice, existing.in_mock);
-      report.questions[sameJson(batchShape, storedShape) ? "same" : "update"]++;
+      const same = sameJson(batchShape, storedShape);
+      report.questions[same ? "same" : "update"]++;
+      if (!same && existing.status === "published") report.publishedChanges++;
     }
   }
 
@@ -172,11 +179,12 @@ export async function checkBatch(db: Db, raw: unknown, files: PictureFileInfo[])
   for (const name of used) {
     const stored = storedByName.get(name);
     const sha = fileByName.get(name)?.sha256 ?? null;
-    if (!stored) report.pictures.new++;
-    else if (stored.sha256 && sha && stored.sha256 === sha) report.pictures.same++;
-    else {
-      report.pictures.update++;
-      note(general(`The picture ${name} is already in the portal and would be replaced by the new file wherever it's used.`));
+    const file = batch.pictures.find((picture) => picture.file.toLowerCase() === name)?.file ?? name;
+    const change: Change = !stored ? "new" : stored.sha256 && sha && stored.sha256 === sha ? "same" : "update";
+    report.pictures[change]++;
+    report.pictureChanges.push({ file, change });
+    if (change === "update") {
+      note(general(`The picture ${file} is already in the portal and would be replaced by the new file wherever it's used.`));
     }
   }
 
@@ -195,7 +203,7 @@ export async function checkBatch(db: Db, raw: unknown, files: PictureFileInfo[])
   report.chapters = batch.chapters.map((chapter) => {
     const id = chapterIdOf.get(chapter.chapter);
     const notInBatch = id ? (otherCount.get(id) ?? 0) : 0;
-    if (notInBatch > 0) note(general(`${notInBatch} item${notInBatch === 1 ? "" : "s"} in "${chapter.chapter}" ${notInBatch === 1 ? "isn't" : "aren't"} in this batch and will be left as ${notInBatch === 1 ? "it is" : "they are"}.`));
+    if (notInBatch > 0) note(general(`${notInBatch} item${notInBatch === 1 ? "" : "s"} in "${chapter.chapter}" ${notInBatch === 1 ? "isn't" : "aren't"} in this batch; ${notInBatch === 1 ? "it stays" : "they stay"} where ${notInBatch === 1 ? "it is" : "they are"}.`));
     return { name: chapter.chapter, found: Boolean(id), items: chapter.items.length, notInBatch };
   });
   report.ok = report.errors.length === 0 && report.moreErrors === 0;
@@ -204,9 +212,9 @@ export async function checkBatch(db: Db, raw: unknown, files: PictureFileInfo[])
 
 type QuestionRow = {
   id: string; source_key: string; chapter_id: string; type: string; stem_text: string; stem_media_id: string | null; stem_media_size: string | null;
-  stem_media_align: string | null; content: unknown; answer: unknown; explanation: string | null; in_practice: boolean; in_mock: boolean;
+  stem_media_align: string | null; content: unknown; answer: unknown; explanation: string | null; in_practice: boolean; in_mock: boolean; status: string;
 };
-type PageRow = { id: string; source_key: string; chapter_id: string; title: string; blocks: unknown };
+type PageRow = { id: string; source_key: string; chapter_id: string; title: string; blocks: unknown; status: string };
 type Shaped = { type: string; stemText: string; stemMediaId: string | null; stemMediaSize: string | null; stemMediaAlign: string | null; content: unknown; answer: unknown; explanation: string | null };
 
 const storedQuestion = (row: QuestionRow): Shaped => ({

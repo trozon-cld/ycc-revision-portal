@@ -1,6 +1,7 @@
 // The bulk upload batch (content.json): its shape, read from untrusted JSON. Pure, safe in the browser and on the server.
 
 import { isRecord } from "@/lib/text";
+import { MAX_BATCH_PICTURES } from "./limits";
 
 export const BATCH_FORMAT = "ycc-content";
 export const BATCH_VERSION = 1;
@@ -178,4 +179,18 @@ function readItem(raw: unknown, issues: BatchIssue[]): BatchItem | null {
 export function picturesOf(item: BatchItem): string[] {
   if (item.kind === "page") return item.blocks.filter((block) => block.type === "picture" && typeof block.picture === "string").map((block) => block.picture as string);
   return [...(item.picture ? [item.picture.file] : []), ...item.options.flatMap((option) => (option.picture ? [option.picture] : []))];
+}
+
+// The browser's findings about each picture file (untrusted), kept to what the check uses; null if malformed.
+export function readPictureList(value: unknown): PictureFileInfo[] | null {
+  if (!Array.isArray(value) || value.length > MAX_BATCH_PICTURES * 2) return null;
+  const files: PictureFileInfo[] = [];
+  for (const raw of value) {
+    if (!isRecord(raw) || typeof raw.name !== "string" || !raw.name || raw.name.length > 255) return null;
+    const sha256 = typeof raw.sha256 === "string" && /^[0-9a-f]{64}$/.test(raw.sha256) ? raw.sha256 : null;
+    const bytes = typeof raw.bytes === "number" && raw.bytes >= 0 ? raw.bytes : 0;
+    const error = typeof raw.error === "string" && raw.error ? raw.error.slice(0, 200) : null;
+    files.push({ name: raw.name, sha256, bytes, error });
+  }
+  return files;
 }

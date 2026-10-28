@@ -26,42 +26,56 @@ export async function saveUpload(session: SessionPayload, formData: FormData): P
   if (altError) return { error: altError };
 
   const originalName = cleanLine(formData.get("originalName")).slice(0, MAX_NAME_LENGTH) || "picture";
-  const main = await readUpload(formData.get("file"), MAX_UPLOAD_BYTES);
-  if ("error" in main) return { error: main.error };
-  const thumb = await readUpload(formData.get("thumb"), MAX_THUMB_BYTES);
-  if ("error" in thumb) return { error: "The preview image couldn't be prepared. Please choose the picture again." };
-  if ((await storedBytes()) + main.file.size + thumb.file.size > STORAGE_LIMIT_BYTES) return { error: STORAGE_FULL };
-
+  const upload = await readPreparedUpload(formData);
+  if ("error" in upload) return { error: upload.error };
   const id = crypto.randomUUID();
-  const storagePath = `media/${id}.${EXTENSION_BY_MIME[main.info.mime]}`;
-  const thumbPath = `media/${id}-thumb.${EXTENSION_BY_MIME[thumb.info.mime]}`;
-
-  try {
-    await storeObject(storagePath, main.file, main.info.mime);
-    await storeObject(thumbPath, thumb.file, thumb.info.mime);
-  } catch (error) {
-    await deleteQuietly([storagePath, thumbPath]);
-    if (error instanceof StorageConfigError) return { error: NOT_CONFIGURED };
-    console.error("Media upload failed", error);
-    return { error: "The picture couldn't be uploaded. Please try again." };
-  }
+  const stored = await storePictureFiles(id, upload);
+  if ("error" in stored) return { error: stored.error };
 
   try {
     await withTransaction(async (client) => {
       await client.query(
         `insert into media (id, storage_path, thumb_path, original_name, mime_type, width, height, byte_size, alt_text, uploaded_by)
          values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-        [id, storagePath, thumbPath, originalName, main.info.mime, main.info.width, main.info.height, main.file.size, altText, session.sub]
+        [id, stored.storagePath, stored.thumbPath, originalName, upload.main.info.mime, upload.main.info.width, upload.main.info.height, upload.main.file.size, altText, session.sub]
       );
       await logActivity(client, session, "media.uploaded", { type: "media", id, label: originalName });
     });
   } catch (error) {
-    await deleteQuietly([storagePath, thumbPath]);
+    await deleteQuietly([stored.storagePath, stored.thumbPath]);
     throw error;
   }
 
   revalidatePath(MEDIA_PAGE_PATH);
   return { success: true, mediaId: id };
+}
+
+// The picture and its small copy from an upload form (prepared in the browser), checked again as files.
+export type PreparedUpload = { main: { file: File; info: ImageInfo }; thumb: { file: File; info: ImageInfo } };
+
+export async function readPreparedUpload(formData: FormData): Promise<PreparedUpload | { error: string }> {
+  const main = await readUpload(formData.get("file"), MAX_UPLOAD_BYTES);
+  if ("error" in main) return { error: main.error };
+  const thumb = await readUpload(formData.get("thumb"), MAX_THUMB_BYTES);
+  if ("error" in thumb) return { error: "The preview image couldn't be prepared. Please choose the picture again." };
+  return { main, thumb };
+}
+
+// Stores both files under `fileId` once there's room; if either fails, neither is left in storage.
+export async function storePictureFiles(fileId: string, upload: PreparedUpload): Promise<{ storagePath: string; thumbPath: string } | { error: string }> {
+  if ((await storedBytes()) + upload.main.file.size + upload.thumb.file.size > STORAGE_LIMIT_BYTES) return { error: STORAGE_FULL };
+  const storagePath = `media/${fileId}.${EXTENSION_BY_MIME[upload.main.info.mime]}`;
+  const thumbPath = `media/${fileId}-thumb.${EXTENSION_BY_MIME[upload.thumb.info.mime]}`;
+  try {
+    await storeObject(storagePath, upload.main.file, upload.main.info.mime);
+    await storeObject(thumbPath, upload.thumb.file, upload.thumb.info.mime);
+  } catch (error) {
+    await deleteQuietly([storagePath, thumbPath]);
+    if (error instanceof StorageConfigError) return { error: NOT_CONFIGURED };
+    console.error("Media upload failed", error);
+    return { error: "The picture couldn't be uploaded. Please try again." };
+  }
+  return { storagePath, thumbPath };
 }
 
 type ReadUpload = { file: File; info: ImageInfo } | { error: string };

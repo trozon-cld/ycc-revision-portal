@@ -456,6 +456,7 @@ function describeDetails(details: Record<string, string>): string | null {
   if (testArea) parts.push(`Test area: ${testArea}`);
   if (details.section) parts.push(`Section: ${details.section}`);
   if (details.chapter) parts.push(`Chapter: ${details.chapter}`);
+  if (details.chapters) parts.push(`Chapters: ${details.chapters}`);
   if (details.language) parts.push(`Language: ${details.language}`);
   if (details.pageVersion) parts.push(`From page ${details.pageVersion.toLowerCase()}`);
   if (details.length) parts.push(`Length: ${details.length}`);
@@ -478,6 +479,7 @@ function describeDetails(details: Record<string, string>): string | null {
   if (details.frontCover) parts.push(`Front cover: ${details.frontCover}`);
   if (details.backCover) parts.push(`Back cover: ${details.backCover}`);
   if (details.accessUntil) parts.push(`Access until ${details.accessUntil}`);
+  if (details.source) parts.push(details.source);
   if (details.records) parts.push(`${details.records} record${details.records === "1" ? "" : "s"}`);
   return parts.length > 0 ? parts.join(" · ") : null;
 }

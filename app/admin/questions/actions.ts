@@ -9,7 +9,7 @@ import { logActivity } from "@/lib/audit/log";
 import { questionLogLabel } from "@/lib/questions/labels";
 import { readQuestionForUpdate } from "@/lib/questions/queries";
 import { questionTypeLabel } from "@/lib/questions/registry";
-import { parseQuestion, type ParsedQuestion } from "@/lib/questions/validate";
+import { parseQuestion, questionFingerprint } from "@/lib/questions/validate";
 import { isUuid } from "@/lib/ids";
 import { deleteAudioFilesQuietly } from "@/lib/voice/audio-files";
 import { questionAudioPaths } from "@/lib/voice/question-voice";
@@ -129,7 +129,7 @@ export async function saveQuestion(input: QuestionSaveInput): Promise<QuestionSa
       if (!(await picturesExist(client, question.mediaIds))) return { ok: false, error: PICTURE_GONE };
 
       const before = parseQuestion(stored);
-      const contentChanged = !before.ok || fingerprint(before.question) !== fingerprint(question);
+      const contentChanged = !before.ok || questionFingerprint(before.question) !== questionFingerprint(question);
       const usageChanged = stored.inPractice !== input.inPractice || stored.inMock !== input.inMock;
       if (!contentChanged && !usageChanged && !chapterChanged) return { ok: true, id: questionId, version: stored.version };
 
@@ -286,18 +286,6 @@ async function writeMediaLinks(client: PoolClient, questionId: string, mediaIds:
   }
 }
 
-// What candidates see: a change here raises the version. Chapter and usage are tracked separately.
-function fingerprint(question: ParsedQuestion): string {
-  return JSON.stringify([
-    question.stemText,
-    question.stemMediaId,
-    question.stemMediaSize,
-    question.stemMediaAlign,
-    question.content,
-    question.answer,
-    question.explanation,
-  ]);
-}
 
 type Usage = { inPractice: boolean; inMock: boolean };
 

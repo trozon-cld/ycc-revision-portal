@@ -53,6 +53,11 @@ export async function openBatchZip(file: File): Promise<OpenedBatch> {
   return { ok: true, content, files, pictures };
 }
 
+// The picture's type from its first bytes (file names can't be trusted); null if not a PNG, JPEG or WebP.
+export function pictureType(data: Uint8Array): string | null {
+  return KINDS.find((candidate) => candidate.test(data))?.type ?? null;
+}
+
 async function pictureError(data: Uint8Array): Promise<string | null> {
   const kind = KINDS.find((candidate) => candidate.test(data));
   if (!kind) return "Not a PNG, JPEG or WebP picture.";
