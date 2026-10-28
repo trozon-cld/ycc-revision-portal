@@ -1,6 +1,7 @@
 import type { PoolClient } from "pg";
 import { pool } from "@/lib/db/pool";
 import { chapterNumber, sectionLetter } from "@/lib/handbook/structure";
+import { sourceSearchPattern } from "@/lib/content/import/format";
 import { escapeLike } from "@/lib/db/like";
 import { parseQuestionRef } from "./labels";
 import type { QuestionStatus, QuestionType, StoredQuestion } from "./types";
@@ -49,12 +50,13 @@ const BANK_WHERE = `
     and ($2::uuid is null or q.chapter_id = $2)
     and ($3::text is null or q.type = $3)
     and ($4::content_status is null or q.status = $4)
-    and ($5 = '' or q.stem_text ilike '%' || $5 || '%' escape '\\' or q.ref_no = $6::int)
+    and ($5 = '' or q.stem_text ilike '%' || $5 || '%' escape '\\' or q.ref_no = $6::int or q.source_key ~* $8::text)
     and ($7::uuid is null or exists (select 1 from test_type_chapters cc where cc.test_type_id = $7 and cc.chapter_id = q.chapter_id))`;
 
 function bankValues(filters: BankFilters) {
   const search = filters.search.trim().slice(0, 100);
-  return [filters.sectionId, filters.chapterId, filters.type, filters.status, escapeLike(search), search ? parseQuestionRef(search) : null, filters.testTypeId];
+  return [filters.sectionId, filters.chapterId, filters.type, filters.status, escapeLike(search), search ? parseQuestionRef(search) : null, filters.testTypeId,
+    sourceSearchPattern(search)];
 }
 
 export async function countBankQuestions(filters: BankFilters): Promise<number> {
@@ -90,7 +92,7 @@ export async function listBankQuestions(filters: BankFilters, page: number): Pro
      left join numbered hn on hn.id = hi.chapter_id
      ${BANK_WHERE}
      order by n.section_position, n.position, q.ref_no
-     limit $8 offset $9`,
+     limit $9 offset $10`,
     [...bankValues(filters), BANK_PAGE_SIZE, (page - 1) * BANK_PAGE_SIZE]
   );
   return rows.map((row) => ({

@@ -21,7 +21,7 @@ export function normaliseTitle(value: FormDataEntryValue | string | null | undef
   return cleanLine(value);
 }
 
-export function validateTitle(title: string, noun: "Section" | "Chapter"): string | null {
+export function validateTitle(title: string, noun: "Section" | "Chapter" | "Page"): string | null {
   if (!title) return `${noun} title is required.`;
   if (title.length > TITLE_MAX_LENGTH) return `${noun} title must be ${TITLE_MAX_LENGTH} characters or fewer.`;
   return null;

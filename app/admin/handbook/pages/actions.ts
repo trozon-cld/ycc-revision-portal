@@ -16,8 +16,7 @@ import { isUuid } from "@/lib/ids";
 import { deleteAudioFilesQuietly } from "@/lib/voice/audio-files";
 import { pageAudioPaths } from "@/lib/voice/page-audio";
 import { escapeLike } from "@/lib/db/like";
-import { TITLE_MAX_LENGTH } from "@/lib/limits";
-import { lockHandbookOrder, normaliseTitle } from "@/lib/handbook/structure";
+import { lockHandbookOrder, normaliseTitle, validateTitle } from "@/lib/handbook/structure";
 import type { FormState } from "@/lib/forms";
 
 export type PageActionState = FormState;
@@ -31,7 +30,7 @@ export async function createPage(_prev: PageActionState, formData: FormData): Pr
 
   const chapterId = String(formData.get("chapterId") ?? "");
   const title = normaliseTitle(formData.get("title"));
-  const invalid = validateTitle(title);
+  const invalid = validateTitle(title, "Page");
   if (invalid) return { error: invalid };
   if (!isUuid(chapterId)) return { error: "This chapter no longer exists." };
 
@@ -71,7 +70,7 @@ export async function renamePage(_prev: PageActionState, formData: FormData): Pr
 
   const pageId = String(formData.get("pageId") ?? "");
   const title = normaliseTitle(formData.get("title"));
-  const invalid = validateTitle(title);
+  const invalid = validateTitle(title, "Page");
   if (invalid) return { error: invalid };
   if (!isUuid(pageId)) return { error: NOT_FOUND };
 
@@ -192,7 +191,7 @@ export async function savePageContent(input: {
   if (!isUuid(pageId) || !Number.isInteger(expectedVersion)) return { ok: false, error: NOT_FOUND };
 
   const title = normaliseTitle(input.title);
-  const invalidTitle = validateTitle(title);
+  const invalidTitle = validateTitle(title, "Page");
   if (invalidTitle) return { ok: false, error: invalidTitle };
 
   const parsed = parseBlocks(input.blocks);
@@ -314,8 +313,3 @@ export async function getPreviewMedia(mediaIds: string[]): Promise<ResolvedMedia
   }
 }
 
-function validateTitle(title: string): string | null {
-  if (!title) return "Page title is required.";
-  if (title.length > TITLE_MAX_LENGTH) return `Page title must be ${TITLE_MAX_LENGTH} characters or fewer.`;
-  return null;
-}

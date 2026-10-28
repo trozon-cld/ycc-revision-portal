@@ -76,6 +76,9 @@ export default async function HandbookPage() {
             <Link href="/admin/handbook/languages" className={buttonClass("secondary")}>
               Languages and audio
             </Link>
+            <Link href="/admin/handbook/upload" className={buttonClass("secondary")}>
+              Upload content
+            </Link>
             <NewSectionButton />
             <NewChapterButton sections={sectionOptions} testAreas={testAreas} />
           </>

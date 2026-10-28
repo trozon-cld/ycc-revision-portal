@@ -13,6 +13,7 @@
     "@breezystack/lamejs": "1.2.7",
     "@phosphor-icons/react": "^2.1.10",
     "bcryptjs": "^2.4.3",
+    "fflate": "0.8.2",
     "jose": "^5.9.6",
     "next": "16.3.5",
     "pg": "^8.13.1",

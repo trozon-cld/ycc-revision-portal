@@ -78,7 +78,7 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
       />
 
       <FilterBar action="/admin/questions" clearHref="/admin/questions" isFiltered={isFiltered}>
-        <FilterSearch name="q" label="Search question text or ID" defaultValue={filters.search} />
+        <FilterSearch name="q" label="Search question text, ID or source page" defaultValue={filters.search} />
         <FilterSelect name="section" label="Section" defaultValue={filters.sectionId ?? ""}>
           <option value="">All sections</option>
           {sections.map((section) => (

@@ -43,6 +43,7 @@ type SaveProblem = { message: string; conflict?: boolean } | null;
 export function QuestionEditor({
   questionId,
   refLabel,
+  source = null,
   type,
   initial,
   initialVersion,
@@ -57,6 +58,8 @@ export function QuestionEditor({
 }: {
   questionId: string | null;
   refLabel: string | null;
+  // Where a bulk-uploaded question came from, e.g. "A–D PDF p12"; null for questions made here.
+  source?: string | null;
   type: QuestionType;
   initial: QuestionDraft;
   initialVersion: number | null;
@@ -216,7 +219,10 @@ export function QuestionEditor({
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3 md:sticky md:top-14 md:z-10 md:[@media(max-height:500px)]:top-0 md:-mx-6 md:border-b md:border-slate-200 md:bg-slate-50/95 md:px-6 md:py-3 md:backdrop-blur lg:top-0 lg:-mx-8 lg:px-8">
         <div className="min-w-0">
           <h1 className="text-xl font-semibold text-ink">{refLabel ? `Question ${refLabel}` : "New question"}</h1>
-          <p className="mt-0.5 text-sm text-slate-600">{questionTypeLabel(type)}</p>
+          <p className="mt-0.5 text-sm text-slate-600">
+            {questionTypeLabel(type)}
+            {source && ` · Source: ${source}`}
+          </p>
         </div>
         <div
           data-editor-bar

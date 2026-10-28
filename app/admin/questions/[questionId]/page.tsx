@@ -7,6 +7,7 @@ import { pool } from "@/lib/db/pool";
 import type { ResolvedMedia } from "@/lib/content/book";
 import { resolveMedia } from "@/lib/content/pages";
 import { chapterNumber } from "@/lib/handbook/structure";
+import { sourceLabel } from "@/lib/content/import/format";
 import { questionRef } from "@/lib/questions/labels";
 import { listChapterOptions } from "@/lib/questions/queries";
 import type { QuestionStatus, QuestionType } from "@/lib/questions/types";
@@ -42,11 +43,12 @@ export default async function EditQuestionPage({ params }: PageProps<"/admin/que
     in_practice: boolean;
     in_mock: boolean;
     content_version: number;
+    source_key: string | null;
     book_chapter: number | null;
   }>(
     `select q.id, q.ref_no, q.chapter_id, q.type, q.status, q.stem_text, q.stem_media_id, q.stem_media_size,
             q.stem_media_align, q.content, q.answer,
-            q.explanation, q.in_practice, q.in_mock, q.content_version,
+            q.explanation, q.in_practice, q.in_mock, q.content_version, q.source_key,
             (select n.number from handbook_items hi
                join (select c.id, row_number() over (order by s.position, c.position)::int as number
                      from chapters c join sections s on s.id = c.section_id) n on n.id = hi.chapter_id
@@ -90,6 +92,7 @@ export default async function EditQuestionPage({ params }: PageProps<"/admin/que
     <QuestionEditor
       questionId={question.id}
       refLabel={questionRef(question.ref_no)}
+      source={question.source_key ? sourceLabel(question.source_key) : null}
       type={question.type}
       initial={{
         chapterId: question.chapter_id,
