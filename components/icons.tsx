@@ -1,6 +1,7 @@
 // Every icon in the app comes from here: Phosphor Icons (MIT licence, phosphoricons.com), server-safe build.
 // Line icons normally ("bold" on candidate pages, "regular" in the staff console); "fill" for selected or on.
 import type { IconWeight } from "@phosphor-icons/react/dist/lib/types";
+import { ArchiveIcon } from "@phosphor-icons/react/dist/ssr/Archive";
 import { ArrowCounterClockwiseIcon } from "@phosphor-icons/react/dist/ssr/ArrowCounterClockwise";
 import { ArrowDownIcon } from "@phosphor-icons/react/dist/ssr/ArrowDown";
 import { ArrowUpIcon } from "@phosphor-icons/react/dist/ssr/ArrowUp";
@@ -76,6 +77,7 @@ const ICONS = {
   candidates: UsersIcon,
   testTypes: TagIcon,
   faq: ChatCircleTextIcon,
+  archive: ArchiveIcon,
   activity: ClockCounterClockwiseIcon,
   account: GearSixIcon,
 } as const;

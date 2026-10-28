@@ -26,6 +26,8 @@ const nextConfig: NextConfig = {
     return [
       { source: "/admin/categories", destination: "/admin/test-types", permanent: false },
       { source: "/dashboard/category", destination: "/dashboard/test-type", permanent: false },
+      // Upload content moved into Backup & Restore (run 5).
+      { source: "/admin/handbook/upload", destination: "/admin/backup", permanent: false },
     ];
   },
 };
