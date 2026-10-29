@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { buttonClass, cardClass } from "@/components/admin/styles";
 import { formatBytes } from "@/lib/format";
-import type { BackupManifest } from "@/lib/content/backup/format";
+import { backupCounts, type BackupManifest } from "@/lib/content/backup/format";
 import { buildBackup, reportSaved } from "@/lib/content/backup/zip";
 
 type State =
@@ -61,16 +61,7 @@ export function BackupDownload() {
 }
 
 function BackupDone({ fileName, bytes, manifest, recorded }: { fileName: string; bytes: number; manifest: BackupManifest; recorded: boolean }) {
-  const rows = (table: string) => manifest.tables[table]?.rows ?? 0;
-  const counts = [
-    ["Test types", rows("test_types")],
-    ["Chapters", rows("chapters")],
-    ["Pages", rows("content_pages")],
-    ["Questions", rows("questions")],
-    ["Pictures", rows("media")],
-    ["Translations", rows("page_translations") + rows("question_translations")],
-    ["Languages", rows("voice_languages")],
-  ] as const;
+  const counts = backupCounts((table) => manifest.tables[table]?.rows ?? 0);
   return (
     <section aria-labelledby="backup-done" role="status" className="space-y-2 rounded-lg bg-ok-bg p-4 text-sm text-ok-strong ring-1 ring-ok/20">
       <h2 id="backup-done" className="text-base font-semibold">
@@ -79,7 +70,7 @@ function BackupDone({ fileName, bytes, manifest, recorded }: { fileName: string;
       <p>
         {fileName} ({formatBytes(bytes)}) is in your downloads. Keep a copy somewhere safe, not only on this computer.
       </p>
-      <p>{counts.map(([label, count]) => `${label}: ${count}`).join(" · ")}</p>
+      <p>{counts.map(({ label, count }) => `${label}: ${count}`).join(" · ")}</p>
       {!recorded && <p>The backup is saved, but it couldn&apos;t be noted in the Activity log (connection). That doesn&apos;t affect the file.</p>}
     </section>
   );

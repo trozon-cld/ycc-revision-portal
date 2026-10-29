@@ -2,6 +2,7 @@ import type { PoolClient } from "pg";
 import type { SessionPayload } from "@/lib/auth/jwt";
 import { logActivity } from "@/lib/audit/log";
 import { ACCESS_TIME_ZONE } from "@/lib/candidates/access";
+import { quoteIdent as quote } from "@/lib/db/identifiers";
 import { withTransaction } from "@/lib/db/transaction";
 import { countOf } from "@/lib/format";
 import { isRecord } from "@/lib/text";
@@ -12,6 +13,7 @@ import {
   BACKUP_PARTS,
   BACKUP_VERSION,
   PICTURES_FOLDER,
+  backupCounts,
   type BackupData,
   type BackupManifest,
   type BackupPart,
@@ -81,7 +83,7 @@ export async function recordBackupSaved(session: SessionPayload, raw: unknown): 
     tables[table] = { columns: [], rows };
   }
   const fileName = raw.fileName;
-  await withTransaction((client) => logActivity(client, session, "content.backup_downloaded", { type: "backup", id: null, label: fileName }, { items: summary(tables) }));
+  await withTransaction((client) => logActivity(client, session, "content.backup_downloaded", { type: "backup", id: null, label: fileName }, { items: backupSummary(tables) }));
   return true;
 }
 
@@ -125,17 +127,9 @@ async function pictureFiles(media: BackupRow[]): Promise<{ files: BackupPictureF
   return { files: wanted.map((file) => ({ zipPath: `${PICTURES_FOLDER}/${file.path}`, name: file.name, bytes: file.bytes, url: urls.get(file.path) as string })) };
 }
 
-function summary(tables: BackupManifest["tables"]): string {
-  const rows = (table: string) => tables[table]?.rows ?? 0;
-  return [
-    `Test types: ${rows("test_types")}`,
-    `Chapters: ${rows("chapters")}`,
-    `Pages: ${rows("content_pages")}`,
-    `Questions: ${rows("questions")}`,
-    `Pictures: ${rows("media")}`,
-    `Translations: ${rows("page_translations") + rows("question_translations")}`,
-  ].join(" · ");
+// The counts in the log entry (backup and restore).
+export function backupSummary(tables: BackupManifest["tables"]): string {
+  return backupCounts((table) => tables[table]?.rows ?? 0)
+    .map(({ label, count }) => `${label}: ${count}`)
+    .join(" · ");
 }
-
-// Table and column names come from the fixed list above and the database itself, never from a request.
-const quote = (name: string) => `"${name.replace(/"/g, '""')}"`;

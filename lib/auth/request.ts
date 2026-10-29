@@ -3,8 +3,20 @@
 export const MAX_LOGIN_BODY_BYTES = 4096;
 
 export type SmallJson = { ok: true; value: unknown } | { ok: false; tooLarge: boolean };
+export type SmallBody = { ok: true; bytes: Buffer } | { ok: false; tooLarge: boolean };
 
 export async function readSmallJson(request: Request, maxBytes: number): Promise<SmallJson> {
+  const body = await readSmallBody(request, maxBytes);
+  if (!body.ok) return body;
+  try {
+    return { ok: true, value: JSON.parse(new TextDecoder().decode(body.bytes)) };
+  } catch {
+    return { ok: false, tooLarge: false };
+  }
+}
+
+// The raw request body, read only up to maxBytes.
+export async function readSmallBody(request: Request, maxBytes: number): Promise<SmallBody> {
   if (Number(request.headers.get("content-length")) > maxBytes) return { ok: false, tooLarge: true };
   const reader = request.body?.getReader();
   if (!reader) return { ok: false, tooLarge: false };
@@ -21,11 +33,7 @@ export async function readSmallJson(request: Request, maxBytes: number): Promise
     }
     chunks.push(value);
   }
-  try {
-    return { ok: true, value: JSON.parse(new TextDecoder().decode(Buffer.concat(chunks))) };
-  } catch {
-    return { ok: false, tooLarge: false };
-  }
+  return { ok: true, bytes: Buffer.concat(chunks) };
 }
 
 // A browser request sent from this site: its Origin names the host it was sent to. Server actions get this check

@@ -50,6 +50,7 @@ export const ACTIVITY_ACTIONS = {
   "content_page.deleted": "Deleted page",
   "content.imported": "Imported content",
   "content.backup_downloaded": "Downloaded backup",
+  "content.backup_restored": "Restored backup",
   "page_translation.generated": "Translated page",
   "page_translation.edited": "Edited page translation",
   "page_translation.checked": "Checked page translation",

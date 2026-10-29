@@ -25,6 +25,24 @@ export type BackupPart = keyof typeof BACKUP_PARTS;
 export type BackupTable = (typeof BACKUP_PARTS)[BackupPart][number];
 export const PICTURES_FOLDER = "pictures";
 
+// What a backup holds, as shown to staff (after a backup, before and after a restore, and in the log).
+export const BACKUP_COUNTS: { label: string; tables: BackupTable[] }[] = [
+  { label: "Test areas", tables: ["test_areas"] },
+  { label: "Test types", tables: ["test_types"] },
+  { label: "Sections", tables: ["sections"] },
+  { label: "Chapters", tables: ["chapters"] },
+  { label: "Pages", tables: ["content_pages"] },
+  { label: "Questions", tables: ["questions"] },
+  { label: "Pictures", tables: ["media"] },
+  { label: "Translations", tables: ["page_translations", "question_translations"] },
+  { label: "Languages", tables: ["voice_languages"] },
+];
+
+// Rows per count, from a manifest's tables or a restore's result.
+export function backupCounts(rows: (table: string) => number): { label: string; count: number }[] {
+  return BACKUP_COUNTS.map(({ label, tables }) => ({ label, count: tables.reduce((sum, table) => sum + rows(table), 0) }));
+}
+
 // Rows exactly as stored (ids kept, so links, translations and Q numbers come back as they were).
 export type BackupRow = Record<string, unknown>;
 

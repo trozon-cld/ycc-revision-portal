@@ -9,8 +9,8 @@ export type OpenedBatch =
   | { ok: true; content: unknown; files: PictureFileInfo[]; pictures: Map<string, Uint8Array> }
   | { ok: false; error: string };
 
-// Zip clutter from macOS and Windows; never part of a batch.
-const JUNK = /(^|\/)(__MACOSX\/|\.DS_Store$|Thumbs\.db$|desktop\.ini$)/i;
+// Zip clutter from macOS and Windows; never part of a batch or backup.
+export const ZIP_JUNK = /(^|\/)(__MACOSX\/|\.DS_Store$|Thumbs\.db$|desktop\.ini$)/i;
 const KINDS: { type: string; test: (b: Uint8Array) => boolean }[] = [
   { type: "image/png", test: (b) => b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47 },
   { type: "image/jpeg", test: (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff },
@@ -21,7 +21,7 @@ export async function openBatchZip(file: File): Promise<OpenedBatch> {
   if (file.size > MAX_BATCH_ZIP_BYTES) return { ok: false, error: `The zip must be ${MAX_BATCH_ZIP_BYTES / 1024 / 1024} MB or smaller. Split the batch.` };
   let entries: Record<string, Uint8Array>;
   try {
-    entries = unzipSync(new Uint8Array(await file.arrayBuffer()), { filter: (entry) => !JUNK.test(entry.name) && !entry.name.endsWith("/") });
+    entries = unzipSync(new Uint8Array(await file.arrayBuffer()), { filter: (entry) => !ZIP_JUNK.test(entry.name) && !entry.name.endsWith("/") });
   } catch {
     return { ok: false, error: "This file couldn't be opened as a zip. Make a new zip of the batch folder and try again." };
   }
