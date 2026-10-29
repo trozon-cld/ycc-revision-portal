@@ -10,6 +10,7 @@ import {
   deleteChapter,
   moveChapter,
   moveChapterToSection,
+  publishChapterContent,
   publishChapterForm,
   renameChapter,
   saveChapterTestTypes,
@@ -18,6 +19,7 @@ import {
 } from "./chapter-actions";
 import type { TestAreaOption } from "@/lib/handbook/test-types";
 import { TITLE_MAX_LENGTH } from "@/lib/limits";
+import { countOf } from "@/lib/format";
 import { TestTypePicker } from "./test-type-picker";
 import type { SectionOption } from "./section-row-actions";
 
@@ -288,7 +290,7 @@ function chapterStatusAction({ id, number, title, status, itemCount, draftCount,
             {name}{" "}
             {itemCount === 0
               ? "has no pages or questions yet. Add at least one, publish it, then publish the chapter."
-              : `${draftCount === 1 ? "has 1 item that is" : `has ${draftCount} items that are`} still ${draftCount === 1 ? "a draft" : "drafts"}. Publish ${draftCount === 1 ? "it" : "them"} first, then publish the chapter.`}
+              : `${draftCount === 1 ? "has 1 item that is" : `has ${draftCount} items that are`} still ${draftCount === 1 ? "a draft" : "drafts"}. Publish ${draftCount === 1 ? "it" : "them"} first, then publish the chapter.${onChapterPage ? " Publish all does both in one step." : ""}`}
           </p>
           <div className="flex justify-end gap-2 border-t border-slate-200 px-5 py-3">
             <button type="button" onClick={close} className={buttonClass("secondary")}>
@@ -354,4 +356,75 @@ function SectionSelect({ id, options }: { id: string; options: SectionOption[] }
       ))}
     </select>
   );
+}
+
+export type PublishAllSummary = {
+  pages: number;
+  questions: number;
+  heldBack: string;
+  heldBackCount: number;
+  // True when nothing in the page order stays a draft, so the chapter goes live too.
+  chapterGoesLive: boolean;
+  hasTestTypes: boolean;
+};
+
+// "Publish all" on the chapter page: publishes the drafts that are ready (and the chapter once nothing is left).
+export function PublishAllButton({ chapterId, number, title, summary }: { chapterId: string; number: string; title: string; summary: PublishAllSummary }) {
+  const { pages, questions, heldBack, heldBackCount, chapterGoesLive, hasTestTypes } = summary;
+  const ready = pages + questions;
+  const what = [pages > 0 ? countOf(pages, "page") : "", questions > 0 ? countOf(questions, "question") : ""].filter(Boolean).join(" and ");
+  const name = (
+    <strong className="font-medium">
+      {number} {title}
+    </strong>
+  );
+  const action: PanelRowAction = {
+    label: "Publish all",
+    title: ready > 0 ? "Publish all drafts?" : "Nothing ready to publish",
+    variant: "confirm",
+    render: (close) =>
+      ready === 0 ? (
+        <div>
+          <p className="px-5 py-4 text-sm [overflow-wrap:anywhere]">
+            None of the drafts in {name} can be published yet: {heldBack}. Fix them, then try again.
+          </p>
+          <div className="flex justify-end border-t border-slate-200 px-5 py-3">
+            <button type="button" onClick={close} className={buttonClass("secondary")}>
+              Close
+            </button>
+          </div>
+        </div>
+      ) : (
+        <ActionForm
+          action={publishChapterContent}
+          hidden={{ chapterId }}
+          submitLabel={`Publish ${countOf(ready, "item")}`}
+          pendingLabel="Publishing…"
+          successMessage={chapterGoesLive ? `Published ${what}, and the chapter.` : `Published ${what}.`}
+          onSuccess={close}
+          onCancel={close}
+        >
+          <div className="space-y-2 text-sm [overflow-wrap:anywhere]">
+            <p>
+              {what} in {name} {ready === 1 ? "is" : "are"} ready and will be published.
+            </p>
+            {heldBackCount > 0 && (
+              <p>
+                {heldBackCount === 1 ? "1 item can't be published yet and stays a draft" : `${heldBackCount} items can't be published yet and stay drafts`}:{" "}
+                {heldBack}.
+              </p>
+            )}
+            {chapterGoesLive ? (
+              <p>
+                The chapter is published too
+                {hasTestTypes ? ", so candidates in its test types see it." : ". It isn't in any test type yet, so no candidate sees it until it's added to one."}
+              </p>
+            ) : (
+              <p>The chapter itself stays as it is until everything in its page order is published.</p>
+            )}
+          </div>
+        </ActionForm>
+      ),
+  };
+  return <ActionButton action={action} />;
 }

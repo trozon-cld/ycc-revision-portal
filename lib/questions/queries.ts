@@ -1,4 +1,4 @@
-import type { PoolClient } from "pg";
+import type { Pool, PoolClient } from "pg";
 import { pool } from "@/lib/db/pool";
 import { chapterNumber, sectionLetter } from "@/lib/handbook/structure";
 import { sourceSearchPattern } from "@/lib/content/import/format";
@@ -170,17 +170,10 @@ type QuestionRow = {
   content_version: number;
 };
 
-// Reads and row-locks one question inside a transaction, for the change that follows.
-export async function readQuestionForUpdate(client: PoolClient, id: string): Promise<StoredQuestion | null> {
-  const { rows } = await client.query<QuestionRow>(
-    `select id, ref_no, chapter_id, type, status, stem_text, stem_media_id, stem_media_size, stem_media_align,
-            content, answer, explanation,
-            in_practice, in_mock, content_version
-     from questions where id = $1 for update`,
-    [id]
-  );
-  const row = rows[0];
-  if (!row) return null;
+const QUESTION_COLUMNS = `id, ref_no, chapter_id, type, status, stem_text, stem_media_id, stem_media_size, stem_media_align,
+            content, answer, explanation, in_practice, in_mock, content_version`;
+
+function toStoredQuestion(row: QuestionRow): StoredQuestion {
   return {
     id: row.id,
     refNo: row.ref_no,
@@ -198,4 +191,19 @@ export async function readQuestionForUpdate(client: PoolClient, id: string): Pro
     inMock: row.in_mock,
     version: row.content_version,
   };
+}
+
+// Reads and row-locks one question inside a transaction, for the change that follows.
+export async function readQuestionForUpdate(client: PoolClient, id: string): Promise<StoredQuestion | null> {
+  const { rows } = await client.query<QuestionRow>(`select ${QUESTION_COLUMNS} from questions where id = $1 for update`, [id]);
+  return rows[0] ? toStoredQuestion(rows[0]) : null;
+}
+
+// A chapter's draft questions, in Q-number order; row-locked when read inside a transaction for a change.
+export async function readChapterDraftQuestions(db: Pool | PoolClient, chapterId: string, lock: boolean): Promise<StoredQuestion[]> {
+  const { rows } = await db.query<QuestionRow>(
+    `select ${QUESTION_COLUMNS} from questions where chapter_id = $1 and status = 'draft' order by ref_no${lock ? " for update" : ""}`,
+    [chapterId]
+  );
+  return rows.map(toStoredQuestion);
 }

@@ -10,6 +10,7 @@ import { logActivity } from "@/lib/audit/log";
 import { listNames } from "@/lib/handbook/test-types";
 import { questionRef } from "@/lib/questions/labels";
 import { isUuid } from "@/lib/ids";
+import { describeHeldBack, planChapterPublish, refRuns } from "@/lib/handbook/publish-all";
 import {
   lockHandbookStructure,
   normaliseTitle,
@@ -405,6 +406,65 @@ export async function publishChapterForm(_prev: StructureActionState, formData: 
 
 export async function unpublishChapterForm(_prev: StructureActionState, formData: FormData): Promise<StructureActionState> {
   return setChapterStatus(String(formData.get("chapterId") ?? ""), "draft");
+}
+
+// Publish all: every draft page and question in the chapter that passes the single Publish checks, then the
+// chapter itself if nothing in its page order is left a draft. One log entry for the content, plus "Published chapter".
+export async function publishChapterContent(_prev: StructureActionState, formData: FormData): Promise<StructureActionState> {
+  const session = await requireRole(CONTENT_EDITORS);
+  const chapterId = String(formData.get("chapterId") ?? "");
+  if (!isUuid(chapterId)) return { error: NOT_FOUND };
+
+  const result = await withTransaction<StructureActionState>(async (client) => {
+    const { rows } = await client.query<{ title: string; status: string }>(`select title, status from chapters where id = $1 for update`, [chapterId]);
+    const chapter = rows[0];
+    if (!chapter) return { error: NOT_FOUND };
+    // Holds the page order still while the items are checked and published.
+    await client.query(`lock table handbook_items in share mode`);
+
+    const plan = await planChapterPublish(client, chapterId, true);
+    const pages = plan.pageIds.length;
+    const questions = plan.questionIds.length;
+    if (pages + questions === 0) {
+      return {
+        error: plan.heldBack.length > 0
+          ? `Nothing could be published. Still drafts: ${describeHeldBack(plan.heldBack)}.`
+          : "Everything in this chapter is already published.",
+      };
+    }
+    if (pages > 0) await client.query(`update content_pages set status = 'published', updated_at = now() where id = any($1::uuid[])`, [plan.pageIds]);
+    if (questions > 0) await client.query(`update questions set status = 'published', updated_at = now() where id = any($1::uuid[])`, [plan.questionIds]);
+
+    const details: Record<string, string> = {
+      pages: String(pages),
+      questions: String(questions),
+      ...(questions > 0 ? { "question numbers": refRuns(plan.questionRefNos) } : {}),
+      ...(plan.heldBack.length > 0 ? { "still drafts": String(plan.heldBack.length) } : {}),
+    };
+    const target = { type: "chapter" as const, id: chapterId, label: chapter.title };
+    await logActivity(client, session, "chapter.content_published", target, details);
+
+    if (chapter.status === "draft") {
+      const { rows: counts } = await client.query<{ total: number; drafts: number }>(
+        `select count(*)::int as total, count(*) filter (where coalesce(p.status, q.status) <> 'published')::int as drafts
+         from handbook_items i
+         left join content_pages p on p.id = i.content_page_id
+         left join questions q on q.id = i.question_id
+         where i.chapter_id = $1`,
+        [chapterId]
+      );
+      const { total, drafts } = counts[0];
+      if (total > 0 && drafts === 0) {
+        await client.query(`update chapters set status = 'published', updated_at = now() where id = $1`, [chapterId]);
+        await logActivity(client, session, "chapter.published", target, { items: `${total} ${total === 1 ? "item" : "items"}` });
+      }
+    }
+    return { success: true };
+  });
+
+  revalidatePath(PAGE_PATH, "layout");
+  revalidatePath("/admin/questions", "layout");
+  return result;
 }
 
 function testTypeIdsFrom(formData: FormData): string[] {

@@ -41,6 +41,7 @@ export const ACTIVITY_ACTIONS = {
   "chapter.deleted": "Deleted chapter",
   "chapter.published": "Published chapter",
   "chapter.unpublished": "Unpublished chapter",
+  "chapter.content_published": "Published chapter content",
   "content_page.created": "Created page",
   "content_page.renamed": "Renamed page",
   "content_page.updated": "Edited page content",

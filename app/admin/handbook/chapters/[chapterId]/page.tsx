@@ -15,7 +15,8 @@ import { buttonClass } from "@/components/admin/styles";
 import { countOf } from "@/lib/format";
 import { AddQuestionsButton, ChapterOrder, type AddableQuestion, type OrderItem } from "./chapter-order";
 import { NewPageButton } from "./page-row-actions";
-import { ChapterTestTypesButton, ChapterStatusButton } from "../../chapter-row-actions";
+import { ChapterTestTypesButton, ChapterStatusButton, PublishAllButton, type PublishAllSummary } from "../../chapter-row-actions";
+import { describeHeldBack, planChapterPublish } from "@/lib/handbook/publish-all";
 import { Badge } from "@/components/admin/badge";
 
 export const metadata: Metadata = { title: "Chapter" };
@@ -49,7 +50,7 @@ export default async function ChapterPagesPage({ params }: PageProps<"/admin/han
   const chapter = await getChapterContext(chapterId);
   if (!chapter) notFound();
 
-  const [{ rows }, { rows: unplaced }, testAreas, links] = await Promise.all([
+  const [{ rows }, { rows: unplaced }, testAreas, links, plan] = await Promise.all([
     pool.query<ItemRow>(
       `select i.id, i.position,
               p.id as page_id, p.title as page_title, p.status as page_status,
@@ -73,6 +74,7 @@ export default async function ChapterPagesPage({ params }: PageProps<"/admin/han
     ),
     loadTestAreas(),
     loadChapterTestTypeIds([chapter.id]),
+    planChapterPublish(pool, chapter.id, false),
   ]);
   const testTypeIds = links.get(chapter.id) ?? [];
   const testTypeNames = testAreas.flatMap((testArea) => testArea.testTypes).filter((testType) => testTypeIds.includes(testType.id)).map((testType) => testType.name);
@@ -115,6 +117,19 @@ export default async function ChapterPagesPage({ params }: PageProps<"/admin/han
   const questionCount = items.length - pageCount;
   const published = items.filter((item) => item.status === "published").length;
   const drafts = items.length - published;
+  // The chapter goes live with Publish all when every draft in its page order is ready.
+  const ready = new Set([...plan.pageIds, ...plan.questionIds]);
+  const publishAll: PublishAllSummary = {
+    pages: plan.pageIds.length,
+    questions: plan.questionIds.length,
+    heldBack: describeHeldBack(plan.heldBack),
+    heldBackCount: plan.heldBack.length,
+    chapterGoesLive:
+      chapter.status === "draft" &&
+      items.length > 0 &&
+      items.every((item) => item.status === "published" || ready.has(item.kind === "page" ? item.pageId : item.questionId)),
+    hasTestTypes: testTypeIds.length > 0,
+  };
   return (
     <>
       <nav aria-label="Breadcrumb" className="mb-2 text-sm">
@@ -140,6 +155,9 @@ export default async function ChapterPagesPage({ params }: PageProps<"/admin/han
             <ChapterTestTypesButton chapterId={chapter.id} testAreas={testAreas} initialSelected={testTypeIds} />
             <AddQuestionsButton chapterId={chapter.id} questions={addable} />
             <NewPageButton chapterId={chapter.id} />
+            {publishAll.pages + publishAll.questions + publishAll.heldBackCount > 0 && (
+              <PublishAllButton chapterId={chapter.id} number={chapter.number} title={chapter.title} summary={publishAll} />
+            )}
             <ChapterStatusButton
               id={chapter.id}
               number={chapter.number}
