@@ -61,6 +61,7 @@ export default async function EditQuestionPage({ params }: PageProps<"/admin/que
 
   const [chapters, voice, languages] = await Promise.all([listChapterOptions(), loadQuestionVoice(question.id), loadVoiceLanguages()]);
   // Saved questions passed the checks on save; if the rules tightened since, say so and keep the data.
+  // A draft may still be waiting for its areas (the editor says so itself).
   const parsed = parseQuestion({
     type: question.type,
     stemText: question.stem_text,
@@ -70,7 +71,7 @@ export default async function EditQuestionPage({ params }: PageProps<"/admin/que
     content: question.content,
     answer: question.answer,
     explanation: question.explanation,
-  });
+  }, { allowUnmarked: question.status !== "published" });
 
   // Always in the editor's draft shape (e.g. an empty label rather than none), so opening a question
   // never shows it as changed. A question that no longer passes the checks opens with what is usable.

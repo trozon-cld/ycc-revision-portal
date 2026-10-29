@@ -13,10 +13,12 @@ export type ItemIds = {
 
 export function toQuestionInput(question: BatchQuestion, ids: ItemIds): Record<string, unknown> {
   const { content, answer } = contentAndAnswer(question, ids);
+  // Tap the area / Choose the area: their picture is the one candidates tap, not a separate question picture.
+  const tapped = question.type === "hotspot" || question.type === "area_choice";
   return {
     type: question.type,
     stemText: question.stem,
-    stemMediaId: question.picture ? ids.media(question.picture.file) : null,
+    stemMediaId: question.picture && !tapped ? ids.media(question.picture.file) : null,
     stemMediaSize: question.picture?.size ?? null,
     stemMediaAlign: question.picture?.align ?? null,
     content,
@@ -46,6 +48,15 @@ function contentAndAnswer(question: BatchQuestion, ids: ItemIds): { content: unk
         },
         answer: { correctOptionId: optionIds[question.right[0]] },
       };
+    case "hotspot":
+    case "area_choice": {
+      // Areas aren't in a batch: they're drawn in the portal (a draft until then).
+      const mediaId = question.picture ? ids.media(question.picture.file) : "";
+      const label = question.label ? { label: question.label } : {};
+      return question.type === "hotspot"
+        ? { content: { mediaId }, answer: { areas: [], ...label } }
+        : { content: { mediaId, areas: [] }, answer: label };
+    }
     case "match_pictures": {
       const itemIds = question.options.map((_, position) => ids.matchItem(position));
       return {

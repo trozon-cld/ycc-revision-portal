@@ -167,7 +167,11 @@ function readParts(raw: Record<string, unknown>, manifest: BackupManifest): { ro
 function rowProblems(parts: Parts): string[] {
   const problems: string[] = [];
   for (const row of parts.content.questions ?? []) {
-    const result = parseQuestion({ type: row.type, stemText: row.stem_text, stemMediaId: row.stem_media_id, content: row.content, answer: row.answer, explanation: row.explanation });
+    // A draft may still be waiting for its areas (Tap the area / Choose the area).
+    const result = parseQuestion(
+      { type: row.type, stemText: row.stem_text, stemMediaId: row.stem_media_id, content: row.content, answer: row.answer, explanation: row.explanation },
+      { allowUnmarked: row.status === "draft" }
+    );
     if (!result.ok) problems.push(`Question Q${String(row.ref_no).padStart(4, "0")}: ${result.error}`);
   }
   for (const row of parts.content.content_pages ?? []) {

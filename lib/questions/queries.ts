@@ -3,6 +3,7 @@ import { pool } from "@/lib/db/pool";
 import { chapterNumber, sectionLetter } from "@/lib/handbook/structure";
 import { sourceSearchPattern } from "@/lib/content/import/format";
 import { escapeLike } from "@/lib/db/like";
+import { NEEDS_AREAS_SQL } from "./areas";
 import { parseQuestionRef } from "./labels";
 import type { QuestionStatus, QuestionType, StoredQuestion } from "./types";
 
@@ -18,6 +19,8 @@ export type BankFilters = {
   testTypeId: string | null;
   type: QuestionType | null;
   status: QuestionStatus | null;
+  // Tap the area / Choose the area drafts whose areas aren't drawn yet.
+  needsAreas: boolean;
 };
 
 export type BankRow = {
@@ -32,6 +35,7 @@ export type BankRow = {
   bookChapter: string | null;
   inPractice: boolean;
   inMock: boolean;
+  needsAreas: boolean;
 };
 
 export type ChapterOption = { id: string; label: string };
@@ -51,12 +55,13 @@ const BANK_WHERE = `
     and ($3::text is null or q.type = $3)
     and ($4::content_status is null or q.status = $4)
     and ($5 = '' or q.stem_text ilike '%' || $5 || '%' escape '\\' or q.ref_no = $6::int or q.source_key ~* $8::text)
-    and ($7::uuid is null or exists (select 1 from test_type_chapters cc where cc.test_type_id = $7 and cc.chapter_id = q.chapter_id))`;
+    and ($7::uuid is null or exists (select 1 from test_type_chapters cc where cc.test_type_id = $7 and cc.chapter_id = q.chapter_id))
+    and (not $9::boolean or ${NEEDS_AREAS_SQL})`;
 
 function bankValues(filters: BankFilters) {
   const search = filters.search.trim().slice(0, 100);
   return [filters.sectionId, filters.chapterId, filters.type, filters.status, escapeLike(search), search ? parseQuestionRef(search) : null, filters.testTypeId,
-    sourceSearchPattern(search)];
+    sourceSearchPattern(search), filters.needsAreas];
 }
 
 export async function countBankQuestions(filters: BankFilters): Promise<number> {
@@ -81,9 +86,10 @@ export async function listBankQuestions(filters: BankFilters, page: number): Pro
     book_chapter: number | null;
     in_practice: boolean;
     in_mock: boolean;
+    needs_areas: boolean;
   }>(
     `with ${NUMBERED_CHAPTERS}
-     select q.id, q.ref_no, q.type, q.status, q.stem_text, q.stem_media_id is not null as has_picture,
+     select q.id, q.ref_no, q.type, q.status, q.stem_text, q.stem_media_id is not null as has_picture, ${NEEDS_AREAS_SQL} as needs_areas,
             n.number as chapter_number, n.title as chapter_title, hn.number as book_chapter,
             q.in_practice, q.in_mock
      from questions q
@@ -92,7 +98,7 @@ export async function listBankQuestions(filters: BankFilters, page: number): Pro
      left join numbered hn on hn.id = hi.chapter_id
      ${BANK_WHERE}
      order by n.section_position, n.position, q.ref_no
-     limit $9 offset $10`,
+     limit $10 offset $11`,
     [...bankValues(filters), BANK_PAGE_SIZE, (page - 1) * BANK_PAGE_SIZE]
   );
   return rows.map((row) => ({
@@ -106,6 +112,7 @@ export async function listBankQuestions(filters: BankFilters, page: number): Pro
     bookChapter: row.book_chapter === null ? null : chapterNumber(row.book_chapter),
     inPractice: row.in_practice,
     inMock: row.in_mock,
+    needsAreas: row.needs_areas,
   }));
 }
 

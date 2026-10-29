@@ -21,6 +21,9 @@ import { NewQuestionButton, QuestionRowActions } from "./question-row-actions";
 
 export const metadata: Metadata = { title: "Question bank" };
 
+// The Status filter's extra choice: drafts still waiting for their areas.
+const NEEDS_AREAS_FILTER = "needs-areas";
+
 export default async function QuestionBankPage({ searchParams }: PageProps<"/admin/questions">) {
   await requireRole(CONTENT_EDITORS);
   const params = await searchParams;
@@ -34,9 +37,10 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
     testTypeId: uuidOrNull(firstParam(params.testType)),
     type: isQuestionType(typeParam) ? typeParam : null,
     status: statusParam === "draft" || statusParam === "published" ? statusParam : null,
+    needsAreas: statusParam === NEEDS_AREAS_FILTER,
   };
   const isFiltered = Boolean(
-    filters.search || filters.sectionId || filters.chapterId || filters.testTypeId || filters.type || filters.status
+    filters.search || filters.sectionId || filters.chapterId || filters.testTypeId || filters.type || filters.status || filters.needsAreas
   );
 
   const [matching, total, sections, testAreas] = await Promise.all([
@@ -55,7 +59,7 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
     chapter: filters.chapterId ?? "",
     testType: filters.testTypeId ?? "",
     type: filters.type ?? "",
-    status: filters.status ?? "",
+    status: filters.needsAreas ? NEEDS_AREAS_FILTER : (filters.status ?? ""),
   };
 
   return (
@@ -123,10 +127,11 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
             </option>
           ))}
         </FilterSelect>
-        <FilterSelect name="status" label="Status" defaultValue={filters.status ?? ""}>
+        <FilterSelect name="status" label="Status" defaultValue={query.status}>
           <option value="">All statuses</option>
           <option value="draft">Draft</option>
           <option value="published">Published</option>
+          <option value={NEEDS_AREAS_FILTER}>Needs areas</option>
         </FilterSelect>
       </FilterBar>
 
@@ -167,6 +172,11 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
                 <Badge tone={row.status === "published" ? "success" : "neutral"}>
                   {row.status === "published" ? "Published" : "Draft"}
                 </Badge>
+                {row.needsAreas && (
+                  <span className="mt-1 block">
+                    <Badge tone="warning">Needs areas</Badge>
+                  </span>
+                )}
               </Cell>
               <Cell label="Used in">
                 {usedIn(row).length > 0 ? (

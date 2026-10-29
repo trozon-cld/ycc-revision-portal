@@ -17,7 +17,7 @@ export type BatchBlock = Record<string, unknown> & { type: string; picture?: str
 
 export type BatchPage = { kind: "page"; key: string; sourcePage: number | null; title: string; blocks: BatchBlock[] };
 
-export type BatchQuestionType = "single_text" | "single_picture" | "multi_pick" | "match_pictures";
+export type BatchQuestionType = "single_text" | "single_picture" | "multi_pick" | "match_pictures" | "hotspot" | "area_choice";
 export type BatchQuestion = {
   kind: "question";
   key: string;
@@ -34,6 +34,9 @@ export type BatchQuestion = {
   explanation: string | null;
   inPractice: boolean;
   inMock: boolean;
+  // Tap the area / Choose the area: the answer shown after Check (e.g. "Gloves", "470 mm"). Their `picture` is the
+  // one candidates tap; the areas are drawn by hand in the portal.
+  label: string | null;
 };
 
 export type BatchItem = BatchPage | BatchQuestion;
@@ -48,8 +51,8 @@ export type PictureFileInfo = { name: string; sha256: string | null; bytes: numb
 export type BatchIssue = { key: string | null; sourcePage: number | null; message: string };
 export type ReadResult = { ok: true; batch: Batch } | { ok: false; issues: BatchIssue[] };
 
-const QUESTION_TYPES: readonly string[] = ["single_text", "single_picture", "multi_pick", "match_pictures"];
-const BY_HAND: Record<string, string> = { hotspot: "Tap the area", area_choice: "Choose the area" };
+const QUESTION_TYPES: readonly string[] = ["single_text", "single_picture", "multi_pick", "match_pictures", "hotspot", "area_choice"];
+const AREA_TYPES: readonly string[] = ["hotspot", "area_choice"];
 const str = (value: unknown) => (typeof value === "string" ? value : "");
 const page = (value: unknown) => (typeof value === "number" && Number.isInteger(value) && value > 0 ? value : null);
 
@@ -130,8 +133,8 @@ function readItem(raw: unknown, issues: BatchIssue[]): BatchItem | null {
   if (raw.kind !== "question") return issue(`"${str(raw.kind)}" isn't a page or a question.`);
 
   const type = str(raw.type);
-  if (BY_HAND[type]) return issue(`${BY_HAND[type]} questions are added by hand in the portal, so they can't be in a batch.`);
   if (!QUESTION_TYPES.includes(type)) return issue(`"${type}" isn't a question type.`);
+  if (AREA_TYPES.includes(type)) return readAreaQuestion(raw, key, sourcePage, type as BatchQuestionType, issue);
   if (!Array.isArray(raw.options)) return issue("This question has no options.");
 
   const options: BatchQuestion["options"] = [];
@@ -172,6 +175,32 @@ function readItem(raw: unknown, issues: BatchIssue[]): BatchItem | null {
     explanation: str(raw.explanation) || null,
     inPractice: raw.inPractice !== false,
     inMock: raw.inMock !== false,
+    label: null,
+  };
+}
+
+// Tap the area / Choose the area: the picture to tap, the question and the answer label; no options or letters.
+function readAreaQuestion(raw: Record<string, unknown>, key: string, sourcePage: number | null, type: BatchQuestionType, issue: (message: string) => null): BatchQuestion | null {
+  const file = typeof raw.picture === "string" ? raw.picture : isRecord(raw.picture) ? str(raw.picture.file) : "";
+  if (!file) return issue("This question needs the picture candidates tap.");
+  if ((Array.isArray(raw.options) && raw.options.length > 0) || str(raw.answer)) {
+    return issue("The areas of this question are drawn in the portal, so it has no options or answer letters. Put the answer in label.");
+  }
+  return {
+    kind: "question",
+    key,
+    sourcePage,
+    type,
+    stem: str(raw.stem),
+    picture: { file, size: null, align: null },
+    options: [],
+    right: [],
+    pick: null,
+    keepOrder: false,
+    explanation: str(raw.explanation) || null,
+    inPractice: raw.inPractice !== false,
+    inMock: raw.inMock !== false,
+    label: str(raw.label) || null,
   };
 }
 

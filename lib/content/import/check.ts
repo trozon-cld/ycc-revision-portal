@@ -1,4 +1,5 @@
 import type { PoolClient } from "pg";
+import { AREA_TYPES } from "@/lib/questions/areas";
 import { parseQuestion } from "@/lib/questions/validate";
 import { parseBlocks, type Block } from "@/lib/content/blocks";
 import { validateTitle, normaliseTitle } from "@/lib/handbook/structure";
@@ -138,6 +139,8 @@ export async function checkBatch(db: Db, raw: unknown, files: PictureFileInfo[])
   const nameOfFake = new Map([...mediaIdOfName].map(([name, id]) => [id, name]));
   const ids: ItemIds = { option: (i) => fakeId(1, i), matchItem: (i) => fakeId(2, i), block: (i) => fakeId(3, i), media: (file) => mediaIdOfName.get(file.toLowerCase()) ?? fakeId(9, 99999) };
 
+  let unmarkedNew = 0;
+  const keptByHand: string[] = [];
   for (const { item, chapter } of items) {
     const chapterId = chapterIdOf.get(chapter);
     const at = { key: item.key, sourcePage: item.sourcePage };
@@ -158,20 +161,35 @@ export async function checkBatch(db: Db, raw: unknown, files: PictureFileInfo[])
       }
       continue;
     }
-    const parsed = parseQuestion(toQuestionInput(item, ids));
+    const parsed = parseQuestion(toQuestionInput(item, ids), { allowUnmarked: true });
     if (!parsed.ok) error({ ...at, message: parsed.error });
     if (pageByKey.has(item.key)) error({ ...at, message: `The key ${item.key} belongs to a page in the portal, not a question.` });
     const existing = questionByKey.get(item.key);
-    if (!existing) report.questions.new++;
-    else if (existing.type !== item.type) error({ ...at, message: "This question has a different type in the portal. A question's type can't be changed by upload." });
+    const byHand = AREA_TYPES.includes(item.type);
+    if (!existing) {
+      report.questions.new++;
+      if (byHand) unmarkedNew++;
+    } else if (existing.type !== item.type) error({ ...at, message: "This question has a different type in the portal. A question's type can't be changed by upload." });
     else if (chapterId && existing.chapter_id !== chapterId) error({ ...at, message: "This question is in another chapter in the portal. Moving between chapters isn't done by upload." });
-    else if (parsed.ok) {
+    else if (byHand) {
+      // Their areas are drawn in the portal, so an upload never changes one that's already there.
+      report.questions.same++;
+      keptByHand.push(item.key);
+    } else if (parsed.ok) {
       const batchShape = questionShape(parsed.question, (id) => nameOfFake.get(id), item.inPractice, item.inMock);
       const storedShape = questionShape(storedQuestion(existing), (id) => nameOfStored.get(id), existing.in_practice, existing.in_mock);
       const same = sameJson(batchShape, storedShape);
       report.questions[same ? "same" : "update"]++;
       if (!same && existing.status === "published") report.publishedChanges++;
     }
+  }
+
+  if (unmarkedNew > 0) {
+    const one = unmarkedNew === 1;
+    note(general(`${one ? "1 Tap the area or Choose the area question comes" : `${unmarkedNew} Tap the area and Choose the area questions come`} in without ${one ? "its" : "their"} areas. Find ${one ? "it" : "them"} in the Question bank under Status: Needs areas, and mark the areas before publishing.`));
+  }
+  if (keptByHand.length > 0) {
+    note(general(`${keptByHand.length === 1 ? "1 Tap the area or Choose the area question is" : `${keptByHand.length} Tap the area and Choose the area questions are`} already in the portal and ${keptByHand.length === 1 ? "is" : "are"} left as ${keptByHand.length === 1 ? "it is" : "they are"}, so ${keptByHand.length === 1 ? "its" : "their"} drawn areas stay (${keptByHand.slice(0, 5).join(", ")}${keptByHand.length > 5 ? ", …" : ""}). Edit ${keptByHand.length === 1 ? "it" : "them"} in the portal.`));
   }
 
   // Pictures: new, replaced (same name, different file) or the same file again.

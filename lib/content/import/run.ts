@@ -5,6 +5,7 @@ import { logActivity } from "@/lib/audit/log";
 import { withTransaction } from "@/lib/db/transaction";
 import { lockHandbookOrder, normaliseTitle } from "@/lib/handbook/structure";
 import { parseBlocks } from "@/lib/content/blocks";
+import { AREA_TYPES } from "@/lib/questions/areas";
 import { parseQuestion, questionFingerprint } from "@/lib/questions/validate";
 import { isRecord } from "@/lib/text";
 import { checkBatch, type CheckReport } from "./check";
@@ -132,8 +133,13 @@ async function saveQuestion(client: PoolClient, chapterId: string, item: BatchQu
     [item.key]
   );
   const stored = rows[0];
+  // Tap the area / Choose the area already in the portal: left as they are, so their drawn areas stay.
+  if (stored && AREA_TYPES.includes(stored.type)) {
+    counts.unchanged++;
+    return placeInBook(client, chapterId, { questionId: stored.id });
+  }
   const ids = itemIds(mediaId, stored ? keptQuestionIds(stored) : {});
-  const parsed = parseQuestion(toQuestionInput(item, ids));
+  const parsed = parseQuestion(toQuestionInput(item, ids), { allowUnmarked: true });
   if (!parsed.ok) throw new Error(`Batch item ${item.key} failed after its check: ${parsed.error}`);
   const q = parsed.question;
 
@@ -151,7 +157,7 @@ async function saveQuestion(client: PoolClient, chapterId: string, item: BatchQu
     const before = parseQuestion({
       type: stored.type, stemText: stored.stem_text, stemMediaId: stored.stem_media_id, stemMediaSize: stored.stem_media_size,
       stemMediaAlign: stored.stem_media_align, content: stored.content, answer: stored.answer, explanation: stored.explanation,
-    });
+    }, { allowUnmarked: true });
     const contentChanged = !before.ok || questionFingerprint(before.question) !== questionFingerprint(q);
     const usageChanged = stored.in_practice !== item.inPractice || stored.in_mock !== item.inMock;
     if (contentChanged || usageChanged) {
