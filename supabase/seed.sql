@@ -32,16 +32,16 @@ from (values
 join test_areas a on a.position = seed.area_position
 where not exists (select 1 from test_types);
 
--- Sections and chapters, all renameable. Each only seeds an empty table.
-insert into sections (position, title)
-select position, title
+-- Sections and chapters, all renameable. Each only seeds an empty table. A–D are linked to every test type.
+insert into sections (position, title, linked_to_all)
+select position, title, linked_to_all
 from (values
-  (1, 'Working environment'),
-  (2, 'Occupational health'),
-  (3, 'Safety'),
-  (4, 'High risk activities'),
-  (5, 'Specialist activities')
-) as seed (position, title)
+  (1, 'Working environment', true),
+  (2, 'Occupational health', true),
+  (3, 'Safety', true),
+  (4, 'High risk activities', true),
+  (5, 'Specialist activities', false)
+) as seed (position, title, linked_to_all)
 where not exists (select 1 from sections);
 
 insert into chapters (section_id, position, title)
@@ -85,7 +85,7 @@ select t.id, c.id
 from test_types t
 join chapters c on true
 join sections s on s.id = c.section_id
-where (s.position <= 4 or c.title = t.name)
+where (s.linked_to_all or c.title = t.name)
   and not exists (select 1 from test_type_chapters);
 
 -- Starter General queries (hidden), as migration 0027 adds them.

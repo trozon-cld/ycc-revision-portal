@@ -686,3 +686,17 @@ alter table media add column source_name varchar(255)
 alter table media add column source_sha256 char(64)
   constraint media_source_sha256_check check (source_sha256 ~ '^[0-9a-f]{64}$');
 create unique index media_source_name_key on media (lower(source_name));
+
+-- Structure lock (0040). One row only. While locked, sections, chapters and which chapters each test type has can't change.
+create table structure_lock (
+  id boolean primary key default true check (id),
+  locked boolean not null default false,
+  changed_by uuid references users (id) on delete set null,
+  changed_at timestamptz
+);
+
+insert into structure_lock default values;
+
+-- A section linked to every test type puts each of its chapters in every test type's book (0040); otherwise each of
+-- its chapters belongs to one test type at most.
+alter table sections add column linked_to_all boolean not null default false;

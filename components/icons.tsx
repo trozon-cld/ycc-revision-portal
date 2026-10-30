@@ -23,6 +23,8 @@ import { GearSixIcon } from "@phosphor-icons/react/dist/ssr/GearSix";
 import { HouseIcon } from "@phosphor-icons/react/dist/ssr/House";
 import { ImageIcon } from "@phosphor-icons/react/dist/ssr/Image";
 import { ListIcon } from "@phosphor-icons/react/dist/ssr/List";
+import { LockIcon } from "@phosphor-icons/react/dist/ssr/Lock";
+import { LockOpenIcon } from "@phosphor-icons/react/dist/ssr/LockOpen";
 import { ListBulletsIcon } from "@phosphor-icons/react/dist/ssr/ListBullets";
 import { ListChecksIcon } from "@phosphor-icons/react/dist/ssr/ListChecks";
 import { PauseIcon } from "@phosphor-icons/react/dist/ssr/Pause";
@@ -80,6 +82,8 @@ const ICONS = {
   archive: ArchiveIcon,
   activity: ClockCounterClockwiseIcon,
   account: GearSixIcon,
+  locked: LockIcon,
+  unlocked: LockOpenIcon,
 } as const;
 
 export type IconName = keyof typeof ICONS;

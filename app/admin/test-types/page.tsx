@@ -14,6 +14,8 @@ import type { ChapterOutline } from "./test-type-chapters-form";
 import type { CoverChoice } from "./test-type-covers-form";
 import { TestTypeRowActions, NewTestTypeButton, type TestAreaOption } from "./test-type-row-actions";
 import { TestAreaRowActions, NewTestAreaButton } from "./test-area-row-actions";
+import { loadStructureLockView } from "@/lib/handbook/structure-lock";
+import { StructureLockBar } from "../handbook/structure-lock-bar";
 
 export const metadata: Metadata = { title: "Test types" };
 
@@ -27,6 +29,8 @@ interface TestTypeRow {
   test_area_id: string;
   name: string;
   candidate_count: number;
+  // Candidates whose current test type this is (they see its chapters now).
+  studying: number;
   listen_mode: ListenMode;
   // Chosen Listen languages that aren't hidden (used when listen_mode is "chosen").
   chosen: string[];
@@ -49,6 +53,7 @@ interface OutlineRow {
   section_id: string;
   section_position: number;
   section_title: string;
+  linked_to_all: boolean;
   chapter_id: string | null;
   chapter_title: string | null;
   number: number | null;
@@ -57,7 +62,7 @@ interface OutlineRow {
 export default async function TestTypesPage() {
   await requireRole(["superadmin"]);
 
-  const [{ rows: testAreas }, { rows: testTypes }, { rows: outlineRows }, { rows: links }, { rows: coverRows }] = await Promise.all([
+  const [{ rows: testAreas }, { rows: testTypes }, { rows: outlineRows }, { rows: links }, { rows: coverRows }, lock] = await Promise.all([
     pool.query<TestAreaRow>(`select id, name from test_areas order by position`),
     // A candidate counts once, whether the test type is their assigned one, their current one, or both.
     pool.query<TestTypeRow>(
@@ -65,12 +70,13 @@ export default async function TestTypesPage() {
               array(select cl.language from test_type_languages cl join voice_languages l on l.code = cl.language and l.status <> 'hidden'
                     where cl.test_type_id = c.id order by l.name) as chosen,
               (select count(*) from users u where u.test_type_id = c.id or u.current_test_type_id = c.id)::int
-                as candidate_count
+                as candidate_count,
+              (select count(*) from users u where u.role = 'candidate' and u.current_test_type_id = c.id)::int as studying
        from test_types c
        order by c.position`
     ),
     pool.query<OutlineRow>(
-      `select s.id as section_id, s.position as section_position, s.title as section_title,
+      `select s.id as section_id, s.position as section_position, s.title as section_title, s.linked_to_all,
               c.id as chapter_id, c.title as chapter_title,
               (row_number() over (partition by c.id is not null order by s.position, c.position))::int as number
        from sections s
@@ -84,6 +90,7 @@ export default async function TestTypesPage() {
        cross join lateral (values ('front', c.front_cover_media_id), ('back', c.back_cover_media_id)) as s (side, media_id)
        join media m on m.id = s.media_id`
     ),
+    loadStructureLockView(),
   ]);
 
   // Languages a test type can offer besides English: live and draft ones (drafts are offered once they go live).
@@ -115,7 +122,7 @@ export default async function TestTypesPage() {
     coversByTestType.set(row.test_type_id, entry);
   }
 
-  const outline = buildOutline(outlineRows);
+  const outline = buildOutline(outlineRows, links, testTypes);
   const totalChapters = outline.reduce((sum, section) => sum + section.chapters.length, 0);
   const linkedByTestType = new Map<string, string[]>();
   for (const link of links) {
@@ -137,9 +144,11 @@ export default async function TestTypesPage() {
         }
       />
 
-      <p className="mb-6 text-sm text-slate-600">
+      <p className="mb-4 text-sm text-slate-600">
         Candidates can switch to any test type in the same test area as the one their Admin assigned.
       </p>
+
+      <StructureLockBar lock={lock} />
 
       <div className="space-y-8">
         {testAreas.map((testArea, testAreaIndex) => {
@@ -203,6 +212,8 @@ export default async function TestTypesPage() {
                           id={testType.id}
                           name={testType.name}
                           candidateCount={testType.candidate_count}
+                          studying={testType.studying}
+                          structureLocked={lock.locked}
                           outline={outline}
                           linkedChapterIds={linked}
                           otherTestAreas={testAreaOptions.filter((option) => option.id !== testArea.id)}
@@ -234,16 +245,33 @@ function describeCovers(front: boolean, back: boolean) {
   return "Standard";
 }
 
-function buildOutline(rows: OutlineRow[]): ChapterOutline {
+function buildOutline(
+  rows: OutlineRow[],
+  links: { test_type_id: string; chapter_id: string }[],
+  testTypes: { id: string; name: string }[]
+): ChapterOutline {
+  const names = new Map(testTypes.map((testType) => [testType.id, testType.name]));
   const outline: ChapterOutline = [];
   for (const row of rows) {
     let section = outline.at(-1);
     if (!section || section.id !== row.section_id) {
-      section = { id: row.section_id, label: `${sectionLetter(row.section_position)} · ${row.section_title}`, chapters: [] };
+      section = {
+        id: row.section_id,
+        label: `${sectionLetter(row.section_position)} · ${row.section_title}`,
+        linkedToAll: row.linked_to_all,
+        chapters: [],
+      };
       outline.push(section);
     }
     if (row.chapter_id && row.chapter_title && row.number) {
-      section.chapters.push({ id: row.chapter_id, number: chapterNumber(row.number), title: row.chapter_title });
+      // Who has a chapter outside the "every test type" sections, so other test types show it as taken.
+      const owners = row.linked_to_all
+        ? []
+        : links
+            .filter((link) => link.chapter_id === row.chapter_id)
+            .map((link) => ({ id: link.test_type_id, name: names.get(link.test_type_id) ?? "" }))
+            .sort((a, b) => a.name.localeCompare(b.name));
+      section.chapters.push({ id: row.chapter_id, number: chapterNumber(row.number), title: row.chapter_title, owners });
     }
   }
   return outline;

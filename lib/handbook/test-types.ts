@@ -1,11 +1,13 @@
 import { pool } from "@/lib/db/pool";
 
-export type TestAreaOption = { id: string; label: string; testTypes: { id: string; name: string }[] };
+// `studying`: candidates whose current test type it is (they see its chapters now).
+export type TestAreaOption = { id: string; label: string; testTypes: { id: string; name: string; studying: number }[] };
 
 // Every test type under its test area, in test area order, for the chapter-side test type pickers.
 export async function loadTestAreas(): Promise<TestAreaOption[]> {
-  const { rows } = await pool.query<{ test_area_id: string; test_area_name: string; id: string | null; name: string | null }>(
-    `select g.id as test_area_id, g.name as test_area_name, c.id, c.name
+  const { rows } = await pool.query<{ test_area_id: string; test_area_name: string; id: string | null; name: string | null; studying: number }>(
+    `select g.id as test_area_id, g.name as test_area_name, c.id, c.name,
+            (select count(*) from users u where u.role = 'candidate' and u.current_test_type_id = c.id)::int as studying
      from test_areas g
      left join test_types c on c.test_area_id = g.id
      order by g.position, c.position`
@@ -17,7 +19,7 @@ export async function loadTestAreas(): Promise<TestAreaOption[]> {
       testArea = { id: row.test_area_id, label: row.test_area_name, testTypes: [] };
       testAreas.push(testArea);
     }
-    if (row.id && row.name) testArea.testTypes.push({ id: row.id, name: row.name });
+    if (row.id && row.name) testArea.testTypes.push({ id: row.id, name: row.name, studying: row.studying });
   }
   return testAreas;
 }

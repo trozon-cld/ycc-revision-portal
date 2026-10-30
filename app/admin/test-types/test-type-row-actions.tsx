@@ -48,6 +48,8 @@ export function TestTypeRowActions({
   id,
   name,
   candidateCount,
+  studying,
+  structureLocked,
   outline,
   linkedChapterIds,
   otherTestAreas,
@@ -62,6 +64,8 @@ export function TestTypeRowActions({
   id: string;
   name: string;
   candidateCount: number;
+  studying: number;
+  structureLocked: boolean;
   outline: ChapterOutline;
   linkedChapterIds: string[];
   otherTestAreas: TestAreaOption[];
@@ -82,7 +86,15 @@ export function TestTypeRowActions({
       title: `Chapters for ${name}`,
       description: "Tick the chapters candidates studying this test type see in Prepare, Practice and the Mock test.",
       render: (close) => (
-        <TestTypeChaptersForm testTypeId={id} outline={outline} initialSelected={linkedChapterIds} onClose={close} />
+        <TestTypeChaptersForm
+          testTypeId={id}
+          testTypeName={name}
+          studying={studying}
+          outline={outline}
+          initialSelected={linkedChapterIds}
+          locked={structureLocked}
+          onClose={close}
+        />
       ),
     },
     {

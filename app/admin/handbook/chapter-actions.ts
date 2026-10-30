@@ -11,6 +11,8 @@ import { listNames } from "@/lib/handbook/test-types";
 import { questionRef } from "@/lib/questions/labels";
 import { isUuid } from "@/lib/ids";
 import { describeHeldBack, planChapterPublish, refRuns } from "@/lib/handbook/publish-all";
+import { structureLockedError } from "@/lib/handbook/structure-lock";
+import { EVERY_TEST_TYPE, everyTestTypeOnly, linkToEveryTestType, oneTestTypeOnly, sectionLinking } from "@/lib/handbook/sharing";
 import {
   lockHandbookStructure,
   normaliseTitle,
@@ -43,11 +45,16 @@ export async function createChapter(
   let chapterId = "";
   try {
     result = await withTransaction<StructureActionState>(async (client) => {
+      const locked = await structureLockedError(client);
+      if (locked) return { error: locked };
       await lockHandbookStructure(client);
-      const sectionTitle = await sectionTitleOf(client, sectionId);
-      if (!sectionTitle) return { error: SECTION_NOT_FOUND };
+      const section = isUuid(sectionId) ? await sectionLinking(client, sectionId) : null;
+      if (!section) return { error: SECTION_NOT_FOUND };
       if (await titleTaken(client, title, null)) return { error: DUPLICATE_TITLE };
-      const testTypes = await lockTestTypes(client, testTypeIds);
+      // A section linked to every test type ignores the choice; any other takes one test type at most.
+      const chosen = section.linkedToAll ? [] : testTypeIds;
+      if (chosen.length > 1) return { error: oneTestTypeOnly(section.label) };
+      const testTypes = await lockTestTypes(client, chosen);
       if (!testTypes) return { error: TEST_TYPES_CHANGED };
 
       const { rows: created } = await client.query<{ id: string }>(
@@ -56,18 +63,25 @@ export async function createChapter(
          returning id`,
         [sectionId, title]
       );
-      await client.query(
-        `insert into test_type_chapters (test_type_id, chapter_id) select unnest($1::uuid[]), $2::uuid`,
-        [testTypeIds, created[0].id]
-      );
+      if (section.linkedToAll) await linkToEveryTestType(client, created[0].id);
+      else {
+        await client.query(
+          `insert into test_type_chapters (test_type_id, chapter_id) select unnest($1::uuid[]), $2::uuid`,
+          [chosen, created[0].id]
+        );
+      }
       await logActivity(
         client,
         session,
         "chapter.created",
         { type: "chapter", id: created[0].id, label: title },
         {
-          section: sectionTitle,
-          ...(testTypeIds.length > 0 ? { testTypes: listNames(testTypeIds.map((id) => testTypes.get(id) ?? "")) } : {}),
+          section: section.title,
+          ...(section.linkedToAll
+            ? { testTypes: EVERY_TEST_TYPE }
+            : chosen.length > 0
+              ? { testTypes: listNames(chosen.map((id) => testTypes.get(id) ?? "")) }
+              : {}),
         }
       );
       chapterId = created[0].id;
@@ -101,11 +115,21 @@ export async function saveChapterTestTypes(
   let result: StructureActionState;
   try {
     result = await withTransaction<StructureActionState>(async (client) => {
-      // Test types first, then the chapter: the same order as a save from the Test types page.
+      const locked = await structureLockedError(client);
+      if (locked) return { error: locked };
+      // Structure, test types, then the chapter: the same order as a save from the Test types page.
+      await lockHandbookStructure(client);
       const testTypes = await lockTestTypes(client, testTypeIds);
       if (!testTypes) return { error: TEST_TYPES_CHANGED };
-      const { rows } = await client.query<{ title: string }>(`select title from chapters where id = $1 for update`, [chapterId]);
+      if (!isUuid(chapterId)) return { error: NOT_FOUND };
+      const { rows } = await client.query<{ title: string; section_id: string }>(
+        `select title, section_id from chapters where id = $1 for update`,
+        [chapterId]
+      );
       if (!rows[0]) return { error: NOT_FOUND };
+      const section = await sectionLinking(client, rows[0].section_id);
+      if (section?.linkedToAll) return { error: everyTestTypeOnly(section.label) };
+      if (section && testTypeIds.length > 1) return { error: oneTestTypeOnly(section.label) };
 
       const { rows: removed } = await client.query<{ test_type_id: string; name: string }>(
         `delete from test_type_chapters cc using test_types c
@@ -162,6 +186,8 @@ export async function renameChapter(
   let result: StructureActionState;
   try {
     result = await withTransaction<StructureActionState>(async (client) => {
+      const locked = await structureLockedError(client);
+      if (locked) return { error: locked };
       const { rows } = await client.query<{ title: string }>(
         `select title from chapters where id = $1 for update`,
         [chapterId]
@@ -201,6 +227,8 @@ export async function moveChapter(id: string, direction: "up" | "down"): Promise
   let result: StructureActionState;
   try {
     result = await withTransaction<StructureActionState>(async (client) => {
+      const locked = await structureLockedError(client);
+      if (locked) return { error: locked };
       await lockHandbookStructure(client);
 
       const { rows } = await client.query<{ section_id: string; position: number; title: string }>(
@@ -262,6 +290,8 @@ export async function moveChapterToSection(
   let result: StructureActionState;
   try {
     result = await withTransaction<StructureActionState>(async (client) => {
+      const locked = await structureLockedError(client);
+      if (locked) return { error: locked };
       await lockHandbookStructure(client);
 
       const { rows } = await client.query<{ section_id: string; position: number; title: string }>(
@@ -270,9 +300,9 @@ export async function moveChapterToSection(
       );
       if (!rows[0]) return { error: NOT_FOUND };
       if (rows[0].section_id === sectionId) return { success: true };
-      const newSection = await sectionTitleOf(client, sectionId);
+      const newSection = await sectionLinking(client, sectionId);
       if (!newSection) return { error: SECTION_NOT_FOUND };
-      const oldSection = await sectionTitleOf(client, rows[0].section_id);
+      const oldSection = await sectionLinking(client, rows[0].section_id);
 
       await client.query(
         `update chapters
@@ -283,12 +313,21 @@ export async function moveChapterToSection(
         [chapterId, sectionId]
       );
       await closeGap(client, rows[0].section_id, rows[0].position);
+      // Into a section linked to every test type: in every book. Out of one into another kind: in none.
+      let testTypes: string | null = null;
+      if (newSection.linkedToAll) {
+        await linkToEveryTestType(client, chapterId);
+        testTypes = EVERY_TEST_TYPE;
+      } else if (oldSection?.linkedToAll) {
+        await client.query(`delete from test_type_chapters where chapter_id = $1`, [chapterId]);
+        testTypes = "None (choose one with Test types)";
+      }
       await logActivity(
         client,
         session,
         "chapter.section_changed",
         { type: "chapter", id: chapterId, label: rows[0].title },
-        { from: oldSection ?? "", to: newSection }
+        { from: oldSection?.title ?? "", to: newSection.title, ...(testTypes ? { testTypes } : {}) }
       );
       return { success: true };
     });
@@ -313,6 +352,8 @@ export async function deleteChapter(
   let result: StructureActionState;
   try {
     result = await withTransaction<StructureActionState>(async (client) => {
+      const locked = await structureLockedError(client);
+      if (locked) return { error: locked };
       await lockHandbookStructure(client);
 
       const { rows } = await client.query<{ section_id: string; position: number; title: string }>(
@@ -344,7 +385,7 @@ export async function deleteChapter(
   return result;
 }
 
-// Publish: the chapter needs at least one item, and every item must be published. Unpublish: always.
+// Publish: the chapter needs at least one item, and every item must be published. Unpublish: unless the structure is locked.
 // Later edits don't unpublish it; candidates only ever see published items in published chapters.
 export async function setChapterStatus(id: string, status: "draft" | "published"): Promise<StructureActionState> {
   const session = await requireRole(CONTENT_EDITORS);
@@ -352,6 +393,11 @@ export async function setChapterStatus(id: string, status: "draft" | "published"
   if (!isUuid(chapterId) || (status !== "draft" && status !== "published")) return { error: NOT_FOUND };
 
   const result = await withTransaction<StructureActionState>(async (client) => {
+    // Unpublishing takes a chapter out of candidates' books, so it waits for an unlock; publishing doesn't.
+    if (status === "draft") {
+      const locked = await structureLockedError(client);
+      if (locked) return { error: locked };
+    }
     const { rows } = await client.query<{ title: string; status: string }>(
       `select title, status from chapters where id = $1 for update`,
       [chapterId]
@@ -468,7 +514,7 @@ export async function publishChapterContent(_prev: StructureActionState, formDat
 }
 
 function testTypeIdsFrom(formData: FormData): string[] {
-  return [...new Set(formData.getAll("testTypeId").map(String))];
+  return [...new Set(formData.getAll("testTypeId").map(String).filter(Boolean))];
 }
 
 // Keeps the chosen test types from being deleted until the save commits; null if any is gone.

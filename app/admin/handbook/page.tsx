@@ -12,6 +12,8 @@ import { Cell, Row, Table } from "@/components/admin/table";
 import { countOf } from "@/lib/format";
 import { ChapterRowActions, NewChapterButton } from "./chapter-row-actions";
 import { NewSectionButton, SectionRowActions, type SectionOption } from "./section-row-actions";
+import { loadStructureLockView } from "@/lib/handbook/structure-lock";
+import { StructureLockBar } from "./structure-lock-bar";
 
 export const metadata: Metadata = { title: "Handbook" };
 
@@ -19,6 +21,7 @@ interface SectionRow {
   id: string;
   position: number;
   title: string;
+  linked_to_all: boolean;
 }
 
 interface ChapterRow {
@@ -32,13 +35,14 @@ interface ChapterRow {
   question_count: number;
   item_count: number;
   draft_count: number;
+  studying: number;
 }
 
 export default async function HandbookPage() {
   await requireRole(CONTENT_EDITORS);
 
-  const [{ rows: sections }, { rows: chapters }, testAreas, chapterTestTypes] = await Promise.all([
-    pool.query<SectionRow>(`select id, position, title from sections order by position`),
+  const [{ rows: sections }, { rows: chapters }, testAreas, chapterTestTypes, lock] = await Promise.all([
+    pool.query<SectionRow>(`select id, position, title, linked_to_all from sections order by position`),
     pool.query<ChapterRow>(
       `select c.id, c.section_id, c.position, c.title, c.status,
               row_number() over (order by s.position, c.position)::int as number,
@@ -48,19 +52,23 @@ export default async function HandbookPage() {
               (select count(*) from handbook_items i
                  left join content_pages p on p.id = i.content_page_id
                  left join questions q on q.id = i.question_id
-                 where i.chapter_id = c.id and coalesce(p.status, q.status) <> 'published')::int as draft_count
+                 where i.chapter_id = c.id and coalesce(p.status, q.status) <> 'published')::int as draft_count,
+              (select count(*) from users u join test_type_chapters l on l.test_type_id = u.current_test_type_id
+                 where u.role = 'candidate' and l.chapter_id = c.id)::int as studying
        from chapters c
        join sections s on s.id = c.section_id
        order by s.position, c.position`
     ),
     loadTestAreas(),
     loadChapterTestTypeIds(),
+    loadStructureLockView(),
   ]);
   const testTypeTotal = testAreas.reduce((sum, testArea) => sum + testArea.testTypes.length, 0);
 
   const sectionOptions: SectionOption[] = sections.map((section) => ({
     id: section.id,
     label: `${sectionLetter(section.position)} · ${section.title}`,
+    linkedToAll: section.linked_to_all,
   }));
 
   return (
@@ -76,11 +84,17 @@ export default async function HandbookPage() {
             <Link href="/admin/handbook/languages" className={buttonClass("secondary")}>
               Languages and audio
             </Link>
-            <NewSectionButton />
-            <NewChapterButton sections={sectionOptions} testAreas={testAreas} />
+            {!lock.locked && (
+              <>
+                <NewSectionButton />
+                <NewChapterButton sections={sectionOptions} testAreas={testAreas} />
+              </>
+            )}
           </>
         }
       />
+
+      <StructureLockBar lock={lock} />
 
       {sections.length === 0 && (
         <p className="rounded-lg border border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-600">
@@ -104,6 +118,7 @@ export default async function HandbookPage() {
                   </h2>
                   <p className="text-sm text-slate-600">
                     {countOf(sectionChapters.length, "chapter")}
+                    {section.linked_to_all && " · In every test type"}
                     {/* A section is in the book once one of its chapters is published. */}
                     {!sectionChapters.some((chapter) => chapter.status === "published") && " · Not in the book yet"}
                     {withoutTestType > 0 && (
@@ -114,14 +129,17 @@ export default async function HandbookPage() {
                     )}
                   </p>
                 </div>
+                {!lock.locked && (
                 <SectionRowActions
                   id={section.id}
                   label={label}
                   title={section.title}
                   chapterCount={sectionChapters.length}
+                  linkedToAll={section.linked_to_all}
                   isFirst={sectionIndex === 0}
                   isLast={sectionIndex === sections.length - 1}
                 />
+                )}
               </div>
 
               <Table
@@ -169,6 +187,9 @@ export default async function HandbookPage() {
                         status={chapter.status}
                         testAreas={testAreas}
                         testTypeIds={chapterTestTypes.get(chapter.id) ?? []}
+                        linking={sectionOptions[sectionIndex]}
+                        studying={chapter.studying}
+                        locked={lock.locked}
                       />
                     </Cell>
                   </Row>

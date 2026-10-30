@@ -8,6 +8,7 @@ import { quoteIdent as quote } from "@/lib/db/identifiers";
 import { withTransaction } from "@/lib/db/transaction";
 import { countOf } from "@/lib/format";
 import { lockHandbookOrder } from "@/lib/handbook/structure";
+import { DERIVE_SECTION_LINKING_SQL } from "@/lib/handbook/sharing";
 import { NOT_CONFIGURED } from "@/lib/media/upload";
 import { parseQuestion } from "@/lib/questions/validate";
 import { EXTENSION_BY_MIME, readImageInfo } from "@/lib/media/image-info";
@@ -105,6 +106,11 @@ export async function restoreBackup(session: SessionPayload, raw: unknown): Prom
       await insertRows(client, table, columns, tableRows, conflict);
     }
     await finishStructure(client, rows);
+    // A backup from before 0040 has no section linking: worked out from its chapters' test types.
+    if (!m.tables.sections.columns.includes("linked_to_all")) {
+      await client.query(`update sections set linked_to_all = false`);
+      await client.query(DERIVE_SECTION_LINKING_SQL);
+    }
     // New questions carry on after the highest restored Q number.
     await client.query(`select setval(pg_get_serial_sequence('questions', 'ref_no'), coalesce((select max(ref_no) from questions), 0) + 1, false)`);
 

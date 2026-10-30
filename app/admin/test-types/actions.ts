@@ -10,6 +10,9 @@ import { TEST_TYPE_NAME_MAX_LENGTH } from "@/lib/limits";
 import { cleanLine } from "@/lib/text";
 import type { FormState } from "@/lib/forms";
 import type { ListenMode } from "@/lib/voice/language-store";
+import { lockHandbookStructure } from "@/lib/handbook/structure";
+import { structureLockedError } from "@/lib/handbook/structure-lock";
+import { claimedElsewhere, linkSharedChapters, sharedChapterIds } from "@/lib/handbook/sharing";
 
 export type TestTypeActionState = FormState;
 
@@ -50,12 +53,13 @@ export async function createTestType(
          returning id`,
         [name, testAreaId]
       );
+      const shared = await linkSharedChapters(client, rows[0].id);
       await logActivity(
         client,
         session,
         "test_type.created",
         { type: "test_type", id: rows[0].id, label: name },
-        { testArea: testAreas[0].name }
+        { testArea: testAreas[0].name, ...(shared > 0 ? { chapters: `${shared} linked to every test type` } : {}) }
       );
       return { success: true };
     });
@@ -270,15 +274,24 @@ export async function saveTestTypeChapters(
   const session = await requireRole(["superadmin"]);
 
   const testTypeId = String(formData.get("testTypeId") ?? "");
-  const chapterIds = [...new Set(formData.getAll("chapterId").map(String))];
+  const chosen = [...new Set(formData.getAll("chapterId").map(String))];
   if (!testTypeId) return { error: "Test type not found." };
-  if (chapterIds.length > MAX_LINKED_CHAPTERS) return { error: "Too many chapters selected." };
+  if (chosen.length > MAX_LINKED_CHAPTERS) return { error: "Too many chapters selected." };
+  if (!chosen.every(isUuid)) return { error: CHAPTERS_CHANGED };
 
   let result: TestTypeActionState;
   try {
     result = await withTransaction<TestTypeActionState>(async (client) => {
+      const locked = await structureLockedError(client);
+      if (locked) return { error: locked };
+      await lockHandbookStructure(client);
       const testType = await lockTestType(client, testTypeId);
       if (!testType) return { error: "This test type no longer exists." };
+      // Chapters linked to every test type are always in; any other chapter belongs to one test type.
+      const shared = await sharedChapterIds(client);
+      const claimed = await claimedElsewhere(client, testTypeId, chosen.filter((id) => !shared.includes(id)));
+      if (claimed) return { error: claimed };
+      const chapterIds = [...new Set([...chosen, ...shared])];
 
       // FOR SHARE keeps these chapters from being deleted until this save commits.
       const { rows } = await client.query(`select id from chapters where id = any($1::uuid[]) for share`, [

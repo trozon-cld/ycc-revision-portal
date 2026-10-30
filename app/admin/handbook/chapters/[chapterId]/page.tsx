@@ -17,6 +17,7 @@ import { AddQuestionsButton, ChapterOrder, type AddableQuestion, type OrderItem 
 import { NewPageButton } from "./page-row-actions";
 import { ChapterTestTypesButton, ChapterStatusButton, PublishAllButton, type PublishAllSummary } from "../../chapter-row-actions";
 import { describeHeldBack, planChapterPublish } from "@/lib/handbook/publish-all";
+import { readStructureLock } from "@/lib/handbook/structure-lock";
 import { Badge } from "@/components/admin/badge";
 
 export const metadata: Metadata = { title: "Chapter" };
@@ -50,7 +51,7 @@ export default async function ChapterPagesPage({ params }: PageProps<"/admin/han
   const chapter = await getChapterContext(chapterId);
   if (!chapter) notFound();
 
-  const [{ rows }, { rows: unplaced }, testAreas, links, plan] = await Promise.all([
+  const [{ rows }, { rows: unplaced }, testAreas, links, plan, { rows: linkingRows }, lock] = await Promise.all([
     pool.query<ItemRow>(
       `select i.id, i.position,
               p.id as page_id, p.title as page_title, p.status as page_status,
@@ -75,7 +76,17 @@ export default async function ChapterPagesPage({ params }: PageProps<"/admin/han
     loadTestAreas(),
     loadChapterTestTypeIds([chapter.id]),
     planChapterPublish(pool, chapter.id, false),
+    // The section's test type linking, and candidates whose current test type includes the chapter.
+    pool.query<{ linked_to_all: boolean; studying: number }>(
+      `select s.linked_to_all,
+              (select count(*) from users u join test_type_chapters l on l.test_type_id = u.current_test_type_id
+                 where u.role = 'candidate' and l.chapter_id = c.id)::int as studying
+       from chapters c join sections s on s.id = c.section_id where c.id = $1`,
+      [chapter.id]
+    ),
+    readStructureLock(),
   ]);
+  const linking = { label: chapter.sectionLabel, linkedToAll: linkingRows[0]?.linked_to_all ?? false };
   const testTypeIds = links.get(chapter.id) ?? [];
   const testTypeNames = testAreas.flatMap((testArea) => testArea.testTypes).filter((testType) => testTypeIds.includes(testType.id)).map((testType) => testType.name);
 
@@ -152,7 +163,14 @@ export default async function ChapterPagesPage({ params }: PageProps<"/admin/han
             <Link href={`/admin/handbook/preview?chapter=${chapter.id}`} className={buttonClass("secondary")}>
               Preview chapter
             </Link>
-            <ChapterTestTypesButton chapterId={chapter.id} testAreas={testAreas} initialSelected={testTypeIds} />
+            <ChapterTestTypesButton
+              chapterId={chapter.id}
+              chapterName={`${chapter.number} ${chapter.title}`}
+              testAreas={testAreas}
+              initialSelected={testTypeIds}
+              linking={linking}
+              locked={lock.locked}
+            />
             <AddQuestionsButton chapterId={chapter.id} questions={addable} />
             <NewPageButton chapterId={chapter.id} />
             {publishAll.pages + publishAll.questions + publishAll.heldBackCount > 0 && (
@@ -166,6 +184,8 @@ export default async function ChapterPagesPage({ params }: PageProps<"/admin/han
               itemCount={items.length}
               draftCount={drafts}
               hasTestTypes={testTypeIds.length > 0}
+              studying={linkingRows[0]?.studying ?? 0}
+              locked={lock.locked}
             />
           </>
         }
