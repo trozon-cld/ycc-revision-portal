@@ -52,6 +52,8 @@ export function TranslationToolbar({
 }) {
   const [confirmAgain, setConfirmAgain] = useState(false);
   const busy = isSaving || isChecking || isTranslating;
+  // Checked by a bulk run: a person can still read it and mark it as checked.
+  const auto = state === "checked" && summary?.checkedAutomatically === true;
   const translate = () => {
     setConfirmAgain(false);
     onTranslate();
@@ -65,7 +67,7 @@ export function TranslationToolbar({
             <span className="font-medium text-ink">
               {language.name} <span lang={language.code}>{language.nativeName}</span>
             </span>
-            <TranslationBadge state={state} />
+            <TranslationBadge state={state} auto={auto} />
           </p>
           <p className="mt-0.5 text-xs text-slate-600" aria-live="polite">
             {busy
@@ -93,11 +95,11 @@ export function TranslationToolbar({
             <button
               type="button"
               onClick={onCheck}
-              disabled={busy || dirty || state !== "draft"}
+              disabled={busy || dirty || (state !== "draft" && !auto)}
               title={dirty ? "Save your changes first" : state === "outdated" ? `The English ${what} changed: translate again or edit and save first` : undefined}
               className={buttonClass("secondary")}
             >
-              {isChecking ? "Saving…" : state === "checked" ? "Checked" : "Mark as checked"}
+              {isChecking ? "Saving…" : state === "checked" && !auto ? "Checked" : "Mark as checked"}
             </button>
             <button type="button" onClick={onSave} disabled={busy || !dirty || !canSave} className={buttonClass("primary")}>
               {isSaving ? "Saving…" : "Save"}
@@ -142,6 +144,9 @@ export function TranslationToolbar({
 }
 
 function stateLine(state: TranslationState, summary: TranslationSummary, outdatedLine: string): string {
+  if (state === "checked" && summary.checkedAutomatically) {
+    return `Checked automatically by bulk Listen ${formatUkDateTime(summary.checkedAt ?? summary.updatedAt)}. Read it, then mark it as checked.`;
+  }
   if (state === "checked") return `Checked ${formatUkDateTime(summary.checkedAt ?? summary.updatedAt)}.`;
   if (state === "outdated") return outdatedLine;
   return `Draft, last changed ${formatUkDateTime(summary.updatedAt)}. Not checked yet.`;

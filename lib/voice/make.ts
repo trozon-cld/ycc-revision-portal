@@ -8,9 +8,9 @@ import { audioService } from "./language-catalogue";
 import { findVoiceLanguage } from "./language-store";
 import { SOURCE_LANGUAGE, type VoiceLanguage } from "./languages";
 import { VOICE_REQUEST_TIMEOUT_MS } from "./limits";
-import { reserveVoiceUsage, settleVoiceUsage, VoiceQuotaError } from "./quota";
+import { reserveVoiceUsage, settleVoiceUsage, VoiceQuotaError, type GeminiCalls } from "./quota";
 import { readingParts, speechChunks } from "./reading";
-import { serviceOf, VoiceError, type SpeechMaker, type TranslationKind, type Translator, type TranslatorLanguage } from "./services";
+import { failureOf, serviceOf, VoiceError, type SpeechMaker, type TranslationKind, type Translator, type TranslatorLanguage, type VoiceFailure } from "./services";
 import { applyTranslation, matchTranslation, toTranslatable, type TranslatableBlock } from "./translation";
 
 // The editors' two jobs: translate a page or question, and turn one (English or translated) into one MP3.
@@ -34,13 +34,26 @@ function speechFor(code: string): SpeechMaker {
   return audioService(code) === "gemini" ? geminiSpeech() : googleSpeech();
 }
 
-// What staff see when the voice service fails or the hourly cap is reached (the service's own words go to the log).
-export function voiceFailure(error: unknown): { ok: false; error: string } {
+// A job run by bulk Listen: translations are checked automatically, and nothing is logged item by item.
+export type VoiceJobOptions = { bulk?: boolean };
+
+// `limit`: a usage limit stopped it (the hourly one, a daily one), not a fault.
+export type VoiceFailureResult = { ok: false; error: string; failure?: VoiceFailure; waitMs?: number; limit?: boolean };
+
+// What staff see when the voice service fails or a limit is reached (the service's own words go to the log), and
+// what a bulk run should do about it.
+export function voiceFailure(error: unknown): VoiceFailureResult {
   if (error instanceof VoiceError) {
     if (error.detail) console.error("Voice service:", error.kind, error.detail);
-    return { ok: false, error: error.message };
+    const failure = failureOf(error.kind);
+    if (error.kind === "daily_limit") return { ok: false, error: error.message, failure: "stop", limit: true };
+    return failure ? { ok: false, error: error.message, failure } : { ok: false, error: error.message };
   }
-  if (error instanceof VoiceQuotaError) return { ok: false, error: error.message };
+  if (error instanceof VoiceQuotaError) {
+    return error.waitMs
+      ? { ok: false, error: error.message, failure: "retry", waitMs: error.waitMs }
+      : { ok: false, error: error.message, failure: "stop", limit: true };
+  }
   throw error;
 }
 
@@ -111,7 +124,9 @@ export async function speakParts(userId: string, readParts: string[], code: stri
   if (chunks.length === 0) throw new VoiceError("failed", "there is nothing to read aloud");
   // A language the service can't speak is refused before anything is counted toward the cap.
   if (speech.checkLanguage) await withTimeout((signal) => speech.checkLanguage!(lang, signal));
-  const reservation = await reserveVoiceUsage(userId, "speech", serviceOf(speech.name), characterCount(chunks));
+  // A Gemini-voiced language counts its calls against its own limits (one call per part).
+  const calls: GeminiCalls | undefined = audioService(code) === "gemini" ? { language: code, name: lang.name, count: chunks.length } : undefined;
+  const reservation = await reserveVoiceUsage(userId, "speech", serviceOf(speech.name), characterCount(chunks), calls);
   const parts: Pcm[] = [];
   let voice = speech.voice;
   let accepted = 0;

@@ -9,7 +9,7 @@ import { requireRole } from "@/lib/auth/guard";
 import { countOf } from "@/lib/format";
 import { LANGUAGE_CATALOGUE, audioService } from "@/lib/voice/language-catalogue";
 import { VOICE_SERVICE_NAMES } from "@/lib/voice/services";
-import { listManagedLanguages, type ManagedLanguage } from "@/lib/voice/language-admin";
+import { describeGeminiLimits, listManagedLanguages, type ManagedLanguage } from "@/lib/voice/language-admin";
 import { LANGUAGE_TABS, LANGUAGES_MANAGE_PATH } from "@/lib/voice/language-tabs";
 import { phraseKeysFor, type LanguageStatus } from "@/lib/voice/languages";
 import { voiceUsageSummary } from "@/lib/voice/quota";
@@ -77,7 +77,12 @@ export default async function ManageLanguagesPage() {
             <Cell label="Spoken phrases">
               <PhraseState language={language} />
             </Cell>
-            <Cell label="Audio by">{VOICE_SERVICE_NAMES[audioService(language.code)]}</Cell>
+            <Cell label="Audio by">
+              {VOICE_SERVICE_NAMES[audioService(language.code)]}
+              {audioService(language.code) === "gemini" && (
+                <span className="block text-xs text-slate-600">{describeGeminiLimits(language.geminiPerDay, language.geminiPerMinute)}</span>
+              )}
+            </Cell>
             <Cell label="Candidates">{language.candidates}</Cell>
             <Cell kind="actions">
               <LanguageRowActions
@@ -87,6 +92,7 @@ export default async function ManageLanguagesPage() {
                 candidates={language.candidates}
                 ready={language.phrases === phraseKeysFor(language.code).length && language.checked === phraseKeysFor(language.code).length}
                 canDelete={session.role === "superadmin"}
+                gemini={audioService(language.code) === "gemini" ? { perDay: language.geminiPerDay, perMinute: language.geminiPerMinute } : null}
               />
             </Cell>
           </Row>

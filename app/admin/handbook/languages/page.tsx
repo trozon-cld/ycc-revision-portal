@@ -215,7 +215,7 @@ export default async function LanguagesPage({ searchParams }: PageProps<"/admin/
                         className="inline-flex min-h-6 items-center rounded-full"
                       >
                         <span className="sr-only">{language.name} translation: </span>
-                        <TranslationBadge state={state.translation} />
+                        <TranslationBadge state={state.translation} auto={state.auto} />
                       </Link>
                     )}
                     <span className="inline-flex min-h-6 flex-wrap items-center gap-x-1">

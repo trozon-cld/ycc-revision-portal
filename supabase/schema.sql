@@ -700,3 +700,37 @@ insert into structure_lock default values;
 -- A section linked to every test type puts each of its chapters in every test type's book (0040); otherwise each of
 -- its chapters belongs to one test type at most.
 alter table sections add column linked_to_all boolean not null default false;
+
+-- Bulk Listen (0041). A translation a bulk run checked stays "checked automatically" until a person checks it.
+alter table page_translations add column checked_automatically boolean not null default false;
+alter table page_translations add constraint page_translations_auto_check check (not checked_automatically or status = 'checked');
+alter table question_translations add column checked_automatically boolean not null default false;
+alter table question_translations add constraint question_translations_auto_check check (not checked_automatically or status = 'checked');
+
+-- Call limits for a language voiced by Gemini (empty = no limit; the free tier allows about 10 a day and 3 a minute).
+alter table voice_languages add column gemini_calls_per_day integer check (gemini_calls_per_day between 1 and 100000);
+alter table voice_languages add column gemini_calls_per_minute integer check (gemini_calls_per_minute between 1 and 1000);
+
+-- Which language a usage row was for, and how many service calls it made (for the Gemini limits).
+alter table voice_usage add column language varchar(10);
+alter table voice_usage add column calls integer not null default 1 check (calls >= 0);
+create index voice_usage_language_idx on voice_usage (service, language, created_at);
+
+-- One row per bulk run (chapter and language): its counts, and how it ended. Its log entry is written when it ends.
+create table voice_bulk_runs (
+  id uuid primary key default gen_random_uuid(),
+  chapter_id uuid not null references chapters (id) on delete cascade,
+  language varchar(10) not null references voice_languages (code) on delete cascade,
+  started_by uuid references users (id) on delete set null,
+  started_at timestamptz not null default now(),
+  last_step_at timestamptz not null default now(),
+  finished_at timestamptz,
+  items integer not null check (items >= 0),
+  translated integer not null default 0 check (translated >= 0),
+  audio integer not null default 0 check (audio >= 0),
+  failed integer not null default 0 check (failed >= 0),
+  outcome varchar(12) check (outcome in ('finished', 'stopped', 'limit', 'abandoned')),
+  check ((finished_at is null) = (outcome is null))
+);
+
+create unique index voice_bulk_runs_open_key on voice_bulk_runs (chapter_id, language) where finished_at is null;

@@ -30,17 +30,17 @@ export function useLeaveGuard(dirty: boolean): [string | null, (to: string | nul
   return [leaveTo, setLeaveTo];
 }
 
-// The question asked when a caught link would lose unsaved edits.
-export function LeaveDialog({ what, onStay, onLeave }: { what: string; onStay: () => void; onLeave: () => void }) {
+// The question asked when a caught link would lose unsaved edits (or, with `running`, stop work in progress).
+export function LeaveDialog({ what, onStay, onLeave, running }: { what: string; onStay: () => void; onLeave: () => void; running?: string }) {
   return (
-    <Dialog title="Leave without saving?" variant="confirm" onClose={onStay}>
-      <p className="px-5 py-4 text-sm">Your changes to {what} haven&apos;t been saved yet.</p>
+    <Dialog title={running ? "Leave and stop?" : "Leave without saving?"} variant="confirm" onClose={onStay}>
+      <p className="px-5 py-4 text-sm">{running ?? <>Your changes to {what} haven&apos;t been saved yet.</>}</p>
       <div className="flex justify-end gap-2 border-t border-slate-200 px-5 py-3">
         <button type="button" onClick={onStay} className={buttonClass("secondary")}>
           Stay
         </button>
         <button type="button" onClick={onLeave} className={buttonClass("danger")}>
-          Leave without saving
+          {running ? "Leave and stop" : "Leave without saving"}
         </button>
       </div>
     </Dialog>

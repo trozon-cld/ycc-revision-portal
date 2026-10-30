@@ -480,6 +480,7 @@ function describeDetails(details: Record<string, string>): string | null {
   if (details.backCover) parts.push(`Back cover: ${details.backCover}`);
   if (details.accessUntil) parts.push(`Access until ${details.accessUntil}`);
   if (details.source) parts.push(details.source);
+  if (details.result) parts.push(details.result);
   if (details.records) parts.push(`${details.records} record${details.records === "1" ? "" : "s"}`);
   return parts.length > 0 ? parts.join(" · ") : null;
 }
