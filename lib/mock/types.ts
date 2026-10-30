@@ -47,7 +47,7 @@ export type MockEnd = "submitted" | "time_up" | "away" | "moved";
 
 // The start page: what a test would hold now, and the one in progress if any.
 export type MockHome = {
-  categoryName: string;
+  testTypeName: string;
   // Questions a new test would have (up to 50) and its time.
   size: number;
   minutes: number;
@@ -83,7 +83,7 @@ export type MockResults = {
   next: NextStep;
   // Only the newest tests keep their questions and answers for review.
   answersKept: boolean;
-  // Wrong or unanswered questions that can be practised now (in the current category's Practice).
+  // Wrong or unanswered questions that can be practised now (in the current test type's Practice).
   practiceCount: number;
 };
 

@@ -9,7 +9,8 @@ import { logActivity } from "@/lib/audit/log";
 import { questionLogLabel } from "@/lib/questions/labels";
 import { readQuestionForUpdate } from "@/lib/questions/queries";
 import { questionTypeLabel } from "@/lib/questions/registry";
-import { parseQuestion, type ParsedQuestion } from "@/lib/questions/validate";
+import { needsAreas } from "@/lib/questions/areas";
+import { parseQuestion, questionFingerprint } from "@/lib/questions/validate";
 import { isUuid } from "@/lib/ids";
 import { deleteAudioFilesQuietly } from "@/lib/voice/audio-files";
 import { questionAudioPaths } from "@/lib/voice/question-voice";
@@ -53,7 +54,8 @@ export async function saveQuestion(input: QuestionSaveInput): Promise<QuestionSa
   if (typeof input.inPractice !== "boolean" || typeof input.inMock !== "boolean") {
     return { ok: false, error: "Choose where this question is used." };
   }
-  const parsed = parseQuestion(input);
+  // Drafts may be saved before their areas are drawn; a published question is checked below.
+  const parsed = parseQuestion(input, { allowUnmarked: true });
   if (!parsed.ok) return { ok: false, error: parsed.error };
   const question = parsed.question;
   const chapterId = input.chapterId.toLowerCase();
@@ -106,6 +108,9 @@ export async function saveQuestion(input: QuestionSaveInput): Promise<QuestionSa
         };
       }
       if (stored.type !== question.type) return { ok: false, error: "A question's type can't be changed." };
+      if (stored.status === "published" && needsAreas(question)) {
+        return { ok: false, error: "This question is published, so it needs its areas. Draw them, or unpublish it first." };
+      }
 
       const chapterChanged = stored.chapterId !== chapterId;
       let fromChapter = "";
@@ -128,8 +133,8 @@ export async function saveQuestion(input: QuestionSaveInput): Promise<QuestionSa
       }
       if (!(await picturesExist(client, question.mediaIds))) return { ok: false, error: PICTURE_GONE };
 
-      const before = parseQuestion(stored);
-      const contentChanged = !before.ok || fingerprint(before.question) !== fingerprint(question);
+      const before = parseQuestion(stored, { allowUnmarked: true });
+      const contentChanged = !before.ok || questionFingerprint(before.question) !== questionFingerprint(question);
       const usageChanged = stored.inPractice !== input.inPractice || stored.inMock !== input.inMock;
       if (!contentChanged && !usageChanged && !chapterChanged) return { ok: true, id: questionId, version: stored.version };
 
@@ -286,18 +291,6 @@ async function writeMediaLinks(client: PoolClient, questionId: string, mediaIds:
   }
 }
 
-// What candidates see: a change here raises the version. Chapter and usage are tracked separately.
-function fingerprint(question: ParsedQuestion): string {
-  return JSON.stringify([
-    question.stemText,
-    question.stemMediaId,
-    question.stemMediaSize,
-    question.stemMediaAlign,
-    question.content,
-    question.answer,
-    question.explanation,
-  ]);
-}
 
 type Usage = { inPractice: boolean; inMock: boolean };
 

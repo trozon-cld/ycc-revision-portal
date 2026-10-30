@@ -4,28 +4,29 @@ create extension if not exists pgcrypto;
 
 create type role_type as enum ('superadmin', 'admin', 'candidate');
 
--- Candidates can switch only between categories of the same group. Managed by the Superadmin.
-create table category_groups (
+-- Test areas (e.g. General, Specialist): candidates can switch only between test types of the same test area.
+-- Managed by the Superadmin.
+create table test_areas (
   id uuid primary key default gen_random_uuid(),
   position integer not null check (position > 0),
   name varchar(100) not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  constraint category_groups_position_key unique (position) deferrable initially deferred
+  constraint test_areas_position_key unique (position) deferrable initially deferred
 );
 
-create unique index category_groups_name_key on category_groups (lower(name));
+create unique index test_areas_name_key on test_areas (lower(name));
 
--- A Candidate's assignment (e.g. Operative).
-create table categories (
+-- A test type (e.g. Operative): what a candidate is assigned and studies. Its book is its linked chapters.
+create table test_types (
   id uuid primary key default gen_random_uuid(),
   name varchar not null,
-  group_id uuid not null references category_groups (id) on delete restrict,
+  test_area_id uuid not null references test_areas (id) on delete restrict,
   created_at timestamptz not null default now()
 );
 
-create unique index categories_name_key on categories (lower(name));
-create index categories_group_idx on categories (group_id);
+create unique index test_types_name_key on test_types (lower(name));
+create index test_types_test_area_idx on test_types (test_area_id);
 
 create table users (
   id uuid primary key default gen_random_uuid(),
@@ -33,9 +34,9 @@ create table users (
   password_hash varchar not null,
   role role_type not null,
   -- Candidates only (required for them, see check below). NULL for Admins/Superadmins.
-  category_id uuid references categories (id),
-  -- Candidates only: their own choice, always in the same group as category_id (see trigger below).
-  current_category_id uuid references categories (id),
+  test_type_id uuid references test_types (id),
+  -- Candidates only: their own choice, always in the same test area as test_type_id (see trigger below).
+  current_test_type_id uuid references test_types (id),
   -- Admin who owns this candidate. Restrict: an Admin can't be deleted while owning candidates.
   admin_id uuid references users (id) on delete restrict,
   -- Expiry/block checks apply only to candidates. Admins/Superadmins keep
@@ -53,51 +54,51 @@ create table users (
   -- Candidates: the language Listen reads Handbook pages in (voice_languages, added below). Staff: unused.
   preferred_language varchar(10) not null default 'en' check (preferred_language ~ '^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$'),
   constraint users_candidate_fields_check check (
-    (role = 'candidate' and category_id is not null and admin_id is not null)
+    (role = 'candidate' and test_type_id is not null and admin_id is not null)
     or (role <> 'candidate' and admin_id is null)
   ),
-  constraint users_current_category_check check ((role = 'candidate') = (current_category_id is not null))
+  constraint users_current_test_type_check check ((role = 'candidate') = (current_test_type_id is not null))
 );
 
 create index users_admin_id_idx on users (admin_id);
-create index users_category_idx on users (category_id);
-create index users_current_category_idx on users (current_category_id);
+create index users_test_type_idx on users (test_type_id);
+create index users_current_test_type_idx on users (current_test_type_id);
 
-create function check_candidate_category_group() returns trigger
+create function check_candidate_test_area() returns trigger
 language plpgsql as $$
 begin
-  if new.role = 'candidate' and new.current_category_id is not null
-     and (select group_id from categories where id = new.category_id)
-         is distinct from (select group_id from categories where id = new.current_category_id) then
-    raise exception 'A candidate''s current category must be in the same group as their assigned category'
+  if new.role = 'candidate' and new.current_test_type_id is not null
+     and (select test_area_id from test_types where id = new.test_type_id)
+         is distinct from (select test_area_id from test_types where id = new.current_test_type_id) then
+    raise exception 'A candidate''s current test type must be in the same test area as their assigned test type'
       using errcode = '23514';
   end if;
   return new;
 end;
 $$;
 
-create trigger users_category_group_check
-  before insert or update of category_id, current_category_id on users
-  for each row execute function check_candidate_category_group();
+create trigger users_test_area_check
+  before insert or update of test_type_id, current_test_type_id on users
+  for each row execute function check_candidate_test_area();
 
--- Moving a category to another group would silently move its candidates too, so it's refused.
-create function check_category_group_move() returns trigger
+-- Moving a test type to another test area would silently move its candidates too, so it's refused.
+create function check_test_type_area_move() returns trigger
 language plpgsql as $$
 begin
-  if new.group_id is distinct from old.group_id
-     and exists (select 1 from users where category_id = new.id or current_category_id = new.id) then
-    raise exception 'A category in use by candidates cannot move to another group'
+  if new.test_area_id is distinct from old.test_area_id
+     and exists (select 1 from users where test_type_id = new.id or current_test_type_id = new.id) then
+    raise exception 'A test type in use by candidates cannot move to another test area'
       using errcode = '23514';
   end if;
   return new;
 end;
 $$;
 
-create trigger categories_group_move_check
-  before update of group_id on categories
-  for each row execute function check_category_group_move();
+create trigger test_types_area_move_check
+  before update of test_area_id on test_types
+  for each row execute function check_test_type_area_move();
 
--- No foreign keys: entries must outlive the users and categories they mention.
+-- No foreign keys: entries must outlive the users and test types they mention.
 create table activity_logs (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz not null default now(),
@@ -114,9 +115,9 @@ create table activity_logs (
 
 create index activity_logs_created_at_idx on activity_logs (created_at desc);
 create index activity_logs_actor_idx on activity_logs (actor_id, created_at desc);
--- An admin's Activity page: their candidates' category switches.
+-- An admin's Activity page: their candidates' test type switches (key renamed in 0037; older entries keep the old key).
 create index activity_logs_switch_target_idx on activity_logs (target_id, created_at desc)
-  where action = 'candidate.category_switched';
+  where action in ('candidate.test_type_switched', 'candidate.category_switched');
 
 create table auth_events (
   id uuid primary key default gen_random_uuid(),
@@ -215,14 +216,14 @@ create table chapters (
 create unique index chapters_title_key on chapters (lower(title));
 
 -- No order column: chapters follow the Handbook order. Links are settings, so deletes cascade.
-create table category_chapters (
-  category_id uuid not null references categories (id) on delete cascade,
+create table test_type_chapters (
+  test_type_id uuid not null references test_types (id) on delete cascade,
   chapter_id uuid not null references chapters (id) on delete cascade,
   created_at timestamptz not null default now(),
-  primary key (category_id, chapter_id)
+  primary key (test_type_id, chapter_id)
 );
 
-create index category_chapters_chapter_idx on category_chapters (chapter_id);
+create index test_type_chapters_chapter_idx on test_type_chapters (chapter_id);
 
 create table media (
   id uuid primary key default gen_random_uuid(),
@@ -244,13 +245,13 @@ create table media (
 create index media_created_at_idx on media (created_at desc);
 create index media_uploaded_by_idx on media (uploaded_by);
 
--- Optional Handbook cover pictures per category (declared here because media comes after categories).
-alter table categories
+-- Optional Handbook cover pictures per test type (declared here because media comes after test types).
+alter table test_types
   add column front_cover_media_id uuid references media (id) on delete restrict,
   add column back_cover_media_id uuid references media (id) on delete restrict;
 
-create index categories_front_cover_idx on categories (front_cover_media_id);
-create index categories_back_cover_idx on categories (back_cover_media_id);
+create index test_types_front_cover_idx on test_types (front_cover_media_id);
+create index test_types_back_cover_idx on test_types (back_cover_media_id);
 
 create table content_pages (
   id uuid primary key default gen_random_uuid(),
@@ -332,37 +333,37 @@ create table content_page_media (
 
 create index content_page_media_media_idx on content_page_media (media_id);
 
--- Where each candidate last was in each category's book. A deleted page just resets it to the start.
+-- Where each candidate last was in each test type's book. A deleted page just resets it to the start.
 create table handbook_progress (
   user_id uuid not null references users (id) on delete cascade,
-  category_id uuid not null references categories (id) on delete cascade,
+  test_type_id uuid not null references test_types (id) on delete cascade,
   item_id uuid references handbook_items (id) on delete set null,
   updated_at timestamptz not null default now(),
-  primary key (user_id, category_id)
+  primary key (user_id, test_type_id)
 );
 
-create index handbook_progress_category_idx on handbook_progress (category_id);
+create index handbook_progress_test_type_idx on handbook_progress (test_type_id);
 create index handbook_progress_item_idx on handbook_progress (item_id);
 
 -- Handbook items done, one row per chapter: a content page once its last part was on screen, a
 -- question once Check or Reveal was used. Ids of deleted items drop out on the chapter's next save.
 create table handbook_chapter_progress (
   user_id uuid not null references users (id) on delete cascade,
-  category_id uuid not null references categories (id) on delete cascade,
+  test_type_id uuid not null references test_types (id) on delete cascade,
   chapter_id uuid not null references chapters (id) on delete cascade,
   done_items uuid[] not null default '{}' check (cardinality(done_items) <= 2000),
   updated_at timestamptz not null default now(),
-  primary key (user_id, category_id, chapter_id)
+  primary key (user_id, test_type_id, chapter_id)
 );
 
-create index handbook_chapter_progress_category_idx on handbook_chapter_progress (category_id);
+create index handbook_chapter_progress_test_type_idx on handbook_chapter_progress (test_type_id);
 create index handbook_chapter_progress_chapter_idx on handbook_chapter_progress (chapter_id);
 
--- One row per candidate, category and question; counters stop at the smallint limit.
+-- One row per candidate, test type and question; counters stop at the smallint limit.
 -- A Reveal before any try counts as not right first time. Practice columns are filled from E4a-2.
 create table question_results (
   user_id uuid not null references users (id) on delete cascade,
-  category_id uuid not null references categories (id) on delete cascade,
+  test_type_id uuid not null references test_types (id) on delete cascade,
   question_id uuid not null references questions (id) on delete cascade,
   handbook_tries smallint not null default 0,
   handbook_right smallint not null default 0,
@@ -375,7 +376,7 @@ create table question_results (
   practice_first_right boolean,
   practice_last_right boolean,
   practice_at timestamptz,
-  primary key (user_id, category_id, question_id),
+  primary key (user_id, test_type_id, question_id),
   constraint question_results_counts_check check (
     handbook_tries >= 0 and handbook_reveals >= 0 and practice_tries >= 0
     and handbook_right between 0 and handbook_tries
@@ -383,7 +384,7 @@ create table question_results (
   )
 );
 
-create index question_results_category_idx on question_results (category_id);
+create index question_results_test_type_idx on question_results (test_type_id);
 create index question_results_question_idx on question_results (question_id);
 
 -- results: one letter per question in order: '.' not answered yet, R right, W wrong, S skipped
@@ -391,7 +392,7 @@ create index question_results_question_idx on question_results (question_id);
 create table practice_sessions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references users (id) on delete cascade,
-  category_id uuid not null references categories (id) on delete cascade,
+  test_type_id uuid not null references test_types (id) on delete cascade,
   mode varchar(10) not null check (mode in ('smart', 'chapters', 'types', 'all', 'retry', 'wrong', 'flagged', 'unseen', 'weak', 'mock')),
   -- Chapter ids or question types chosen (weak: the weak chapters at the start; mock: the mock test); empty otherwise.
   choices text[] not null default '{}' check (cardinality(choices) <= 200),
@@ -418,18 +419,18 @@ create table practice_sessions (
 -- One practice in progress per candidate.
 create unique index practice_sessions_open_key on practice_sessions (user_id) where finished_at is null;
 create index practice_sessions_user_idx on practice_sessions (user_id, finished_at desc);
-create index practice_sessions_category_idx on practice_sessions (category_id);
+create index practice_sessions_test_type_idx on practice_sessions (test_type_id);
 
 -- A candidate's own bookmark on a question, set in Practice or its report. Not activity-log data.
 create table question_flags (
   user_id uuid not null references users (id) on delete cascade,
-  category_id uuid not null references categories (id) on delete cascade,
+  test_type_id uuid not null references test_types (id) on delete cascade,
   question_id uuid not null references questions (id) on delete cascade,
   created_at timestamptz not null default now(),
-  primary key (user_id, category_id, question_id)
+  primary key (user_id, test_type_id, question_id)
 );
 
-create index question_flags_category_idx on question_flags (category_id);
+create index question_flags_test_type_idx on question_flags (test_type_id);
 create index question_flags_question_idx on question_flags (question_id);
 
 -- While open: the drawn questions, the answers as given (marked at the end) and this test's own flags.
@@ -437,7 +438,7 @@ create index question_flags_question_idx on question_flags (question_id);
 create table mock_attempts (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references users (id) on delete cascade,
-  category_id uuid not null references categories (id) on delete cascade,
+  test_type_id uuid not null references test_types (id) on delete cascade,
   question_ids uuid[] check (cardinality(question_ids) between 1 and 50),
   -- One entry per question: the answer as given, or null.
   responses jsonb check (jsonb_typeof(responses) = 'array'),
@@ -453,7 +454,7 @@ create table mock_attempts (
   deadline_at timestamptz not null,
   updated_at timestamptz not null default now(),
   -- submitted, time_up (ended at 0 on the test screen), away (time ran out while away),
-  -- moved (the candidate's category was changed by their Admin).
+  -- moved (the candidate's test type was changed by their Admin).
   ended_how varchar(10) check (ended_how in ('submitted', 'time_up', 'away', 'moved')),
   ended_at timestamptz,
   -- Totals, kept after the question list is trimmed. out_of leaves out removed questions.
@@ -478,7 +479,7 @@ create table mock_attempts (
 -- One mock test in progress per candidate.
 create unique index mock_attempts_open_key on mock_attempts (user_id) where ended_at is null;
 create index mock_attempts_user_idx on mock_attempts (user_id, ended_at desc);
-create index mock_attempts_category_idx on mock_attempts (category_id);
+create index mock_attempts_test_type_idx on mock_attempts (test_type_id);
 
 -- General queries (FAQ) and support contact details, edited by the Superadmin.
 create table faq_items (
@@ -601,9 +602,13 @@ create table question_audio (
   check ((language = 'en') = (source_revision is null))
 );
 
--- Listen per category (0032, 0035): off hides Listen and the listening language for its candidates; all offers every
--- live language (including ones added later); chosen offers English plus category_languages (added below).
-alter table categories add column listen_mode varchar(10) not null default 'all' check (listen_mode in ('off', 'all', 'chosen'));
+-- Listen per test type (0032, 0035): off hides Listen and the listening language for its candidates; all offers every
+-- live language (including ones added later); chosen offers English plus test_type_languages (added below).
+alter table test_types add column listen_mode varchar(10) not null default 'all' check (listen_mode in ('off', 'all', 'chosen'));
+
+-- Order within the test area (0038), shown everywhere test types are listed. Deferred so a reorder can swap two positions.
+alter table test_types add column position integer not null check (position > 0);
+alter table test_types add constraint test_types_area_position_key unique (test_area_id, position) deferrable initially deferred;
 
 -- Listen's languages and their fixed spoken phrases (0033); managed in the app from L2.
 -- One row per language. Only live languages are offered to candidates; staff can prepare draft ones; hidden ones
@@ -661,9 +666,71 @@ alter table question_translations add foreign key (language) references voice_la
 alter table question_audio add foreign key (language) references voice_languages (code);
 alter table users add foreign key (preferred_language) references voice_languages (code);
 
--- The languages a category offers when its listen_mode is 'chosen' (0035; kept when the mode changes). English is always offered.
-create table category_languages (
-  category_id uuid not null references categories (id) on delete cascade,
+-- The languages a test type offers when its listen_mode is 'chosen' (0035; kept when the mode changes). English is always offered.
+create table test_type_languages (
+  test_type_id uuid not null references test_types (id) on delete cascade,
   language varchar(10) not null references voice_languages (code) check (language <> 'en'),
-  primary key (category_id, language)
+  primary key (test_type_id, language)
 );
+
+-- Bulk upload keys (0039). A batch page or question keeps its key (e.g. AD-p012), so a re-upload updates it; a batch
+-- picture keeps its file name and a fingerprint (SHA-256) of the file. Empty for anything made by hand.
+alter table content_pages add column source_key varchar(40)
+  constraint content_pages_source_key_check check (source_key ~ '^[A-Za-z0-9][A-Za-z0-9-]{0,39}$');
+create unique index content_pages_source_key_key on content_pages (source_key);
+alter table questions add column source_key varchar(40)
+  constraint questions_source_key_check check (source_key ~ '^[A-Za-z0-9][A-Za-z0-9-]{0,39}$');
+create unique index questions_source_key_key on questions (source_key);
+alter table media add column source_name varchar(255)
+  constraint media_source_name_check check (length(trim(source_name)) > 0);
+alter table media add column source_sha256 char(64)
+  constraint media_source_sha256_check check (source_sha256 ~ '^[0-9a-f]{64}$');
+create unique index media_source_name_key on media (lower(source_name));
+
+-- Structure lock (0040). One row only. While locked, sections, chapters and which chapters each test type has can't change.
+create table structure_lock (
+  id boolean primary key default true check (id),
+  locked boolean not null default false,
+  changed_by uuid references users (id) on delete set null,
+  changed_at timestamptz
+);
+
+insert into structure_lock default values;
+
+-- A section linked to every test type puts each of its chapters in every test type's book (0040); otherwise each of
+-- its chapters belongs to one test type at most.
+alter table sections add column linked_to_all boolean not null default false;
+
+-- Bulk Listen (0041). A translation a bulk run checked stays "checked automatically" until a person checks it.
+alter table page_translations add column checked_automatically boolean not null default false;
+alter table page_translations add constraint page_translations_auto_check check (not checked_automatically or status = 'checked');
+alter table question_translations add column checked_automatically boolean not null default false;
+alter table question_translations add constraint question_translations_auto_check check (not checked_automatically or status = 'checked');
+
+-- Call limits for a language voiced by Gemini (empty = no limit; the free tier allows about 10 a day and 3 a minute).
+alter table voice_languages add column gemini_calls_per_day integer check (gemini_calls_per_day between 1 and 100000);
+alter table voice_languages add column gemini_calls_per_minute integer check (gemini_calls_per_minute between 1 and 1000);
+
+-- Which language a usage row was for, and how many service calls it made (for the Gemini limits).
+alter table voice_usage add column language varchar(10);
+alter table voice_usage add column calls integer not null default 1 check (calls >= 0);
+create index voice_usage_language_idx on voice_usage (service, language, created_at);
+
+-- One row per bulk run (chapter and language): its counts, and how it ended. Its log entry is written when it ends.
+create table voice_bulk_runs (
+  id uuid primary key default gen_random_uuid(),
+  chapter_id uuid not null references chapters (id) on delete cascade,
+  language varchar(10) not null references voice_languages (code) on delete cascade,
+  started_by uuid references users (id) on delete set null,
+  started_at timestamptz not null default now(),
+  last_step_at timestamptz not null default now(),
+  finished_at timestamptz,
+  items integer not null check (items >= 0),
+  translated integer not null default 0 check (translated >= 0),
+  audio integer not null default 0 check (audio >= 0),
+  failed integer not null default 0 check (failed >= 0),
+  outcome varchar(12) check (outcome in ('finished', 'stopped', 'limit', 'abandoned')),
+  check ((finished_at is null) = (outcome is null))
+);
+
+create unique index voice_bulk_runs_open_key on voice_bulk_runs (chapter_id, language) where finished_at is null;

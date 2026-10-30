@@ -50,7 +50,7 @@ function useDebounced<T>(save: (value: T) => Promise<void>, delay: number) {
 }
 
 // Pages seen are collected and sent together; leaving or hiding the page sends what's left.
-function usePagesDone(categoryId: string) {
+function usePagesDone(testTypeId: string) {
   const timer = useRef<number | undefined>(undefined);
   const pending = useRef(new Set<string>());
   const flushRef = useRef<() => void>(() => {});
@@ -60,12 +60,12 @@ function usePagesDone(categoryId: string) {
     // At most a batch per save; once one is saved, the next goes straight after.
     const ids = [...pending.current].slice(0, PAGES_DONE_BATCH);
     for (const id of ids) pending.current.delete(id);
-    saveHandbookPagesDone(categoryId, ids).then(
+    saveHandbookPagesDone(testTypeId, ids).then(
       () => pending.current.size > 0 && flushRef.current(),
       // Not saved: back in the list, sent with the next batch (marking a page done twice changes nothing).
       () => ids.forEach((id) => pending.current.add(id))
     );
-  }, [categoryId]);
+  }, [testTypeId]);
   useEffect(() => {
     flushRef.current = flush;
   });
@@ -117,7 +117,7 @@ function useFreshPictureLinks(media: ResolvedMedia) {
 }
 
 export function PrepareReader({
-  categoryId,
+  testTypeId,
   pages,
   media,
   startPageId,
@@ -125,14 +125,14 @@ export function PrepareReader({
   covers,
   listen,
 }: {
-  // Every save names the category this book was opened for; the server ignores it after a switch.
-  categoryId: string;
+  // Every save names the test type this book was opened for; the server ignores it after a switch.
+  testTypeId: string;
   pages: BookPageData[];
   media: ResolvedMedia;
   startPageId: string | null;
   initialTextSize: TextSize;
   covers: BookCovers;
-  // null when Listen is off for the category: no Listen button and no Reading speed.
+  // null when Listen is off for the test type: no Listen button and no Reading speed.
   listen: { language: string; languageName: string; durations: Record<string, number> } | null;
 }) {
   const languageName = listen?.languageName ?? null;
@@ -146,14 +146,14 @@ export function PrepareReader({
   );
   const [textSize, setTextSize] = useState<TextSize>(initialTextSize);
   useFreshPictureLinks(media);
-  const savePosition = useDebounced(useCallback((itemId: string) => saveReadingPosition(categoryId, itemId), [categoryId]), POSITION_DELAY);
+  const savePosition = useDebounced(useCallback((itemId: string) => saveReadingPosition(testTypeId, itemId), [testTypeId]), POSITION_DELAY);
   const saveSize = useDebounced(saveTextSize, TEXT_SIZE_DELAY);
-  const pagesDone = usePagesDone(categoryId);
+  const pagesDone = usePagesDone(testTypeId);
   const saveAnswer = useCallback(
     (pageId: string, outcome: HandbookOutcome) => {
-      saveHandbookAnswer(categoryId, pageId, outcome).catch(() => {});
+      saveHandbookAnswer(testTypeId, pageId, outcome).catch(() => {});
     },
-    [categoryId]
+    [testTypeId]
   );
 
   return (

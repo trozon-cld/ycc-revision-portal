@@ -30,12 +30,12 @@ const LABEL = "text-base font-semibold text-muted";
 const VALUE = "text-base text-ink [overflow-wrap:anywhere]";
 
 // Account: who you are, what you're studying, until when, your listening language (saved and logged; only when
-// Listen is on for the current category), and signing out.
+// Listen is on for the current test type), and signing out.
 export default async function AccountPage() {
   const session = await requireRole(["candidate"]);
   const home = await loadCandidateHome(session.sub);
   if (!home) redirect(SESSION_ENDED_LOGIN);
-  // Only what the current category offers; a choice it doesn't offer is kept, and English is used here (0035).
+  // Only what the current test type offers; a choice it doesn't offer is kept, and English is used here (0035).
   const [languages, listening, chosen] = await Promise.all([
     offeredLanguages(home.current.id),
     listeningLanguageIn(home.language, home.current.id),
@@ -69,15 +69,15 @@ export default async function AccountPage() {
           <p className="mt-4 text-base text-muted">To change these, please contact your Admin.</p>
         </section>
 
-        <section aria-labelledby="category-heading" className={`${CARD} p-4 lg:p-5`}>
-          <h2 id="category-heading" className={`${SECTION_TITLE}`}>
-            Your category
+        <section aria-labelledby="test-type-heading" className={`${CARD} p-4 lg:p-5`}>
+          <h2 id="test-type-heading" className={`${SECTION_TITLE}`}>
+            Your test type
           </h2>
           <p className="mt-2 text-xl font-bold text-ink [overflow-wrap:anywhere]">{home.current.name}</p>
-          <p className="mt-1 text-base text-muted">Group: {home.current.groupName}</p>
+          <p className="mt-1 text-base text-muted">Test area: {home.current.testAreaName}</p>
           {home.choices > 1 && (
-            <Link href="/dashboard/category" className={`${SECONDARY_BUTTON} mt-4 w-full sm:w-auto`}>
-              Change category
+            <Link href="/dashboard/test-type" className={`${SECONDARY_BUTTON} mt-4 w-full sm:w-auto`}>
+              Change test type
             </Link>
           )}
         </section>
@@ -93,7 +93,7 @@ export default async function AccountPage() {
             {notOffered && (
               <p className={`${NOTE_BOX} mt-3 p-4 text-base leading-relaxed text-ink`}>
                 {notOffered.name} isn&apos;t available for {home.current.name}, so Listen uses English here. Your choice comes back in a
-                category that has {notOffered.name}.
+                test type that has {notOffered.name}.
               </p>
             )}
             <LanguageForm current={listening.code} languages={languageNames(languages)} />

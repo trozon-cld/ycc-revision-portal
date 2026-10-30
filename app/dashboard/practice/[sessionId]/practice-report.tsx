@@ -52,7 +52,7 @@ export function PracticeReportView({ report, againUnavailable }: { report: Pract
         <div className="max-w-3xl">
           <ArrivalHeading className={`${PAGE_TITLE}`}>Your practice results</ArrivalHeading>
           <p className="mt-2 text-base text-muted [overflow-wrap:anywhere]">
-            {report.categoryName} · {what} · {date}
+            {report.testTypeName} · {what} · {date}
           </p>
 
           <section aria-labelledby="score-heading" className={`mt-5 lg:mt-6 ${CARD} p-4 lg:p-5 lg:p-6`}>

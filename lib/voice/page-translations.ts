@@ -5,20 +5,31 @@ import { parseBlocks, type Block } from "@/lib/content/blocks";
 import { pool } from "@/lib/db/pool";
 import { withTransaction } from "@/lib/db/transaction";
 import { isTranslatedLanguage, languageName } from "./language-store";
-import { translatePage, voiceFailure } from "./make";
+import { translatePage, voiceFailure, type VoiceJobOptions } from "./make";
 import type { TranslationRow } from "./status";
 import { checkEditedTranslation } from "./translation";
+import type { VoiceFailure } from "./services";
 
 // Server-only: a page's translations (V2). Translations are made from the saved page; edits and checks
 // are guarded by the translation's revision, and every change is logged in the same transaction.
 
-export type TranslationSummary = TranslationRow & { language: string; updatedAt: string; checkedAt: string | null };
-export type TranslationResult = { ok: true; translation: TranslationSummary } | { ok: false; error: string; conflict?: boolean };
+// `checkedAutomatically`: checked by a bulk run, not yet by a person.
+export type TranslationSummary = TranslationRow & { language: string; updatedAt: string; checkedAt: string | null; checkedAutomatically: boolean };
+// `failure`/`waitMs`: what a bulk run should do about a voice service failure (see voiceFailure).
+export type TranslationResult = { ok: true; translation: TranslationSummary } | { ok: false; error: string; conflict?: boolean; failure?: VoiceFailure; waitMs?: number; limit?: boolean };
 
 const NOT_FOUND = "This page no longer exists.";
-const SUMMARY_COLUMNS = `language, source_version, revision, status, updated_at, checked_at`;
+const SUMMARY_COLUMNS = `language, source_version, revision, status, updated_at, checked_at, checked_automatically`;
 
-type SummaryRow = { language: string; source_version: number; revision: number; status: "draft" | "checked"; updated_at: Date; checked_at: Date | null };
+type SummaryRow = {
+  language: string;
+  source_version: number;
+  revision: number;
+  status: "draft" | "checked";
+  updated_at: Date;
+  checked_at: Date | null;
+  checked_automatically: boolean;
+};
 
 function toSummary(row: SummaryRow): TranslationSummary {
   return {
@@ -28,6 +39,7 @@ function toSummary(row: SummaryRow): TranslationSummary {
     status: row.status,
     updatedAt: row.updated_at.toISOString(),
     checkedAt: row.checked_at ? row.checked_at.toISOString() : null,
+    checkedAutomatically: row.checked_automatically,
   };
 }
 
@@ -54,7 +66,8 @@ async function readPage(client: PoolClient | typeof pool, pageId: string, lock =
 }
 
 // A new translation from the saved English page (replaces any earlier one, which goes back to draft).
-export async function generateTranslation(session: SessionPayload, pageId: string, language: string): Promise<TranslationResult> {
+// `bulk`: a bulk run's translation is checked automatically (labelled so) and not logged item by item.
+export async function generateTranslation(session: SessionPayload, pageId: string, language: string, { bulk = false }: VoiceJobOptions = {}): Promise<TranslationResult> {
   if (!(await isTranslatedLanguage(language))) return { ok: false, error: "Choose a language." };
   const page = await readPage(pool, pageId);
   if (!page) return { ok: false, error: NOT_FOUND };
@@ -75,18 +88,21 @@ export async function generateTranslation(session: SessionPayload, pageId: strin
       return { ok: false, error: "The page changed while this was being translated. Please try again." };
     }
     const { rows } = await client.query<SummaryRow>(
-      `insert into page_translations (content_page_id, language, blocks, source_version)
-       values ($1, $2, $3, $4)
+      `insert into page_translations (content_page_id, language, blocks, source_version, status, checked_by, checked_at, checked_automatically)
+       values ($1, $2, $3, $4, case when $5 then 'checked' else 'draft' end, case when $5 then $6::uuid end, case when $5 then now() end, $5)
        on conflict (content_page_id, language) do update
          set blocks = excluded.blocks, source_version = excluded.source_version, revision = page_translations.revision + 1,
-             status = 'draft', checked_by = null, checked_at = null, updated_at = now()
+             status = excluded.status, checked_by = excluded.checked_by, checked_at = excluded.checked_at,
+             checked_automatically = excluded.checked_automatically, updated_at = now()
        returning ${SUMMARY_COLUMNS}`,
-      [pageId, language, JSON.stringify(translated), page.content_version]
+      [pageId, language, JSON.stringify(translated), page.content_version, bulk, session.sub]
     );
-    await logActivity(client, session, "page_translation.generated", { type: "page", id: pageId, label: current.title }, {
-      language: await languageName(language),
-      pageVersion: `Version ${page.content_version}`,
-    });
+    if (!bulk) {
+      await logActivity(client, session, "page_translation.generated", { type: "page", id: pageId, label: current.title }, {
+        language: await languageName(language),
+        pageVersion: `Version ${page.content_version}`,
+      });
+    }
     return { ok: true, translation: toSummary(rows[0]) };
   });
 }
@@ -126,7 +142,8 @@ export async function saveTranslationEdit(
     if (same[0].same) return { ok: true, translation: toSummary(existing) };
     const { rows: saved } = await client.query<SummaryRow>(
       `update page_translations
-       set blocks = $3, source_version = $4, revision = revision + 1, status = 'draft', checked_by = null, checked_at = null, updated_at = now()
+       set blocks = $3, source_version = $4, revision = revision + 1, status = 'draft', checked_by = null, checked_at = null,
+           checked_automatically = false, updated_at = now()
        where content_page_id = $1 and language = $2
        returning ${SUMMARY_COLUMNS}`,
       [pageId, language, JSON.stringify(checked.blocks), page.content_version]
@@ -138,7 +155,8 @@ export async function saveTranslationEdit(
   });
 }
 
-// A reader of the language has checked it: only for an up-to-date draft, as it was when they read it.
+// A reader of the language has checked it: an up-to-date draft, or one a bulk run checked automatically, as it was
+// when they read it.
 export async function markTranslationChecked(session: SessionPayload, pageId: string, language: string, expectedRevision: number): Promise<TranslationResult> {
   if (!(await isTranslatedLanguage(language))) return { ok: false, error: "Choose a language." };
   return withTransaction<TranslationResult>(async (client) => {
@@ -156,9 +174,9 @@ export async function markTranslationChecked(session: SessionPayload, pageId: st
     if (existing.source_version !== page.content_version) {
       return { ok: false, error: "The English page changed since this was translated. Translate it again, or edit and save it first." };
     }
-    if (existing.status === "checked") return { ok: true, translation: toSummary(existing) };
+    if (existing.status === "checked" && !existing.checked_automatically) return { ok: true, translation: toSummary(existing) };
     const { rows: saved } = await client.query<SummaryRow>(
-      `update page_translations set status = 'checked', checked_by = $3, checked_at = now(), updated_at = now()
+      `update page_translations set status = 'checked', checked_by = $3, checked_at = now(), checked_automatically = false, updated_at = now()
        where content_page_id = $1 and language = $2
        returning ${SUMMARY_COLUMNS}`,
       [pageId, language, session.sub]

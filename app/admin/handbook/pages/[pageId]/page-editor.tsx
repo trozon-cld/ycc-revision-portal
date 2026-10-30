@@ -36,6 +36,7 @@ export function PageEditor({
   initialMedia,
   storageReady,
   loadProblem,
+  source = null,
   translations,
   audio,
   languages,
@@ -49,6 +50,8 @@ export function PageEditor({
   initialMedia: ResolvedMedia;
   storageReady: boolean;
   loadProblem: string | null;
+  // Where a bulk-uploaded page came from, e.g. "A–D PDF p1"; null for pages made here.
+  source?: string | null;
   translations: TranslationSummary[];
   audio: AudioSummary[];
   languages: LanguageName[];
@@ -231,6 +234,7 @@ export function PageEditor({
             onChange={(event) => setTitle(event.target.value)}
             className={`${inputClass} font-medium`}
           />
+          {source && <p className="text-xs text-slate-600">Source: {source}</p>}
         </div>
         <div
           data-editor-bar

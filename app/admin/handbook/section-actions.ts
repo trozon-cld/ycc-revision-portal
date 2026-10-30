@@ -6,6 +6,8 @@ import { requireRole } from "@/lib/auth/guard";
 import { CONTENT_EDITORS } from "@/lib/auth/content-editors";
 import { getErrorCode, withTransaction } from "@/lib/db/transaction";
 import { logActivity } from "@/lib/audit/log";
+import { structureLockedError } from "@/lib/handbook/structure-lock";
+import { EVERY_TEST_TYPE } from "@/lib/handbook/sharing";
 import {
   MAX_SECTIONS,
   lockHandbookStructure,
@@ -17,6 +19,8 @@ import {
 const DUPLICATE_TITLE = "A section with this title already exists.";
 const NOT_FOUND = "This section no longer exists.";
 const PAGE_PATH = "/admin/handbook";
+const LINKED = "Linked to every test type";
+const NOT_LINKED = "One test type per chapter";
 
 export async function createSection(
   _prevState: StructureActionState,
@@ -25,12 +29,15 @@ export async function createSection(
   const session = await requireRole(CONTENT_EDITORS);
 
   const title = normaliseTitle(formData.get("title"));
+  const linkedToAll = formData.get("linkedToAll") === "on";
   const invalid = validateTitle(title, "Section");
   if (invalid) return { error: invalid };
 
   let result: StructureActionState;
   try {
     result = await withTransaction<StructureActionState>(async (client) => {
+      const locked = await structureLockedError(client);
+      if (locked) return { error: locked };
       await lockHandbookStructure(client);
       if (await titleTaken(client, title, null)) return { error: DUPLICATE_TITLE };
 
@@ -38,11 +45,17 @@ export async function createSection(
       if (rows[0].count >= MAX_SECTIONS) return { error: `The Handbook can have up to ${MAX_SECTIONS} sections (A–Z).` };
 
       const { rows: created } = await client.query<{ id: string }>(
-        `insert into sections (position, title) select coalesce(max(position), 0) + 1, $1 from sections
+        `insert into sections (position, title, linked_to_all) select coalesce(max(position), 0) + 1, $1, $2 from sections
          returning id`,
-        [title]
+        [title, linkedToAll]
       );
-      await logActivity(client, session, "section.created", { type: "section", id: created[0].id, label: title });
+      await logActivity(
+        client,
+        session,
+        "section.created",
+        { type: "section", id: created[0].id, label: title },
+        linkedToAll ? { testTypes: EVERY_TEST_TYPE } : {}
+      );
       return { success: true };
     });
   } catch (error) {
@@ -68,6 +81,8 @@ export async function renameSection(
   let result: StructureActionState;
   try {
     result = await withTransaction<StructureActionState>(async (client) => {
+      const locked = await structureLockedError(client);
+      if (locked) return { error: locked };
       const { rows } = await client.query<{ title: string }>(
         `select title from sections where id = $1 for update`,
         [sectionId]
@@ -106,6 +121,8 @@ export async function moveSection(id: string, direction: "up" | "down"): Promise
   let result: StructureActionState;
   try {
     result = await withTransaction<StructureActionState>(async (client) => {
+      const locked = await structureLockedError(client);
+      if (locked) return { error: locked };
       await lockHandbookStructure(client);
 
       const { rows } = await client.query<{ position: number; title: string }>(
@@ -159,6 +176,8 @@ export async function deleteSection(
   let result: StructureActionState;
   try {
     result = await withTransaction<StructureActionState>(async (client) => {
+      const locked = await structureLockedError(client);
+      if (locked) return { error: locked };
       await lockHandbookStructure(client);
 
       const { rows: counts } = await client.query<{ count: number }>(
@@ -183,6 +202,55 @@ export async function deleteSection(
     const code = getErrorCode(error);
     if (code === "22P02") return { error: NOT_FOUND };
     if (code === "23503") return { error: blockedMessage(1) };
+    throw error;
+  }
+
+  revalidatePath(PAGE_PATH);
+  return result;
+}
+
+// Linked to every test type, or one test type per chapter: chosen while the section has no chapters.
+export async function setSectionLinking(
+  _prevState: StructureActionState,
+  formData: FormData
+): Promise<StructureActionState> {
+  const session = await requireRole(CONTENT_EDITORS);
+
+  const sectionId = String(formData.get("sectionId") ?? "");
+  const linkedToAll = formData.get("linkedToAll") === "on";
+  if (!sectionId) return { error: NOT_FOUND };
+
+  let result: StructureActionState;
+  try {
+    result = await withTransaction<StructureActionState>(async (client) => {
+      const locked = await structureLockedError(client);
+      if (locked) return { error: locked };
+      await lockHandbookStructure(client);
+
+      const { rows } = await client.query<{ title: string; linked_to_all: boolean }>(
+        `select title, linked_to_all from sections where id = $1 for update`,
+        [sectionId]
+      );
+      if (!rows[0]) return { error: NOT_FOUND };
+      if (rows[0].linked_to_all === linkedToAll) return { success: true };
+      const { rows: counts } = await client.query<{ count: number }>(
+        `select count(*)::int as count from chapters where section_id = $1`,
+        [sectionId]
+      );
+      if (counts[0].count > 0) return { error: "This can only be changed while the section has no chapters." };
+
+      await client.query(`update sections set linked_to_all = $2, updated_at = now() where id = $1`, [sectionId, linkedToAll]);
+      await logActivity(
+        client,
+        session,
+        "section.sharing_changed",
+        { type: "section", id: sectionId, label: rows[0].title },
+        { from: linkedToAll ? NOT_LINKED : LINKED, to: linkedToAll ? LINKED : NOT_LINKED }
+      );
+      return { success: true };
+    });
+  } catch (error) {
+    if (getErrorCode(error) === "22P02") return { error: NOT_FOUND };
     throw error;
   }
 

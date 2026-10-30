@@ -1,6 +1,7 @@
 // Every icon in the app comes from here: Phosphor Icons (MIT licence, phosphoricons.com), server-safe build.
 // Line icons normally ("bold" on candidate pages, "regular" in the staff console); "fill" for selected or on.
 import type { IconWeight } from "@phosphor-icons/react/dist/lib/types";
+import { ArchiveIcon } from "@phosphor-icons/react/dist/ssr/Archive";
 import { ArrowCounterClockwiseIcon } from "@phosphor-icons/react/dist/ssr/ArrowCounterClockwise";
 import { ArrowDownIcon } from "@phosphor-icons/react/dist/ssr/ArrowDown";
 import { ArrowUpIcon } from "@phosphor-icons/react/dist/ssr/ArrowUp";
@@ -22,6 +23,8 @@ import { GearSixIcon } from "@phosphor-icons/react/dist/ssr/GearSix";
 import { HouseIcon } from "@phosphor-icons/react/dist/ssr/House";
 import { ImageIcon } from "@phosphor-icons/react/dist/ssr/Image";
 import { ListIcon } from "@phosphor-icons/react/dist/ssr/List";
+import { LockIcon } from "@phosphor-icons/react/dist/ssr/Lock";
+import { LockOpenIcon } from "@phosphor-icons/react/dist/ssr/LockOpen";
 import { ListBulletsIcon } from "@phosphor-icons/react/dist/ssr/ListBullets";
 import { ListChecksIcon } from "@phosphor-icons/react/dist/ssr/ListChecks";
 import { PauseIcon } from "@phosphor-icons/react/dist/ssr/Pause";
@@ -74,10 +77,13 @@ const ICONS = {
   picture: ImageIcon,
   admins: UserGearIcon,
   candidates: UsersIcon,
-  categories: TagIcon,
+  testTypes: TagIcon,
   faq: ChatCircleTextIcon,
+  archive: ArchiveIcon,
   activity: ClockCounterClockwiseIcon,
   account: GearSixIcon,
+  locked: LockIcon,
+  unlocked: LockOpenIcon,
 } as const;
 
 export type IconName = keyof typeof ICONS;

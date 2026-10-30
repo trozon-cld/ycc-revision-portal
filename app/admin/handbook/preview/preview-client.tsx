@@ -11,14 +11,14 @@ import { inputClass, labelClass } from "@/components/admin/styles";
 // Changing a choice reloads the page with it in the address, so a preview can be bookmarked or shared.
 export function PreviewControls({
   chapters,
-  categories,
+  testTypes,
   chapterId,
-  categoryId,
+  testTypeId,
   includeDrafts,
-}: PreviewOptions & { chapterId: string | null; categoryId: string | null; includeDrafts: boolean }) {
+}: PreviewOptions & { chapterId: string | null; testTypeId: string | null; includeDrafts: boolean }) {
   const router = useRouter();
-  const go = (patch: { chapter?: string | null; category?: string | null; content?: string | null }) => {
-    const next = { chapter: chapterId, category: categoryId, content: includeDrafts ? null : "published", ...patch };
+  const go = (patch: { chapter?: string | null; testType?: string | null; content?: string | null }) => {
+    const next = { chapter: chapterId, testType: testTypeId, content: includeDrafts ? null : "published", ...patch };
     const query = new URLSearchParams(Object.entries(next).filter((entry): entry is [string, string] => Boolean(entry[1])));
     router.push(`/admin/handbook/preview${query.size ? `?${query}` : ""}`);
   };
@@ -46,19 +46,19 @@ export function PreviewControls({
         </select>
       </div>
       <div className="min-w-0 space-y-1">
-        <label htmlFor="preview-category" className={labelClass}>
-          As category
+        <label htmlFor="preview-test-type" className={labelClass}>
+          As test type
         </label>
         <select
-          id="preview-category"
-          value={categoryId ?? ""}
-          onChange={(event) => go({ category: event.target.value || null })}
+          id="preview-test-type"
+          value={testTypeId ?? ""}
+          onChange={(event) => go({ testType: event.target.value || null })}
           className={`${inputClass} max-w-72`}
         >
           <option value="">All chapters</option>
-          {categories.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.label}
+          {testTypes.map((testType) => (
+            <option key={testType.id} value={testType.id}>
+              {testType.label}
             </option>
           ))}
         </select>

@@ -6,8 +6,8 @@ import type { ActivityAction, AuthEvent } from "./actions";
 type TargetType =
   | "admin"
   | "candidate"
-  | "category"
-  | "category_group"
+  | "test_type"
+  | "test_area"
   | "section"
   | "chapter"
   | "page"
@@ -17,7 +17,10 @@ type TargetType =
   | "language"
   | "support_contact"
   | "account"
-  | "log_archive";
+  | "log_archive"
+  | "batch"
+  | "backup"
+  | "structure";
 type Details = Record<string, string>;
 
 export function ipFromHeaders(requestHeaders: Headers): string | null {

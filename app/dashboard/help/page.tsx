@@ -74,10 +74,10 @@ export default async function CandidateHelpPage() {
           <p className="mt-2 text-base text-ink">
             {adminName ? (
               <>
-                Your Admin is <strong className="[overflow-wrap:anywhere]">{adminName}</strong>. They can help with your login, your access dates and your category.
+                Your Admin is <strong className="[overflow-wrap:anywhere]">{adminName}</strong>. They can help with your login, your access dates and your test type.
               </>
             ) : (
-              "Your Admin can help with your login, your access dates and your category."
+              "Your Admin can help with your login, your access dates and your test type."
             )}
           </p>
           {hasSupport ? (

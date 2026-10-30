@@ -19,7 +19,7 @@ import {
 } from "./audio-files";
 import { findVoiceLanguage } from "./language-store";
 import { SOURCE_LANGUAGE } from "./languages";
-import { speakPage, voiceFailure, type PageSpeech } from "./make";
+import { speakPage, voiceFailure, type PageSpeech, type VoiceJobOptions } from "./make";
 import { audioSourceVersion, type TranslationRow } from "./status";
 
 // Server-only: a page's audio (V3), one MP3 per page and language. English is read from the saved page,
@@ -80,14 +80,15 @@ async function readSource(client: PoolClient | typeof pool, pageId: string, lang
 }
 
 // Makes (or replaces) the page's audio in one language. The old file is removed once the new one is recorded.
-export async function generateAudio(session: SessionPayload, pageId: string, language: string): Promise<AudioResult> {
+// `bulk`: made by a bulk run, which writes one log entry for the whole run instead.
+export async function generateAudio(session: SessionPayload, pageId: string, language: string, { bulk = false }: VoiceJobOptions = {}): Promise<AudioResult> {
   const lang = await findVoiceLanguage(language);
   if (!lang) return { ok: false, error: "Choose a language." };
   if (!isStorageConfigured()) return { ok: false, error: AUDIO_NOT_CONFIGURED };
   const source = await readSource(pool, pageId, lang.code);
   if ("error" in source) return { ok: false, error: source.error };
   const blocked = await audioCanStart();
-  if (blocked) return { ok: false, error: blocked };
+  if (blocked) return blocked;
 
   let speech: PageSpeech;
   try {
@@ -98,7 +99,7 @@ export async function generateAudio(session: SessionPayload, pageId: string, lan
 
   const path = `pages/${pageId}/${lang.code}-${crypto.randomUUID()}.mp3`;
   const storeError = await storeAudioFile(path, speech.mp3);
-  if (storeError) return { ok: false, error: storeError };
+  if (storeError) return storeError;
 
   let outcome: { result: AudioResult; oldPath: string | null };
   try {
@@ -123,10 +124,12 @@ export async function generateAudio(session: SessionPayload, pageId: string, lan
          returning ${SUMMARY_COLUMNS}`,
         [pageId, lang.code, source.version, path, speech.mp3.byteLength, Math.max(1, speech.durationMs), speech.provider, speech.voice, session.sub]
       );
-      await logActivity(client, session, "page_audio.generated", { type: "page", id: pageId, label: current.title }, {
-        language: lang.name,
-        length: formatDuration(Math.max(1, Math.round(speech.durationMs / 1000))),
-      });
+      if (!bulk) {
+        await logActivity(client, session, "page_audio.generated", { type: "page", id: pageId, label: current.title }, {
+          language: lang.name,
+          length: formatDuration(Math.max(1, Math.round(speech.durationMs / 1000))),
+        });
+      }
       return { result: { ok: true, audio: toSummary(rows[0]) } as AudioResult, oldPath: old[0]?.storage_path ?? null };
     });
   } catch (error) {

@@ -7,7 +7,8 @@ import { inputClass } from "@/components/admin/styles";
 import { countOf } from "@/lib/format";
 import { LANGUAGES_MANAGE_PATH } from "@/lib/voice/language-tabs";
 import { SOURCE_LANGUAGE, type LanguageStatus } from "@/lib/voice/languages";
-import { addLanguageAction, deleteLanguageAction, hideLanguageAction, publishLanguageAction, restoreLanguageAction } from "./actions";
+import { GEMINI_CALLS_MAX } from "@/lib/voice/limits";
+import { addLanguageAction, deleteLanguageAction, hideLanguageAction, publishLanguageAction, restoreLanguageAction, setGeminiLimitsAction } from "./actions";
 
 export function AddLanguageButton({ options }: { options: { code: string; label: string }[] }) {
   return (
@@ -52,6 +53,7 @@ export function LanguageRowActions({
   candidates,
   ready,
   canDelete,
+  gemini,
 }: {
   code: string;
   name: string;
@@ -61,9 +63,57 @@ export function LanguageRowActions({
   ready: boolean;
   // Superadmin: a hidden language can be deleted.
   canDelete: boolean;
+  // A language Gemini reads aloud: its call limits (null: no limit).
+  gemini: { perDay: number | null; perMinute: number | null } | null;
 }) {
   const hidden = { code };
   const actions: RowAction[] = [{ label: "Spoken phrases", href: `${LANGUAGES_MANAGE_PATH}/${code}` }];
+
+  if (gemini && status !== "hidden") {
+    actions.push({
+      label: "Gemini limits",
+      title: `Gemini limits for ${name}`,
+      description: "Match these to your Gemini key's tier. Every audio file made counts: in bulk runs and one at a time.",
+      render: (close) => (
+        <ActionForm
+          action={setGeminiLimitsAction}
+          hidden={hidden}
+          submitLabel="Save limits"
+          successMessage="Limits saved."
+          onSuccess={close}
+          onCancel={close}
+        >
+          <Field id={`gemini-day-${code}`} label="Calls a day" hint="Gemini's day starts at midnight Pacific time (8 or 9 am UK). Empty: no limit.">
+            <input
+              id={`gemini-day-${code}`}
+              name="perDay"
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={GEMINI_CALLS_MAX.perDay}
+              step={1}
+              defaultValue={gemini.perDay ?? ""}
+              className={inputClass}
+            />
+          </Field>
+          <Field id={`gemini-minute-${code}`} label="Calls a minute" hint="Empty: no limit.">
+            <input
+              id={`gemini-minute-${code}`}
+              name="perMinute"
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={GEMINI_CALLS_MAX.perMinute}
+              step={1}
+              defaultValue={gemini.perMinute ?? ""}
+              className={inputClass}
+            />
+          </Field>
+          <p className="text-sm text-slate-700">The free tier allows about 10 a day and 3 a minute. A long page can take more than one call.</p>
+        </ActionForm>
+      ),
+    });
+  }
 
   if (status === "draft" && ready) {
     actions.push({

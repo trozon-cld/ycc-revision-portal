@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { ActionForm } from "@/components/admin/action-form";
 import { Field } from "@/components/admin/field";
 import Link from "next/link";
@@ -10,20 +11,20 @@ import {
   deleteChapter,
   moveChapter,
   moveChapterToSection,
+  publishChapterContent,
   publishChapterForm,
   renameChapter,
-  saveChapterCategories,
+  saveChapterTestTypes,
   setChapterStatus,
   unpublishChapterForm,
 } from "./chapter-actions";
-import type { CategoryGroupOption } from "@/lib/handbook/categories";
+import type { TestAreaOption } from "@/lib/handbook/test-types";
 import { TITLE_MAX_LENGTH } from "@/lib/limits";
-import { CategoryPicker } from "./category-picker";
+import { countOf } from "@/lib/format";
+import { ChapterTestTypeChoice, type ChapterLinking } from "./chapter-test-type-choice";
 import type { SectionOption } from "./section-row-actions";
 
-const CATEGORY_HINT = "Candidates studying these categories see this chapter in Prepare, Practice and the Mock test once it's published.";
-
-export function NewChapterButton({ sections, categoryGroups }: { sections: SectionOption[]; categoryGroups: CategoryGroupOption[] }) {
+export function NewChapterButton({ sections, testAreas }: { sections: SectionOption[]; testAreas: TestAreaOption[] }) {
   return (
     <PanelButton label="New chapter" title="New chapter">
       {(close) =>
@@ -37,23 +38,27 @@ export function NewChapterButton({ sections, categoryGroups }: { sections: Secti
             </div>
           </div>
         ) : (
-          <ActionForm
-            action={createChapter}
-            submitLabel="Create and open"
-            pendingLabel="Creating…"
-            onCancel={close}
-          >
-            <Field id="new-chapter-title" label="Chapter title">
-              <input id="new-chapter-title" name="title" type="text" required maxLength={TITLE_MAX_LENGTH} className={inputClass} />
-            </Field>
-            <Field id="new-chapter-section" label="Section" hint="It's added at the end of this section.">
-              <SectionSelect id="new-chapter-section" options={sections} />
-            </Field>
-            <CategoryPicker groups={categoryGroups} legend="Categories (optional)" hint={CATEGORY_HINT} />
-          </ActionForm>
+          <NewChapterForm sections={sections} testAreas={testAreas} onClose={close} />
         )
       }
     </PanelButton>
+  );
+}
+
+function NewChapterForm({ sections, testAreas, onClose }: { sections: SectionOption[]; testAreas: TestAreaOption[]; onClose: () => void }) {
+  const [sectionId, setSectionId] = useState("");
+  const section = sections.find((option) => option.id === sectionId);
+  return (
+    <ActionForm action={createChapter} submitLabel="Create and open" pendingLabel="Creating…" onCancel={onClose}>
+      <Field id="new-chapter-title" label="Chapter title">
+        <input id="new-chapter-title" name="title" type="text" required maxLength={TITLE_MAX_LENGTH} className={inputClass} />
+      </Field>
+      <Field id="new-chapter-section" label="Section" hint="It's added at the end of this section.">
+        <SectionSelect id="new-chapter-section" options={sections} value={sectionId} onChange={setSectionId} />
+      </Field>
+      {/* Keyed by section, so switching sections starts the choice afresh. */}
+      <ChapterTestTypeChoice key={sectionId} testAreas={testAreas} linking={section ? { label: section.label, linkedToAll: section.linkedToAll } : null} />
+    </ActionForm>
   );
 }
 
@@ -69,8 +74,11 @@ export function ChapterRowActions({
   itemCount,
   draftCount,
   status,
-  categoryGroups,
-  categoryIds,
+  testAreas,
+  testTypeIds,
+  linking,
+  studying,
+  locked,
 }: {
   id: string;
   title: string;
@@ -83,11 +91,29 @@ export function ChapterRowActions({
   itemCount: number;
   draftCount: number;
   status: "draft" | "published";
-  categoryGroups: CategoryGroupOption[];
-  categoryIds: string[];
+  testAreas: TestAreaOption[];
+  testTypeIds: string[];
+  linking: ChapterLinking;
+  // Candidates whose current test type includes this chapter.
+  studying: number;
+  // Structure lock: only viewing test types and publishing remain.
+  locked: boolean;
 }) {
   const hidden = { chapterId: id };
   const description = `Chapter ${number} · ${title}`;
+  const testTypesAction: RowAction = {
+    label: "Test types",
+    title: "Test types",
+    description,
+    render: (close) => (
+      <ChapterTestTypesForm chapterId={id} chapterName={`${number} ${title}`} testAreas={testAreas} initialSelected={testTypeIds} linking={linking} locked={locked} onClose={close} />
+    ),
+  };
+  const statusAction = chapterStatusAction({ id, number, title, status, itemCount, draftCount, hasTestTypes: testTypeIds.length > 0, studying, locked, onChapterPage: false });
+
+  if (locked) {
+    return <RowActions label={`Actions for ${title}`} actions={statusAction ? [testTypesAction, statusAction] : [testTypesAction]} />;
+  }
 
   const actions: RowAction[] = [
     {
@@ -119,12 +145,7 @@ export function ChapterRowActions({
     },
   ];
 
-  actions.push({
-    label: "Categories",
-    title: "Categories",
-    description,
-    render: (close) => <ChapterCategoriesForm chapterId={id} groups={categoryGroups} initialSelected={categoryIds} onClose={close} />,
-  });
+  actions.push(testTypesAction);
 
   if (!isFirst) {
     actions.push({ label: "Move up", run: () => moveChapter(id, "up"), successMessage: "Chapter moved up." });
@@ -148,15 +169,13 @@ export function ChapterRowActions({
           onSuccess={close}
           onCancel={close}
         >
-          <Field id={`move-${id}`} label="Section" hint="It's added at the end of that section.">
-            <SectionSelect id={`move-${id}`} options={otherSections} />
-          </Field>
+          <MoveToSectionField id={`move-${id}`} options={otherSections} from={linking} />
         </ActionForm>
       ),
     });
   }
 
-  actions.push(chapterStatusAction({ id, number, title, status, itemCount, draftCount, hasCategories: categoryIds.length > 0, onChapterPage: false }));
+  if (statusAction) actions.push(statusAction);
 
   actions.push({
     label: "Delete",
@@ -194,7 +213,7 @@ export function ChapterRowActions({
             {number} {title}
           </strong>{" "}
           will be removed and the chapters after it will move up one number. It&apos;s also removed from any
-          categories that include it. This can&apos;t be undone.
+          test types that include it. This can&apos;t be undone.
         </p>
       </ActionForm>
       ),
@@ -203,35 +222,54 @@ export function ChapterRowActions({
   return <RowActions label={`Actions for ${title}`} actions={actions} />;
 }
 
-function ChapterCategoriesForm({
-  chapterId,
-  groups,
-  initialSelected,
-  onClose,
-}: {
+type ChapterTestTypesProps = {
   chapterId: string;
-  groups: CategoryGroupOption[];
+  chapterName: string;
+  testAreas: TestAreaOption[];
   initialSelected: string[];
-  onClose: () => void;
-}) {
+  linking: ChapterLinking;
+  locked: boolean;
+};
+
+// Editable only for a chapter outside the "every test type" sections, while the structure is unlocked.
+function ChapterTestTypesForm({ chapterId, chapterName, testAreas, initialSelected, linking, locked, onClose }: ChapterTestTypesProps & { onClose: () => void }) {
+  if (locked || linking.linkedToAll) {
+    return (
+      <div>
+        <div className="space-y-3 px-5 py-4">
+          {locked && (
+            <p className="rounded-md bg-slate-50 px-3 py-2 text-sm text-ink ring-1 ring-slate-200">
+              The structure is locked, so this can&apos;t be changed. Unlock it at the top of the Handbook page.
+            </p>
+          )}
+          <ChapterTestTypeChoice testAreas={testAreas} linking={linking} initialSelected={initialSelected} chapterName={chapterName} readOnly />
+        </div>
+        <div className="flex justify-end border-t border-slate-200 px-5 py-3">
+          <button type="button" onClick={onClose} className={buttonClass("secondary")}>
+            Close
+          </button>
+        </div>
+      </div>
+    );
+  }
   return (
     <ActionForm
-      action={saveChapterCategories}
+      action={saveChapterTestTypes}
       hidden={{ chapterId }}
-      submitLabel="Save categories"
-      successMessage="Categories updated."
+      submitLabel="Save test type"
+      successMessage="Test type updated."
       onSuccess={onClose}
       onCancel={onClose}
     >
-      <CategoryPicker groups={groups} initialSelected={initialSelected} hint={CATEGORY_HINT} />
+      <ChapterTestTypeChoice testAreas={testAreas} linking={linking} initialSelected={initialSelected} chapterName={chapterName} />
     </ActionForm>
   );
 }
 
-export function ChapterCategoriesButton(props: { chapterId: string; groups: CategoryGroupOption[]; initialSelected: string[] }) {
+export function ChapterTestTypesButton(props: ChapterTestTypesProps) {
   return (
-    <PanelButton label="Categories" title="Categories" variant="secondary" icon={false}>
-      {(close) => <ChapterCategoriesForm {...props} onClose={close} />}
+    <PanelButton label="Test types" title="Test types" variant="secondary" icon={false}>
+      {(close) => <ChapterTestTypesForm {...props} onClose={close} />}
     </PanelButton>
   );
 }
@@ -243,19 +281,23 @@ type ChapterStatusProps = {
   status: "draft" | "published";
   itemCount: number;
   draftCount: number;
-  hasCategories: boolean;
+  hasTestTypes: boolean;
+  studying: number;
+  locked: boolean;
   // On the chapter's own page the items are right below, so no "Open chapter" link.
   onChapterPage: boolean;
 };
 
 // Publish or Unpublish, shared by the Handbook row menu and the chapter page. A chapter that isn't ready says why.
-function chapterStatusAction({ id, number, title, status, itemCount, draftCount, hasCategories, onChapterPage }: ChapterStatusProps): PanelRowAction | InstantRowAction {
+// None while the structure is locked and the chapter is published (unpublishing waits for an unlock).
+function chapterStatusAction({ id, number, title, status, itemCount, draftCount, hasTestTypes, studying, locked, onChapterPage }: ChapterStatusProps): PanelRowAction | InstantRowAction | null {
   const name = (
     <strong className="font-medium">
       {number} {title}
     </strong>
   );
   if (status === "published") {
+    if (locked) return null;
     return {
       label: "Unpublish",
       title: "Unpublish chapter?",
@@ -271,7 +313,9 @@ function chapterStatusAction({ id, number, title, status, itemCount, draftCount,
           onCancel={close}
         >
           <p className="text-sm [overflow-wrap:anywhere]">
-            Candidates will no longer see {name}. Its pages and questions stay as they are.
+            Candidates will no longer see {name}
+            {studying > 0 ? `: ${countOf(studying, "candidate")} studying a test type that includes it lose it from their book, Practice and Mock test straight away` : ""}
+            . Its pages and questions stay as they are.
           </p>
         </ActionForm>
       ),
@@ -288,7 +332,7 @@ function chapterStatusAction({ id, number, title, status, itemCount, draftCount,
             {name}{" "}
             {itemCount === 0
               ? "has no pages or questions yet. Add at least one, publish it, then publish the chapter."
-              : `${draftCount === 1 ? "has 1 item that is" : `has ${draftCount} items that are`} still ${draftCount === 1 ? "a draft" : "drafts"}. Publish ${draftCount === 1 ? "it" : "them"} first, then publish the chapter.`}
+              : `${draftCount === 1 ? "has 1 item that is" : `has ${draftCount} items that are`} still ${draftCount === 1 ? "a draft" : "drafts"}. Publish ${draftCount === 1 ? "it" : "them"} first, then publish the chapter.${onChapterPage ? " Publish all does both in one step." : ""}`}
           </p>
           <div className="flex justify-end gap-2 border-t border-slate-200 px-5 py-3">
             <button type="button" onClick={close} className={buttonClass("secondary")}>
@@ -304,7 +348,7 @@ function chapterStatusAction({ id, number, title, status, itemCount, draftCount,
       ),
     };
   }
-  if (hasCategories) {
+  if (hasTestTypes) {
     return { label: "Publish", run: () => setChapterStatus(id, "published"), successMessage: "Chapter published.", pendingLabel: "Publishing…" };
   }
   return {
@@ -322,7 +366,7 @@ function chapterStatusAction({ id, number, title, status, itemCount, draftCount,
         onCancel={close}
       >
         <p className="text-sm [overflow-wrap:anywhere]">
-          {name} isn&apos;t in any category yet, so no candidate will see it. Add it to categories with the Categories
+          {name} isn&apos;t in any test type yet, so no candidate will see it. Add it to test types with the Test types
           {onChapterPage ? " button" : " action"}.
         </p>
       </ActionForm>
@@ -331,7 +375,8 @@ function chapterStatusAction({ id, number, title, status, itemCount, draftCount,
 }
 
 export function ChapterStatusButton(props: Omit<ChapterStatusProps, "onChapterPage">) {
-  return <ActionButton action={chapterStatusAction({ ...props, onChapterPage: true })} />;
+  const action = chapterStatusAction({ ...props, onChapterPage: true });
+  return action ? <ActionButton action={action} /> : null;
 }
 
 function blockedBy(pages: number, questions: number): string {
@@ -341,9 +386,34 @@ function blockedBy(pages: number, questions: number): string {
   return parts.join(" and ");
 }
 
-function SectionSelect({ id, options }: { id: string; options: SectionOption[] }) {
+// What moving a chapter does to its test types, shown as the section is chosen.
+function MoveToSectionField({ id, options, from }: { id: string; options: SectionOption[]; from: ChapterLinking }) {
+  const [sectionId, setSectionId] = useState("");
+  const to = options.find((option) => option.id === sectionId);
+  const effect = !to
+    ? null
+    : to.linkedToAll
+      ? `It will be in every test type's book, like every chapter in ${to.label}.`
+      : from.linkedToAll
+        ? `It will be taken out of every test type. Choose its one test type afterwards with Test types.`
+        : null;
   return (
-    <select id={id} name="sectionId" required defaultValue="" className={inputClass}>
+    <>
+      <Field id={id} label="Section" hint="It's added at the end of that section. Chapters after it are renumbered.">
+        <SectionSelect id={id} options={options} value={sectionId} onChange={setSectionId} />
+      </Field>
+      {effect && (
+        <p role="status" className="rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25">
+          {effect}
+        </p>
+      )}
+    </>
+  );
+}
+
+function SectionSelect({ id, options, value, onChange }: { id: string; options: SectionOption[]; value: string; onChange: (value: string) => void }) {
+  return (
+    <select id={id} name="sectionId" required value={value} onChange={(event) => onChange(event.target.value)} className={inputClass}>
       <option value="" disabled>
         Choose a section
       </option>
@@ -354,4 +424,75 @@ function SectionSelect({ id, options }: { id: string; options: SectionOption[] }
       ))}
     </select>
   );
+}
+
+export type PublishAllSummary = {
+  pages: number;
+  questions: number;
+  heldBack: string;
+  heldBackCount: number;
+  // True when nothing in the page order stays a draft, so the chapter goes live too.
+  chapterGoesLive: boolean;
+  hasTestTypes: boolean;
+};
+
+// "Publish all" on the chapter page: publishes the drafts that are ready (and the chapter once nothing is left).
+export function PublishAllButton({ chapterId, number, title, summary }: { chapterId: string; number: string; title: string; summary: PublishAllSummary }) {
+  const { pages, questions, heldBack, heldBackCount, chapterGoesLive, hasTestTypes } = summary;
+  const ready = pages + questions;
+  const what = [pages > 0 ? countOf(pages, "page") : "", questions > 0 ? countOf(questions, "question") : ""].filter(Boolean).join(" and ");
+  const name = (
+    <strong className="font-medium">
+      {number} {title}
+    </strong>
+  );
+  const action: PanelRowAction = {
+    label: "Publish all",
+    title: ready > 0 ? "Publish all drafts?" : "Nothing ready to publish",
+    variant: "confirm",
+    render: (close) =>
+      ready === 0 ? (
+        <div>
+          <p className="px-5 py-4 text-sm [overflow-wrap:anywhere]">
+            None of the drafts in {name} can be published yet: {heldBack}. Fix them, then try again.
+          </p>
+          <div className="flex justify-end border-t border-slate-200 px-5 py-3">
+            <button type="button" onClick={close} className={buttonClass("secondary")}>
+              Close
+            </button>
+          </div>
+        </div>
+      ) : (
+        <ActionForm
+          action={publishChapterContent}
+          hidden={{ chapterId }}
+          submitLabel={`Publish ${countOf(ready, "item")}`}
+          pendingLabel="Publishing…"
+          successMessage={chapterGoesLive ? `Published ${what}, and the chapter.` : `Published ${what}.`}
+          onSuccess={close}
+          onCancel={close}
+        >
+          <div className="space-y-2 text-sm [overflow-wrap:anywhere]">
+            <p>
+              {what} in {name} {ready === 1 ? "is" : "are"} ready and will be published.
+            </p>
+            {heldBackCount > 0 && (
+              <p>
+                {heldBackCount === 1 ? "1 item can't be published yet and stays a draft" : `${heldBackCount} items can't be published yet and stay drafts`}:{" "}
+                {heldBack}.
+              </p>
+            )}
+            {chapterGoesLive ? (
+              <p>
+                The chapter is published too
+                {hasTestTypes ? ", so candidates in its test types see it." : ". It isn't in any test type yet, so no candidate sees it until it's added to one."}
+              </p>
+            ) : (
+              <p>The chapter itself stays as it is until everything in its page order is published.</p>
+            )}
+          </div>
+        </ActionForm>
+      ),
+  };
+  return <ActionButton action={action} />;
 }

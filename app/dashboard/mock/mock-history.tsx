@@ -9,12 +9,12 @@ import { Accordion } from "@/components/candidate/accordion";
 const ENDED: Partial<Record<MockEnd, string>> = {
   time_up: "Time ran out",
   away: "Time ran out while away",
-  moved: "Ended when your category changed",
+  moved: "Ended when your test type changed",
 };
 
 const score = (entry: MockHistoryEntry) => scoreText(entry.rightCount, entry.outOf);
 
-// The candidate's past mock tests in this category, newest first; each opens its results.
+// The candidate's past mock tests in this test type, newest first; each opens its results.
 export function MockHistoryList({
   history,
   moreHref,

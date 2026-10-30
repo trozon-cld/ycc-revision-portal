@@ -18,3 +18,15 @@ export const TRANSLATE_BATCH_CHARS = 5_000;
 export const TRANSLATE_BATCH_TEXTS = 100;
 // Google Text-to-Speech takes at most 5,000 bytes a request (Punjabi uses 3 bytes a character): parts stay under this.
 export const SPEECH_PART_BYTES = 4_500;
+// A Gemini-voiced language starts with Gemini's free-tier limits (staff change them on the Languages tab).
+export const GEMINI_FREE_CALLS = { perDay: 10, perMinute: 3 } as const;
+// Highest values staff can set (the database allows the same).
+export const GEMINI_CALLS_MAX = { perDay: 100_000, perMinute: 1_000 } as const;
+// Bulk Listen: the waits before trying an item again, the pause after several failures in a row, and when an
+// unfinished run counts as abandoned (its page closed).
+export const BULK_RETRY_WAITS_MS = [5_000, 30_000] as const;
+export const BULK_FAILURES_BEFORE_PAUSE = 3;
+export const BULK_PAUSE_MS = 120_000;
+export const BULK_ABANDONED_AFTER_MINUTES = 15;
+// Google's price per million characters beyond the free allowance, in US dollars (checked 23 Oct 2026; WaveNet audio).
+export const GOOGLE_PRICE_PER_MILLION = { translate: 20, speech: 4 } as const;

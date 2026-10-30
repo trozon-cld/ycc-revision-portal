@@ -59,40 +59,40 @@ export async function languageName(code: string): Promise<string> {
   return (await findVoiceLanguage(code, "any"))?.name ?? code;
 }
 
-// ---- What a category offers (0035) ----
+// ---- What a test type offers (0035) ----
 
 export type ListenMode = "off" | "all" | "chosen";
-export type CategoryListen = { mode: ListenMode; chosen: string[] };
+export type TestTypeListen = { mode: ListenMode; chosen: string[] };
 
-const readCategoryListen = cache(async (categoryId: string): Promise<CategoryListen | null> => {
+const readTestTypeListen = cache(async (testTypeId: string): Promise<TestTypeListen | null> => {
   const { rows } = await pool.query<{ listen_mode: ListenMode; chosen: string[] }>(
-    `select c.listen_mode, array(select cl.language from category_languages cl where cl.category_id = c.id order by cl.language) as chosen
-     from categories c where c.id = $1`,
-    [categoryId]
+    `select c.listen_mode, array(select cl.language from test_type_languages cl where cl.test_type_id = c.id order by cl.language) as chosen
+     from test_types c where c.id = $1`,
+    [testTypeId]
   );
   return rows[0] ? { mode: rows[0].listen_mode, chosen: rows[0].chosen } : null;
 });
 
-export async function categoryListen(categoryId: string): Promise<CategoryListen | null> {
-  return readCategoryListen(categoryId);
+export async function testTypeListen(testTypeId: string): Promise<TestTypeListen | null> {
+  return readTestTypeListen(testTypeId);
 }
 
-// Whether a category offers this language: never while Listen is off; English always; otherwise all, or its chosen ones.
-export function categoryOffers(listen: CategoryListen | null, code: string): boolean {
+// Whether a test type offers this language: never while Listen is off; English always; otherwise all, or its chosen ones.
+export function testTypeOffers(listen: TestTypeListen | null, code: string): boolean {
   if (!listen || listen.mode === "off") return false;
   return code === SOURCE_LANGUAGE || listen.mode === "all" || listen.chosen.includes(code);
 }
 
-// The live languages candidates in this category can choose (none while Listen is off).
-export async function offeredLanguages(categoryId: string): Promise<VoiceLanguage[]> {
-  const [listen, live] = await Promise.all([readCategoryListen(categoryId), loadVoiceLanguages("candidate")]);
-  return live.filter((language) => categoryOffers(listen, language.code));
+// The live languages candidates in this test type can choose (none while Listen is off).
+export async function offeredLanguages(testTypeId: string): Promise<VoiceLanguage[]> {
+  const [listen, live] = await Promise.all([readTestTypeListen(testTypeId), loadVoiceLanguages("candidate")]);
+  return live.filter((language) => testTypeOffers(listen, language.code));
 }
 
-// What a candidate hears in a category: their choice while it is live and offered there, otherwise English.
-export async function listeningLanguageIn(code: string | null | undefined, categoryId: string): Promise<VoiceLanguage> {
-  const listen = await readCategoryListen(categoryId);
-  if (code && categoryOffers(listen, code)) {
+// What a candidate hears in a test type: their choice while it is live and offered there, otherwise English.
+export async function listeningLanguageIn(code: string | null | undefined, testTypeId: string): Promise<VoiceLanguage> {
+  const listen = await readTestTypeListen(testTypeId);
+  if (code && testTypeOffers(listen, code)) {
     const found = await findVoiceLanguage(code, "candidate");
     if (found) return found;
   }

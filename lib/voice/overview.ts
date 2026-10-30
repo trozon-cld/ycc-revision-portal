@@ -13,11 +13,12 @@ import { audioState, translationState, type AudioState, type TranslationState } 
 
 export const LANGUAGE_LIST_PAGE_SIZE = 50;
 
-export const LANGUAGE_NEEDS = ["translate", "check", "audio", "done"] as const;
+export const LANGUAGE_NEEDS = ["translate", "check", "auto", "audio", "done"] as const;
 export type LanguageNeed = (typeof LANGUAGE_NEEDS)[number];
 export const LANGUAGE_NEED_LABELS: Record<LanguageNeed, string> = {
   translate: "Needs translating",
   check: "Needs checking",
+  auto: "Checked automatically",
   audio: "Needs audio",
   done: "All done",
 };
@@ -33,7 +34,8 @@ export type LanguageFilters = {
   need: LanguageNeed | null;
   kind: LanguageKind | null;
 };
-export type PageLanguageState = { translation: TranslationState | null; audio: AudioState; durationMs: number | null };
+// `auto`: the translation was checked by a bulk run, not yet by a person.
+export type PageLanguageState = { translation: TranslationState | null; auto: boolean; audio: AudioState; durationMs: number | null };
 export type LanguageListRow = {
   kind: LanguageKind;
   id: string;
@@ -56,8 +58,8 @@ export function isLanguageKind(value: unknown): value is LanguageKind {
 }
 
 // One row per item and language with its translation state (t) and audio state (a), mirroring status.ts.
-// $1: language codes; $2: question types with Listen.
-const STATES = `
+// $1: language codes; $2: question types with Listen. Bulk Listen reads it too.
+export const STATES = `
   with langs(code) as (select unnest($1::text[])),
   page_base as (
     select p.id as item_id, l.code,
@@ -68,7 +70,8 @@ const STATES = `
            case when l.code = '${SOURCE_LANGUAGE}' then p.content_version
                 when t.content_page_id is not null and t.source_version = p.content_version and t.status = 'checked' then t.revision
                 end as source,
-           a.source_version as audio_version, a.content_page_id is not null as has_audio
+           a.source_version as audio_version, a.content_page_id is not null as has_audio,
+           coalesce(t.checked_automatically, false) as auto
     from content_pages p
     cross join langs l
     left join page_translations t on t.content_page_id = p.id and t.language = l.code
@@ -86,7 +89,8 @@ const STATES = `
            case when a.source <> ${QUESTION_SOURCE_SQL} then 0
                 when l.code = '${SOURCE_LANGUAGE}' then ${QUESTION_CURRENT_VERSION}
                 else a.source_revision end as audio_version,
-           a.question_id is not null as has_audio
+           a.question_id is not null as has_audio,
+           coalesce(t.checked_automatically, false) as auto
     from handbook_items i
     join questions q on q.id = i.question_id and q.type = any($2::text[])
     cross join langs l
@@ -94,7 +98,7 @@ const STATES = `
     left join question_audio a on a.question_id = q.id and a.language = l.code
   ),
   states as (
-    select item_id, code, t, source is not null as can_make,
+    select item_id, code, t, source is not null as can_make, t = 'checked' and auto as auto,
            case when not has_audio then case when source is null then 'waiting' else 'missing' end
                 when source is not null and audio_version = source then 'ready'
                 else 'outdated' end as a
@@ -116,6 +120,8 @@ function needCondition(need: LanguageNeed | null): string {
       return `exists (select 1 from states s where s.item_id = x.id and s.t in ('missing', 'outdated'))`;
     case "check":
       return `exists (select 1 from states s where s.item_id = x.id and s.t = 'draft')`;
+    case "auto":
+      return `exists (select 1 from states s where s.item_id = x.id and s.auto)`;
     case "audio":
       return `exists (select 1 from states s where s.item_id = x.id and s.a in ('missing', 'outdated') and s.can_make)`;
     case "done":
@@ -202,7 +208,7 @@ type RawRow = {
   number: number | null;
   chapter_title: string;
   // Questions: source_version is 1 when made from the current English, 0 otherwise (as the editor shows it).
-  translations: { language: string; source_version: number; revision: number; status: "draft" | "checked" }[];
+  translations: { language: string; source_version: number; revision: number; status: "draft" | "checked"; auto: boolean }[];
   audio: { language: string; source_version: number; duration_ms: number }[];
 };
 
@@ -224,12 +230,12 @@ export async function listLanguageItems(filters: LanguageFilters, page: number):
      select x.kind, x.id, x.title, x.ref_no, x.status, x.supported, x.content_version, n.number, n.title as chapter_title,
             case when x.kind = 'page' then
               coalesce((select json_agg(json_build_object('language', t.language, 'source_version', t.source_version,
-                                                          'revision', t.revision, 'status', t.status))
+                                                          'revision', t.revision, 'status', t.status, 'auto', t.checked_automatically))
                         from page_translations t where t.content_page_id = x.id), '[]')
             else
               coalesce((select json_agg(json_build_object('language', t.language,
                                                           'source_version', case when t.source = ${TRANSLATION_SOURCE_SQL} then ${QUESTION_CURRENT_VERSION} else 0 end,
-                                                          'revision', t.revision, 'status', t.status))
+                                                          'revision', t.revision, 'status', t.status, 'auto', t.checked_automatically))
                         from question_translations t join questions q on q.id = t.question_id where t.question_id = x.id), '[]')
             end as translations,
             case when x.kind = 'page' then
@@ -261,8 +267,10 @@ export async function listLanguageItems(filters: LanguageFilters, page: number):
         const found = row.translations.find((t) => t.language === language.code);
         const translation = found ? { sourceVersion: found.source_version, revision: found.revision, status: found.status } : null;
         const audio = row.audio.find((a) => a.language === language.code);
+        const translationNow = isSource ? null : translationState(version, translation);
         states[language.code] = {
-          translation: isSource ? null : translationState(version, translation),
+          translation: translationNow,
+          auto: translationNow === "checked" && (found?.auto ?? false),
           audio: audioState(isSource, version, translation, audio ? { sourceVersion: audio.source_version } : null),
           durationMs: audio?.duration_ms ?? null,
         };
@@ -277,4 +285,23 @@ export async function listLanguageItems(filters: LanguageFilters, page: number):
       states,
     };
   });
+}
+
+// Per chapter, for one language (Bulk tab): items that can have Listen, how many are done (checked translation and
+// audio ready), to do (a translation or audio to make), and waiting for a person to check a draft.
+export type ChapterLanguageCount = { chapterId: string; total: number; ready: number; todo: number; waiting: number };
+
+export async function chapterLanguageCounts(code: string): Promise<ChapterLanguageCount[]> {
+  const { rows } = await pool.query<{ chapter_id: string; total: number; ready: number; todo: number; waiting: number }>(
+    `${STATES}
+     select x.chapter_id, count(*)::int as total,
+            count(*) filter (where s.a = 'ready' and coalesce(s.t, 'checked') = 'checked')::int as ready,
+            count(*) filter (where s.t in ('missing', 'outdated') or (s.a in ('missing', 'outdated') and s.can_make))::int as todo,
+            count(*) filter (where s.t = 'draft')::int as waiting
+     from items x join states s on s.item_id = x.id
+     where x.supported and x.chapter_id is not null
+     group by x.chapter_id`,
+    [[code], [...VOICE_QUESTION_TYPES]]
+  );
+  return rows.map((row) => ({ chapterId: row.chapter_id, total: row.total, ready: row.ready, todo: row.todo, waiting: row.waiting }));
 }

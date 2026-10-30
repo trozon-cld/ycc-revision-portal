@@ -28,7 +28,7 @@ export default async function MockAttemptPage({ params, searchParams }: PageProp
     return <MockRunner key={view.run.attemptId} run={view.run} initialTextSize={textSize} />;
   }
 
-  // A test removed because nothing was answered before a category change: back to the start page.
+  // A test removed because nothing was answered before a test type change: back to the start page.
   const results = await loadMockResults(session.sub, attemptId);
   if (!results) redirect("/dashboard/mock");
   return (

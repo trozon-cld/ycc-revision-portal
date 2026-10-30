@@ -6,24 +6,24 @@ import { listeningLanguageIn } from "@/lib/voice/language-store";
 import { loadReadyAudio } from "@/lib/voice/listen";
 
 export type CandidateBook = {
-  categoryId: string;
-  categoryName: string;
+  testTypeId: string;
+  testTypeName: string;
   pages: BookPageData[];
   media: ResolvedMedia;
   startPageId: string | null;
   textSize: TextSize;
   covers: BookCovers;
   // Listen: the candidate's language and the pages with up-to-date audio in it (item id → length in ms);
-  // null when Listen is off for the category.
+  // null when Listen is off for the test type.
   listen: { language: string; languageName: string; durations: Record<string, number> } | null;
 };
 
-// The candidate's current category as they see it (published items in published chapters): one query for
+// The candidate's current test type as they see it (published items in published chapters): one query for
 // the candidate, their place and the covers, then all pictures signed together.
 export async function loadCandidateBook(userId: string): Promise<CandidateBook | null> {
   const { rows } = await pool.query<{
-    category_id: string;
-    category_name: string;
+    test_type_id: string;
+    test_type_name: string;
     front_id: string | null;
     back_id: string | null;
     reader_text_size: number | null;
@@ -31,11 +31,11 @@ export async function loadCandidateBook(userId: string): Promise<CandidateBook |
     listen_mode: string;
     item_id: string | null;
   }>(
-    `select c.id as category_id, c.name as category_name, c.front_cover_media_id as front_id,
+    `select c.id as test_type_id, c.name as test_type_name, c.front_cover_media_id as front_id,
             c.back_cover_media_id as back_id, u.reader_text_size, u.preferred_language, c.listen_mode, hp.item_id
      from users u
-     join categories c on c.id = u.current_category_id
-     left join handbook_progress hp on hp.user_id = u.id and hp.category_id = u.current_category_id
+     join test_types c on c.id = u.current_test_type_id
+     left join handbook_progress hp on hp.user_id = u.id and hp.test_type_id = u.current_test_type_id
      where u.id = $1 and u.role = 'candidate'`,
     [userId]
   );
@@ -43,20 +43,20 @@ export async function loadCandidateBook(userId: string): Promise<CandidateBook |
   if (!row) return null;
 
   const coverIds = [row.front_id, row.back_id].filter((id): id is string => Boolean(id));
-  const language = await listeningLanguageIn(row.preferred_language, row.category_id);
+  const language = await listeningLanguageIn(row.preferred_language, row.test_type_id);
   const [book, durations] = await Promise.all([
-    loadPreviewBook({ chapterId: null, categoryId: row.category_id, includeDrafts: false }, { ids: coverIds, thumbIds: coverIds }),
-    row.listen_mode !== "off" ? loadReadyAudio(row.category_id, language.code) : null,
+    loadPreviewBook({ chapterId: null, testTypeId: row.test_type_id, includeDrafts: false }, { ids: coverIds, thumbIds: coverIds }),
+    row.listen_mode !== "off" ? loadReadyAudio(row.test_type_id, language.code) : null,
   ]);
   return {
-    categoryId: row.category_id,
-    categoryName: row.category_name,
+    testTypeId: row.test_type_id,
+    testTypeName: row.test_type_name,
     pages: book.pages,
     media: book.media,
     startPageId: row.item_id && book.pages.some((page) => page.id === row.item_id) ? row.item_id : null,
     textSize: toTextSize(row.reader_text_size),
     covers: {
-      categoryName: row.category_name,
+      testTypeName: row.test_type_name,
       front: row.front_id ? (book.media[row.front_id] ?? null) : null,
       back: row.back_id ? (book.media[row.back_id] ?? null) : null,
       homeHref: "/dashboard",

@@ -1,8 +1,8 @@
 import type { ResolvedMedia } from "./book";
 
-// A category's Handbook covers as the reader draws them. With no picture, a standard brand cover shows.
+// A test type's Handbook covers as the reader draws them. With no picture, a standard brand cover shows.
 export type BookCovers = {
-  categoryName: string;
+  testTypeName: string;
   front: ResolvedMedia[string] | null;
   back: ResolvedMedia[string] | null;
   // Candidates only: the back cover's "Back to home" link.

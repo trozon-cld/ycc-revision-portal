@@ -37,11 +37,12 @@ export function isStorageConfigured() {
 
 // Media and audio paths are unique per upload, so objects never change and can be cached for a year.
 // `replace`: for fixed paths written again on a retry (log archives); those aren't cached.
+// `restore`: a picture put back at its own path (same file), so it may overwrite and stays cached.
 export async function storeObject(
   path: string,
   body: Blob,
   contentType: string,
-  { replace = false, area = "media" }: { replace?: boolean; area?: StorageArea } = {}
+  { replace = false, restore = false, area = "media" }: { replace?: boolean; restore?: boolean; area?: StorageArea } = {}
 ): Promise<void> {
   const { base, key, bucket } = config(area);
   const response = await fetch(`${base}/object/${encodeURIComponent(bucket)}/${encodePath(path)}`, {
@@ -50,7 +51,7 @@ export async function storeObject(
       ...authHeaders(key),
       "Content-Type": contentType,
       "cache-control": replace ? "no-cache" : IMMUTABLE_MAX_AGE,
-      "x-upsert": replace ? "true" : "false",
+      "x-upsert": replace || restore ? "true" : "false",
     },
     body,
   });

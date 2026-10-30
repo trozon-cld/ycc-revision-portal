@@ -6,33 +6,42 @@ insert into users (email, password_hash, role, access_start_at, access_expires_a
 values ('REPLACE_WITH_EMAIL', 'REPLACE_WITH_BCRYPT_HASH', 'superadmin', null, null, false)
 on conflict (email) do update set password_hash = excluded.password_hash;
 
--- Placeholder category groups and categories, renameable by the Superadmin.
-insert into category_groups (position, name)
+-- Test areas and test types (renameable by the Superadmin). Each only seeds an empty table.
+insert into test_areas (position, name)
 select position, name
-from (values (1, 'General'), (2, 'Special')) as seed (position, name)
-where not exists (select 1 from category_groups);
+from (values (1, 'General'), (2, 'Specialist')) as seed (position, name)
+where not exists (select 1 from test_areas);
 
-insert into categories (name, group_id)
-select name, (select id from category_groups order by position limit 1)
+insert into test_types (name, test_area_id, position)
+select seed.name, a.id, seed.position
 from (values
-  ('General Operative'),
-  ('Skilled Trade'),
-  ('Supervisor'),
-  ('Site Manager'),
-  ('Specialist Role')
-) as seed (name)
-on conflict ((lower(name))) do nothing;
+  (1, 1, 'Operative'),
+  (2, 1, 'Supervisory'),
+  (2, 2, 'Demolition'),
+  (2, 3, 'Plumbing (JIB)'),
+  (2, 4, 'Highway works'),
+  (2, 5, 'Specialist working at height'),
+  (2, 6, 'Lifts and escalators'),
+  (2, 7, 'Tunnelling'),
+  (2, 8, 'Heating and plumbing services'),
+  (2, 9, 'Pipefitting and welding'),
+  (2, 10, 'Ductwork'),
+  (2, 11, 'Refrigeration and air conditioning'),
+  (2, 12, 'Services and facilities maintenance')
+) as seed (area_position, position, name)
+join test_areas a on a.position = seed.area_position
+where not exists (select 1 from test_types);
 
--- Placeholder sections and chapters, all renameable. Each only seeds an empty table.
-insert into sections (position, title)
-select position, title
+-- Sections and chapters, all renameable. Each only seeds an empty table. A–D are linked to every test type.
+insert into sections (position, title, linked_to_all)
+select position, title, linked_to_all
 from (values
-  (1, 'Working environment'),
-  (2, 'Occupational health'),
-  (3, 'Safety'),
-  (4, 'High risk activities'),
-  (5, 'Specialist activities')
-) as seed (position, title)
+  (1, 'Working environment', true),
+  (2, 'Occupational health', true),
+  (3, 'Safety', true),
+  (4, 'High risk activities', true),
+  (5, 'Specialist activities', false)
+) as seed (position, title, linked_to_all)
 where not exists (select 1 from sections);
 
 insert into chapters (section_id, position, title)
@@ -53,10 +62,31 @@ from (values
   (4, 1, 'Site transport and lifting operations'),
   (4, 2, 'Working at height'),
   (4, 3, 'Excavations and confined spaces'),
-  (4, 4, 'Hazardous substances')
+  (4, 4, 'Hazardous substances'),
+  (5, 1, 'Supervisory'),
+  (5, 2, 'Demolition'),
+  (5, 3, 'Plumbing (JIB)'),
+  (5, 4, 'Highway works'),
+  (5, 5, 'Specialist working at height'),
+  (5, 6, 'Lifts and escalators'),
+  (5, 7, 'Tunnelling'),
+  (5, 8, 'Heating and plumbing services'),
+  (5, 9, 'Pipefitting and welding'),
+  (5, 10, 'Ductwork'),
+  (5, 11, 'Refrigeration and air conditioning'),
+  (5, 12, 'Services and facilities maintenance')
 ) as seed (section_position, position, title)
 join sections s on s.position = seed.section_position
 where not exists (select 1 from chapters);
+
+-- Every test type's book: the core chapters (sections A–D) and, in section E, the chapter named like the test type.
+insert into test_type_chapters (test_type_id, chapter_id)
+select t.id, c.id
+from test_types t
+join chapters c on true
+join sections s on s.id = c.section_id
+where (s.linked_to_all or c.title = t.name)
+  and not exists (select 1 from test_type_chapters);
 
 -- Starter General queries (hidden), as migration 0027 adds them.
 insert into faq_items (position, question, answer)
@@ -65,8 +95,8 @@ select * from (values
  E'Log in with the email address and password your Admin gave you.\n\nIf you forget your password, please ask your Admin to set a new one for you.'),
 (2, 'When does my access end?',
  E'Your Home page shows the date your revision access ends. Please complete your study and mock tests before this date.\n\nIf you need more time, please ask your Admin.'),
-(3, 'How do I change category?',
- E'If your group has more than one category, tap Change category on your Home page and choose another one.\n\nYour progress is kept separately for each category, so you can switch back at any time. You can’t change category while a mock test is in progress.'),
+(3, 'How do I change test type?',
+ E'If your test area has more than one test type, tap Change test type on your Home page and choose another one.\n\nYour progress is kept separately for each test type, so you can switch back at any time. You can’t change test type while a mock test is in progress.'),
 (4, 'What is the difference between Prepare, Practice and Mock test?',
  E'Prepare is the Handbook: read it chapter by chapter, with questions along the way.\n\nPractice lets you answer questions with no time limit and see the answer straight away.\n\nMock test is like the real test: up to 50 questions in 45 minutes, with your results at the end.'),
 (5, 'What happens if the mock test time runs out or I lose my connection?',
@@ -76,6 +106,6 @@ select * from (values
 (7, 'What does my readiness score mean?',
  E'Your readiness score appears on My progress after your first mock test. It is worked out from your latest mock test score, your average mock test score, how much of the Handbook you have done and how many of your practised chapters are not weak areas.\n\nIt is a guide to help you prepare, not a prediction of your official result.'),
 (8, 'Who do I contact for help?',
- E'Your Admin can help with your login, your access dates and your category. You can also use the support details on this page.')
+ E'Your Admin can help with your login, your access dates and your test type. You can also use the support details on this page.')
 ) as starter (position, question, answer)
 where not exists (select 1 from faq_items);

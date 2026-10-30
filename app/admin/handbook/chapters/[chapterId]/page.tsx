@@ -5,7 +5,7 @@ import { requireRole } from "@/lib/auth/guard";
 import { CONTENT_EDITORS } from "@/lib/auth/content-editors";
 import { pool } from "@/lib/db/pool";
 import { getChapterContext } from "@/lib/content/pages";
-import { listNames, loadCategoryGroups, loadChapterCategoryIds } from "@/lib/handbook/categories";
+import { listNames, loadTestAreas, loadChapterTestTypeIds } from "@/lib/handbook/test-types";
 import { questionLogLabel, questionRef } from "@/lib/questions/labels";
 import { plainText } from "@/lib/content/inline";
 import { questionTypeLabel } from "@/lib/questions/registry";
@@ -15,7 +15,9 @@ import { buttonClass } from "@/components/admin/styles";
 import { countOf } from "@/lib/format";
 import { AddQuestionsButton, ChapterOrder, type AddableQuestion, type OrderItem } from "./chapter-order";
 import { NewPageButton } from "./page-row-actions";
-import { ChapterCategoriesButton, ChapterStatusButton } from "../../chapter-row-actions";
+import { ChapterTestTypesButton, ChapterStatusButton, PublishAllButton, type PublishAllSummary } from "../../chapter-row-actions";
+import { describeHeldBack, planChapterPublish } from "@/lib/handbook/publish-all";
+import { readStructureLock } from "@/lib/handbook/structure-lock";
 import { Badge } from "@/components/admin/badge";
 
 export const metadata: Metadata = { title: "Chapter" };
@@ -49,7 +51,7 @@ export default async function ChapterPagesPage({ params }: PageProps<"/admin/han
   const chapter = await getChapterContext(chapterId);
   if (!chapter) notFound();
 
-  const [{ rows }, { rows: unplaced }, categoryGroups, links] = await Promise.all([
+  const [{ rows }, { rows: unplaced }, testAreas, links, plan, { rows: linkingRows }, lock] = await Promise.all([
     pool.query<ItemRow>(
       `select i.id, i.position,
               p.id as page_id, p.title as page_title, p.status as page_status,
@@ -71,11 +73,22 @@ export default async function ChapterPagesPage({ params }: PageProps<"/admin/han
        order by q.ref_no`,
       [chapter.id]
     ),
-    loadCategoryGroups(),
-    loadChapterCategoryIds([chapter.id]),
+    loadTestAreas(),
+    loadChapterTestTypeIds([chapter.id]),
+    planChapterPublish(pool, chapter.id, false),
+    // The section's test type linking, and candidates whose current test type includes the chapter.
+    pool.query<{ linked_to_all: boolean; studying: number }>(
+      `select s.linked_to_all,
+              (select count(*) from users u join test_type_chapters l on l.test_type_id = u.current_test_type_id
+                 where u.role = 'candidate' and l.chapter_id = c.id)::int as studying
+       from chapters c join sections s on s.id = c.section_id where c.id = $1`,
+      [chapter.id]
+    ),
+    readStructureLock(),
   ]);
-  const categoryIds = links.get(chapter.id) ?? [];
-  const categoryNames = categoryGroups.flatMap((group) => group.categories).filter((category) => categoryIds.includes(category.id)).map((category) => category.name);
+  const linking = { label: chapter.sectionLabel, linkedToAll: linkingRows[0]?.linked_to_all ?? false };
+  const testTypeIds = links.get(chapter.id) ?? [];
+  const testTypeNames = testAreas.flatMap((testArea) => testArea.testTypes).filter((testType) => testTypeIds.includes(testType.id)).map((testType) => testType.name);
 
   const items: OrderItem[] = rows.map((row) =>
     row.page_id
@@ -115,6 +128,19 @@ export default async function ChapterPagesPage({ params }: PageProps<"/admin/han
   const questionCount = items.length - pageCount;
   const published = items.filter((item) => item.status === "published").length;
   const drafts = items.length - published;
+  // The chapter goes live with Publish all when every draft in its page order is ready.
+  const ready = new Set([...plan.pageIds, ...plan.questionIds]);
+  const publishAll: PublishAllSummary = {
+    pages: plan.pageIds.length,
+    questions: plan.questionIds.length,
+    heldBack: describeHeldBack(plan.heldBack),
+    heldBackCount: plan.heldBack.length,
+    chapterGoesLive:
+      chapter.status === "draft" &&
+      items.length > 0 &&
+      items.every((item) => item.status === "published" || ready.has(item.kind === "page" ? item.pageId : item.questionId)),
+    hasTestTypes: testTypeIds.length > 0,
+  };
   return (
     <>
       <nav aria-label="Breadcrumb" className="mb-2 text-sm">
@@ -137,9 +163,19 @@ export default async function ChapterPagesPage({ params }: PageProps<"/admin/han
             <Link href={`/admin/handbook/preview?chapter=${chapter.id}`} className={buttonClass("secondary")}>
               Preview chapter
             </Link>
-            <ChapterCategoriesButton chapterId={chapter.id} groups={categoryGroups} initialSelected={categoryIds} />
+            <ChapterTestTypesButton
+              chapterId={chapter.id}
+              chapterName={`${chapter.number} ${chapter.title}`}
+              testAreas={testAreas}
+              initialSelected={testTypeIds}
+              linking={linking}
+              locked={lock.locked}
+            />
             <AddQuestionsButton chapterId={chapter.id} questions={addable} />
             <NewPageButton chapterId={chapter.id} />
+            {publishAll.pages + publishAll.questions + publishAll.heldBackCount > 0 && (
+              <PublishAllButton chapterId={chapter.id} number={chapter.number} title={chapter.title} summary={publishAll} />
+            )}
             <ChapterStatusButton
               id={chapter.id}
               number={chapter.number}
@@ -147,19 +183,21 @@ export default async function ChapterPagesPage({ params }: PageProps<"/admin/han
               status={chapter.status}
               itemCount={items.length}
               draftCount={drafts}
-              hasCategories={categoryIds.length > 0}
+              hasTestTypes={testTypeIds.length > 0}
+              studying={linkingRows[0]?.studying ?? 0}
+              locked={lock.locked}
             />
           </>
         }
       />
 
-      {categoryNames.length > 0 ? (
+      {testTypeNames.length > 0 ? (
         <p className="mb-3 text-sm text-slate-700 [overflow-wrap:anywhere]">
-          <span className="font-medium text-ink">In categories:</span> {listNames(categoryNames, 12)}
+          <span className="font-medium text-ink">In test types:</span> {listNames(testTypeNames, 12)}
         </p>
       ) : (
         <p className="mb-3 rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25">
-          Not in any category yet. Candidates won&apos;t see this chapter until it&apos;s added to one with Categories.
+          Not in any test type yet. Candidates won&apos;t see this chapter until it&apos;s added to one with Test types.
         </p>
       )}
 

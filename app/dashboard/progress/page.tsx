@@ -15,7 +15,7 @@ import { MockHistoryList } from "@/app/dashboard/mock/mock-history";
 
 export const metadata: Metadata = { title: "My progress" };
 
-// My progress: Handbook, Practice and mock tests in the current category.
+// My progress: Handbook, Practice and mock tests in the current test type.
 export default async function ProgressPage() {
   const session = await requireRole(["candidate"]);
   await settleOwnMocks(session.sub);
@@ -28,7 +28,7 @@ export default async function ProgressPage() {
     <PageBody>
       <div className="max-w-3xl">
         <h1 className={`${PAGE_TITLE}`}>My progress</h1>
-        <p className="mt-2 text-base text-ink [overflow-wrap:anywhere]">Your Handbook, Practice and mock tests for {progress.categoryName}.</p>
+        <p className="mt-2 text-base text-ink [overflow-wrap:anywhere]">Your Handbook, Practice and mock tests for {progress.testTypeName}.</p>
 
         <div className="mt-5 flex flex-col gap-4 lg:mt-6">
           <Accordion
@@ -64,7 +64,7 @@ export default async function ProgressPage() {
             title="Handbook"
             summary={
               handbook.total === 0
-                ? `There’s no Handbook for ${progress.categoryName} yet.`
+                ? `There’s no Handbook for ${progress.testTypeName} yet.`
                 : `${donePercent(handbook.done, handbook.total)}% done · ${handbook.done} of ${handbook.total} pages and questions`
             }
             share={handbook.total > 0 ? handbook.done / handbook.total : undefined}
@@ -93,7 +93,7 @@ export default async function ProgressPage() {
             title="Practice"
             summary={
               practice.pool === 0
-                ? `There are no practice questions for ${progress.categoryName} yet.`
+                ? `There are no practice questions for ${progress.testTypeName} yet.`
                 : `${practice.practised} of ${countOf(practice.pool, "question")} practised${practice.tries > 0 ? ` · ${scorePercent(practice.right, practice.tries)}% right` : ""}`
             }
             share={practice.pool > 0 ? practice.practised / practice.pool : undefined}

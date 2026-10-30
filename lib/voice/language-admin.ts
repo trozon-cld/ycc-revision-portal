@@ -4,7 +4,8 @@ import { logActivity } from "@/lib/audit/log";
 import { pool } from "@/lib/db/pool";
 import { withTransaction } from "@/lib/db/transaction";
 import { countOf } from "@/lib/format";
-import { catalogueEntry } from "./language-catalogue";
+import { audioService, catalogueEntry } from "./language-catalogue";
+import { GEMINI_CALLS_MAX, GEMINI_FREE_CALLS } from "./limits";
 import { phraseKeysFor, SOURCE_LANGUAGE, type LanguageStatus, type PhraseKey } from "./languages";
 import { translateItems, voiceFailure } from "./make";
 import { deleteAudioFilesQuietly } from "./audio-files";
@@ -22,6 +23,9 @@ export type ManagedLanguage = {
   checked: number;
   // Candidates whose listening language this is.
   candidates: number;
+  // Call limits when Gemini reads it aloud (null: no limit).
+  geminiPerDay: number | null;
+  geminiPerMinute: number | null;
 };
 
 export type PhraseRow = { text: string; status: "draft" | "checked"; checkedAt: string | null };
@@ -41,8 +45,9 @@ const NOT_FOUND = "This language isn't in the list any more.";
 const CONFLICT = "Someone else changed these phrases meanwhile. Reload the page to see their version.";
 
 type LanguageDbRow = { code: string; name: string; native_name: string; status: LanguageStatus };
+type ManagedRow = LanguageDbRow & { phrases: number; checked: number; candidates: number; gemini_calls_per_day: number | null; gemini_calls_per_minute: number | null };
 
-function toManaged(row: LanguageDbRow & { phrases: number; checked: number; candidates: number }): ManagedLanguage {
+function toManaged(row: ManagedRow): ManagedLanguage {
   return {
     code: row.code,
     name: row.name,
@@ -51,11 +56,13 @@ function toManaged(row: LanguageDbRow & { phrases: number; checked: number; cand
     phrases: row.phrases,
     checked: row.checked,
     candidates: row.candidates,
+    geminiPerDay: row.gemini_calls_per_day,
+    geminiPerMinute: row.gemini_calls_per_minute,
   };
 }
 
 const MANAGED_SELECT = `
-  select l.code, l.name, l.native_name, l.status,
+  select l.code, l.name, l.native_name, l.status, l.gemini_calls_per_day, l.gemini_calls_per_minute,
          (select count(*) from voice_phrases p where p.language = l.code)::int as phrases,
          (select count(*) from voice_phrases p where p.language = l.code and p.status = 'checked')::int as checked,
          (select count(*) from users u where u.role = 'candidate' and u.preferred_language = l.code)::int as candidates
@@ -63,7 +70,7 @@ const MANAGED_SELECT = `
 
 // English first, then A–Z, hidden ones last.
 export async function listManagedLanguages(): Promise<ManagedLanguage[]> {
-  const { rows } = await pool.query<LanguageDbRow & { phrases: number; checked: number; candidates: number }>(MANAGED_SELECT);
+  const { rows } = await pool.query<ManagedRow>(MANAGED_SELECT);
   return rows
     .map(toManaged)
     .sort(
@@ -75,7 +82,7 @@ export async function listManagedLanguages(): Promise<ManagedLanguage[]> {
 }
 
 export async function loadLanguagePhrases(code: string): Promise<LanguagePhrases | null> {
-  const { rows } = await pool.query<LanguageDbRow & { phrases: number; checked: number; candidates: number }>(`${MANAGED_SELECT} where l.code = $1`, [code]);
+  const { rows } = await pool.query<ManagedRow>(`${MANAGED_SELECT} where l.code = $1`, [code]);
   if (!rows[0]) return null;
   const { rows: phraseRows } = await pool.query<{ language: string; phrase: PhraseKey; text: string; status: "draft" | "checked"; checked_at: Date | null }>(
     `select language, phrase, text, status, checked_at from voice_phrases where language = any($1::text[])`,
@@ -131,10 +138,12 @@ export async function addLanguage(session: SessionPayload, code: string): Promis
   const entry = catalogueEntry(code);
   if (!entry) return { ok: false, error: "Choose a language from the list." };
   return withTransaction<LanguageResult>(async (client) => {
+    // A language Gemini reads aloud starts with Gemini's free-tier call limits.
+    const limits = audioService(entry.code) === "gemini" ? GEMINI_FREE_CALLS : null;
     const { rowCount } = await client.query(
-      `insert into voice_languages (code, name, native_name, status, created_by)
-       values ($1, $2, $3, 'draft', $4) on conflict (code) do nothing`,
-      [entry.code, entry.name, entry.nativeName, session.sub]
+      `insert into voice_languages (code, name, native_name, status, created_by, gemini_calls_per_day, gemini_calls_per_minute)
+       values ($1, $2, $3, 'draft', $4, $5, $6) on conflict (code) do nothing`,
+      [entry.code, entry.name, entry.nativeName, session.sub, limits?.perDay ?? null, limits?.perMinute ?? null]
     );
     if (!rowCount) return { ok: false, error: `${entry.name} has already been added.` };
     await logActivity(client, session, "language.added", target(entry), {});
@@ -266,7 +275,7 @@ export async function restoreLanguage(session: SessionPayload, code: string): Pr
 }
 
 // Superadmin only: a hidden language and everything made for it (phrases, translations, audio rows and files) go for
-// good. Anyone still set to it moves to English; categories stop listing it. Files are removed after the commit.
+// good. Anyone still set to it moves to English; test types stop listing it. Files are removed after the commit.
 export async function deleteLanguage(session: SessionPayload, code: string): Promise<LanguageResult> {
   if (code === SOURCE_LANGUAGE) return { ok: false, error: "English can't be deleted." };
   const outcome = await withTransaction<{ result: LanguageResult; paths: string[] }>(async (client) => {
@@ -282,7 +291,7 @@ export async function deleteLanguage(session: SessionPayload, code: string): Pro
       [code]
     );
     const moved = (await client.query(`update users set preferred_language = $2 where preferred_language = $1`, [code, SOURCE_LANGUAGE])).rowCount ?? 0;
-    for (const table of ["category_languages", "page_audio", "question_audio", "page_translations", "question_translations", "voice_phrases"]) {
+    for (const table of ["test_type_languages", "page_audio", "question_audio", "page_translations", "question_translations", "voice_phrases"]) {
       await client.query(`delete from ${table} where language = $1`, [code]);
     }
     await client.query(`delete from voice_languages where code = $1`, [code]);
@@ -296,4 +305,42 @@ export async function deleteLanguage(session: SessionPayload, code: string): Pro
   });
   await deleteAudioFilesQuietly(outcome.paths);
   return outcome.result;
+}
+
+// A Gemini-voiced language's call limits (null: no limit), to match the Gemini key's tier.
+export async function setGeminiLimits(session: SessionPayload, code: string, perDay: number | null, perMinute: number | null): Promise<LanguageResult> {
+  if (audioService(code) !== "gemini") return { ok: false, error: "Only languages Gemini reads aloud have these limits." };
+  for (const [value, max, what] of [
+    [perDay, GEMINI_CALLS_MAX.perDay, "a day"],
+    [perMinute, GEMINI_CALLS_MAX.perMinute, "a minute"],
+  ] as const) {
+    if (value !== null && (!Number.isInteger(value) || value < 1 || value > max)) {
+      return { ok: false, error: `Calls ${what} must be a whole number from 1 to ${max.toLocaleString("en-GB")}, or empty for no limit.` };
+    }
+  }
+  return withTransaction<LanguageResult>(async (client) => {
+    const { rows } = await client.query<{ name: string; per_day: number | null; per_minute: number | null }>(
+      `select name, gemini_calls_per_day as per_day, gemini_calls_per_minute as per_minute from voice_languages where code = $1 for update`,
+      [code]
+    );
+    const language = rows[0];
+    if (!language) return { ok: false, error: NOT_FOUND };
+    if (language.per_day === perDay && language.per_minute === perMinute) return { ok: true };
+    await client.query(`update voice_languages set gemini_calls_per_day = $2, gemini_calls_per_minute = $3, updated_at = now() where code = $1`, [
+      code,
+      perDay,
+      perMinute,
+    ]);
+    await logActivity(client, session, "language.audio_limits_changed", target(language), {
+      from: describeGeminiLimits(language.per_day, language.per_minute),
+      to: describeGeminiLimits(perDay, perMinute),
+    });
+    return { ok: true };
+  });
+}
+
+// "10 a day, 3 a minute"; "No limit" when neither is set.
+export function describeGeminiLimits(perDay: number | null, perMinute: number | null): string {
+  const parts = [perDay !== null ? `${perDay.toLocaleString("en-GB")} a day` : "", perMinute !== null ? `${perMinute.toLocaleString("en-GB")} a minute` : ""].filter(Boolean);
+  return parts.length > 0 ? parts.join(", ") : "No limit";
 }

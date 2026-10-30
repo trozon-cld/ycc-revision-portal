@@ -22,7 +22,7 @@ export default async function PreparePage() {
         <div className="max-w-3xl">
           <h1 className={`${PAGE_TITLE}`}>Prepare</h1>
           <p className="mt-4 text-base leading-relaxed text-ink">
-            There’s no Handbook for {book.categoryName} yet. Please check back soon.
+            There’s no Handbook for {book.testTypeName} yet. Please check back soon.
           </p>
           <Link href="/dashboard" className={`${PRIMARY_BUTTON} mt-5 lg:mt-6 w-full sm:w-auto`}>
             Back to home
@@ -37,9 +37,9 @@ export default async function PreparePage() {
 
   return (
     <div className="flex h-dvh min-h-[480px] flex-col phone-sideways:min-h-0">
-      <h1 className="sr-only">Prepare: Handbook for {book.categoryName}</h1>
+      <h1 className="sr-only">Prepare: Handbook for {book.testTypeName}</h1>
       <PrepareReader
-        categoryId={book.categoryId}
+        testTypeId={book.testTypeId}
         pages={book.pages}
         media={book.media}
         startPageId={book.startPageId}

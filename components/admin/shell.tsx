@@ -10,7 +10,7 @@ import { ToastProvider } from "./toast";
 import { Icon, type IconName } from "@/components/icons";
 
 type Role = "admin" | "superadmin";
-type NavIconName = "admins" | "candidates" | "categories" | "handbook" | "questions" | "media" | "faq" | "languages" | "activity" | "account";
+type NavIconName = "admins" | "candidates" | "testTypes" | "handbook" | "questions" | "media" | "faq" | "languages" | "backup" | "activity" | "account";
 type NavItem = { href: string; label: string; icon: NavIconName };
 type NavGroup = { heading?: string; items: NavItem[] };
 
@@ -19,10 +19,11 @@ const CONTENT: NavGroup = {
   heading: "Content",
   items: [
     { href: "/admin/handbook", label: "Handbook", icon: "handbook" },
-    { href: "/admin/questions", label: "Question bank", icon: "questions" },
+    { href: "/admin/questions", label: "Question Bank", icon: "questions" },
     { href: "/admin/handbook/languages", label: "Languages", icon: "languages" },
     { href: "/admin/media", label: "Media", icon: "media" },
-    { href: "/admin/faq", label: "General queries", icon: "faq" },
+    { href: "/admin/faq", label: "General Queries", icon: "faq" },
+    { href: "/admin/backup", label: "Backup & Restore", icon: "backup" },
   ],
 };
 const contentFor = (role: Role): NavGroup[] => (CONTENT_EDITORS.includes(role) ? [CONTENT] : []);
@@ -34,7 +35,7 @@ const NAV: Record<Role, NavGroup[]> = {
       items: [
         { href: "/admin/admins", label: "Admins", icon: "admins" },
         { href: "/admin/candidates", label: "Candidates", icon: "candidates" },
-        { href: "/admin/categories", label: "Categories", icon: "categories" },
+        { href: "/admin/test-types", label: "Test Types", icon: "testTypes" },
       ],
     },
     ...contentFor("superadmin"),
@@ -42,7 +43,7 @@ const NAV: Record<Role, NavGroup[]> = {
       heading: "System",
       items: [
         { href: "/admin/activity", label: "Activity", icon: "activity" },
-        { href: "/admin/account", label: "My account", icon: "account" },
+        { href: "/admin/account", label: "My Account", icon: "account" },
       ],
     },
   ],
@@ -54,8 +55,8 @@ const NAV: Record<Role, NavGroup[]> = {
         {
           heading: "System",
           items: [
-            { href: "/admin/activity", label: "My activity", icon: "activity" },
-            { href: "/admin/account", label: "My account", icon: "account" },
+            { href: "/admin/activity", label: "My Activity", icon: "activity" },
+            { href: "/admin/account", label: "My Account", icon: "account" },
           ],
         },
       ]
@@ -63,8 +64,8 @@ const NAV: Record<Role, NavGroup[]> = {
         {
           items: [
             { href: "/admin/candidates", label: "Candidates", icon: "candidates" },
-            { href: "/admin/activity", label: "My activity", icon: "activity" },
-            { href: "/admin/account", label: "My account", icon: "account" },
+            { href: "/admin/activity", label: "My Activity", icon: "activity" },
+            { href: "/admin/account", label: "My Account", icon: "account" },
           ],
         },
       ],
@@ -231,12 +232,13 @@ function MobileDrawer({ onClose, children }: { onClose: () => void; children: Re
 const NAV_ICONS: Record<NavIconName, IconName> = {
   admins: "admins",
   candidates: "candidates",
-  categories: "categories",
+  testTypes: "testTypes",
   handbook: "book",
   questions: "help",
   media: "picture",
   faq: "faq",
   languages: "listen",
+  backup: "archive",
   activity: "activity",
   account: "account",
 };

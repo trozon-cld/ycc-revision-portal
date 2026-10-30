@@ -34,9 +34,9 @@ export const STRONG_FROM = 0.9;
 // Most questions one practice can hold.
 export const MAX_QUESTIONS = 2000;
 
-// What the setup page offers: question counts in the current category's practice pool.
+// What the setup page offers: question counts in the current test type's practice pool.
 export type PracticeOptions = {
-  categoryName: string;
+  testTypeName: string;
   total: number;
   sections: { label: string; chapters: { id: string; label: string; count: number }[] }[];
   types: { type: QuestionType; name: string; count: number }[];

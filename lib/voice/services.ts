@@ -60,6 +60,30 @@ export type VoiceErrorKind =
   | "bad_reply"
   | "failed";
 
+// What a bulk run does after a failure: try the same item again after a wait, or stop the whole run. Other
+// failures (none) concern one item only: it's listed as failed and the run carries on.
+export type VoiceFailure = "retry" | "stop";
+
+const FAILURES: Record<VoiceErrorKind, VoiceFailure | null> = {
+  not_set_up: "stop",
+  key: "stop",
+  billing: "stop",
+  disabled: "stop",
+  no_voice: "stop",
+  daily_limit: "stop",
+  rate_limit: "retry",
+  busy: "retry",
+  blocked: "retry",
+  timeout: "retry",
+  network: "retry",
+  bad_reply: "retry",
+  failed: null,
+};
+
+export function failureOf(kind: VoiceErrorKind): VoiceFailure | null {
+  return FAILURES[kind];
+}
+
 // Shown to staff as is; the service's own message goes to the server log only.
 const MESSAGES: Record<VoiceErrorKind, string> = {
   not_set_up: "The voice service isn't set up yet. Check its API key in the server settings.",

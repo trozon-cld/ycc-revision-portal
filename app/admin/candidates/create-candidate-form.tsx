@@ -8,14 +8,14 @@ import { NAME_MAX_LENGTH } from "@/lib/users/name";
 import { MAX_EMAIL_LENGTH, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from "@/lib/users/credentials";
 import { createCandidate } from "./actions";
 import { AccessLengthField } from "./access-length-field";
-import { CategoryOptions, type CategoryChoice } from "./category-options";
+import { TestTypeOptions, type TestTypeChoice } from "./test-type-options";
 
 export function NewCandidateButton({
-  categories,
+  testTypes,
   minDate,
   maxDate,
 }: {
-  categories: CategoryChoice[];
+  testTypes: TestTypeChoice[];
   minDate: string;
   maxDate: string;
 }) {
@@ -30,9 +30,9 @@ export function NewCandidateButton({
           onSuccess={close}
           onCancel={close}
         >
-          {categories.length === 0 && (
+          {testTypes.length === 0 && (
             <p className="rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong">
-              No categories are available yet. A category is needed before a candidate can be created.
+              No test types are available yet. A test type is needed before a candidate can be created.
             </p>
           )}
           <Field id="new-candidate-name" label="Name">
@@ -54,15 +54,15 @@ export function NewCandidateButton({
             />
           </Field>
           <Field
-            id="new-candidate-category"
-            label="Category"
-            hint="The candidate starts here and can switch to others in the same group."
+            id="new-candidate-test-type"
+            label="Test type"
+            hint="The candidate starts here and can switch to others in the same test area."
           >
-            <select id="new-candidate-category" name="categoryId" required defaultValue="" className={inputClass}>
+            <select id="new-candidate-test-type" name="testTypeId" required defaultValue="" className={inputClass}>
               <option value="" disabled>
-                Select a category
+                Select a test type
               </option>
-              <CategoryOptions categories={categories} />
+              <TestTypeOptions testTypes={testTypes} />
             </select>
           </Field>
           <AccessLengthField idPrefix="new-candidate" label="Access length" minDate={minDate} maxDate={maxDate} />

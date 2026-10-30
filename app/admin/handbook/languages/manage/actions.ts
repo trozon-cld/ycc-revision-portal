@@ -13,6 +13,7 @@ import {
   publishLanguage,
   restoreLanguage,
   savePhrases,
+  setGeminiLimits,
   type ExpectedPhrases,
   type LanguageResult,
 } from "@/lib/voice/language-admin";
@@ -103,4 +104,17 @@ export async function publishLanguageNow(code: string): Promise<LanguageResult> 
   const result = await publishLanguage(session, String(code).slice(0, 10));
   refresh(String(code), result);
   return result;
+}
+
+// Empty fields mean no limit.
+export async function setGeminiLimitsAction(_prev: LanguageActionState | undefined, formData: FormData): Promise<LanguageActionState> {
+  const session = await requireRole(CONTENT_EDITORS);
+  const code = codeFrom(formData);
+  const read = (name: string) => {
+    const value = String(formData.get(name) ?? "").trim();
+    return value === "" ? null : Number(value);
+  };
+  const result = await setGeminiLimits(session, code, read("perDay"), read("perMinute"));
+  refresh(code, result);
+  return asFormState(result);
 }

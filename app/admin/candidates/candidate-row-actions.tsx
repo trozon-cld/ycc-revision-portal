@@ -9,7 +9,7 @@ import {
   deleteCandidate,
   setCandidateBlocked,
   updateCandidateAccess,
-  updateCandidateCategory,
+  updateCandidateTestType,
   updateCandidateEmail,
   updateCandidateName,
   updateCandidatePassword,
@@ -18,15 +18,15 @@ import { candidateProgressPath } from "@/lib/candidates/paths";
 import { NAME_MAX_LENGTH } from "@/lib/users/name";
 import { MAX_EMAIL_LENGTH, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from "@/lib/users/credentials";
 import { AccessLengthField } from "./access-length-field";
-import { CategoryOptions, type CategoryChoice } from "./category-options";
+import { TestTypeOptions, type TestTypeChoice } from "./test-type-options";
 
 export interface RowCandidate {
   id: string;
   email: string;
   name: string | null;
-  categoryId: string;
+  testTypeId: string;
   // "Supervisor (assigned: General Operative)" when they have switched.
-  categoryLabel: string;
+  testTypeLabel: string;
   adminId: string;
   isBlocked: boolean;
   expiryLabel: string;
@@ -36,13 +36,13 @@ export interface RowCandidate {
 
 export function AdminCandidateActions({
   candidate,
-  categories,
+  testTypes,
   minDate,
   maxDate,
   onProgressPage = false,
 }: {
   candidate: RowCandidate;
-  categories: CategoryChoice[];
+  testTypes: TestTypeChoice[];
   minDate: string;
   maxDate: string;
   // On the Progress page: no "View progress", and deleting goes back to the list.
@@ -126,32 +126,32 @@ export function AdminCandidateActions({
       ),
     },
     {
-      label: "Change category",
-      title: "Change category",
+      label: "Change test type",
+      title: "Change test type",
       description: email,
       render: (close) => (
         <ActionForm
-          action={updateCandidateCategory}
+          action={updateCandidateTestType}
           hidden={hidden}
-          submitLabel="Save category"
-          successMessage="Category updated."
+          submitLabel="Save test type"
+          successMessage="Test type updated."
           onSuccess={close}
           onCancel={close}
         >
-          <p className="text-sm text-slate-600">Currently: {candidate.categoryLabel}</p>
+          <p className="text-sm text-slate-600">Currently: {candidate.testTypeLabel}</p>
           <Field
-            id={`category-${id}`}
-            label="Assigned category"
-            hint="The candidate is moved to this category now. They can switch to others in the same group. If they're in a mock test, it ends now with the answers saved so far."
+            id={`test-type-${id}`}
+            label="Assigned test type"
+            hint="The candidate is moved to this test type now. They can switch to others in the same test area. If they're in a mock test, it ends now with the answers saved so far."
           >
             <select
-              id={`category-${id}`}
-              name="categoryId"
+              id={`test-type-${id}`}
+              name="testTypeId"
               required
-              defaultValue={candidate.categoryId}
+              defaultValue={candidate.testTypeId}
               className={inputClass}
             >
-              <CategoryOptions categories={categories} />
+              <TestTypeOptions testTypes={testTypes} />
             </select>
           </Field>
         </ActionForm>

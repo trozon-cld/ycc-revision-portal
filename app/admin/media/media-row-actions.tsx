@@ -120,8 +120,8 @@ export function MediaRowActions({
 
 function removeFrom(pages: number, questions: number, covers: number): string {
   const kinds = [pages > 0, questions > 0, covers > 0].filter(Boolean).length;
-  if (kinds > 1) return `Remove it from all of them first${covers > 0 ? " (covers are chosen on the Categories page)" : ""}.`;
-  if (covers > 0) return `Choose another picture for ${covers === 1 ? "that cover" : "those covers"} on the Categories page first.`;
+  if (kinds > 1) return `Remove it from all of them first${covers > 0 ? " (covers are chosen on the Test types page)" : ""}.`;
+  if (covers > 0) return `Choose another picture for ${covers === 1 ? "that cover" : "those covers"} on the Test types page first.`;
   if (questions === 0) return `Remove it from ${pages === 1 ? "that page" : "those pages"} first.`;
   return `Remove it from ${questions === 1 ? "that question" : "those questions"} first.`;
 }

@@ -1,7 +1,9 @@
-import type { PoolClient } from "pg";
+import type { Pool, PoolClient } from "pg";
 import { pool } from "@/lib/db/pool";
 import { chapterNumber, sectionLetter } from "@/lib/handbook/structure";
+import { sourceSearchPattern } from "@/lib/content/import/format";
 import { escapeLike } from "@/lib/db/like";
+import { NEEDS_AREAS_SQL } from "./areas";
 import { parseQuestionRef } from "./labels";
 import type { QuestionStatus, QuestionType, StoredQuestion } from "./types";
 
@@ -13,10 +15,12 @@ export type BankFilters = {
   search: string;
   sectionId: string | null;
   chapterId: string | null;
-  // Questions whose chapter this category includes.
-  categoryId: string | null;
+  // Questions whose chapter this test type includes.
+  testTypeId: string | null;
   type: QuestionType | null;
   status: QuestionStatus | null;
+  // Tap the area / Choose the area drafts whose areas aren't drawn yet.
+  needsAreas: boolean;
 };
 
 export type BankRow = {
@@ -31,6 +35,7 @@ export type BankRow = {
   bookChapter: string | null;
   inPractice: boolean;
   inMock: boolean;
+  needsAreas: boolean;
 };
 
 export type ChapterOption = { id: string; label: string };
@@ -49,12 +54,14 @@ const BANK_WHERE = `
     and ($2::uuid is null or q.chapter_id = $2)
     and ($3::text is null or q.type = $3)
     and ($4::content_status is null or q.status = $4)
-    and ($5 = '' or q.stem_text ilike '%' || $5 || '%' escape '\\' or q.ref_no = $6::int)
-    and ($7::uuid is null or exists (select 1 from category_chapters cc where cc.category_id = $7 and cc.chapter_id = q.chapter_id))`;
+    and ($5 = '' or q.stem_text ilike '%' || $5 || '%' escape '\\' or q.ref_no = $6::int or q.source_key ~* $8::text)
+    and ($7::uuid is null or exists (select 1 from test_type_chapters cc where cc.test_type_id = $7 and cc.chapter_id = q.chapter_id))
+    and (not $9::boolean or ${NEEDS_AREAS_SQL})`;
 
 function bankValues(filters: BankFilters) {
   const search = filters.search.trim().slice(0, 100);
-  return [filters.sectionId, filters.chapterId, filters.type, filters.status, escapeLike(search), search ? parseQuestionRef(search) : null, filters.categoryId];
+  return [filters.sectionId, filters.chapterId, filters.type, filters.status, escapeLike(search), search ? parseQuestionRef(search) : null, filters.testTypeId,
+    sourceSearchPattern(search), filters.needsAreas];
 }
 
 export async function countBankQuestions(filters: BankFilters): Promise<number> {
@@ -79,9 +86,10 @@ export async function listBankQuestions(filters: BankFilters, page: number): Pro
     book_chapter: number | null;
     in_practice: boolean;
     in_mock: boolean;
+    needs_areas: boolean;
   }>(
     `with ${NUMBERED_CHAPTERS}
-     select q.id, q.ref_no, q.type, q.status, q.stem_text, q.stem_media_id is not null as has_picture,
+     select q.id, q.ref_no, q.type, q.status, q.stem_text, q.stem_media_id is not null as has_picture, ${NEEDS_AREAS_SQL} as needs_areas,
             n.number as chapter_number, n.title as chapter_title, hn.number as book_chapter,
             q.in_practice, q.in_mock
      from questions q
@@ -90,7 +98,7 @@ export async function listBankQuestions(filters: BankFilters, page: number): Pro
      left join numbered hn on hn.id = hi.chapter_id
      ${BANK_WHERE}
      order by n.section_position, n.position, q.ref_no
-     limit $8 offset $9`,
+     limit $10 offset $11`,
     [...bankValues(filters), BANK_PAGE_SIZE, (page - 1) * BANK_PAGE_SIZE]
   );
   return rows.map((row) => ({
@@ -104,6 +112,7 @@ export async function listBankQuestions(filters: BankFilters, page: number): Pro
     bookChapter: row.book_chapter === null ? null : chapterNumber(row.book_chapter),
     inPractice: row.in_practice,
     inMock: row.in_mock,
+    needsAreas: row.needs_areas,
   }));
 }
 
@@ -161,17 +170,10 @@ type QuestionRow = {
   content_version: number;
 };
 
-// Reads and row-locks one question inside a transaction, for the change that follows.
-export async function readQuestionForUpdate(client: PoolClient, id: string): Promise<StoredQuestion | null> {
-  const { rows } = await client.query<QuestionRow>(
-    `select id, ref_no, chapter_id, type, status, stem_text, stem_media_id, stem_media_size, stem_media_align,
-            content, answer, explanation,
-            in_practice, in_mock, content_version
-     from questions where id = $1 for update`,
-    [id]
-  );
-  const row = rows[0];
-  if (!row) return null;
+const QUESTION_COLUMNS = `id, ref_no, chapter_id, type, status, stem_text, stem_media_id, stem_media_size, stem_media_align,
+            content, answer, explanation, in_practice, in_mock, content_version`;
+
+function toStoredQuestion(row: QuestionRow): StoredQuestion {
   return {
     id: row.id,
     refNo: row.ref_no,
@@ -189,4 +191,19 @@ export async function readQuestionForUpdate(client: PoolClient, id: string): Pro
     inMock: row.in_mock,
     version: row.content_version,
   };
+}
+
+// Reads and row-locks one question inside a transaction, for the change that follows.
+export async function readQuestionForUpdate(client: PoolClient, id: string): Promise<StoredQuestion | null> {
+  const { rows } = await client.query<QuestionRow>(`select ${QUESTION_COLUMNS} from questions where id = $1 for update`, [id]);
+  return rows[0] ? toStoredQuestion(rows[0]) : null;
+}
+
+// A chapter's draft questions, in Q-number order; row-locked when read inside a transaction for a change.
+export async function readChapterDraftQuestions(db: Pool | PoolClient, chapterId: string, lock: boolean): Promise<StoredQuestion[]> {
+  const { rows } = await db.query<QuestionRow>(
+    `select ${QUESTION_COLUMNS} from questions where chapter_id = $1 and status = 'draft' order by ref_no${lock ? " for update" : ""}`,
+    [chapterId]
+  );
+  return rows.map(toStoredQuestion);
 }

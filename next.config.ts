@@ -21,6 +21,15 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: SECURITY_HEADERS }];
   },
+  // Addresses before 0037 (categories became test types); kept so old links and bookmarks still work.
+  async redirects() {
+    return [
+      { source: "/admin/categories", destination: "/admin/test-types", permanent: false },
+      { source: "/dashboard/category", destination: "/dashboard/test-type", permanent: false },
+      // Upload content moved into Backup & Restore (run 5).
+      { source: "/admin/handbook/upload", destination: "/admin/backup", permanent: false },
+    ];
+  },
 };
 
 export default nextConfig;

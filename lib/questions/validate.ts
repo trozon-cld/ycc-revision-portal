@@ -1,5 +1,6 @@
 import { cleanText, isRecord } from "@/lib/text";
 import { isUuid } from "@/lib/ids";
+import { parseUnmarked } from "./areas";
 import { getQuestionTypeDef } from "./registry";
 import { isQuestionType, type QuestionData } from "./types";
 
@@ -11,9 +12,12 @@ export const QUESTION_LIMITS = {
 export type ParsedQuestion = QuestionData & { mediaIds: string[] };
 export type QuestionParseResult = { ok: true; question: ParsedQuestion } | { ok: false; error: string };
 
+// `allowUnmarked`: a Tap the area / Choose the area draft may have no areas yet (never when publishing).
+export type ParseOptions = { allowUnmarked?: boolean };
+
 // Checks an untrusted question (from the editor or the database) and returns a clean copy,
 // plus every picture it uses. Text keeps single line breaks; **bold** is the only formatting.
-export function parseQuestion(raw: unknown): QuestionParseResult {
+export function parseQuestion(raw: unknown, options: ParseOptions = {}): QuestionParseResult {
   if (!isRecord(raw)) return { ok: false, error: "This is not a question." };
   if (!isQuestionType(raw.type)) return { ok: false, error: "Choose a question type." };
 
@@ -57,7 +61,7 @@ export function parseQuestion(raw: unknown): QuestionParseResult {
     return { ok: false, error: `Explanation must be ${QUESTION_LIMITS.explanationLength} characters or fewer.` };
   }
 
-  const parsed = def.parse(raw.content, raw.answer);
+  const parsed = (options.allowUnmarked ? parseUnmarked(raw.type, raw.content, raw.answer) : null) ?? def.parse(raw.content, raw.answer);
   if (!parsed.ok) return { ok: false, error: parsed.error };
 
   const mediaIds = [...new Set([...(stemMediaId ? [stemMediaId] : []), ...def.mediaIds(parsed.content)])];
@@ -75,4 +79,17 @@ export function parseQuestion(raw: unknown): QuestionParseResult {
       mediaIds,
     },
   };
+}
+
+// What candidates see: a change here raises the version. Chapter and usage are tracked separately.
+export function questionFingerprint(question: QuestionData): string {
+  return JSON.stringify([
+    question.stemText,
+    question.stemMediaId,
+    question.stemMediaSize,
+    question.stemMediaAlign,
+    question.content,
+    question.answer,
+    question.explanation,
+  ]);
 }

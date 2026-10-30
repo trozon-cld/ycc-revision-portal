@@ -5,9 +5,11 @@ import { Field } from "@/components/admin/field";
 import { PanelButton, RowActions, type RowAction } from "@/components/admin/row-actions";
 import { buttonClass, inputClass } from "@/components/admin/styles";
 import { TITLE_MAX_LENGTH } from "@/lib/limits";
-import { createSection, deleteSection, moveSection, renameSection } from "./section-actions";
+import { createSection, deleteSection, moveSection, renameSection, setSectionLinking } from "./section-actions";
 
-export type SectionOption = { id: string; label: string };
+const LINKING_HINT = "Each chapter in it is in every test type's book (like A–D). Leave unticked for chapters that belong to one test type each (like E).";
+
+export type SectionOption = { id: string; label: string; linkedToAll: boolean };
 
 export function NewSectionButton() {
   return (
@@ -24,6 +26,7 @@ export function NewSectionButton() {
           <Field id="new-section-title" label="Section title" hint="It's added at the end. You can move it afterwards.">
             <input id="new-section-title" name="title" type="text" required maxLength={TITLE_MAX_LENGTH} className={inputClass} />
           </Field>
+          <LinkingCheckbox id="new-section-linked" defaultChecked={false} />
         </ActionForm>
       )}
     </PanelButton>
@@ -35,6 +38,7 @@ export function SectionRowActions({
   label,
   title,
   chapterCount,
+  linkedToAll,
   isFirst,
   isLast,
 }: {
@@ -42,6 +46,7 @@ export function SectionRowActions({
   label: string;
   title: string;
   chapterCount: number;
+  linkedToAll: boolean;
   isFirst: boolean;
   isLast: boolean;
 }) {
@@ -76,6 +81,40 @@ export function SectionRowActions({
       ),
     },
   ];
+
+  actions.push({
+    label: "Test type linking",
+    title: "Test type linking",
+    description: label,
+    variant: chapterCount > 0 ? "confirm" : "panel",
+    render: (close) =>
+      chapterCount > 0 ? (
+        <div>
+          <p className="px-5 py-4 text-sm">
+            {linkedToAll
+              ? "Each chapter in this section is in every test type's book."
+              : "Each chapter in this section belongs to one test type at most."}{" "}
+            This can only be changed while the section has no chapters.
+          </p>
+          <div className="flex justify-end border-t border-slate-200 px-5 py-3">
+            <button type="button" onClick={close} className={buttonClass("secondary")}>
+              Close
+            </button>
+          </div>
+        </div>
+      ) : (
+        <ActionForm
+          action={setSectionLinking}
+          hidden={hidden}
+          submitLabel="Save"
+          successMessage="Section linking saved."
+          onSuccess={close}
+          onCancel={close}
+        >
+          <LinkingCheckbox id={`linked-${id}`} defaultChecked={linkedToAll} />
+        </ActionForm>
+      ),
+  });
 
   if (!isFirst) {
     actions.push({ label: "Move up", run: () => moveSection(id, "up"), successMessage: "Section moved up." });
@@ -122,4 +161,20 @@ export function SectionRowActions({
   });
 
   return <RowActions label={`Actions for section ${title}`} actions={actions} />;
+}
+
+function LinkingCheckbox({ id, defaultChecked }: { id: string; defaultChecked: boolean }) {
+  return (
+    <div className="flex items-start gap-3">
+      <input id={id} name="linkedToAll" type="checkbox" defaultChecked={defaultChecked} aria-describedby={`${id}-hint`} className="mt-0.5 size-4 shrink-0 accent-primary" />
+      <div>
+        <label htmlFor={id} className="text-sm font-medium text-ink">
+          Linked to every test type
+        </label>
+        <p id={`${id}-hint`} className="text-sm text-slate-600">
+          {LINKING_HINT}
+        </p>
+      </div>
+    </div>
+  );
 }

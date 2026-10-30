@@ -7,9 +7,12 @@ import { requireRole } from "@/lib/auth/guard";
 import { CONTENT_EDITORS } from "@/lib/auth/content-editors";
 import { getErrorCode, withTransaction } from "@/lib/db/transaction";
 import { logActivity } from "@/lib/audit/log";
-import { listNames } from "@/lib/handbook/categories";
+import { listNames } from "@/lib/handbook/test-types";
 import { questionRef } from "@/lib/questions/labels";
 import { isUuid } from "@/lib/ids";
+import { describeHeldBack, planChapterPublish, refRuns } from "@/lib/handbook/publish-all";
+import { structureLockedError } from "@/lib/handbook/structure-lock";
+import { EVERY_TEST_TYPE, everyTestTypeOnly, linkToEveryTestType, oneTestTypeOnly, sectionLinking } from "@/lib/handbook/sharing";
 import {
   lockHandbookStructure,
   normaliseTitle,
@@ -21,8 +24,8 @@ const DUPLICATE_TITLE = "A chapter with this title already exists.";
 const NOT_FOUND = "This chapter no longer exists.";
 const SECTION_NOT_FOUND = "The chosen section no longer exists.";
 const PAGE_PATH = "/admin/handbook";
-const CATEGORIES_CHANGED = "The list of categories has changed. Close this panel and open it again.";
-const MAX_CATEGORIES = 500;
+const TEST_TYPES_CHANGED = "The list of test types has changed. Close this panel and open it again.";
+const MAX_TEST_TYPES = 500;
 
 export async function createChapter(
   _prevState: StructureActionState,
@@ -32,22 +35,27 @@ export async function createChapter(
 
   const sectionId = String(formData.get("sectionId") ?? "");
   const title = normaliseTitle(formData.get("title"));
-  const categoryIds = categoryIdsFrom(formData);
+  const testTypeIds = testTypeIdsFrom(formData);
   const invalid = validateTitle(title, "Chapter");
   if (invalid) return { error: invalid };
   if (!sectionId) return { error: "Choose a section." };
-  if (categoryIds.length > MAX_CATEGORIES) return { error: "Too many categories selected." };
+  if (testTypeIds.length > MAX_TEST_TYPES) return { error: "Too many test types selected." };
 
   let result: StructureActionState;
   let chapterId = "";
   try {
     result = await withTransaction<StructureActionState>(async (client) => {
+      const locked = await structureLockedError(client);
+      if (locked) return { error: locked };
       await lockHandbookStructure(client);
-      const sectionTitle = await sectionTitleOf(client, sectionId);
-      if (!sectionTitle) return { error: SECTION_NOT_FOUND };
+      const section = isUuid(sectionId) ? await sectionLinking(client, sectionId) : null;
+      if (!section) return { error: SECTION_NOT_FOUND };
       if (await titleTaken(client, title, null)) return { error: DUPLICATE_TITLE };
-      const categories = await lockCategories(client, categoryIds);
-      if (!categories) return { error: CATEGORIES_CHANGED };
+      // A section linked to every test type ignores the choice; any other takes one test type at most.
+      const chosen = section.linkedToAll ? [] : testTypeIds;
+      if (chosen.length > 1) return { error: oneTestTypeOnly(section.label) };
+      const testTypes = await lockTestTypes(client, chosen);
+      if (!testTypes) return { error: TEST_TYPES_CHANGED };
 
       const { rows: created } = await client.query<{ id: string }>(
         `insert into chapters (section_id, position, title)
@@ -55,18 +63,25 @@ export async function createChapter(
          returning id`,
         [sectionId, title]
       );
-      await client.query(
-        `insert into category_chapters (category_id, chapter_id) select unnest($1::uuid[]), $2::uuid`,
-        [categoryIds, created[0].id]
-      );
+      if (section.linkedToAll) await linkToEveryTestType(client, created[0].id);
+      else {
+        await client.query(
+          `insert into test_type_chapters (test_type_id, chapter_id) select unnest($1::uuid[]), $2::uuid`,
+          [chosen, created[0].id]
+        );
+      }
       await logActivity(
         client,
         session,
         "chapter.created",
         { type: "chapter", id: created[0].id, label: title },
         {
-          section: sectionTitle,
-          ...(categoryIds.length > 0 ? { categories: listNames(categoryIds.map((id) => categories.get(id) ?? "")) } : {}),
+          section: section.title,
+          ...(section.linkedToAll
+            ? { testTypes: EVERY_TEST_TYPE }
+            : chosen.length > 0
+              ? { testTypes: listNames(chosen.map((id) => testTypes.get(id) ?? "")) }
+              : {}),
         }
       );
       chapterId = created[0].id;
@@ -80,56 +95,66 @@ export async function createChapter(
   }
 
   revalidatePath(PAGE_PATH);
-  revalidatePath("/admin/categories");
+  revalidatePath("/admin/test-types");
   // The next step is adding pages, so open the new chapter.
   if (result.success) redirect(`/admin/handbook/chapters/${chapterId}`);
   return result;
 }
 
-// Replaces the whole list of categories that include this chapter (the Categories page edits the same links).
-export async function saveChapterCategories(
+// Replaces the whole list of test types that include this chapter (the Test types page edits the same links).
+export async function saveChapterTestTypes(
   _prevState: StructureActionState,
   formData: FormData
 ): Promise<StructureActionState> {
   const session = await requireRole(CONTENT_EDITORS);
 
   const chapterId = String(formData.get("chapterId") ?? "");
-  const categoryIds = categoryIdsFrom(formData);
-  if (categoryIds.length > MAX_CATEGORIES) return { error: "Too many categories selected." };
+  const testTypeIds = testTypeIdsFrom(formData);
+  if (testTypeIds.length > MAX_TEST_TYPES) return { error: "Too many test types selected." };
 
   let result: StructureActionState;
   try {
     result = await withTransaction<StructureActionState>(async (client) => {
-      // Categories first, then the chapter: the same order as a save from the Categories page.
-      const categories = await lockCategories(client, categoryIds);
-      if (!categories) return { error: CATEGORIES_CHANGED };
-      const { rows } = await client.query<{ title: string }>(`select title from chapters where id = $1 for update`, [chapterId]);
+      const locked = await structureLockedError(client);
+      if (locked) return { error: locked };
+      // Structure, test types, then the chapter: the same order as a save from the Test types page.
+      await lockHandbookStructure(client);
+      const testTypes = await lockTestTypes(client, testTypeIds);
+      if (!testTypes) return { error: TEST_TYPES_CHANGED };
+      if (!isUuid(chapterId)) return { error: NOT_FOUND };
+      const { rows } = await client.query<{ title: string; section_id: string }>(
+        `select title, section_id from chapters where id = $1 for update`,
+        [chapterId]
+      );
       if (!rows[0]) return { error: NOT_FOUND };
+      const section = await sectionLinking(client, rows[0].section_id);
+      if (section?.linkedToAll) return { error: everyTestTypeOnly(section.label) };
+      if (section && testTypeIds.length > 1) return { error: oneTestTypeOnly(section.label) };
 
-      const { rows: removed } = await client.query<{ category_id: string; name: string }>(
-        `delete from category_chapters cc using categories c
-         where cc.chapter_id = $1 and c.id = cc.category_id
-         returning cc.category_id, c.name`,
+      const { rows: removed } = await client.query<{ test_type_id: string; name: string }>(
+        `delete from test_type_chapters cc using test_types c
+         where cc.chapter_id = $1 and c.id = cc.test_type_id
+         returning cc.test_type_id, c.name`,
         [chapterId]
       );
       await client.query(
-        `insert into category_chapters (category_id, chapter_id) select unnest($1::uuid[]), $2::uuid`,
-        [categoryIds, chapterId]
+        `insert into test_type_chapters (test_type_id, chapter_id) select unnest($1::uuid[]), $2::uuid`,
+        [testTypeIds, chapterId]
       );
 
-      const before = new Set(removed.map((row) => row.category_id));
-      const added = categoryIds.filter((id) => !before.has(id)).map((id) => categories.get(id) ?? "");
-      const dropped = removed.filter((row) => !categoryIds.includes(row.category_id)).map((row) => row.name);
+      const before = new Set(removed.map((row) => row.test_type_id));
+      const added = testTypeIds.filter((id) => !before.has(id)).map((id) => testTypes.get(id) ?? "");
+      const dropped = removed.filter((row) => !testTypeIds.includes(row.test_type_id)).map((row) => row.name);
       if (added.length > 0 || dropped.length > 0) {
         await logActivity(
           client,
           session,
-          "chapter.categories_changed",
+          "chapter.test_types_changed",
           { type: "chapter", id: chapterId, label: rows[0].title },
           {
-            ...(added.length > 0 ? { addedCategories: listNames(added.sort()) } : {}),
-            ...(dropped.length > 0 ? { removedCategories: listNames(dropped.sort()) } : {}),
-            categoryTotal: String(categoryIds.length),
+            ...(added.length > 0 ? { addedTestTypes: listNames(added.sort()) } : {}),
+            ...(dropped.length > 0 ? { removedTestTypes: listNames(dropped.sort()) } : {}),
+            testTypeTotal: String(testTypeIds.length),
           }
         );
       }
@@ -138,12 +163,12 @@ export async function saveChapterCategories(
   } catch (error) {
     const code = getErrorCode(error);
     if (code === "22P02") return { error: NOT_FOUND };
-    if (code === "23503") return { error: CATEGORIES_CHANGED };
+    if (code === "23503") return { error: TEST_TYPES_CHANGED };
     throw error;
   }
 
   revalidatePath(PAGE_PATH, "layout");
-  revalidatePath("/admin/categories");
+  revalidatePath("/admin/test-types");
   return result;
 }
 
@@ -161,6 +186,8 @@ export async function renameChapter(
   let result: StructureActionState;
   try {
     result = await withTransaction<StructureActionState>(async (client) => {
+      const locked = await structureLockedError(client);
+      if (locked) return { error: locked };
       const { rows } = await client.query<{ title: string }>(
         `select title from chapters where id = $1 for update`,
         [chapterId]
@@ -200,6 +227,8 @@ export async function moveChapter(id: string, direction: "up" | "down"): Promise
   let result: StructureActionState;
   try {
     result = await withTransaction<StructureActionState>(async (client) => {
+      const locked = await structureLockedError(client);
+      if (locked) return { error: locked };
       await lockHandbookStructure(client);
 
       const { rows } = await client.query<{ section_id: string; position: number; title: string }>(
@@ -261,6 +290,8 @@ export async function moveChapterToSection(
   let result: StructureActionState;
   try {
     result = await withTransaction<StructureActionState>(async (client) => {
+      const locked = await structureLockedError(client);
+      if (locked) return { error: locked };
       await lockHandbookStructure(client);
 
       const { rows } = await client.query<{ section_id: string; position: number; title: string }>(
@@ -269,9 +300,9 @@ export async function moveChapterToSection(
       );
       if (!rows[0]) return { error: NOT_FOUND };
       if (rows[0].section_id === sectionId) return { success: true };
-      const newSection = await sectionTitleOf(client, sectionId);
+      const newSection = await sectionLinking(client, sectionId);
       if (!newSection) return { error: SECTION_NOT_FOUND };
-      const oldSection = await sectionTitleOf(client, rows[0].section_id);
+      const oldSection = await sectionLinking(client, rows[0].section_id);
 
       await client.query(
         `update chapters
@@ -282,12 +313,21 @@ export async function moveChapterToSection(
         [chapterId, sectionId]
       );
       await closeGap(client, rows[0].section_id, rows[0].position);
+      // Into a section linked to every test type: in every book. Out of one into another kind: in none.
+      let testTypes: string | null = null;
+      if (newSection.linkedToAll) {
+        await linkToEveryTestType(client, chapterId);
+        testTypes = EVERY_TEST_TYPE;
+      } else if (oldSection?.linkedToAll) {
+        await client.query(`delete from test_type_chapters where chapter_id = $1`, [chapterId]);
+        testTypes = "None (choose one with Test types)";
+      }
       await logActivity(
         client,
         session,
         "chapter.section_changed",
         { type: "chapter", id: chapterId, label: rows[0].title },
-        { from: oldSection ?? "", to: newSection }
+        { from: oldSection?.title ?? "", to: newSection.title, ...(testTypes ? { testTypes } : {}) }
       );
       return { success: true };
     });
@@ -312,6 +352,8 @@ export async function deleteChapter(
   let result: StructureActionState;
   try {
     result = await withTransaction<StructureActionState>(async (client) => {
+      const locked = await structureLockedError(client);
+      if (locked) return { error: locked };
       await lockHandbookStructure(client);
 
       const { rows } = await client.query<{ section_id: string; position: number; title: string }>(
@@ -343,7 +385,7 @@ export async function deleteChapter(
   return result;
 }
 
-// Publish: the chapter needs at least one item, and every item must be published. Unpublish: always.
+// Publish: the chapter needs at least one item, and every item must be published. Unpublish: unless the structure is locked.
 // Later edits don't unpublish it; candidates only ever see published items in published chapters.
 export async function setChapterStatus(id: string, status: "draft" | "published"): Promise<StructureActionState> {
   const session = await requireRole(CONTENT_EDITORS);
@@ -351,6 +393,11 @@ export async function setChapterStatus(id: string, status: "draft" | "published"
   if (!isUuid(chapterId) || (status !== "draft" && status !== "published")) return { error: NOT_FOUND };
 
   const result = await withTransaction<StructureActionState>(async (client) => {
+    // Unpublishing takes a chapter out of candidates' books, so it waits for an unlock; publishing doesn't.
+    if (status === "draft") {
+      const locked = await structureLockedError(client);
+      if (locked) return { error: locked };
+    }
     const { rows } = await client.query<{ title: string; status: string }>(
       `select title, status from chapters where id = $1 for update`,
       [chapterId]
@@ -407,16 +454,75 @@ export async function unpublishChapterForm(_prev: StructureActionState, formData
   return setChapterStatus(String(formData.get("chapterId") ?? ""), "draft");
 }
 
-function categoryIdsFrom(formData: FormData): string[] {
-  return [...new Set(formData.getAll("categoryId").map(String))];
+// Publish all: every draft page and question in the chapter that passes the single Publish checks, then the
+// chapter itself if nothing in its page order is left a draft. One log entry for the content, plus "Published chapter".
+export async function publishChapterContent(_prev: StructureActionState, formData: FormData): Promise<StructureActionState> {
+  const session = await requireRole(CONTENT_EDITORS);
+  const chapterId = String(formData.get("chapterId") ?? "");
+  if (!isUuid(chapterId)) return { error: NOT_FOUND };
+
+  const result = await withTransaction<StructureActionState>(async (client) => {
+    const { rows } = await client.query<{ title: string; status: string }>(`select title, status from chapters where id = $1 for update`, [chapterId]);
+    const chapter = rows[0];
+    if (!chapter) return { error: NOT_FOUND };
+    // Holds the page order still while the items are checked and published.
+    await client.query(`lock table handbook_items in share mode`);
+
+    const plan = await planChapterPublish(client, chapterId, true);
+    const pages = plan.pageIds.length;
+    const questions = plan.questionIds.length;
+    if (pages + questions === 0) {
+      return {
+        error: plan.heldBack.length > 0
+          ? `Nothing could be published. Still drafts: ${describeHeldBack(plan.heldBack)}.`
+          : "Everything in this chapter is already published.",
+      };
+    }
+    if (pages > 0) await client.query(`update content_pages set status = 'published', updated_at = now() where id = any($1::uuid[])`, [plan.pageIds]);
+    if (questions > 0) await client.query(`update questions set status = 'published', updated_at = now() where id = any($1::uuid[])`, [plan.questionIds]);
+
+    const details: Record<string, string> = {
+      pages: String(pages),
+      questions: String(questions),
+      ...(questions > 0 ? { "question numbers": refRuns(plan.questionRefNos) } : {}),
+      ...(plan.heldBack.length > 0 ? { "still drafts": String(plan.heldBack.length) } : {}),
+    };
+    const target = { type: "chapter" as const, id: chapterId, label: chapter.title };
+    await logActivity(client, session, "chapter.content_published", target, details);
+
+    if (chapter.status === "draft") {
+      const { rows: counts } = await client.query<{ total: number; drafts: number }>(
+        `select count(*)::int as total, count(*) filter (where coalesce(p.status, q.status) <> 'published')::int as drafts
+         from handbook_items i
+         left join content_pages p on p.id = i.content_page_id
+         left join questions q on q.id = i.question_id
+         where i.chapter_id = $1`,
+        [chapterId]
+      );
+      const { total, drafts } = counts[0];
+      if (total > 0 && drafts === 0) {
+        await client.query(`update chapters set status = 'published', updated_at = now() where id = $1`, [chapterId]);
+        await logActivity(client, session, "chapter.published", target, { items: `${total} ${total === 1 ? "item" : "items"}` });
+      }
+    }
+    return { success: true };
+  });
+
+  revalidatePath(PAGE_PATH, "layout");
+  revalidatePath("/admin/questions", "layout");
+  return result;
 }
 
-// Keeps the chosen categories from being deleted until the save commits; null if any is gone.
-async function lockCategories(client: PoolClient, ids: string[]): Promise<Map<string, string> | null> {
+function testTypeIdsFrom(formData: FormData): string[] {
+  return [...new Set(formData.getAll("testTypeId").map(String).filter(Boolean))];
+}
+
+// Keeps the chosen test types from being deleted until the save commits; null if any is gone.
+async function lockTestTypes(client: PoolClient, ids: string[]): Promise<Map<string, string> | null> {
   if (ids.length === 0) return new Map();
   if (!ids.every(isUuid)) return null;
   const { rows } = await client.query<{ id: string; name: string }>(
-    `select id, name from categories where id = any($1::uuid[]) order by id for share`,
+    `select id, name from test_types where id = any($1::uuid[]) order by id for share`,
     [ids]
   );
   return rows.length === ids.length ? new Map(rows.map((row) => [row.id, row.name])) : null;

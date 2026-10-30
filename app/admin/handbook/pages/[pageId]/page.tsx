@@ -6,6 +6,7 @@ import { pool } from "@/lib/db/pool";
 import { collectMediaIds, parseBlocks } from "@/lib/content/blocks";
 import type { ResolvedMedia } from "@/lib/content/book";
 import { getChapterContext, resolveMedia } from "@/lib/content/pages";
+import { sourceLabel } from "@/lib/content/import/format";
 import { isStorageConfigured } from "@/lib/storage/storage";
 import { isUuid } from "@/lib/ids";
 import { loadVoiceLanguages } from "@/lib/voice/language-store";
@@ -28,7 +29,8 @@ export default async function EditPagePage({ params }: PageProps<"/admin/handboo
     blocks: unknown;
     content_version: number;
     status: "draft" | "published";
-  }>(`select id, chapter_id, title, blocks, content_version, status from content_pages where id = $1`, [pageId]);
+    source_key: string | null;
+  }>(`select id, chapter_id, title, blocks, content_version, status, source_key from content_pages where id = $1`, [pageId]);
   const page = rows[0];
   if (!page) notFound();
 
@@ -60,6 +62,7 @@ export default async function EditPagePage({ params }: PageProps<"/admin/handboo
       initialMedia={media}
       storageReady={isStorageConfigured()}
       loadProblem={loadProblem}
+      source={page.source_key ? sourceLabel(page.source_key) : null}
       translations={translations}
       audio={audio}
       languages={languageNames(languages)}

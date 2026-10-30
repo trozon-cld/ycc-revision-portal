@@ -3,7 +3,7 @@ import Link from "next/link";
 import { requireRole } from "@/lib/auth/guard";
 import { CONTENT_EDITORS } from "@/lib/auth/content-editors";
 import { pool } from "@/lib/db/pool";
-import { loadCategoryGroups, loadChapterCategoryIds } from "@/lib/handbook/categories";
+import { loadTestAreas, loadChapterTestTypeIds } from "@/lib/handbook/test-types";
 import { chapterNumber, sectionLetter } from "@/lib/handbook/structure";
 import { Badge } from "@/components/admin/badge";
 import { PageHeader } from "@/components/admin/page-header";
@@ -12,6 +12,8 @@ import { Cell, Row, Table } from "@/components/admin/table";
 import { countOf } from "@/lib/format";
 import { ChapterRowActions, NewChapterButton } from "./chapter-row-actions";
 import { NewSectionButton, SectionRowActions, type SectionOption } from "./section-row-actions";
+import { loadStructureLockView } from "@/lib/handbook/structure-lock";
+import { StructureLockBar } from "./structure-lock-bar";
 
 export const metadata: Metadata = { title: "Handbook" };
 
@@ -19,6 +21,7 @@ interface SectionRow {
   id: string;
   position: number;
   title: string;
+  linked_to_all: boolean;
 }
 
 interface ChapterRow {
@@ -32,13 +35,14 @@ interface ChapterRow {
   question_count: number;
   item_count: number;
   draft_count: number;
+  studying: number;
 }
 
 export default async function HandbookPage() {
   await requireRole(CONTENT_EDITORS);
 
-  const [{ rows: sections }, { rows: chapters }, categoryGroups, chapterCategories] = await Promise.all([
-    pool.query<SectionRow>(`select id, position, title from sections order by position`),
+  const [{ rows: sections }, { rows: chapters }, testAreas, chapterTestTypes, lock] = await Promise.all([
+    pool.query<SectionRow>(`select id, position, title, linked_to_all from sections order by position`),
     pool.query<ChapterRow>(
       `select c.id, c.section_id, c.position, c.title, c.status,
               row_number() over (order by s.position, c.position)::int as number,
@@ -48,19 +52,23 @@ export default async function HandbookPage() {
               (select count(*) from handbook_items i
                  left join content_pages p on p.id = i.content_page_id
                  left join questions q on q.id = i.question_id
-                 where i.chapter_id = c.id and coalesce(p.status, q.status) <> 'published')::int as draft_count
+                 where i.chapter_id = c.id and coalesce(p.status, q.status) <> 'published')::int as draft_count,
+              (select count(*) from users u join test_type_chapters l on l.test_type_id = u.current_test_type_id
+                 where u.role = 'candidate' and l.chapter_id = c.id)::int as studying
        from chapters c
        join sections s on s.id = c.section_id
        order by s.position, c.position`
     ),
-    loadCategoryGroups(),
-    loadChapterCategoryIds(),
+    loadTestAreas(),
+    loadChapterTestTypeIds(),
+    loadStructureLockView(),
   ]);
-  const categoryTotal = categoryGroups.reduce((sum, group) => sum + group.categories.length, 0);
+  const testTypeTotal = testAreas.reduce((sum, testArea) => sum + testArea.testTypes.length, 0);
 
   const sectionOptions: SectionOption[] = sections.map((section) => ({
     id: section.id,
     label: `${sectionLetter(section.position)} · ${section.title}`,
+    linkedToAll: section.linked_to_all,
   }));
 
   return (
@@ -76,11 +84,17 @@ export default async function HandbookPage() {
             <Link href="/admin/handbook/languages" className={buttonClass("secondary")}>
               Languages and audio
             </Link>
-            <NewSectionButton />
-            <NewChapterButton sections={sectionOptions} categoryGroups={categoryGroups} />
+            {!lock.locked && (
+              <>
+                <NewSectionButton />
+                <NewChapterButton sections={sectionOptions} testAreas={testAreas} />
+              </>
+            )}
           </>
         }
       />
+
+      <StructureLockBar lock={lock} />
 
       {sections.length === 0 && (
         <p className="rounded-lg border border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-600">
@@ -93,7 +107,7 @@ export default async function HandbookPage() {
           const sectionChapters = chapters.filter((chapter) => chapter.section_id === section.id);
           const headingId = `section-${section.id}`;
           const label = sectionOptions[sectionIndex].label;
-          const uncategorised = sectionChapters.filter((chapter) => !chapterCategories.get(chapter.id)?.length).length;
+          const withoutTestType = sectionChapters.filter((chapter) => !chapterTestTypes.get(chapter.id)?.length).length;
 
           return (
             <section key={section.id} aria-labelledby={headingId}>
@@ -104,28 +118,32 @@ export default async function HandbookPage() {
                   </h2>
                   <p className="text-sm text-slate-600">
                     {countOf(sectionChapters.length, "chapter")}
+                    {section.linked_to_all && " · In every test type"}
                     {/* A section is in the book once one of its chapters is published. */}
                     {!sectionChapters.some((chapter) => chapter.status === "published") && " · Not in the book yet"}
-                    {uncategorised > 0 && (
+                    {withoutTestType > 0 && (
                       <span className="font-medium text-warn-strong">
                         {" · "}
-                        {uncategorised === 1 ? "1 chapter isn't" : `${uncategorised} chapters aren't`} in any category
+                        {withoutTestType === 1 ? "1 chapter isn't" : `${withoutTestType} chapters aren't`} in any test type
                       </span>
                     )}
                   </p>
                 </div>
+                {!lock.locked && (
                 <SectionRowActions
                   id={section.id}
                   label={label}
                   title={section.title}
                   chapterCount={sectionChapters.length}
+                  linkedToAll={section.linked_to_all}
                   isFirst={sectionIndex === 0}
                   isLast={sectionIndex === sections.length - 1}
                 />
+                )}
               </div>
 
               <Table
-                columns={["Chapter", "Pages", "Questions", "Categories", "Status", ""]}
+                columns={["Chapter", "Pages", "Questions", "Test types", "Status", ""]}
                 widths={["", "md:w-20", "md:w-24", "md:w-28", "md:w-44", "md:w-14"]}
                 isEmpty={sectionChapters.length === 0}
                 emptyMessage="No chapters in this section yet."
@@ -143,8 +161,8 @@ export default async function HandbookPage() {
                     </Cell>
                     <Cell label="Pages">{chapter.page_count}</Cell>
                     <Cell label="Questions">{chapter.question_count}</Cell>
-                    <Cell label="Categories">
-                      <CategoryCount linked={chapterCategories.get(chapter.id)?.length ?? 0} total={categoryTotal} />
+                    <Cell label="Test types">
+                      <TestTypeCount linked={chapterTestTypes.get(chapter.id)?.length ?? 0} total={testTypeTotal} />
                     </Cell>
                     <Cell label="Status">
                       <span className="inline-flex flex-wrap items-center justify-end gap-x-2 gap-y-1 md:justify-start">
@@ -167,8 +185,11 @@ export default async function HandbookPage() {
                         itemCount={chapter.item_count}
                         draftCount={chapter.draft_count}
                         status={chapter.status}
-                        categoryGroups={categoryGroups}
-                        categoryIds={chapterCategories.get(chapter.id) ?? []}
+                        testAreas={testAreas}
+                        testTypeIds={chapterTestTypes.get(chapter.id) ?? []}
+                        linking={sectionOptions[sectionIndex]}
+                        studying={chapter.studying}
+                        locked={lock.locked}
                       />
                     </Cell>
                   </Row>
@@ -182,7 +203,7 @@ export default async function HandbookPage() {
   );
 }
 
-function CategoryCount({ linked, total }: { linked: number; total: number }) {
+function TestTypeCount({ linked, total }: { linked: number; total: number }) {
   if (linked === 0) return <Badge tone="warning">None</Badge>;
   return <>{linked === total ? `All ${total}` : `${linked} of ${total}`}</>;
 }

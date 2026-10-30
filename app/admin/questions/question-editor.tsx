@@ -8,6 +8,7 @@ import type { ResolvedMedia } from "@/lib/content/book";
 import type { SectionOptions } from "@/lib/questions/queries";
 import { questionTypeLabel } from "@/lib/questions/registry";
 import type { QuestionType } from "@/lib/questions/types";
+import { NEEDS_AREAS_MESSAGE, needsAreas } from "@/lib/questions/areas";
 import { parseQuestion, QUESTION_LIMITS } from "@/lib/questions/validate";
 import { NOT_THROUGH_MESSAGE, reachServer } from "@/lib/forms";
 import { Badge } from "@/components/admin/badge";
@@ -43,6 +44,7 @@ type SaveProblem = { message: string; conflict?: boolean } | null;
 export function QuestionEditor({
   questionId,
   refLabel,
+  source = null,
   type,
   initial,
   initialVersion,
@@ -57,6 +59,8 @@ export function QuestionEditor({
 }: {
   questionId: string | null;
   refLabel: string | null;
+  // Where a bulk-uploaded question came from, e.g. "A–D PDF p12"; null for questions made here.
+  source?: string | null;
   type: QuestionType;
   initial: QuestionDraft;
   initialVersion: number | null;
@@ -91,6 +95,7 @@ export function QuestionEditor({
   const isNew = questionId === null;
   const snapshot = JSON.stringify(draft);
   const dirty = snapshot !== savedSnapshot;
+  const unmarked = needsAreas({ type, content: draft.content, answer: draft.answer });
   const update = (patch: Partial<QuestionDraft>) => setDraft((current) => ({ ...current, ...patch }));
 
   const save = useCallback(() => {
@@ -99,7 +104,7 @@ export function QuestionEditor({
       setProblem({ message: "Choose a chapter." });
       return;
     }
-    const check = parseQuestion({ type, ...draft });
+    const check = parseQuestion({ type, ...draft }, { allowUnmarked: status !== "published" });
     if (!check.ok) {
       setProblem({ message: check.error });
       return;
@@ -122,7 +127,7 @@ export function QuestionEditor({
       if (isNew) router.replace(`/admin/questions/${result.id}`);
       else router.refresh();
     });
-  }, [dirty, draft, isNew, isSaving, questionId, router, toast, type, version]);
+  }, [dirty, draft, isNew, isSaving, questionId, router, status, toast, type, version]);
 
   // Ctrl/Cmd+S saves from anywhere on the page.
   useEffect(() => {
@@ -216,7 +221,10 @@ export function QuestionEditor({
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3 md:sticky md:top-14 md:z-10 md:[@media(max-height:500px)]:top-0 md:-mx-6 md:border-b md:border-slate-200 md:bg-slate-50/95 md:px-6 md:py-3 md:backdrop-blur lg:top-0 lg:-mx-8 lg:px-8">
         <div className="min-w-0">
           <h1 className="text-xl font-semibold text-ink">{refLabel ? `Question ${refLabel}` : "New question"}</h1>
-          <p className="mt-0.5 text-sm text-slate-600">{questionTypeLabel(type)}</p>
+          <p className="mt-0.5 text-sm text-slate-600">
+            {questionTypeLabel(type)}
+            {source && ` · Source: ${source}`}
+          </p>
         </div>
         <div
           data-editor-bar
@@ -232,8 +240,8 @@ export function QuestionEditor({
             <button
               type="button"
               onClick={() => publish(status === "published" ? "draft" : "published")}
-              disabled={dirty || isSaving || isPublishing}
-              title={dirty ? "Save your changes first" : undefined}
+              disabled={dirty || isSaving || isPublishing || (status === "draft" && unmarked)}
+              title={dirty ? "Save your changes first" : status === "draft" && unmarked ? NEEDS_AREAS_MESSAGE : undefined}
               className={buttonClass("secondary")}
             >
               {status === "published" ? (isPublishing ? "Unpublishing…" : "Unpublish") : isPublishing ? "Publishing…" : "Publish"}
@@ -257,6 +265,11 @@ export function QuestionEditor({
           unavailable={voice.unavailable}
           languages={languages}
         />
+      )}
+      {unmarked && status !== "published" && (
+        <p className="mb-3 rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25">
+          No areas yet. {NEEDS_AREAS_MESSAGE} Until then it stays a draft, so candidates don&apos;t see it.
+        </p>
       )}
       {isNew && (
         <p className="mb-3 text-sm text-slate-700">The question is added to the bank when you first save it. New questions start as drafts.</p>

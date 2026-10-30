@@ -1,12 +1,13 @@
 import { STORAGE_LIMIT_BYTES } from "@/lib/media/limits";
 import { StorageConfigError, deleteObjects, getSignedUrls, isStorageConfigured, storeObject } from "@/lib/storage/storage";
 import { storedBytes } from "@/lib/storage/usage";
+import type { VoiceFailure } from "./services";
 
 // Server-only: the audio files themselves (private handbook-audio bucket), shared by page audio, question audio and
 // deleting a language, with the result types the editors share.
 
 export type AudioSummary = { language: string; sourceVersion: number; durationMs: number; byteSize: number; createdAt: string };
-export type AudioResult = { ok: true; audio: AudioSummary } | { ok: false; error: string };
+export type AudioResult = { ok: true; audio: AudioSummary } | { ok: false; error: string; failure?: VoiceFailure; waitMs?: number; limit?: boolean };
 export type AudioDeleteResult = { ok: true } | { ok: false; error: string };
 export type AudioLinkResult = { ok: true; url: string } | { ok: false; error: string };
 
@@ -26,23 +27,26 @@ export async function deleteAudioFilesQuietly(paths: string[]) {
   }
 }
 
+type AudioFailure = { ok: false; error: string; failure: VoiceFailure };
+
 // Shared by page and question audio: checks before the voice service is called, and room for the new file.
-export async function audioCanStart(): Promise<string | null> {
-  if (!isStorageConfigured()) return AUDIO_NOT_CONFIGURED;
-  return (await storedBytes()) >= STORAGE_LIMIT_BYTES ? STORAGE_FULL : null;
+// Storage not set up or full stops a bulk run.
+export async function audioCanStart(): Promise<AudioFailure | null> {
+  if (!isStorageConfigured()) return { ok: false, error: AUDIO_NOT_CONFIGURED, failure: "stop" };
+  return (await storedBytes()) >= STORAGE_LIMIT_BYTES ? { ok: false, error: STORAGE_FULL, failure: "stop" } : null;
 }
 
-// Stores a new MP3 at `path`; on failure nothing is left behind.
-export async function storeAudioFile(path: string, mp3: Uint8Array<ArrayBuffer>): Promise<string | null> {
-  if ((await storedBytes()) + mp3.byteLength > STORAGE_LIMIT_BYTES) return STORAGE_FULL;
+// Stores a new MP3 at `path`; on failure nothing is left behind. A failed upload can be tried again.
+export async function storeAudioFile(path: string, mp3: Uint8Array<ArrayBuffer>): Promise<AudioFailure | null> {
+  if ((await storedBytes()) + mp3.byteLength > STORAGE_LIMIT_BYTES) return { ok: false, error: STORAGE_FULL, failure: "stop" };
   try {
     await storeObject(path, new Blob([mp3], { type: "audio/mpeg" }), "audio/mpeg", { area: "audio" });
     return null;
   } catch (error) {
     await deleteAudioFilesQuietly([path]);
-    if (error instanceof StorageConfigError) return AUDIO_NOT_CONFIGURED;
+    if (error instanceof StorageConfigError) return { ok: false, error: AUDIO_NOT_CONFIGURED, failure: "stop" };
     console.error("Audio upload failed", error);
-    return SAVE_FAILED;
+    return { ok: false, error: SAVE_FAILED, failure: "retry" };
   }
 }
 

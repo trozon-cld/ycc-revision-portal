@@ -8,7 +8,7 @@ import { questionLogLabel } from "@/lib/questions/labels";
 import { optionLetter } from "@/lib/questions/types/single-text";
 import { findVoiceLanguage, isTranslatedLanguage, languageName, sourceLanguage } from "./language-store";
 import { SOURCE_LANGUAGE, type VoiceLanguage } from "./languages";
-import { speakParts, translateItems, voiceFailure, type PageSpeech } from "./make";
+import { speakParts, translateItems, voiceFailure, type PageSpeech, type VoiceJobOptions } from "./make";
 import {
   audioCanStart,
   audioFileLink,
@@ -88,9 +88,17 @@ function target(questionId: string, question: QuestionRow) {
 
 // ---- What the editor shows ----
 
-const TRANSLATION_COLUMNS = `t.language, t.revision, t.status, t.updated_at, t.checked_at, (t.source = ${TRANSLATION_SOURCE_SQL}) as current`;
+const TRANSLATION_COLUMNS = `t.language, t.revision, t.status, t.updated_at, t.checked_at, t.checked_automatically, (t.source = ${TRANSLATION_SOURCE_SQL}) as current`;
 // Dates arrive as Date from plain columns and as text from JSON (the one-query loader below).
-type TranslationSummaryRow = { language: string; revision: number; status: TranslationRow["status"]; updated_at: Date | string; checked_at: Date | string | null; current: boolean };
+type TranslationSummaryRow = {
+  language: string;
+  revision: number;
+  status: TranslationRow["status"];
+  updated_at: Date | string;
+  checked_at: Date | string | null;
+  checked_automatically: boolean;
+  current: boolean;
+};
 
 function toTranslationSummary(row: TranslationSummaryRow): TranslationSummary {
   return {
@@ -100,6 +108,7 @@ function toTranslationSummary(row: TranslationSummaryRow): TranslationSummary {
     status: row.status,
     updatedAt: new Date(row.updated_at).toISOString(),
     checkedAt: row.checked_at ? new Date(row.checked_at).toISOString() : null,
+    checkedAutomatically: row.checked_automatically,
   };
 }
 
@@ -126,6 +135,7 @@ async function readVoice(questionId: string): Promise<VoiceRow | null> {
             ${QUESTION_SOURCE_SQL} as source,
             coalesce((select json_agg(json_build_object('language', t.language, 'revision', t.revision, 'status', t.status,
                                                         'updated_at', t.updated_at, 'checked_at', t.checked_at,
+                                                        'checked_automatically', t.checked_automatically,
                                                         'current', t.source = ${TRANSLATION_SOURCE_SQL}, 'texts', t.texts))
                       from question_translations t where t.question_id = q.id), '[]') as translations,
             coalesce((select json_agg(json_build_object('language', a.language, 'source_revision', a.source_revision,
@@ -179,7 +189,13 @@ export async function loadQuestionTranslations(questionId: string, language: str
 
 // ---- Translations ----
 
-export async function generateQuestionTranslation(session: SessionPayload, questionId: string, language: string): Promise<TranslationResult> {
+// `bulk`: a bulk run's translation is checked automatically (labelled so) and not logged item by item.
+export async function generateQuestionTranslation(
+  session: SessionPayload,
+  questionId: string,
+  language: string,
+  { bulk = false }: VoiceJobOptions = {}
+): Promise<TranslationResult> {
   if (!(await isTranslatedLanguage(language))) return { ok: false, error: "Choose a language." };
   const question = await readQuestion(pool, questionId);
   const blocked = unavailable(question);
@@ -215,16 +231,21 @@ export async function generateQuestionTranslation(session: SessionPayload, quest
     }
     const { rows } = await client.query<TranslationSummaryRow>(
       `with saved as (
-         insert into question_translations (question_id, language, texts, source)
-         select q.id, $2, $3, ${TRANSLATION_SOURCE_SQL} from questions q where q.id = $1
+         insert into question_translations (question_id, language, texts, source, status, checked_by, checked_at, checked_automatically)
+         select q.id, $2, $3, ${TRANSLATION_SOURCE_SQL}, case when $4 then 'checked' else 'draft' end, case when $4 then $5::uuid end,
+                case when $4 then now() end, $4
+         from questions q where q.id = $1
          on conflict (question_id, language) do update
            set texts = excluded.texts, source = excluded.source, revision = question_translations.revision + 1,
-               status = 'draft', checked_by = null, checked_at = null, updated_at = now()
+               status = excluded.status, checked_by = excluded.checked_by, checked_at = excluded.checked_at,
+               checked_automatically = excluded.checked_automatically, updated_at = now()
          returning *)
        select ${TRANSLATION_COLUMNS} from saved t join questions q on q.id = t.question_id`,
-      [questionId, language, JSON.stringify(texts)]
+      [questionId, language, JSON.stringify(texts), bulk, session.sub]
     );
-    await logActivity(client, session, "question_translation.generated", target(questionId, current), { language: await languageName(language) });
+    if (!bulk) {
+      await logActivity(client, session, "question_translation.generated", target(questionId, current), { language: await languageName(language) });
+    }
     return { ok: true, translation: toTranslationSummary(rows[0]) };
   });
 }
@@ -260,7 +281,8 @@ export async function saveQuestionTranslationEdit(
     const { rows: saved } = await client.query<TranslationSummaryRow>(
       `with saved as (
          update question_translations t
-         set texts = $3, source = ${TRANSLATION_SOURCE_SQL}, revision = t.revision + 1, status = 'draft', checked_by = null, checked_at = null, updated_at = now()
+         set texts = $3, source = ${TRANSLATION_SOURCE_SQL}, revision = t.revision + 1, status = 'draft', checked_by = null, checked_at = null,
+             checked_automatically = false, updated_at = now()
          from questions q where q.id = t.question_id and t.question_id = $1 and t.language = $2
          returning t.*)
        select ${TRANSLATION_COLUMNS} from saved t join questions q on q.id = t.question_id`,
@@ -271,7 +293,8 @@ export async function saveQuestionTranslationEdit(
   });
 }
 
-// A reader of the language has checked it: only an up-to-date draft, as it was when they read it.
+// A reader of the language has checked it: an up-to-date draft, or one a bulk run checked automatically, as it was
+// when they read it.
 export async function markQuestionTranslationChecked(session: SessionPayload, questionId: string, language: string, expectedRevision: number): Promise<TranslationResult> {
   if (!(await isTranslatedLanguage(language))) return { ok: false, error: "Choose a language." };
   return withTransaction<TranslationResult>(async (client) => {
@@ -290,10 +313,10 @@ export async function markQuestionTranslationChecked(session: SessionPayload, qu
     if (!existing.current) {
       return { ok: false, error: "The English question changed since this was translated. Translate it again, or edit and save it first." };
     }
-    if (existing.status === "checked") return { ok: true, translation: toTranslationSummary(existing) };
+    if (existing.status === "checked" && !existing.checked_automatically) return { ok: true, translation: toTranslationSummary(existing) };
     const { rows: saved } = await client.query<TranslationSummaryRow>(
       `with saved as (
-         update question_translations set status = 'checked', checked_by = $3, checked_at = now(), updated_at = now()
+         update question_translations set status = 'checked', checked_by = $3, checked_at = now(), checked_automatically = false, updated_at = now()
          where question_id = $1 and language = $2 returning *)
        select ${TRANSLATION_COLUMNS} from saved t join questions q on q.id = t.question_id`,
       [questionId, language, session.sub]
@@ -330,13 +353,14 @@ async function readAudioSource(client: PoolClient | typeof pool, questionId: str
   return { question, texts, revision: translation.revision };
 }
 
-export async function generateQuestionAudio(session: SessionPayload, questionId: string, language: string): Promise<AudioResult> {
+// `bulk`: made by a bulk run, which writes one log entry for the whole run instead.
+export async function generateQuestionAudio(session: SessionPayload, questionId: string, language: string, { bulk = false }: VoiceJobOptions = {}): Promise<AudioResult> {
   const lang = await findVoiceLanguage(language);
   if (!lang) return { ok: false, error: "Choose a language." };
   const source = await readAudioSource(pool, questionId, lang.code);
   if ("error" in source) return { ok: false, error: source.error };
   const blocked = await audioCanStart();
-  if (blocked) return { ok: false, error: blocked };
+  if (blocked) return blocked;
 
   let speech: PageSpeech;
   try {
@@ -352,7 +376,7 @@ export async function generateQuestionAudio(session: SessionPayload, questionId:
 
   const path = `questions/${questionId}/${lang.code}-${crypto.randomUUID()}.mp3`;
   const storeError = await storeAudioFile(path, speech.mp3);
-  if (storeError) return { ok: false, error: storeError };
+  if (storeError) return storeError;
 
   let outcome: { result: AudioResult; oldPath: string | null };
   try {
@@ -379,10 +403,12 @@ export async function generateQuestionAudio(session: SessionPayload, questionId:
          select ${AUDIO_COLUMNS} from saved a join questions q on q.id = a.question_id`,
         [questionId, lang.code, source.revision, path, speech.mp3.byteLength, Math.max(1, speech.durationMs), speech.provider, speech.voice, session.sub]
       );
-      await logActivity(client, session, "question_audio.generated", target(questionId, current.question), {
-        language: lang.name,
-        length: formatDuration(Math.max(1, Math.round(speech.durationMs / 1000))),
-      });
+      if (!bulk) {
+        await logActivity(client, session, "question_audio.generated", target(questionId, current.question), {
+          language: lang.name,
+          length: formatDuration(Math.max(1, Math.round(speech.durationMs / 1000))),
+        });
+      }
       return { result: { ok: true, audio: toAudioSummary(rows[0]) } as AudioResult, oldPath: old[0]?.storage_path ?? null };
     });
   } catch (error) {

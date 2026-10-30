@@ -1,5 +1,5 @@
 import { pool } from "@/lib/db/pool";
-import { chapterNumber, sectionLetter } from "@/lib/handbook/structure";
+import { chapterLabel, numberedChapters, sectionLetter } from "@/lib/handbook/structure";
 import { questionRef } from "@/lib/questions/labels";
 import { toClientQuestion } from "@/lib/questions/public";
 import { parseQuestion } from "@/lib/questions/validate";
@@ -11,9 +11,9 @@ import type { BookCovers } from "./covers";
 import { resolveMedia } from "./pages";
 
 // The book as the reader shows it, for the admin preview: every chapter or one, in Handbook order;
-// optionally only a category's chapters, and only what candidates see.
+// optionally only a test type's chapters (numbered in that book, as candidates see it), and only what candidates see.
 
-export type PreviewScope = { chapterId: string | null; categoryId: string | null; includeDrafts: boolean };
+export type PreviewScope = { chapterId: string | null; testTypeId: string | null; includeDrafts: boolean };
 export type PreviewBook = {
   pages: BookPageData[];
   media: ResolvedMedia;
@@ -26,7 +26,7 @@ export type PreviewBook = {
 type Row = {
   chapter_id: string;
   chapter_title: string;
-  chapter_number: number;
+  chapter_number: number | null;
   section_position: number;
   section_title: string;
   item_id: string;
@@ -52,13 +52,9 @@ export async function loadPreviewBook(
   extraMedia: { ids: string[]; thumbIds: string[] } = { ids: [], thumbIds: [] }
 ): Promise<PreviewBook> {
   const chapterId = scope.chapterId && isUuid(scope.chapterId) ? scope.chapterId : null;
-  const categoryId = scope.categoryId && isUuid(scope.categoryId) ? scope.categoryId : null;
+  const testTypeId = scope.testTypeId && isUuid(scope.testTypeId) ? scope.testTypeId : null;
   const { rows } = await pool.query<Row>(
-    `with numbered as (
-       select c.id, c.title, c.status, s.position as section_position, s.title as section_title,
-              (row_number() over (order by s.position, c.position))::int as number
-       from chapters c join sections s on s.id = c.section_id
-     )
+    `with ${numberedChapters(testTypeId ? "$2" : undefined)}
      select n.id as chapter_id, n.title as chapter_title, n.number as chapter_number,
             n.section_position, n.section_title,
             i.id as item_id,
@@ -70,10 +66,10 @@ export async function loadPreviewBook(
      left join content_pages p on p.id = i.content_page_id
      left join questions q on q.id = i.question_id
      where ($1::uuid is null or n.id = $1)
-       and ($2::uuid is null or exists (select 1 from category_chapters cc where cc.category_id = $2 and cc.chapter_id = n.id))
+       and ($2::uuid is null or exists (select 1 from test_type_chapters cc where cc.test_type_id = $2 and cc.chapter_id = n.id))
        and ($3 or (n.status = 'published' and coalesce(p.status, q.status) = 'published'))
-     order by n.number, i.position`,
-    [chapterId, categoryId, scope.includeDrafts]
+     order by n.place, i.position`,
+    [chapterId, testTypeId, scope.includeDrafts]
   );
 
   const pages: BookPageData[] = [];
@@ -85,7 +81,7 @@ export async function loadPreviewBook(
       id: row.item_id,
       chapterId: row.chapter_id,
       sectionLabel: `${sectionLetter(row.section_position)} · ${row.section_title}`,
-      chapterLabel: `${chapterNumber(row.chapter_number)} ${row.chapter_title}`,
+      chapterLabel: chapterLabel({ number: row.chapter_number, title: row.chapter_title }),
     };
     const status = row.page_status ?? row.question_status;
     const badge = status === "draft" ? { badge: "Draft" } : {};
@@ -128,19 +124,19 @@ export async function loadPreviewBook(
   };
 }
 
-// A category's covers with their pictures resolved; null when the category doesn't exist.
-export async function loadBookCovers(categoryId: string): Promise<BookCovers | null> {
-  if (!isUuid(categoryId)) return null;
+// A test type's covers with their pictures resolved; null when the test type doesn't exist.
+export async function loadBookCovers(testTypeId: string): Promise<BookCovers | null> {
+  if (!isUuid(testTypeId)) return null;
   const { rows } = await pool.query<{ name: string; front_id: string | null; back_id: string | null }>(
-    `select name, front_cover_media_id as front_id, back_cover_media_id as back_id from categories where id = $1`,
-    [categoryId]
+    `select name, front_cover_media_id as front_id, back_cover_media_id as back_id from test_types where id = $1`,
+    [testTypeId]
   );
   const row = rows[0];
   if (!row) return null;
   const ids = [row.front_id, row.back_id].filter((id): id is string => Boolean(id));
   const media = ids.length > 0 ? await resolveMedia(ids, ids) : {};
   return {
-    categoryName: row.name,
+    testTypeName: row.name,
     front: row.front_id ? (media[row.front_id] ?? null) : null,
     back: row.back_id ? (media[row.back_id] ?? null) : null,
   };
@@ -148,29 +144,26 @@ export async function loadBookCovers(categoryId: string): Promise<BookCovers | n
 
 export type PreviewOptions = {
   chapters: { id: string; label: string; sectionLabel: string }[];
-  categories: { id: string; label: string }[];
+  testTypes: { id: string; label: string }[];
 };
 
 export async function loadPreviewOptions(): Promise<PreviewOptions> {
-  const [{ rows: chapters }, { rows: categories }] = await Promise.all([
+  const [{ rows: chapters }, { rows: testTypes }] = await Promise.all([
     pool.query<{ id: string; title: string; number: number; section_position: number; section_title: string }>(
-      `select c.id, c.title, s.position as section_position, s.title as section_title,
-              (row_number() over (order by s.position, c.position))::int as number
-       from chapters c join sections s on s.id = c.section_id
-       order by s.position, c.position`
+      `with ${numberedChapters()} select id, title, number, section_position, section_title from numbered order by place`
     ),
-    pool.query<{ id: string; name: string; group_name: string }>(
-      `select c.id, c.name, g.name as group_name
-       from categories c join category_groups g on g.id = c.group_id
-       order by g.position, c.name`
+    pool.query<{ id: string; name: string; test_area_name: string }>(
+      `select c.id, c.name, g.name as test_area_name
+       from test_types c join test_areas g on g.id = c.test_area_id
+       order by g.position, c.position`
     ),
   ]);
   return {
     chapters: chapters.map((row) => ({
       id: row.id,
-      label: `${chapterNumber(row.number)} ${row.title}`,
+      label: chapterLabel(row),
       sectionLabel: `${sectionLetter(row.section_position)} · ${row.section_title}`,
     })),
-    categories: categories.map((row) => ({ id: row.id, label: `${row.name} (${row.group_name})` })),
+    testTypes: testTypes.map((row) => ({ id: row.id, label: `${row.name} (${row.test_area_name})` })),
   };
 }

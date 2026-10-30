@@ -8,8 +8,9 @@ import {
   ACTIVITY_ACTIONS,
   ADMIN_ACTIONS,
   AUTH_EVENTS,
-  isActivityAction,
+  currentAction,
   isAuthEvent,
+  storedKeys,
   type ActivityAction,
   type AuthEvent,
 } from "@/lib/audit/actions";
@@ -81,7 +82,8 @@ export default async function ActivityPage({ searchParams }: PageProps<"/admin/a
   const allowedActions = isSuperadmin
     ? (Object.keys(ACTIVITY_ACTIONS) as ActivityAction[])
     : ADMIN_ACTIONS;
-  const action = isActivityAction(actionParam) && allowedActions.includes(actionParam) ? actionParam : null;
+  const asked = currentAction(actionParam);
+  const action = asked && allowedActions.includes(asked) ? asked : null;
   const event = isAuthEvent(eventParam) ? eventParam : null;
   // Admins are always pinned to their own entries, whatever the URL says.
   const actorId = isSuperadmin ? (isUuid(actorParam) ? actorParam : null) : session.sub;
@@ -97,8 +99,8 @@ export default async function ActivityPage({ searchParams }: PageProps<"/admin/a
         title={isSuperadmin ? "Activity" : "My activity"}
         description={
           isSuperadmin
-            ? "Everything Admins and the Superadmin have changed, candidates' category and language changes, and every login."
-            : "Changes you have made, category and language changes by your current candidates, and your logins."
+            ? "Everything Admins and the Superadmin have changed, candidates' test type and language changes, and every login."
+            : "Changes you have made, test type and language changes by your current candidates, and your logins."
         }
       />
 
@@ -144,7 +146,7 @@ async function ActivityTab({
   filters,
 }: {
   isSuperadmin: boolean;
-  // Admins: also shows category switches and listening-language changes made by their own candidates.
+  // Admins: also shows test type switches and listening-language changes made by their own candidates.
   ownerId: string | null;
   actorId: string | null;
   action: ActivityAction | null;
@@ -154,10 +156,10 @@ async function ActivityTab({
 }) {
   // One filter for the count and the page, so both always agree.
   const where = `where ($1::uuid is null or actor_id = $1::uuid
-              or ($3::uuid is not null and action in ('candidate.category_switched', 'account.language_changed')
+              or ($3::uuid is not null and action in ('candidate.test_type_switched', 'candidate.category_switched', 'account.language_changed')
                   and target_id in (select id from users where admin_id = $3::uuid)))
-         and ($2::varchar is null or action = $2::varchar)`;
-  const values = [actorId, action, ownerId];
+         and ($2::varchar[] is null or action = any($2::varchar[]))`;
+  const values = [actorId, action ? storedKeys(action) : null, ownerId];
   const { rows: counted } = await pool.query<{ total: number }>(`select count(*)::int as total from activity_logs ${where}`, values);
   const total = counted[0].total;
   const page = pageFromParam(pageParam, total, PAGE_SIZE);
@@ -237,7 +239,7 @@ async function ActivityTab({
                 {formatUkDateTime(entry.created_at)}
               </span>
             </Cell>
-            <Cell label="Action">{ACTIVITY_ACTIONS[entry.action] ?? entry.action}</Cell>
+            <Cell label="Action">{actionLabel(entry.action)}</Cell>
             <Cell label="Applies to" breakAnywhere>
               <Breakable text={entry.target_label} />
             </Cell>
@@ -439,14 +441,22 @@ function TabLink({ href, isCurrent, label }: { href: string; isCurrent: boolean;
   );
 }
 
+function actionLabel(stored: string): string {
+  const action = currentAction(stored);
+  return action ? ACTIVITY_ACTIONS[action] : stored;
+}
+
 function describeDetails(details: Record<string, string>): string | null {
   const parts: string[] = [];
   if (details.from !== undefined && details.to !== undefined) parts.push(`${details.from} → ${details.to}`);
   if (details.name) parts.push(`Name: ${details.name}`);
   if (details.previousCurrent) parts.push(`Was working in: ${details.previousCurrent}`);
-  if (details.group) parts.push(`Group: ${details.group}`);
+  // Entries before 0037 use the old detail names (group, category…); both are read.
+  const testArea = details.testArea ?? details.group;
+  if (testArea) parts.push(`Test area: ${testArea}`);
   if (details.section) parts.push(`Section: ${details.section}`);
   if (details.chapter) parts.push(`Chapter: ${details.chapter}`);
+  if (details.chapters) parts.push(`Chapters: ${details.chapters}`);
   if (details.language) parts.push(`Language: ${details.language}`);
   if (details.pageVersion) parts.push(`From page ${details.pageVersion.toLowerCase()}`);
   if (details.length) parts.push(`Length: ${details.length}`);
@@ -456,14 +466,21 @@ function describeDetails(details: Record<string, string>): string | null {
   if (details.total !== undefined) {
     parts.push(`Chapters +${details.added ?? 0} −${details.removed ?? 0} (${details.total} in total)`);
   }
-  if (details.category) parts.push(`Category: ${details.category}`);
-  if (details.categories) parts.push(`Categories: ${details.categories}`);
-  if (details.addedCategories) parts.push(`Added: ${details.addedCategories}`);
-  if (details.removedCategories) parts.push(`Removed: ${details.removedCategories}`);
-  if (details.categoryTotal !== undefined) parts.push(`In ${details.categoryTotal} categor${details.categoryTotal === "1" ? "y" : "ies"}`);
+  const testType = details.testType ?? details.category;
+  const testTypes = details.testTypes ?? details.categories;
+  const added = details.addedTestTypes ?? details.addedCategories;
+  const removed = details.removedTestTypes ?? details.removedCategories;
+  const testTypeTotal = details.testTypeTotal ?? details.categoryTotal;
+  if (testType) parts.push(`Test type: ${testType}`);
+  if (testTypes) parts.push(`Test types: ${testTypes}`);
+  if (added) parts.push(`Added: ${added}`);
+  if (removed) parts.push(`Removed: ${removed}`);
+  if (testTypeTotal !== undefined) parts.push(`In ${testTypeTotal} test type${testTypeTotal === "1" ? "" : "s"}`);
   if (details.frontCover) parts.push(`Front cover: ${details.frontCover}`);
   if (details.backCover) parts.push(`Back cover: ${details.backCover}`);
   if (details.accessUntil) parts.push(`Access until ${details.accessUntil}`);
+  if (details.source) parts.push(details.source);
+  if (details.result) parts.push(details.result);
   if (details.records) parts.push(`${details.records} record${details.records === "1" ? "" : "s"}`);
   return parts.length > 0 ? parts.join(" · ") : null;
 }

@@ -8,7 +8,7 @@ import { questionRef } from "@/lib/questions/labels";
 import { BANK_PAGE_SIZE, countBankQuestions, countQuestions, listBankQuestions, listChapterOptions, type BankFilters, type BankRow } from "@/lib/questions/queries";
 import { availableQuestionTypes, QUESTION_TYPES } from "@/lib/questions/registry";
 import { isQuestionType, QUESTION_TYPE_KEYS } from "@/lib/questions/types";
-import { loadCategoryGroups } from "@/lib/handbook/categories";
+import { loadTestAreas } from "@/lib/handbook/test-types";
 import { isUuid } from "@/lib/ids";
 import { firstParam } from "@/lib/params";
 import { Badge } from "@/components/admin/badge";
@@ -21,6 +21,9 @@ import { NewQuestionButton, QuestionRowActions } from "./question-row-actions";
 
 export const metadata: Metadata = { title: "Question bank" };
 
+// The Status filter's extra choice: drafts still waiting for their areas.
+const NEEDS_AREAS_FILTER = "needs-areas";
+
 export default async function QuestionBankPage({ searchParams }: PageProps<"/admin/questions">) {
   await requireRole(CONTENT_EDITORS);
   const params = await searchParams;
@@ -31,19 +34,20 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
     search: (firstParam(params.q) ?? "").trim().slice(0, 100),
     sectionId: uuidOrNull(firstParam(params.section)),
     chapterId: uuidOrNull(firstParam(params.chapter)),
-    categoryId: uuidOrNull(firstParam(params.category)),
+    testTypeId: uuidOrNull(firstParam(params.testType)),
     type: isQuestionType(typeParam) ? typeParam : null,
     status: statusParam === "draft" || statusParam === "published" ? statusParam : null,
+    needsAreas: statusParam === NEEDS_AREAS_FILTER,
   };
   const isFiltered = Boolean(
-    filters.search || filters.sectionId || filters.chapterId || filters.categoryId || filters.type || filters.status
+    filters.search || filters.sectionId || filters.chapterId || filters.testTypeId || filters.type || filters.status || filters.needsAreas
   );
 
-  const [matching, total, sections, categoryGroups] = await Promise.all([
+  const [matching, total, sections, testAreas] = await Promise.all([
     countBankQuestions(filters),
     countQuestions(),
     listChapterOptions(),
-    loadCategoryGroups(),
+    loadTestAreas(),
   ]);
   const totalLabel = `${total.toLocaleString("en-GB")} question${total === 1 ? "" : "s"}`;
   const page = pageFromParam(firstParam(params.page), matching, BANK_PAGE_SIZE);
@@ -53,9 +57,9 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
     q: filters.search,
     section: filters.sectionId ?? "",
     chapter: filters.chapterId ?? "",
-    category: filters.categoryId ?? "",
+    testType: filters.testTypeId ?? "",
     type: filters.type ?? "",
-    status: filters.status ?? "",
+    status: filters.needsAreas ? NEEDS_AREAS_FILTER : (filters.status ?? ""),
   };
 
   return (
@@ -78,7 +82,7 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
       />
 
       <FilterBar action="/admin/questions" clearHref="/admin/questions" isFiltered={isFiltered}>
-        <FilterSearch name="q" label="Search question text or ID" defaultValue={filters.search} />
+        <FilterSearch name="q" label="Search question text, ID or source page" defaultValue={filters.search} />
         <FilterSelect name="section" label="Section" defaultValue={filters.sectionId ?? ""}>
           <option value="">All sections</option>
           {sections.map((section) => (
@@ -101,15 +105,15 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
               </optgroup>
             ))}
         </FilterSelect>
-        <FilterSelect name="category" label="Category" defaultValue={filters.categoryId ?? ""}>
-          <option value="">All categories</option>
-          {categoryGroups
-            .filter((group) => group.categories.length > 0)
-            .map((group) => (
-              <optgroup key={group.id} label={group.label}>
-                {group.categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
+        <FilterSelect name="testType" label="Test type" defaultValue={filters.testTypeId ?? ""}>
+          <option value="">All test types</option>
+          {testAreas
+            .filter((testArea) => testArea.testTypes.length > 0)
+            .map((testArea) => (
+              <optgroup key={testArea.id} label={testArea.label}>
+                {testArea.testTypes.map((testType) => (
+                  <option key={testType.id} value={testType.id}>
+                    {testType.name}
                   </option>
                 ))}
               </optgroup>
@@ -123,10 +127,11 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
             </option>
           ))}
         </FilterSelect>
-        <FilterSelect name="status" label="Status" defaultValue={filters.status ?? ""}>
+        <FilterSelect name="status" label="Status" defaultValue={query.status}>
           <option value="">All statuses</option>
           <option value="draft">Draft</option>
           <option value="published">Published</option>
+          <option value={NEEDS_AREAS_FILTER}>Needs areas</option>
         </FilterSelect>
       </FilterBar>
 
@@ -167,6 +172,11 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
                 <Badge tone={row.status === "published" ? "success" : "neutral"}>
                   {row.status === "published" ? "Published" : "Draft"}
                 </Badge>
+                {row.needsAreas && (
+                  <span className="mt-1 block">
+                    <Badge tone="warning">Needs areas</Badge>
+                  </span>
+                )}
               </Cell>
               <Cell label="Used in">
                 {usedIn(row).length > 0 ? (
