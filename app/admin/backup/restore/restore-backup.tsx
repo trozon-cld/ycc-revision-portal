@@ -118,7 +118,7 @@ export function RestoreBackup() {
             Restored
           </h2>
           <p>Everything in the backup is back. The table above compares what was restored with what the backup holds.</p>
-          <p>Next: add General queries and the support contact again (they aren&apos;t in backups), and make any Listen audio again.</p>
+          <p>Next: add General queries and the support contact again (they aren&apos;t in backups), and restore each language&apos;s audio backup below.</p>
         </section>
       )}
 

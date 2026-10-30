@@ -5,6 +5,7 @@ import { buttonClass, cardClass } from "@/components/admin/styles";
 import { formatBytes } from "@/lib/format";
 import { backupCounts, type BackupManifest } from "@/lib/content/backup/format";
 import { buildBackup, reportSaved } from "@/lib/content/backup/zip";
+import { saveFile } from "../save-file";
 
 type State =
   | { status: "idle" }
@@ -39,7 +40,7 @@ export function BackupDownload() {
           pictures, translations, languages and spoken phrases. Restoring it brings all of this back into an empty project.
         </p>
         <p className="text-sm text-slate-600">
-          Not included: General queries and support contact (re-enter them after a restore), audio (made again from the translations), and never
+          Not included: General queries and support contact (re-enter them after a restore), audio (downloaded per language under Audio backups, below), and never
           accounts, candidates&apos; data or logs.
         </p>
         <p className="text-sm text-slate-600">Keep this page open until the file is saved. Large backups take a few minutes.</p>
@@ -74,16 +75,4 @@ function BackupDone({ fileName, bytes, manifest, recorded }: { fileName: string;
       {!recorded && <p>The backup is saved, but it couldn&apos;t be noted in the Activity log (connection). That doesn&apos;t affect the file.</p>}
     </section>
   );
-}
-
-function saveFile(fileName: string, zip: Uint8Array) {
-  const url = URL.createObjectURL(new Blob([zip as BlobPart], { type: "application/zip" }));
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = fileName;
-  document.body.append(link);
-  link.click();
-  link.remove();
-  // Revoked a moment later so the browser has started the download.
-  setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
