@@ -41,6 +41,9 @@ export default async function MockReviewPage({ params, searchParams }: PageProps
     <FocusedShell label="Mock test tools" status="Your answers">
       <PageBody>
         <div className="max-w-3xl">
+          <Link href={resultsHref} className={`${SECONDARY_BUTTON} mb-4 w-full sm:w-auto`}>
+            Back to your results
+          </Link>
           <h1 className={`${PAGE_TITLE}`}>Your answers</h1>
           {!review.kept ? (
             <p className="mt-4 text-base leading-relaxed text-ink">

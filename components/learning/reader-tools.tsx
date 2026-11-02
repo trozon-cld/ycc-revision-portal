@@ -32,7 +32,7 @@ export function useReaderLabels(): [showLabels: boolean, toggleLabels: () => voi
 // Bar buttons on laptops and desktops (48px high), also used for the page's own items in the bar.
 export const BAR_BUTTON_DENSE = "h-12 min-w-12 px-3 text-base";
 
-// Large full-width buttons in panels (e.g. Back to home, Help and Log out in Settings on phones).
+// Large full-width buttons in panels (e.g. Help and Log out in Settings on phones).
 export const PANEL_LINK = `${barButton} h-14 w-full px-4 text-lg`;
 
 export function ReaderBar({
@@ -69,7 +69,7 @@ export function ReaderBar({
   narrow?: boolean;
   // Tablets held upright: with labels on, each word sits under its icon so the bar fits.
   stacked?: boolean;
-  // Phones (the header is hidden there): a Home button at the start of the bar.
+  // Candidate Handbook (the header is hidden): a Home button at the start of the bar, after the logo on laptops.
   home?: string;
   // Phones keep text size in Settings only; there's no room for A−/A+ as well.
   textSizeInBar?: boolean;
@@ -607,7 +607,7 @@ export function SettingsPanel({
   onGoToPage?: () => void;
   // Practice: End practice, shown before the links.
   actions?: ReactNode;
-  // Back to home, Help and Log out where the bar has no room for them (phones; the Mock test everywhere).
+  // Help and Log out where the bar has no room for them (phones; the Mock test everywhere).
   links?: ReactNode;
   onClose: () => void;
 }) {

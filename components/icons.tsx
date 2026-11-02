@@ -17,6 +17,7 @@ import { ClockCounterClockwiseIcon } from "@phosphor-icons/react/dist/ssr/ClockC
 import { CopyIcon } from "@phosphor-icons/react/dist/ssr/Copy";
 import { DotsSixVerticalIcon } from "@phosphor-icons/react/dist/ssr/DotsSixVertical";
 import { DotsThreeIcon } from "@phosphor-icons/react/dist/ssr/DotsThree";
+import { DoorOpenIcon } from "@phosphor-icons/react/dist/ssr/DoorOpen";
 import { EyeIcon } from "@phosphor-icons/react/dist/ssr/Eye";
 import { EyeSlashIcon } from "@phosphor-icons/react/dist/ssr/EyeSlash";
 import { FileTextIcon } from "@phosphor-icons/react/dist/ssr/FileText";
@@ -59,6 +60,7 @@ const ICONS = {
   pause: PauseIcon,
   "listen-back": ArrowCounterClockwiseIcon,
   flag: FlagIcon,
+  leave: DoorOpenIcon,
   // Marks and movement
   tick: CheckIcon,
   cross: XIcon,

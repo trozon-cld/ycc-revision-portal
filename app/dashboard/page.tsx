@@ -31,7 +31,10 @@ export default async function CandidateHomePage({ searchParams }: PageProps<"/da
   const lastMock = progress?.mock.items[0];
   const readiness = progress?.readiness;
   if (!home) redirect(SESSION_ENDED_LOGIN);
-  const justSwitched = (await searchParams).switched === "1";
+  const query = await searchParams;
+  const justSwitched = query.switched === "1";
+  // Just left a practice part-way (its Home button): it's kept, so say where to carry on.
+  const practiceSaved = query.practice === "saved" && practice !== null;
   // A first visit (nothing read, practised or tested yet): point to where to begin.
   const startHere =
     progress && !practice && !mock && progress.handbook.done === 0 && progress.practice.tries === 0 && progress.mock.count === 0
@@ -65,6 +68,12 @@ export default async function CandidateHomePage({ searchParams }: PageProps<"/da
         {justSwitched && (
           <p role="status" className={`${OK_BOX} p-4 text-base font-semibold`}>
             You’re now studying {home.current.name}.
+          </p>
+        )}
+
+        {practiceSaved && (
+          <p role="status" className={`${OK_BOX} p-4 text-base font-semibold`}>
+            Your practice is saved. Continue it from Home or Practice.
           </p>
         )}
 
