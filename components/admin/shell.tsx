@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { LogoutButton } from "@/components/logout-button";
 import { buttonClass } from "./styles";
+import { useBackdropClose } from "./dialog";
 import { CONTENT_EDITORS } from "@/lib/auth/content-editors";
 import { ToastProvider } from "./toast";
 import { Icon, type IconName } from "@/components/icons";
@@ -194,6 +195,7 @@ function SidebarContent({ role, email, name, onNavigate }: { role: Role; email: 
 
 function MobileDrawer({ onClose, children }: { onClose: () => void; children: ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const backdrop = useBackdropClose(onClose);
 
   useEffect(() => {
     const dialog = ref.current;
@@ -208,9 +210,7 @@ function MobileDrawer({ onClose, children }: { onClose: () => void; children: Re
         event.preventDefault();
         onClose();
       }}
-      onClick={(event) => {
-        if (event.target === ref.current) onClose();
-      }}
+      {...backdrop}
       className="admin-drawer my-0 ml-0 mr-auto h-dvh max-h-dvh w-72 max-w-[85vw] bg-white p-0 shadow-xl backdrop:bg-ink/40"
     >
       <div className="relative flex h-full flex-col">

@@ -1,8 +1,27 @@
 "use client";
 
 import { Icon } from "@/components/icons";
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, type MouseEvent, type PointerEvent, type ReactNode } from "react";
 import { buttonClass } from "./styles";
+
+// Clicking the dark area outside closes, but only when the press and the release are both there: a text selection
+// or drag that crosses the panel's edge (either way) keeps it open.
+export function useBackdropClose(onClose: () => void) {
+  const outside = useRef({ down: false, up: false });
+  return {
+    onPointerDown: (event: PointerEvent<HTMLDialogElement>) => {
+      outside.current = { down: event.target === event.currentTarget, up: false };
+    },
+    onPointerUp: (event: PointerEvent<HTMLDialogElement>) => {
+      outside.current.up = event.target === event.currentTarget;
+    },
+    onClick: (event: MouseEvent<HTMLDialogElement>) => {
+      const { down, up } = outside.current;
+      outside.current = { down: false, up: false };
+      if (down && up && event.target === event.currentTarget) onClose();
+    },
+  };
+}
 
 // Native <dialog>: focus trapping, Escape and a top-layer backdrop for free.
 // Render it only while open; it opens itself on mount.
@@ -21,6 +40,7 @@ export function Dialog({
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
+  const backdrop = useBackdropClose(onClose);
 
   // No cleanup: unmounting removes the element, which closes it. A native "close"
   // listener would misfire under Strict Mode's double mount, so Escape uses onCancel.
@@ -49,9 +69,7 @@ export function Dialog({
         event.preventDefault();
         onClose();
       }}
-      onClick={(event) => {
-        if (event.target === ref.current) onClose();
-      }}
+      {...backdrop}
       className={`${shape} bg-white p-0 text-left text-ink shadow-xl backdrop:bg-ink/40`}
     >
       <div className="flex h-full max-h-[inherit] flex-col">
