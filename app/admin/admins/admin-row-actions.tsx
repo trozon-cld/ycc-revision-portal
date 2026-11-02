@@ -7,6 +7,7 @@ import { buttonClass, inputClass } from "@/components/admin/styles";
 import { NAME_MAX_LENGTH } from "@/lib/users/name";
 import { MAX_EMAIL_LENGTH, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from "@/lib/users/credentials";
 import { createAdmin, deleteAdmin, moveAllCandidates, updateAdminEmail, updateAdminName, updateAdminPassword } from "./actions";
+import { PasswordInput } from "@/components/password-input";
 
 export function NewAdminButton() {
   return (
@@ -27,10 +28,10 @@ export function NewAdminButton() {
             <input id="new-admin-email" name="email" type="email" maxLength={MAX_EMAIL_LENGTH} required autoComplete="off" className={inputClass} />
           </Field>
           <Field id="new-admin-password" label="Password" hint={`At least ${MIN_PASSWORD_LENGTH} characters.`}>
-            <input
+            <PasswordInput
+              look="staff"
               id="new-admin-password"
               name="password"
-              type="password"
               required
               minLength={MIN_PASSWORD_LENGTH}
               maxLength={MAX_PASSWORD_LENGTH}
@@ -131,10 +132,10 @@ export function AdminRowActions({
           onCancel={close}
         >
           <Field id={`password-${id}`} label="New password" hint={`At least ${MIN_PASSWORD_LENGTH} characters. Share it with them securely.`}>
-            <input
+            <PasswordInput
+              look="staff"
               id={`password-${id}`}
               name="password"
-              type="password"
               required
               minLength={MIN_PASSWORD_LENGTH}
               maxLength={MAX_PASSWORD_LENGTH}
@@ -143,10 +144,10 @@ export function AdminRowActions({
             />
           </Field>
           <Field id={`confirm-${id}`} label="Type the new password again">
-            <input
+            <PasswordInput
+              look="staff"
               id={`confirm-${id}`}
               name="confirmPassword"
-              type="password"
               required
               minLength={MIN_PASSWORD_LENGTH}
               maxLength={MAX_PASSWORD_LENGTH}

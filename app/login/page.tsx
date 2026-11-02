@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useBrowserValue } from "@/components/use-browser-value";
 import { CARD, ERROR_BOX, NOTE_BOX, PAGE_TITLE, PRIMARY_BUTTON } from "@/components/candidate/buttons";
 import { NOT_THROUGH_MESSAGE } from "@/lib/forms";
+import { PasswordInput } from "@/components/password-input";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -83,10 +84,10 @@ export default function LoginPage() {
           >
             Password
           </label>
-          <input
+          <PasswordInput
+            look="candidate"
             id="password"
             name="password"
-            type="password"
             autoComplete="current-password"
             required
             value={password}

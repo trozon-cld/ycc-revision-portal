@@ -17,6 +17,8 @@ import { ClockCounterClockwiseIcon } from "@phosphor-icons/react/dist/ssr/ClockC
 import { CopyIcon } from "@phosphor-icons/react/dist/ssr/Copy";
 import { DotsSixVerticalIcon } from "@phosphor-icons/react/dist/ssr/DotsSixVertical";
 import { DotsThreeIcon } from "@phosphor-icons/react/dist/ssr/DotsThree";
+import { EyeIcon } from "@phosphor-icons/react/dist/ssr/Eye";
+import { EyeSlashIcon } from "@phosphor-icons/react/dist/ssr/EyeSlash";
 import { FileTextIcon } from "@phosphor-icons/react/dist/ssr/FileText";
 import { FlagIcon } from "@phosphor-icons/react/dist/ssr/Flag";
 import { GearSixIcon } from "@phosphor-icons/react/dist/ssr/GearSix";
@@ -84,6 +86,9 @@ const ICONS = {
   account: GearSixIcon,
   locked: LockIcon,
   unlocked: LockOpenIcon,
+  // Password fields
+  show: EyeIcon,
+  hide: EyeSlashIcon,
 } as const;
 
 export type IconName = keyof typeof ICONS;
