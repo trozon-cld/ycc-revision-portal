@@ -4,7 +4,7 @@ import { MOCK_KEEP_ANSWERS, READINESS_TARGET, scorePercent, type MockEnd, type M
 import { PageBody } from "@/components/candidate/page-body";
 import { BAR_FILL, BAR_TRACK, CARD, ERROR_BOX, NOTE_BOX, PAGE_TITLE, PRIMARY_BUTTON, SECONDARY_BUTTON, SECTION_TITLE } from "@/components/candidate/buttons";
 import { ArrivalHeading } from "@/components/candidate/arrival-heading";
-import { ChapterResults } from "@/components/candidate/chapter-results";
+import { ChapterSummary } from "./chapter-summary";
 import { practiseMockMisses } from "@/app/dashboard/practice/actions";
 import { RetryForm } from "@/app/dashboard/practice/[sessionId]/retry-button";
 
@@ -24,7 +24,6 @@ export function MockResultsView({ attemptId, results, practiceUnavailable }: { a
   const wrong = results.answered - results.rightCount;
   const unanswered = results.outOf - results.answered;
   const removed = results.total - results.outOf;
-  const weakIds = new Set(results.weakest.map((topic) => topic.id));
   const { next } = results;
 
   return (
@@ -72,6 +71,8 @@ export function MockResultsView({ attemptId, results, practiceUnavailable }: { a
             </p>
           )}
         </section>
+
+        {results.topics.length > 0 && <ChapterSummary attemptId={attemptId} results={results} />}
 
         {practiceUnavailable && (
           <p role="alert" className={`mt-4 ${ERROR_BOX}`}>
@@ -137,15 +138,6 @@ export function MockResultsView({ attemptId, results, practiceUnavailable }: { a
             </>
           )}
         </section>
-
-        {results.topics.length > 0 && (
-          <ChapterResults
-            id="topics-heading"
-            title="Results by chapter"
-            showPercent
-            items={results.topics.map((topic) => ({ key: topic.id, label: topic.label, right: topic.right, outOf: topic.outOf, badge: weakIds.has(topic.id) ? "Weakest" : undefined }))}
-          />
-        )}
 
         <p className="mt-5 lg:mt-6 text-base text-muted">Mock test results are for practice and aren’t an official CITB result.</p>
 

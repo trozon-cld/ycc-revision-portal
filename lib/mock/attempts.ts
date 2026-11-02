@@ -4,7 +4,7 @@ import { formatUkTime } from "@/lib/candidates/access";
 import { resolveMedia } from "@/lib/content/pages";
 import { pool } from "@/lib/db/pool";
 import { withTransaction } from "@/lib/db/transaction";
-import { chapterLabel, numberedChapters } from "@/lib/handbook/structure";
+import { chapterLabel, numberedChapters, sectionLetter } from "@/lib/handbook/structure";
 import { checkAnswer, isOversizedResponse } from "@/lib/questions/check";
 import { currentTestType, drawRandom, loadPool, loadQuestions, type PoolQuestion } from "@/lib/questions/pool";
 import { toClientQuestion } from "@/lib/questions/public";
@@ -18,6 +18,8 @@ import {
   SAVE_GRACE_SECONDS,
   mockMinutes,
   type MockChange,
+  type MockChapterQuestion,
+  type MockSectionResult,
   type MockEnd,
   type MockHome,
   type MockRun,
@@ -221,13 +223,19 @@ export async function loadMockResults(userId: string, attemptId: string): Promis
   const row = rows[0];
   if (!row) return null;
   const summary = row.chapter_summary ?? {};
-  const { rows: chapters } = await pool.query<{ id: string; title: string; number: number | null }>(
-    `with ${numberedChapters("$2")} select id, title, number from numbered where id = any($1::uuid[]) order by place`,
-    [Object.keys(summary), row.test_type_id]
-  );
-  const known = new Set(chapters.map((chapter) => chapter.id));
+  const [{ rows: chapters }, questionChapters] = await Promise.all([
+    // The test's book (to name the chapters not in this test) and any chapter of the test since unlinked.
+    pool.query<{ id: string; title: string; number: number | null; section_position: number; section_title: string; status: string }>(
+      `with ${numberedChapters("$2")} select id, title, number, section_position, section_title, status from numbered
+       where id = any($1::uuid[]) or number is not null order by place`,
+      [Object.keys(summary), row.test_type_id]
+    ),
+    row.question_ids ? questionChapterIds(row.question_ids) : Promise.resolve(null),
+  ]);
+  const inTest = chapters.filter((chapter) => summary[chapter.id]);
+  const known = new Set(inTest.map((chapter) => chapter.id));
   const topics: TopicResult[] = [
-    ...chapters.map((chapter) => ({ id: chapter.id, label: chapterLabel(chapter), right: summary[chapter.id][0], outOf: summary[chapter.id][1] })),
+    ...inTest.map((chapter) => ({ id: chapter.id, label: chapterLabel(chapter), right: summary[chapter.id][0], outOf: summary[chapter.id][1] })),
     // A chapter deleted since the test still counts in the score.
     ...Object.keys(summary)
       .filter((id) => !known.has(id))
@@ -246,8 +254,58 @@ export async function loadMockResults(userId: string, attemptId: string): Promis
     weakest,
     next: nextStep(weakest, share, READINESS_TARGET, row.same_test_type),
     answersKept: row.kept,
+    sections: chapterSections(topics, inTest, row, questionChapters),
+    notInTest: chapters.filter((chapter) => !summary[chapter.id] && chapter.number !== null && chapter.status === "published").map(chapterLabel),
+    sameTestType: row.same_test_type,
     practiceCount: row.same_test_type ? (await missedInPractice(pool, row.test_type_id, missedIds(row))).length : 0,
   };
+}
+
+// Each question's chapter now (deleted questions are left out).
+async function questionChapterIds(ids: string[]): Promise<Map<string, string>> {
+  const { rows } = await pool.query<{ id: string; chapter_id: string }>(`select id, chapter_id from questions where id = any($1::uuid[])`, [ids]);
+  return new Map(rows.map((question) => [question.id, question.chapter_id]));
+}
+
+// Results by chapter grouped by section in book order; a chapter deleted since goes in a last group of its own.
+function chapterSections(
+  topics: TopicResult[],
+  inTest: { id: string; section_position: number; section_title: string }[],
+  row: { question_ids: string[] | null; marks: string | null },
+  questionChapters: Map<string, string> | null
+): MockSectionResult[] {
+  const perChapter = new Map<string, MockChapterQuestion[]>();
+  if (questionChapters) {
+    (row.question_ids ?? []).forEach((id, position) => {
+      const mark = row.marks?.[position];
+      const chapterId = questionChapters.get(id);
+      if (!chapterId || (mark !== "R" && mark !== "W" && mark !== "U")) return;
+      const list = perChapter.get(chapterId) ?? [];
+      list.push({ position, mark });
+      perChapter.set(chapterId, list);
+    });
+  }
+  const sections = new Map<string, MockSectionResult>();
+  const sectionOf = new Map(inTest.map((chapter) => [chapter.id, chapter]));
+  for (const topic of topics) {
+    const chapter = sectionOf.get(topic.id);
+    const key = chapter ? String(chapter.section_position) : "gone";
+    const section = sections.get(key) ?? {
+      key,
+      label: chapter ? `${sectionLetter(chapter.section_position)} · ${chapter.section_title}` : "No longer in the Handbook",
+      right: 0,
+      outOf: 0,
+      chapters: [],
+    };
+    // The question list only when it agrees with the stored totals (a question can't change chapter in the Handbook).
+    const questions = perChapter.get(topic.id) ?? null;
+    const agrees = questions !== null && questions.length === topic.outOf && questions.filter((q) => q.mark === "R").length === topic.right;
+    section.chapters.push({ ...topic, unanswered: agrees ? questions.filter((q) => q.mark === "U").length : null, questions: agrees ? questions : null });
+    section.right += topic.right;
+    section.outOf += topic.outOf;
+    sections.set(key, section);
+  }
+  return [...sections.values()];
 }
 
 const missedIds = (row: { question_ids: string[] | null; marks: string | null }) =>
@@ -347,6 +405,7 @@ export async function loadMockReview(userId: string, attemptId: string): Promise
       position,
       mark,
       flaggedInTest: row.flags?.[position] === "F",
+      chapterId: question.chapterId,
       chapterLabel: question.chapterLabel,
       question: toClientQuestion({ ...question, id }, "practice"),
       response: row.responses?.[position] ?? null,
