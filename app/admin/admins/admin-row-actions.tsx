@@ -6,7 +6,7 @@ import { PanelButton, RowActions, type RowAction } from "@/components/admin/row-
 import { buttonClass, inputClass } from "@/components/admin/styles";
 import { NAME_MAX_LENGTH } from "@/lib/users/name";
 import { MAX_EMAIL_LENGTH, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from "@/lib/users/credentials";
-import { createAdmin, deleteAdmin, moveAllCandidates, updateAdminEmail, updateAdminName, updateAdminPassword } from "./actions";
+import { createAdmin, deleteAdmin, moveAllCandidates, setAdminOfficeExempt, updateAdminEmail, updateAdminName, updateAdminPassword } from "./actions";
 import { PasswordInput } from "@/components/password-input";
 
 export function NewAdminButton() {
@@ -50,12 +50,14 @@ export function AdminRowActions({
   email,
   name,
   candidateCount,
+  officeExempt,
   otherAdmins,
 }: {
   id: string;
   email: string;
   name: string | null;
   candidateCount: number;
+  officeExempt: boolean;
   // label: "Name (email)", or the email when there is no name.
   otherAdmins: { id: string; label: string }[];
 }) {
@@ -158,6 +160,17 @@ export function AdminRowActions({
         </ActionForm>
       ),
     },
+    officeExempt
+      ? {
+          label: "Office network only",
+          run: () => setAdminOfficeExempt(id, false),
+          successMessage: "This Admin can now work only from the office network (when the check is on).",
+        }
+      : {
+          label: "Allow from any network",
+          run: () => setAdminOfficeExempt(id, true),
+          successMessage: "This Admin can now work from any network.",
+        },
     {
       label: "Delete",
       danger: true,

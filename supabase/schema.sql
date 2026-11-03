@@ -53,11 +53,14 @@ create table users (
   session_version integer not null default 1 check (session_version > 0),
   -- Candidates: the language Listen reads Handbook pages in (voice_languages, added below). Staff: unused.
   preferred_language varchar(10) not null default 'en' check (preferred_language ~ '^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$'),
+  -- Admins only: may use admin pages from any network while the office network check is on.
+  office_exempt boolean not null default false,
   constraint users_candidate_fields_check check (
     (role = 'candidate' and test_type_id is not null and admin_id is not null)
     or (role <> 'candidate' and admin_id is null)
   ),
-  constraint users_current_test_type_check check ((role = 'candidate') = (current_test_type_id is not null))
+  constraint users_current_test_type_check check ((role = 'candidate') = (current_test_type_id is not null)),
+  constraint users_office_exempt_check check (not office_exempt or role = 'admin')
 );
 
 create index users_admin_id_idx on users (admin_id);
@@ -122,7 +125,7 @@ create index activity_logs_switch_target_idx on activity_logs (target_id, create
 create table auth_events (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz not null default now(),
-  event varchar not null check (event in ('login_success', 'login_failed', 'logout', 'login_paused', 'password_check_failed')),
+  event varchar not null check (event in ('login_success', 'login_failed', 'logout', 'login_paused', 'password_check_failed', 'login_refused_network')),
   user_id uuid,
   email varchar not null,
   role role_type,
@@ -131,9 +134,9 @@ create table auth_events (
 
 create index auth_events_created_at_idx on auth_events (created_at desc);
 create index auth_events_user_idx on auth_events (user_id, created_at desc);
--- Rate limiting counts recent failed logins per email and per address.
-create index auth_events_failed_email_idx on auth_events (email, created_at desc) where event = 'login_failed';
-create index auth_events_failed_ip_idx on auth_events (ip_address, created_at desc) where event = 'login_failed';
+-- Rate limiting counts recent failed and refused logins per email and per address.
+create index auth_events_failed_email_idx on auth_events (email, created_at desc) where event in ('login_failed', 'login_refused_network');
+create index auth_events_failed_ip_idx on auth_events (ip_address, created_at desc) where event in ('login_failed', 'login_refused_network');
 
 -- Logs are append-only. TRUNCATE (a deliberate DB-level reset) still works.
 create function prevent_log_changes() returns trigger
@@ -734,3 +737,21 @@ create table voice_bulk_runs (
 );
 
 create unique index voice_bulk_runs_open_key on voice_bulk_runs (chapter_id, language) where finished_at is null;
+
+-- Office network (0042): when on, Admins who aren't exempt (users.office_exempt) can sign in and use admin pages only
+-- from these addresses. The Superadmin and candidates are never limited.
+create table office_network (
+  id boolean primary key default true check (id),
+  is_on boolean not null default false,
+  updated_at timestamptz not null default now()
+);
+
+insert into office_network default values;
+
+-- One address ("203.0.113.8") or range ("203.0.113.8/30"), IPv4 or IPv6, as the app stores it after checking.
+create table office_network_addresses (
+  id uuid primary key default gen_random_uuid(),
+  address varchar(64) not null unique,
+  label varchar(60) not null check (length(trim(label)) > 0),
+  created_at timestamptz not null default now()
+);

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { requireRole } from "@/lib/auth/guard";
 import { pool } from "@/lib/db/pool";
 import { formatUkDate } from "@/lib/candidates/access";
+import { Badge } from "@/components/admin/badge";
 import { PersonLabel } from "@/components/admin/person-label";
 import { PageHeader } from "@/components/admin/page-header";
 import { Cell, Row, Table } from "@/components/admin/table";
@@ -16,17 +17,18 @@ interface AdminRow {
   full_name: string | null;
   candidate_count: number;
   created_at: string;
+  office_exempt: boolean;
 }
 
 export default async function AdminsPage() {
   await requireRole(["superadmin"]);
 
   const { rows: admins } = await pool.query<AdminRow>(
-    `select a.id, a.email, a.full_name, count(c.id)::int as candidate_count, a.created_at
+    `select a.id, a.email, a.full_name, count(c.id)::int as candidate_count, a.created_at, a.office_exempt
      from users a
      left join users c on c.admin_id = a.id
      where a.role = 'admin'
-     group by a.id, a.email, a.full_name, a.created_at
+     group by a.id, a.email, a.full_name, a.created_at, a.office_exempt
      order by a.created_at desc`
   );
 
@@ -43,6 +45,11 @@ export default async function AdminsPage() {
           <Row key={admin.id}>
             <Cell kind="primary">
               <PersonLabel name={admin.full_name} email={admin.email} />
+              {admin.office_exempt && (
+                <span className="mt-1 block">
+                  <Badge tone="info">Any network</Badge>
+                </span>
+              )}
             </Cell>
             <Cell label="Candidates">
               {admin.candidate_count > 0 ? (
@@ -61,6 +68,7 @@ export default async function AdminsPage() {
                 email={admin.email}
                 name={admin.full_name}
                 candidateCount={admin.candidate_count}
+                officeExempt={admin.office_exempt}
                 otherAdmins={admins.filter((other) => other.id !== admin.id).map((other) => ({ id: other.id, label: other.full_name ? `${other.full_name} (${other.email})` : other.email }))}
               />
             </Cell>

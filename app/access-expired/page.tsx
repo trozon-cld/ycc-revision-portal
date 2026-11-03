@@ -3,14 +3,14 @@ import { redirect } from "next/navigation";
 import { CARD, PAGE_TITLE, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { LogoutButton } from "@/components/logout-button";
 import { SESSION_ENDED_LOGIN } from "@/lib/auth/constants";
-import { getLiveSession, hasAccess } from "@/lib/auth/guard";
+import { getSignedInAccount, hasAccess } from "@/lib/auth/guard";
 import { getSession } from "@/lib/auth/session";
 
 export const metadata: Metadata = { title: "Access ended" };
 
 export default async function AccessExpiredPage() {
   if (!(await getSession())) redirect("/login");
-  const live = await getLiveSession();
+  const live = await getSignedInAccount();
   if (!live) redirect(SESSION_ENDED_LOGIN);
   // Unblocked or extended since: straight back in.
   if (live.account.role !== "candidate") redirect("/admin");

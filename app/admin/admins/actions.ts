@@ -289,6 +289,40 @@ export async function moveAllCandidates(
   return result;
 }
 
+// Exempt Admins may use admin pages from any network while the office network check is on.
+export async function setAdminOfficeExempt(adminId: string, exempt: boolean): Promise<AdminActionState> {
+  const session = await requireRole(["superadmin"]);
+  if (!isUuid(adminId) || typeof exempt !== "boolean") return { error: NOT_FOUND };
+
+  const result = await withTransaction<AdminActionState>(async (client) => {
+    const { rows } = await client.query<{ email: string; office_exempt: boolean }>(
+      `select email, office_exempt from users where id = $1 and role = 'admin' for update`,
+      [adminId]
+    );
+    const admin = rows[0];
+    if (!admin) return { error: NOT_FOUND };
+    if (admin.office_exempt === exempt) return { success: true };
+
+    await client.query(`update users set office_exempt = $2 where id = $1`, [adminId, exempt]);
+    await logActivity(
+      client,
+      session,
+      "admin.office_exemption_changed",
+      { type: "admin", id: adminId, label: admin.email },
+      { from: exemptionLabel(admin.office_exempt), to: exemptionLabel(exempt) }
+    );
+    return { success: true };
+  });
+
+  revalidatePath("/admin/admins");
+  revalidatePath("/admin/office-network");
+  return result;
+}
+
+function exemptionLabel(exempt: boolean) {
+  return exempt ? "Any network" : "Office network only";
+}
+
 async function lockAdmin(
   client: PoolClient,
   adminId: string

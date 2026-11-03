@@ -5,6 +5,7 @@ export const ACTIVITY_ACTIONS = {
   "admin.password_changed": "Changed Admin password",
   "admin.name_changed": "Changed Admin name",
   "admin.deleted": "Deleted Admin",
+  "admin.office_exemption_changed": "Changed Admin's office network exemption",
   "candidate.created": "Created candidate",
   "candidate.email_changed": "Changed candidate email",
   "candidate.name_changed": "Changed candidate name",
@@ -103,6 +104,9 @@ export const ACTIVITY_ACTIONS = {
   "account.password_changed": "Changed own password",
   "account.language_changed": "Changed listening language",
   "log.login_records_archived": "Archived old login records",
+  "office_network.changed": "Turned the office network check on or off",
+  "office_network.address_added": "Added office network address",
+  "office_network.address_removed": "Removed office network address",
 } as const;
 
 export type ActivityAction = keyof typeof ACTIVITY_ACTIONS;
@@ -114,6 +118,7 @@ export const ADMIN_ACTIONS = (Object.keys(ACTIVITY_ACTIONS) as ActivityAction[])
 // Groups actions by area for the "Type of action" filter; matched by the part before the dot.
 export const ACTION_AREAS: { label: string; prefixes: string[] }[] = [
   { label: "Admins", prefixes: ["admin"] },
+  { label: "Office network", prefixes: ["office_network"] },
   { label: "Candidates", prefixes: ["candidate"] },
   { label: "Test types", prefixes: ["test_area", "test_type"] },
   { label: "Handbook", prefixes: ["structure", "section", "chapter", "content_page", "page_translation", "page_audio"] },
@@ -163,6 +168,8 @@ export const AUTH_EVENTS = {
   // Written once when too many failed attempts pause logins for an email or address (lib/auth/rate-limit.ts).
   login_paused: "Logins paused (too many failed attempts)",
   password_check_failed: "Wrong current password (My account)",
+  // Right password, but an Admin outside the office network while that check is on (lib/auth/office-network.ts).
+  login_refused_network: "Refused: outside the office network",
 } as const;
 
 export type AuthEvent = keyof typeof AUTH_EVENTS;

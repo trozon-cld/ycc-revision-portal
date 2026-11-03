@@ -6,6 +6,7 @@ import { ArrowCounterClockwiseIcon } from "@phosphor-icons/react/dist/ssr/ArrowC
 import { ArrowDownIcon } from "@phosphor-icons/react/dist/ssr/ArrowDown";
 import { ArrowUpIcon } from "@phosphor-icons/react/dist/ssr/ArrowUp";
 import { BookOpenIcon } from "@phosphor-icons/react/dist/ssr/BookOpen";
+import { BuildingsIcon } from "@phosphor-icons/react/dist/ssr/Buildings";
 import { CaretDownIcon } from "@phosphor-icons/react/dist/ssr/CaretDown";
 import { CaretLeftIcon } from "@phosphor-icons/react/dist/ssr/CaretLeft";
 import { CaretRightIcon } from "@phosphor-icons/react/dist/ssr/CaretRight";
@@ -82,6 +83,7 @@ const ICONS = {
   admins: UserGearIcon,
   candidates: UsersIcon,
   testTypes: TagIcon,
+  office: BuildingsIcon,
   faq: ChatCircleTextIcon,
   archive: ArchiveIcon,
   activity: ClockCounterClockwiseIcon,

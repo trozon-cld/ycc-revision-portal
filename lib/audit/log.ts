@@ -20,7 +20,8 @@ type TargetType =
   | "log_archive"
   | "batch"
   | "backup"
-  | "structure";
+  | "structure"
+  | "office_network";
 type Details = Record<string, string>;
 
 export function ipFromHeaders(requestHeaders: Headers): string | null {

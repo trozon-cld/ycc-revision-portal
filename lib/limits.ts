@@ -10,3 +10,7 @@ export const SUPPORT_EMAIL_MAX_LENGTH = 255;
 export const SUPPORT_PHONE_MAX_LENGTH = 40;
 export const SUPPORT_HOURS_MAX_LENGTH = 120;
 export const SUPPORT_NOTE_MAX_LENGTH = 500;
+// Office network (Superadmin): addresses Admins may work from.
+export const OFFICE_ADDRESS_MAX_COUNT = 20;
+export const OFFICE_ADDRESS_MAX_LENGTH = 64;
+export const OFFICE_LABEL_MAX_LENGTH = 60;

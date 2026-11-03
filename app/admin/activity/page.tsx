@@ -331,7 +331,7 @@ async function LoginsTab({
               </span>
             </Cell>
             <Cell label="Event">
-              <Badge tone={entry.event === "login_failed" || entry.event === "password_check_failed" ? "danger" : entry.event === "login_paused" ? "warning" : entry.event === "logout" ? "neutral" : "success"}>
+              <Badge tone={entry.event === "login_failed" || entry.event === "password_check_failed" ? "danger" : entry.event === "login_paused" || entry.event === "login_refused_network" ? "warning" : entry.event === "logout" ? "neutral" : "success"}>
                 {AUTH_EVENTS[entry.event]}
               </Badge>
             </Cell>
