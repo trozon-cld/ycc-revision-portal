@@ -24,6 +24,7 @@ import { CandidateStatusBadge } from "../status-badge";
 import { AdminCandidateActions, SuperadminCandidateActions } from "../candidate-row-actions";
 import { loadAdminOptions, loadTestTypeChoices } from "../options";
 import { toRowCandidate } from "../row-candidate";
+import { LinkPending } from "@/components/admin/link-pending";
 
 export const metadata: Metadata = { title: "Candidate" };
 
@@ -161,11 +162,12 @@ export default async function CandidateProgressPage({ params, searchParams }: Pa
                     key={item.id}
                     href={item.isCurrent ? path : `${path}?testType=${item.id}`}
                     aria-current={item.id === testType.id ? "page" : undefined}
-                    className={buttonClass(item.id === testType.id ? "primary" : "secondary", "sm")}
+                    className={`relative ${buttonClass(item.id === testType.id ? "primary" : "secondary", "sm")}`}
                   >
                     {item.name}
                     {item.isCurrent && <span className="sr-only"> (current test type)</span>}
                     {item.isCurrent && <span aria-hidden="true">·&nbsp;current</span>}
+                    <LinkPending />
                   </Link>
                 ))}
               </nav>

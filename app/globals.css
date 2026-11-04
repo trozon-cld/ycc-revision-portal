@@ -138,7 +138,7 @@ body {
     animation: loading-fade-in 150ms ease-out 150ms both, link-pending-pulse 900ms ease-in-out 300ms infinite;
   }
 }
-#main-content[aria-busy="true"] > div > :not(nav) {
+[data-busy-fade] {
   opacity: 0.55;
   transition: opacity 150ms ease-out 150ms;
 }
