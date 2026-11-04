@@ -9,10 +9,12 @@ import { useBackdropClose } from "./dialog";
 import { CONTENT_EDITORS } from "@/lib/auth/content-editors";
 import { ToastProvider } from "./toast";
 import { Icon, type IconName } from "@/components/icons";
+import { LANGUAGES_MANAGE_PATH, LANGUAGES_PAGES_PATH } from "@/lib/voice/language-tabs";
 
 type Role = "admin" | "superadmin";
 type NavIconName = "admins" | "candidates" | "testTypes" | "office" | "handbook" | "questions" | "media" | "faq" | "languages" | "backup" | "activity" | "account";
-type NavItem = { href: string; label: string; icon: NavIconName };
+// `match`: the addresses it lights for, when wider than its own link (Languages opens its Languages tab).
+type NavItem = { href: string; label: string; icon: NavIconName; match?: string };
 type NavGroup = { heading?: string; items: NavItem[] };
 
 // Shown to whoever CONTENT_EDITORS lists (lib/auth/content-editors.ts).
@@ -21,7 +23,7 @@ const CONTENT: NavGroup = {
   items: [
     { href: "/admin/handbook", label: "Handbook", icon: "handbook" },
     { href: "/admin/questions", label: "Question Bank", icon: "questions" },
-    { href: "/admin/handbook/languages", label: "Languages", icon: "languages" },
+    { href: LANGUAGES_MANAGE_PATH, label: "Languages", icon: "languages", match: LANGUAGES_PAGES_PATH },
     { href: "/admin/media", label: "Media", icon: "media" },
     { href: "/admin/faq", label: "General Queries", icon: "faq" },
     { href: "/admin/backup", label: "Backup & Restore", icon: "backup" },
@@ -76,9 +78,9 @@ const NAV: Record<Role, NavGroup[]> = {
 // The link for this address: the longest one it falls under, so Languages (under /admin/handbook) lights alone.
 function currentHref(groups: NavGroup[], pathname: string): string | undefined {
   return groups
-    .flatMap((group) => group.items.map((item) => item.href))
-    .filter((href) => pathname === href || pathname.startsWith(`${href}/`))
-    .sort((a, b) => b.length - a.length)[0];
+    .flatMap((group) => group.items.map((item) => ({ href: item.href, prefix: item.match ?? item.href })))
+    .filter(({ prefix }) => pathname === prefix || pathname.startsWith(`${prefix}/`))
+    .sort((a, b) => b.prefix.length - a.prefix.length)[0]?.href;
 }
 
 const ROLE_LABEL: Record<Role, string> = { superadmin: "Superadmin", admin: "Admin" };

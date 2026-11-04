@@ -87,7 +87,7 @@ export const ACTIVITY_ACTIONS = {
   "language.restored": "Showed Listen language again",
   "language.deleted": "Deleted Listen language",
   "language.audio_limits_changed": "Changed Gemini limits",
-  "listen.bulk_run": "Ran bulk Listen",
+  "listen.bulk_run": "Ran Batch Generate",
   "media.uploaded": "Uploaded picture",
   "media.replaced": "Replaced picture",
   "media.alt_text_changed": "Changed picture description",

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LinkPending } from "./link-pending";
 import { buttonClass } from "./styles";
 
 // "?q=x&page=2" for a list's filters and page, leaving out empty values; "" when there are none.
@@ -37,16 +38,18 @@ export function Pagination({
   return (
     <nav aria-label="Pages" className="mt-4 flex items-center justify-between gap-2">
       {page > 1 ? (
-        <Link href={hrefFor(page - 1)} className={buttonClass("secondary", "sm")}>
+        <Link href={hrefFor(page - 1)} className={`relative ${buttonClass("secondary", "sm")}`}>
           ← Previous
+          <LinkPending />
         </Link>
       ) : (
         <span />
       )}
       <span className="text-center text-sm text-slate-600">{range ?? `Page ${page}`}</span>
       {hasMore ? (
-        <Link href={hrefFor(page + 1)} className={buttonClass("secondary", "sm")}>
+        <Link href={hrefFor(page + 1)} className={`relative ${buttonClass("secondary", "sm")}`}>
           Next →
+          <LinkPending />
         </Link>
       ) : (
         <span />

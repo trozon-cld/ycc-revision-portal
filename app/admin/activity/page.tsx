@@ -21,6 +21,7 @@ import { PageHeader } from "@/components/admin/page-header";
 import { buttonClass } from "@/components/admin/styles";
 import { Pagination, pageFromParam } from "@/components/admin/pagination";
 import { Cell, Row, Table } from "@/components/admin/table";
+import { LinkPending } from "@/components/admin/link-pending";
 import { ActionForm } from "@/components/admin/action-form";
 import { ARCHIVE_AFTER_DAYS, archiveMonthText, listArchives, loadArchiveStatus } from "@/lib/audit/archive";
 import { formatBytes } from "@/lib/format";
@@ -432,11 +433,12 @@ function TabLink({ href, isCurrent, label }: { href: string; isCurrent: boolean;
     <Link
       href={href}
       aria-current={isCurrent ? "page" : undefined}
-      className={`inline-flex h-9 items-center rounded px-4 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:h-8 ${
+      className={`relative inline-flex h-9 items-center rounded px-4 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:h-8 ${
         isCurrent ? "bg-primary text-white" : "text-slate-700 hover:bg-slate-100"
       }`}
     >
       {label}
+      <LinkPending />
     </Link>
   );
 }

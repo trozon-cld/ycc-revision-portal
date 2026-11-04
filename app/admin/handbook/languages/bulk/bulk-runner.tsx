@@ -254,7 +254,7 @@ export function BulkRunner({ plan, limits, closeHref }: { plan: BulkPlan; limits
             </div>
             <div
               role="progressbar"
-              aria-label="Bulk Listen progress"
+              aria-label="Batch Generate progress"
               aria-valuemin={0}
               aria-valuemax={view.total || plan.todo.length}
               aria-valuenow={view.processed}

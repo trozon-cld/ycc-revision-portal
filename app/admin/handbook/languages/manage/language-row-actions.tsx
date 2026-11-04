@@ -73,7 +73,7 @@ export function LanguageRowActions({
     actions.push({
       label: "Gemini limits",
       title: `Gemini limits for ${name}`,
-      description: "Match these to your Gemini key's tier. Every audio file made counts: in bulk runs and one at a time.",
+      description: "Match these to your Gemini key's tier. Every audio file made counts: in Batch Generate and one at a time.",
       render: (close) => (
         <ActionForm
           action={setGeminiLimitsAction}

@@ -23,11 +23,11 @@ import { Cell, Row, Table } from "@/components/admin/table";
 import { VoiceUsage } from "../voice-usage";
 import { BulkRunner, type BulkLimits } from "./bulk-runner";
 
-export const metadata: Metadata = { title: "Bulk Listen" };
+export const metadata: Metadata = { title: "Batch Generate" };
 
 const BASE_PATH = LANGUAGES_BULK_PATH;
 
-// The Bulk tab: one language at a time, its progress per chapter, and a run for one chapter.
+// The Batch Generate tab: one language at a time, its progress per chapter, and a run for one chapter.
 export default async function BulkListenPage({ searchParams }: PageProps<"/admin/handbook/languages/bulk">) {
   const session = await requireRole(CONTENT_EDITORS);
   const params = await searchParams;
@@ -77,7 +77,7 @@ export default async function BulkListenPage({ searchParams }: PageProps<"/admin
           Handbook
         </Link>
       </nav>
-      <PageHeader title="Languages and audio" description={`Bulk Listen · ${shown.name}: ${formatCount(totals.ready)} of ${formatCount(totals.total, "item")} done`} />
+      <PageHeader title="Languages and audio" description={`Batch Generate · ${shown.name}: ${formatCount(totals.ready)} of ${formatCount(totals.total, "item")} done`} />
       <PageTabs label="Languages and audio" tabs={LANGUAGE_TABS} current={LANGUAGES_BULK_PATH} />
       <VoiceUsage usage={usage} />
 

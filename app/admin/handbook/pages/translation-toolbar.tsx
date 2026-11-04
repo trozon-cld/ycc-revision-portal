@@ -145,7 +145,7 @@ export function TranslationToolbar({
 
 function stateLine(state: TranslationState, summary: TranslationSummary, outdatedLine: string): string {
   if (state === "checked" && summary.checkedAutomatically) {
-    return `Checked automatically by bulk Listen ${formatUkDateTime(summary.checkedAt ?? summary.updatedAt)}. Read it, then mark it as checked.`;
+    return `Checked automatically by Batch Generate ${formatUkDateTime(summary.checkedAt ?? summary.updatedAt)}. Read it, then mark it as checked.`;
   }
   if (state === "checked") return `Checked ${formatUkDateTime(summary.checkedAt ?? summary.updatedAt)}.`;
   if (state === "outdated") return outdatedLine;
