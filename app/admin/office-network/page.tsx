@@ -11,13 +11,11 @@ import { OFFICE_ADDRESS_MAX_COUNT } from "@/lib/limits";
 import { Badge } from "@/components/admin/badge";
 import { PageHeader } from "@/components/admin/page-header";
 import { PersonLabel } from "@/components/admin/person-label";
-import { cardClass } from "@/components/admin/styles";
+import { cardClass, linkClass, warnNoteClass } from "@/components/admin/styles";
 import { Cell, Row, Table } from "@/components/admin/table";
 import { AddAddressButton, OfficeAddressActions, OfficeSwitchButton } from "./office-network-controls";
 
 export const metadata: Metadata = { title: "Office Network" };
-
-const NOTE = "rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25";
 
 // Superadmin only: where Admins may work from. Exemptions are set per Admin on the Admins page.
 export default async function OfficeNetworkPage() {
@@ -77,7 +75,7 @@ export default async function OfficeNetworkPage() {
         </dl>
 
         {isOn && ip && !onList && (
-          <p role="status" className={`${NOTE} mb-4`}>
+          <p role="status" className={`${warnNoteClass} mb-4`}>
             Your current address isn&apos;t on the list. You can still work from here, but Admins using this network would
             be refused.
           </p>
@@ -105,7 +103,7 @@ export default async function OfficeNetworkPage() {
         </h2>
         <p className="mt-0.5 mb-3 text-sm text-slate-600">
           Change this on the{" "}
-          <Link href="/admin/admins" className="text-primary underline underline-offset-2">
+          <Link href="/admin/admins" className={linkClass}>
             Admins page
           </Link>{" "}
           (row menu: Allow from any network).

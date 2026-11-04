@@ -1,6 +1,5 @@
 "use server";
 
-import type { PoolClient } from "pg";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/guard";
 import { CONTENT_EDITORS } from "@/lib/auth/content-editors";
@@ -15,6 +14,7 @@ import {
   validateTitle,
   type StructureActionState,
 } from "@/lib/handbook/structure";
+import { nameInUse } from "@/lib/db/names";
 
 const DUPLICATE_TITLE = "A section with this title already exists.";
 const NOT_FOUND = "This section no longer exists.";
@@ -39,7 +39,7 @@ export async function createSection(
       const locked = await structureLockedError(client);
       if (locked) return { error: locked };
       await lockHandbookStructure(client);
-      if (await titleTaken(client, title, null)) return { error: DUPLICATE_TITLE };
+      if (await nameInUse(client, "sections", title, null)) return { error: DUPLICATE_TITLE };
 
       const { rows } = await client.query<{ count: number }>(`select count(*)::int as count from sections`);
       if (rows[0].count >= MAX_SECTIONS) return { error: `The Handbook can have up to ${MAX_SECTIONS} sections (A–Z).` };
@@ -89,7 +89,7 @@ export async function renameSection(
       );
       if (!rows[0]) return { error: NOT_FOUND };
       if (rows[0].title === title) return { success: true };
-      if (await titleTaken(client, title, sectionId)) return { error: DUPLICATE_TITLE };
+      if (await nameInUse(client, "sections", title, sectionId)) return { error: DUPLICATE_TITLE };
 
       await client.query(`update sections set title = $2, updated_at = now() where id = $1`, [sectionId, title]);
       await logActivity(
@@ -256,14 +256,6 @@ export async function setSectionLinking(
 
   revalidatePath(PAGE_PATH);
   return result;
-}
-
-async function titleTaken(client: PoolClient, title: string, exceptId: string | null) {
-  const { rows } = await client.query(
-    `select 1 from sections where lower(title) = lower($1) and ($2::uuid is null or id <> $2::uuid)`,
-    [title, exceptId]
-  );
-  return rows.length > 0;
 }
 
 function blockedMessage(chapterCount: number) {

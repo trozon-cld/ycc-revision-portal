@@ -13,6 +13,7 @@ import type { ListenMode } from "@/lib/voice/language-store";
 import { lockHandbookStructure } from "@/lib/handbook/structure";
 import { structureLockedError } from "@/lib/handbook/structure-lock";
 import { claimedElsewhere, linkSharedChapters, sharedChapterIds } from "@/lib/handbook/sharing";
+import { nameInUse } from "@/lib/db/names";
 
 export type TestTypeActionState = FormState;
 
@@ -39,7 +40,7 @@ export async function createTestType(
   try {
     const result = await withTransaction<TestTypeActionState>(async (client) => {
       await lockTestTypeOrder(client);
-      if (await nameTaken(client, name, null)) return { error: DUPLICATE_NAME };
+      if (await nameInUse(client, "test_types", name, null)) return { error: DUPLICATE_NAME };
 
       const { rows: testAreas } = await client.query<{ name: string }>(
         `select name from test_areas where id = $1 for key share`,
@@ -92,7 +93,7 @@ export async function renameTestType(
       const testType = await lockTestType(client, testTypeId);
       if (!testType) return { error: "This test type no longer exists." };
       if (testType.name === name) return { success: true };
-      if (await nameTaken(client, name, testTypeId)) return { error: DUPLICATE_NAME };
+      if (await nameInUse(client, "test_types", name, testTypeId)) return { error: DUPLICATE_NAME };
 
       await client.query(`update test_types set name = $2 where id = $1`, [testTypeId, name]);
       await logActivity(
@@ -429,14 +430,6 @@ async function lockTestType(client: PoolClient, testTypeId: string) {
     [testTypeId]
   );
   return rows[0];
-}
-
-async function nameTaken(client: PoolClient, name: string, exceptId: string | null) {
-  const { rows } = await client.query(
-    `select 1 from test_types where lower(name) = lower($1) and ($2::uuid is null or id <> $2::uuid)`,
-    [name, exceptId]
-  );
-  return rows.length > 0;
 }
 
 function validateName(name: string): string | null {

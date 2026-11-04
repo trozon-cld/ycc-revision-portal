@@ -6,7 +6,7 @@ import type { Block } from "@/lib/content/blocks";
 import type { BookPageData, ResolvedMedia } from "@/lib/content/book";
 import type { ChapterContext } from "@/lib/content/pages";
 import { BookPreview } from "@/components/admin/book-preview";
-import { cardClass, inputClass, textareaClass } from "@/components/admin/styles";
+import { cardClass, inputClass, warnNoteClass, textareaClass } from "@/components/admin/styles";
 import { useToast } from "@/components/admin/toast";
 import { LeaveDialog, useLeaveGuard } from "@/components/admin/leave-guard";
 import { NOT_THROUGH_MESSAGE, reachServer } from "@/lib/forms";
@@ -155,7 +155,7 @@ export function TranslationsEditor({
         onSave={save}
       />
       {missingBlocks > 0 && (
-        <p className="mt-3 rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25">
+        <p className={`mt-3 ${warnNoteClass}`}>
           The English page has {missingBlocks} new block{missingBlocks === 1 ? "" : "s"} that {missingBlocks === 1 ? "isn't" : "aren't"} translated yet. Fill {missingBlocks === 1 ? "it" : "them"} in below, or translate the page again.
         </p>
       )}

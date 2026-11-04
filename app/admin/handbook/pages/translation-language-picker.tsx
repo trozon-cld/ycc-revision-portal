@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { inputClass } from "@/components/admin/styles";
+import { inputClass, linkClass } from "@/components/admin/styles";
 import type { LanguageName } from "@/lib/voice/languages";
 import { TRANSLATION_STATE_LABELS, type TranslationState } from "@/lib/voice/status";
 
@@ -46,7 +46,7 @@ export function TranslationLanguagePicker({
         {next ? (
           <>
             Next to check:{" "}
-            <Link href={hrefFor(next.code)} className="text-primary underline underline-offset-2 hover:text-ink">
+            <Link href={hrefFor(next.code)} className={linkClass}>
               {next.name}
             </Link>
           </>

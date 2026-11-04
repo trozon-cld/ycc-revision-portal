@@ -56,11 +56,6 @@ export async function loadArchiveStatus(): Promise<ArchiveStatus> {
   return { waiting, next: next[0] ?? null };
 }
 
-export async function countArchives(): Promise<number> {
-  const { rows } = await pool.query<{ count: number }>(`select count(*)::int as count from log_archives where log = 'login_records'`);
-  return rows[0].count;
-}
-
 export async function listArchives(offset: number, limit: number): Promise<LogArchive[]> {
   const { rows } = await pool.query<{
     id: string;

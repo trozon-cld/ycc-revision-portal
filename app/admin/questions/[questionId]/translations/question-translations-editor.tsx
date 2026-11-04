@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { LeaveDialog, useLeaveGuard } from "@/components/admin/leave-guard";
-import { cardClass, inputClass, textareaClass } from "@/components/admin/styles";
+import { cardClass, inputClass, warnNoteClass, textareaClass } from "@/components/admin/styles";
 import { useToast } from "@/components/admin/toast";
 import { NOT_THROUGH_MESSAGE, reachServer } from "@/lib/forms";
 import { optionLetter } from "@/lib/questions/types/single-text";
@@ -149,7 +149,7 @@ export function QuestionTranslationsEditor({
         onSave={save}
       />
       {current?.optionsChanged && (
-        <p className="mt-3 rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25">
+        <p className={`mt-3 ${warnNoteClass}`}>
           The English options were added, removed or moved since this was translated, so it can&apos;t be edited. Translate the question again.
         </p>
       )}

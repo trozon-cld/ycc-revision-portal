@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ActionForm } from "@/components/admin/action-form";
 import { PicturePicker } from "@/components/admin/picture-picker";
-import { buttonClass } from "@/components/admin/styles";
+import { buttonClass, warnNoteClass } from "@/components/admin/styles";
 import { BackCoverFace, FrontCoverFace } from "@/components/learning/book-covers";
 import { COVER_MIN_HEIGHT, COVER_MIN_WIDTH, coverAdvice } from "@/lib/content/covers";
 import { listPickerMedia, type PickerItem } from "@/app/admin/handbook/pages/actions";
@@ -145,7 +145,7 @@ function CoverSlot({
       </div>
 
       {advice.map((line) => (
-        <p key={line} className="rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25">
+        <p key={line} className={warnNoteClass}>
           {line}
         </p>
       ))}

@@ -33,6 +33,7 @@ import { voiceUsageSummary } from "@/lib/voice/quota";
 import { AudioBadge, TranslationBadge } from "../pages/translation-badge";
 import { VoiceUsage } from "./voice-usage";
 import { Breadcrumbs } from "@/components/admin/breadcrumbs";
+import { linkClass } from "@/components/admin/styles";
 
 export const metadata: Metadata = { title: "Languages and Audio" };
 
@@ -110,7 +111,7 @@ export default async function LanguagesPage({ searchParams }: PageProps<"/admin/
                     <Link
                       href={showHref(language.code)}
                       aria-current={isShown ? "true" : undefined}
-                      className="text-primary underline underline-offset-2 hover:text-ink"
+                      className={linkClass}
                     >
                       {language.name}
                     </Link>

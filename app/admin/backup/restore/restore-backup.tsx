@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Dialog } from "@/components/admin/dialog";
 import { LeaveDialog, useLeaveGuard } from "@/components/admin/leave-guard";
 import { Cell, Row, Table } from "@/components/admin/table";
-import { buttonClass, cardClass, fileInputClass, labelClass } from "@/components/admin/styles";
+import { panelFooterClass, buttonClass, cardClass, fileInputClass, labelClass, errorNoteClass } from "@/components/admin/styles";
 import { formatBytes } from "@/lib/format";
 import { formatUkDateTime } from "@/lib/candidates/access";
 import { backupCounts } from "@/lib/content/backup/format";
@@ -80,7 +80,7 @@ export function RestoreBackup() {
         <div aria-live="polite">
           {state.status === "working" && <p className="text-sm text-slate-600">{state.step}</p>}
           {state.status === "failed" && (
-            <p role="alert" className="rounded-md bg-danger-bg px-3 py-2 text-sm text-danger-strong">
+            <p role="alert" className={errorNoteClass}>
               {state.message}
             </p>
           )}
@@ -127,7 +127,7 @@ export function RestoreBackup() {
           <p className="px-5 py-4 text-sm">
             Everything in {state.fileName} is added to this project, and its structure replaces this project&apos;s. This can&apos;t be undone from here.
           </p>
-          <div className="flex justify-end gap-2 border-t border-slate-200 px-5 py-3">
+          <div className={panelFooterClass}>
             <button type="button" onClick={() => setConfirming(false)} className={buttonClass("secondary")}>
               Cancel
             </button>

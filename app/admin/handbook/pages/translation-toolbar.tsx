@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { buttonClass, cardClass } from "@/components/admin/styles";
+import { buttonClass, cardClass, errorNoteClass, warnNoteClass } from "@/components/admin/styles";
 import { formatUkDateTime } from "@/lib/candidates/access";
 import type { LanguageName } from "@/lib/voice/languages";
 import type { TranslationSummary } from "@/lib/voice/page-translations";
@@ -115,7 +115,7 @@ export function TranslationToolbar({
 
       {notice}
       {problem && (
-        <div role="alert" className="mt-3 flex flex-wrap items-center gap-3 rounded-md bg-danger-bg px-3 py-2 text-sm text-danger-strong">
+        <div role="alert" className={`mt-3 flex flex-wrap items-center gap-3 ${errorNoteClass}`}>
           <p className="min-w-0 flex-1">{problem.message}</p>
           {problem.conflict && (
             <button type="button" onClick={() => window.location.reload()} className={buttonClass("secondary", "sm")}>
@@ -125,7 +125,7 @@ export function TranslationToolbar({
         </div>
       )}
       {confirmAgain && (
-        <div role="alertdialog" aria-labelledby="again-title" className="mt-3 rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25">
+        <div role="alertdialog" aria-labelledby="again-title" className={`mt-3 ${warnNoteClass}`}>
           <p id="again-title" className="font-medium">
             Translate the {what} into {language.name} again?
           </p>

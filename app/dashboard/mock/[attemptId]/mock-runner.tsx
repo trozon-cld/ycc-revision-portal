@@ -103,8 +103,7 @@ export function MockRunner({ run, initialTextSize }: { run: MockRun; initialText
   useEffect(() => {
     if (!timeUp) return;
     finish().catch(() => router.refresh());
-    // Runs once, when time runs out.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once, when time runs out (finish and router don't change that)
   }, [timeUp]);
 
   async function submit() {

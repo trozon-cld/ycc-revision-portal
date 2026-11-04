@@ -11,7 +11,7 @@ import { plainText } from "@/lib/content/inline";
 import { questionTypeLabel } from "@/lib/questions/registry";
 import type { QuestionType } from "@/lib/questions/types";
 import { PageHeader } from "@/components/admin/page-header";
-import { buttonClass } from "@/components/admin/styles";
+import { buttonClass, warnNoteClass } from "@/components/admin/styles";
 import { countOf } from "@/lib/format";
 import { AddQuestionsButton, ChapterOrder, type AddableQuestion, type OrderItem } from "./chapter-order";
 import { NewPageButton } from "./page-row-actions";
@@ -191,7 +191,7 @@ export default async function ChapterPagesPage({ params }: PageProps<"/admin/han
           <span className="font-medium text-ink">In test types:</span> {listNames(testTypeNames, 12)}
         </p>
       ) : (
-        <p className="mb-3 rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25">
+        <p className={`mb-3 ${warnNoteClass}`}>
           Not in any test type yet. Candidates won&apos;t see this chapter until it&apos;s added to one with Test types.
         </p>
       )}
@@ -203,7 +203,7 @@ export default async function ChapterPagesPage({ params }: PageProps<"/admin/han
       )}
 
       {drafts > 0 && (
-        <p className="mb-3 rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25">
+        <p className={`mb-3 ${warnNoteClass}`}>
           {drafts === 1 ? "1 item is a draft. Candidates won't see it" : `${drafts} items are drafts. Candidates won't see them`} until
           {drafts === 1 ? " it's" : " they're"} published.
         </p>

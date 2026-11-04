@@ -3,7 +3,7 @@
 import { ActionForm } from "@/components/admin/action-form";
 import { Field } from "@/components/admin/field";
 import { PanelButton, RowActions, type RowAction } from "@/components/admin/row-actions";
-import { buttonClass, inputClass } from "@/components/admin/styles";
+import { panelFooterClass, buttonClass, inputClass } from "@/components/admin/styles";
 import { NAME_MAX_LENGTH } from "@/lib/users/name";
 import { MAX_EMAIL_LENGTH, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from "@/lib/users/credentials";
 import { createAdmin, deleteAdmin, moveAllCandidates, setAdminOfficeExempt, updateAdminEmail, updateAdminName, updateAdminPassword } from "./actions";
@@ -184,7 +184,7 @@ export function AdminRowActions({
                 <strong className="font-medium [overflow-wrap:anywhere]">{email}</strong> owns {countLabel}. Add another
                 Admin first, so they can be moved there.
               </p>
-              <div className="flex justify-end border-t border-slate-200 px-5 py-3">
+              <div className={panelFooterClass}>
                 <button type="button" onClick={close} className={buttonClass("secondary")}>
                   Close
                 </button>

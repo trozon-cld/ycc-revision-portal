@@ -9,7 +9,7 @@ import { BANK_PAGE_SIZE, countBankQuestions, countQuestions, listBankQuestions, 
 import { availableQuestionTypes, QUESTION_TYPES } from "@/lib/questions/registry";
 import { isQuestionType, QUESTION_TYPE_KEYS } from "@/lib/questions/types";
 import { loadTestAreas } from "@/lib/handbook/test-types";
-import { isUuid } from "@/lib/ids";
+import { uuidOrNull } from "@/lib/ids";
 import { firstParam } from "@/lib/params";
 import { Badge } from "@/components/admin/badge";
 import { FilterBar, FilterSearch, FilterSelect } from "@/components/admin/filter-bar";
@@ -214,9 +214,6 @@ function PictureIcon() {
   return <Icon name="picture" size={14} weight="regular" className="mr-0.5 inline align-[-2px]" />;
 }
 
-function uuidOrNull(value: string | undefined): string | null {
-  return value && isUuid(value) ? value : null;
-}
 
 // Where the question is set to appear: placed in its chapter's Handbook pages, and its Practice / Mock test switches.
 function usedIn(row: BankRow): string[] {

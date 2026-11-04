@@ -18,7 +18,7 @@ import { Badge } from "@/components/admin/badge";
 import { FilterBar, FilterSelect } from "@/components/admin/filter-bar";
 import { PageHeader } from "@/components/admin/page-header";
 import { PageTabs } from "@/components/admin/page-tabs";
-import { buttonClass } from "@/components/admin/styles";
+import { buttonClass, warnNoteClass } from "@/components/admin/styles";
 import { Cell, Row, Table } from "@/components/admin/table";
 import { VoiceUsage } from "../voice-usage";
 import { BulkRunner, type BulkLimits } from "./bulk-runner";
@@ -95,7 +95,7 @@ export default async function BulkListenPage({ searchParams }: PageProps<"/admin
       </FilterBar>
 
       {chapterParam && !plan && (
-        <p role="alert" className="mb-4 rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25">
+        <p role="alert" className={`mb-4 ${warnNoteClass}`}>
           That chapter no longer exists. Choose one below.
         </p>
       )}

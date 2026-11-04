@@ -17,6 +17,7 @@ import { VoiceUsage } from "../voice-usage";
 import { AddLanguageButton, LanguageRowActions } from "./language-row-actions";
 import { Breadcrumbs } from "@/components/admin/breadcrumbs";
 import { LanguageLabel } from "@/components/admin/language-label";
+import { linkClass } from "@/components/admin/styles";
 
 export const metadata: Metadata = { title: "Languages" };
 
@@ -62,7 +63,7 @@ export default async function ManageLanguagesPage() {
         {languages.map((language) => (
           <Row key={language.code}>
             <Cell kind="primary">
-              <Link href={`${LANGUAGES_MANAGE_PATH}/${language.code}`} className="text-primary underline underline-offset-2 hover:text-ink">
+              <Link href={`${LANGUAGES_MANAGE_PATH}/${language.code}`} className={linkClass}>
                 <LanguageLabel language={language} />
               </Link>
             </Cell>

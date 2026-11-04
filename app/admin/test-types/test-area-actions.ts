@@ -8,6 +8,7 @@ import { logActivity } from "@/lib/audit/log";
 import { TEST_TYPE_NAME_MAX_LENGTH } from "@/lib/limits";
 import { cleanLine } from "@/lib/text";
 import type { FormState } from "@/lib/forms";
+import { nameInUse } from "@/lib/db/names";
 
 export type TestAreaActionState = FormState;
 
@@ -26,7 +27,7 @@ export async function createTestArea(_prevState: TestAreaActionState, formData: 
   try {
     result = await withTransaction<TestAreaActionState>(async (client) => {
       await lockTestAreaOrder(client);
-      if (await nameTaken(client, name, null)) return { error: DUPLICATE_NAME };
+      if (await nameInUse(client, "test_areas", name, null)) return { error: DUPLICATE_NAME };
 
       const { rows: counts } = await client.query<{ count: number }>(
         `select count(*)::int as count from test_areas`
@@ -72,7 +73,7 @@ export async function renameTestArea(_prevState: TestAreaActionState, formData: 
       );
       if (!rows[0]) return { error: NOT_FOUND };
       if (rows[0].name === name) return { success: true };
-      if (await nameTaken(client, name, testAreaId)) return { error: DUPLICATE_NAME };
+      if (await nameInUse(client, "test_areas", name, testAreaId)) return { error: DUPLICATE_NAME };
 
       await client.query(`update test_areas set name = $2, updated_at = now() where id = $1`, [testAreaId, name]);
       await logActivity(
@@ -194,14 +195,6 @@ export async function deleteTestArea(_prevState: TestAreaActionState, formData: 
 // Serialises changes to test area order; reads are not blocked.
 async function lockTestAreaOrder(client: PoolClient) {
   await client.query(`lock table test_areas in share row exclusive mode`);
-}
-
-async function nameTaken(client: PoolClient, name: string, exceptId: string | null) {
-  const { rows } = await client.query(
-    `select 1 from test_areas where lower(name) = lower($1) and ($2::uuid is null or id <> $2::uuid)`,
-    [name, exceptId]
-  );
-  return rows.length > 0;
 }
 
 function validateName(name: string): string | null {

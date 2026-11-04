@@ -9,7 +9,7 @@ import type { ChapterContext } from "@/lib/content/pages";
 import { Badge } from "@/components/admin/badge";
 import { BookPreview, FitReadout } from "@/components/admin/book-preview";
 import { Dialog } from "@/components/admin/dialog";
-import { buttonClass, inputClass, labelClass } from "@/components/admin/styles";
+import { panelFooterClass, buttonClass, inputClass, labelClass, errorNoteClass, warnNoteClass } from "@/components/admin/styles";
 import { useToast } from "@/components/admin/toast";
 import { PicturePicker } from "@/components/admin/picture-picker";
 import { TITLE_MAX_LENGTH } from "@/lib/limits";
@@ -263,12 +263,12 @@ export function PageEditor({
       )}
       <LanguagesStrip target={{ kind: "page", id: pageId, version }} dirty={dirty} initial={translations} initialAudio={audio} languages={languages} />
       {loadProblem && (
-        <p role="alert" className="mb-3 rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25">
+        <p role="alert" className={`mb-3 ${warnNoteClass}`}>
           Some saved content no longer passes the checks and was left out: {loadProblem}
         </p>
       )}
       {problem && (
-        <div role="alert" className="mb-3 flex flex-wrap items-center gap-3 rounded-md bg-danger-bg px-3 py-2 text-sm text-danger-strong">
+        <div role="alert" className={`mb-3 flex flex-wrap items-center gap-3 ${errorNoteClass}`}>
           <p className="min-w-0 flex-1">{problem.message}</p>
           {problem.conflict && (
             <button type="button" onClick={() => window.location.reload()} className={buttonClass("secondary", "sm")}>
@@ -360,7 +360,7 @@ export function PageEditor({
       {leaveTo && (
         <Dialog title="Leave without saving?" variant="confirm" onClose={() => setLeaveTo(null)}>
           <p className="px-5 py-4 text-sm">Your changes to this page haven&apos;t been saved yet.</p>
-          <div className="flex justify-end gap-2 border-t border-slate-200 px-5 py-3">
+          <div className={panelFooterClass}>
             <button type="button" onClick={() => setLeaveTo(null)} className={buttonClass("secondary")}>
               Stay
             </button>

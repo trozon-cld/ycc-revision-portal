@@ -4,7 +4,7 @@ import { DESCRIPTION_HINT } from "@/components/admin/media-upload-form";
 import { ActionForm } from "@/components/admin/action-form";
 import { Field } from "@/components/admin/field";
 import { RowActions, type RowAction } from "@/components/admin/row-actions";
-import { buttonClass, textareaClass } from "@/components/admin/styles";
+import { panelFooterClass, buttonClass, textareaClass } from "@/components/admin/styles";
 import Link from "next/link";
 import { describeMediaUse, type MediaUse } from "@/lib/media/usage";
 import { ALT_TEXT_MAX_LENGTH } from "@/lib/limits";
@@ -90,7 +90,7 @@ export function MediaRowActions({
                 )}
               </ul>
             )}
-            <div className="flex justify-end border-t border-slate-200 px-5 py-3">
+            <div className={panelFooterClass}>
               <button type="button" onClick={close} className={buttonClass("secondary")}>
                 Close
               </button>

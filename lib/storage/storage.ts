@@ -31,6 +31,10 @@ function encodePath(path: string) {
   return path.split("/").map(encodeURIComponent).join("/");
 }
 
+// The storage settings by name, for "not set up" messages elsewhere (they change with the provider).
+export const STORAGE_SETTINGS = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"] as const;
+export const STORAGE_SETTINGS_TEXT = `${STORAGE_SETTINGS.join(" and ")} to the server's environment`;
+
 export function isStorageConfigured() {
   return Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
 }

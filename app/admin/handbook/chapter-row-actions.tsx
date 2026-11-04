@@ -5,7 +5,7 @@ import { ActionForm } from "@/components/admin/action-form";
 import { Field } from "@/components/admin/field";
 import Link from "next/link";
 import { ActionButton, PanelButton, RowActions, type InstantRowAction, type PanelRowAction, type RowAction } from "@/components/admin/row-actions";
-import { buttonClass, inputClass } from "@/components/admin/styles";
+import { panelFooterClass, buttonClass, inputClass, warnNoteClass } from "@/components/admin/styles";
 import {
   createChapter,
   deleteChapter,
@@ -31,7 +31,7 @@ export function NewChapterButton({ sections, testAreas }: { sections: SectionOpt
         sections.length === 0 ? (
           <div>
             <p className="px-5 py-4 text-sm">Add a section first. Every chapter belongs to a section.</p>
-            <div className="flex justify-end border-t border-slate-200 px-5 py-3">
+            <div className={panelFooterClass}>
               <button type="button" onClick={close} className={buttonClass("secondary")}>
                 Close
               </button>
@@ -191,7 +191,7 @@ export function ChapterRowActions({
             </strong>{" "}
             still has {blockedBy(pageCount, questionCount)}. Delete them first.
           </p>
-          <div className="flex justify-end border-t border-slate-200 px-5 py-3">
+          <div className={panelFooterClass}>
             <button type="button" onClick={close} className={buttonClass("secondary")}>
               Close
             </button>
@@ -244,7 +244,7 @@ function ChapterTestTypesForm({ chapterId, chapterName, testAreas, initialSelect
           )}
           <ChapterTestTypeChoice testAreas={testAreas} linking={linking} initialSelected={initialSelected} chapterName={chapterName} readOnly />
         </div>
-        <div className="flex justify-end border-t border-slate-200 px-5 py-3">
+        <div className={panelFooterClass}>
           <button type="button" onClick={onClose} className={buttonClass("secondary")}>
             Close
           </button>
@@ -334,7 +334,7 @@ function chapterStatusAction({ id, number, title, status, itemCount, draftCount,
               ? "has no pages or questions yet. Add at least one, publish it, then publish the chapter."
               : `${draftCount === 1 ? "has 1 item that is" : `has ${draftCount} items that are`} still ${draftCount === 1 ? "a draft" : "drafts"}. Publish ${draftCount === 1 ? "it" : "them"} first, then publish the chapter.${onChapterPage ? " Publish all does both in one step." : ""}`}
           </p>
-          <div className="flex justify-end gap-2 border-t border-slate-200 px-5 py-3">
+          <div className={panelFooterClass}>
             <button type="button" onClick={close} className={buttonClass("secondary")}>
               Close
             </button>
@@ -403,7 +403,7 @@ function MoveToSectionField({ id, options, from }: { id: string; options: Sectio
         <SectionSelect id={id} options={options} value={sectionId} onChange={setSectionId} />
       </Field>
       {effect && (
-        <p role="status" className="rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25">
+        <p role="status" className={warnNoteClass}>
           {effect}
         </p>
       )}
@@ -456,7 +456,7 @@ export function PublishAllButton({ chapterId, number, title, summary }: { chapte
           <p className="px-5 py-4 text-sm [overflow-wrap:anywhere]">
             None of the drafts in {name} can be published yet: {heldBack}. Fix them, then try again.
           </p>
-          <div className="flex justify-end border-t border-slate-200 px-5 py-3">
+          <div className={panelFooterClass}>
             <button type="button" onClick={close} className={buttonClass("secondary")}>
               Close
             </button>

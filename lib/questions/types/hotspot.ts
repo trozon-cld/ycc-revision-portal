@@ -38,7 +38,8 @@ export function hitsArea(area: HotspotArea, point: HotspotPoint, margin: number 
   return dx * dx + dy * dy <= 1;
 }
 
-function readNumber(value: unknown): number | null {
+// A finite number from stored or sent data, to one decimal place; null otherwise. Shared with area-choice.
+export function readNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? roundTenth(value) : null;
 }
 

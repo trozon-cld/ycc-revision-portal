@@ -8,7 +8,7 @@ import { formatBytes } from "@/lib/format";
 import { ALT_TEXT_MAX_LENGTH } from "@/lib/limits";
 import { ActionForm } from "./action-form";
 import { Field } from "./field";
-import { fileInputClass, textareaClass } from "./styles";
+import { fileInputClass, errorNoteClass, textareaClass } from "./styles";
 
 type Selection =
   | { status: "empty" }
@@ -82,7 +82,7 @@ export function MediaUploadForm({
       <div aria-live="polite">
         {selection.status === "preparing" && <p className="text-sm text-slate-600">Preparing picture…</p>}
         {selection.status === "error" && (
-          <p role="alert" className="rounded-md bg-danger-bg px-3 py-2 text-sm text-danger-strong">
+          <p role="alert" className={errorNoteClass}>
             {selection.message}
           </p>
         )}

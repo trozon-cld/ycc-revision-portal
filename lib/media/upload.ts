@@ -5,7 +5,7 @@ import { logActivity } from "@/lib/audit/log";
 import { EXTENSION_BY_MIME, readImageInfo, type ImageInfo } from "@/lib/media/image-info";
 import { storedBytes } from "@/lib/storage/usage";
 import { MAX_THUMB_BYTES, MAX_UPLOAD_BYTES, STORAGE_LIMIT_BYTES } from "@/lib/media/limits";
-import { StorageConfigError, deleteObjects, storeObject } from "@/lib/storage/storage";
+import { STORAGE_SETTINGS_TEXT, StorageConfigError, deleteObjects, storeObject } from "@/lib/storage/storage";
 import { ALT_TEXT_MAX_LENGTH } from "@/lib/limits";
 import { cleanLine } from "@/lib/text";
 import type { FormState } from "@/lib/forms";
@@ -17,7 +17,7 @@ export type MediaUploadState = FormState & { mediaId?: string };
 
 const MAX_NAME_LENGTH = 255;
 export const MEDIA_PAGE_PATH = "/admin/media";
-export const NOT_CONFIGURED = "Image storage isn't set up yet. Add the Supabase settings to the server's environment.";
+export const NOT_CONFIGURED = `Image storage isn't set up yet. Add ${STORAGE_SETTINGS_TEXT}.`;
 export const STORAGE_FULL = "Picture storage is full. Delete pictures you no longer use in Media, then try again.";
 
 export async function saveUpload(session: SessionPayload, formData: FormData): Promise<MediaUploadState> {

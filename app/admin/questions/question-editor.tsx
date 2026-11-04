@@ -15,7 +15,7 @@ import { Dialog } from "@/components/admin/dialog";
 import { BoldTextarea, Segmented } from "@/components/admin/editor-fields";
 import { PicturePicker } from "@/components/admin/picture-picker";
 import { QuestionPreview } from "@/components/admin/question-preview";
-import { buttonClass, cardClass, inputClass, labelClass } from "@/components/admin/styles";
+import { panelFooterClass, buttonClass, cardClass, inputClass, labelClass, errorNoteClass, warnNoteClass } from "@/components/admin/styles";
 import { useToast } from "@/components/admin/toast";
 import { getPreviewMedia, listPickerMedia, type PickerItem } from "@/app/admin/handbook/pages/actions";
 import { saveQuestion, setQuestionStatus } from "./actions";
@@ -266,7 +266,7 @@ export function QuestionEditor({
         />
       )}
       {unmarked && status !== "published" && (
-        <p className="mb-3 rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25">
+        <p className={`mb-3 ${warnNoteClass}`}>
           No areas yet. {NEEDS_AREAS_MESSAGE} Until then it stays a draft, so candidates don&apos;t see it.
         </p>
       )}
@@ -274,12 +274,12 @@ export function QuestionEditor({
         <p className="mb-3 text-sm text-slate-700">The question is added to the bank when you first save it. New questions start as drafts.</p>
       )}
       {loadProblem && (
-        <p role="alert" className="mb-3 rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25">
+        <p role="alert" className={`mb-3 ${warnNoteClass}`}>
           This question no longer passes the checks: {loadProblem} Fix it and save.
         </p>
       )}
       {problem && (
-        <div role="alert" className="mb-3 flex flex-wrap items-center gap-3 rounded-md bg-danger-bg px-3 py-2 text-sm text-danger-strong">
+        <div role="alert" className={`mb-3 flex flex-wrap items-center gap-3 ${errorNoteClass}`}>
           <p className="min-w-0 flex-1">{problem.message}</p>
           {problem.conflict && (
             <button type="button" onClick={() => window.location.reload()} className={buttonClass("secondary", "sm")}>
@@ -473,7 +473,7 @@ export function QuestionEditor({
           <p className="px-5 py-4 text-sm">
             {isNew ? "This question hasn't been saved yet." : "Your changes to this question haven't been saved yet."}
           </p>
-          <div className="flex justify-end gap-2 border-t border-slate-200 px-5 py-3">
+          <div className={panelFooterClass}>
             <button type="button" onClick={() => setLeaveTo(null)} className={buttonClass("secondary")}>
               Stay
             </button>

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { buttonClass, cardClass } from "@/components/admin/styles";
+import { buttonClass, cardClass, linkClass, warnNoteClass } from "@/components/admin/styles";
 import { formatClock } from "@/lib/format";
 import { NOT_THROUGH_MESSAGE, reachServer } from "@/lib/forms";
 import { SOURCE_LANGUAGE, translatedLanguages, type LanguageName } from "@/lib/voice/languages";
@@ -267,7 +267,7 @@ export function LanguagesStrip({
               ) : (
                 <Link
                   href={`${translationsHref}?lang=${code}`}
-                  className="inline-flex min-h-6 items-center gap-1 text-sm text-primary underline underline-offset-2 hover:text-ink"
+                  className={`inline-flex min-h-6 items-center gap-1 text-sm ${linkClass}`}
                 >
                   <LanguageLabel language={language} />
                 </Link>
@@ -353,7 +353,7 @@ export function LanguagesStrip({
                 <div
                   role="alertdialog"
                   aria-labelledby={`delete-audio-${code}`}
-                  className="rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25 md:col-span-3"
+                  className={`${warnNoteClass} md:col-span-3`}
                 >
                   <p id={`delete-audio-${code}`} className="font-medium">
                     Delete the {language.name} audio?
@@ -385,7 +385,7 @@ export function LanguagesStrip({
         })}
       </ul>
       {confirming && (
-        <div role="alertdialog" aria-labelledby="replace-title" className="mt-2 rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25">
+        <div role="alertdialog" aria-labelledby="replace-title" className={`mt-2 ${warnNoteClass}`}>
           <p id="replace-title" className="font-medium">
             Replace the out-of-date {listNames(languages, confirming.filter((code) => rows[code]))} translation?
           </p>

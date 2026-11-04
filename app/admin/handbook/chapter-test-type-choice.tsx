@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { TestAreaOption } from "@/lib/handbook/test-types";
-import { labelClass } from "@/components/admin/styles";
+import { labelClass, warnNoteClass } from "@/components/admin/styles";
 import { countOf } from "@/lib/format";
 
 // A chapter's section decides its test types: linked to every test type (A–D), or one test type at most (E).
@@ -53,7 +53,7 @@ export function ChapterTestTypeChoice({
         the Mock test once it&apos;s published.
       </p>
       {initialSelected.length > 1 && (
-        <p className="rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25">
+        <p className={warnNoteClass}>
           This chapter is in {countOf(initialSelected.length, "test type")} at the moment.{readOnly ? "" : " Choose the one it belongs to."}
         </p>
       )}
@@ -98,7 +98,7 @@ export function ChapterTestTypeChoice({
           ))}
       </div>
       {leaving && (
-        <p role="status" className="rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25">
+        <p role="status" className={warnNoteClass}>
           {countOf(owner.studying, "candidate")} {owner.studying === 1 ? "studies" : "study"} {owner.name}. Moving{" "}
           {chapterName ?? "this chapter"} out of it takes it out of their book, Practice and Mock test straight away.
         </p>

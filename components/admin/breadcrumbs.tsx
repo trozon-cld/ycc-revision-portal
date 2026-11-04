@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { Fragment, type ReactNode } from "react";
 import { ListBackLink } from "./list-place";
+import { linkClass } from "./styles";
 
 // `list`: the link returns to that list with its filters and page; `current`: this page (shown, not linked).
 export type Crumb = { label: ReactNode; href?: string; list?: string; current?: boolean };
-
-const LINK = "text-primary underline underline-offset-2 hover:text-ink";
 
 // The trail above a staff page's heading: "Handbook / 01 General responsibilities".
 export function Breadcrumbs({ items }: { items: Crumb[] }) {
@@ -19,11 +18,11 @@ export function Breadcrumbs({ items }: { items: Crumb[] }) {
             </span>
           )}
           {item.href && item.list ? (
-            <ListBackLink list={item.list} href={item.href} className={LINK}>
+            <ListBackLink list={item.list} href={item.href} className={linkClass}>
               {item.label}
             </ListBackLink>
           ) : item.href ? (
-            <Link href={item.href} className={LINK}>
+            <Link href={item.href} className={linkClass}>
               {item.label}
             </Link>
           ) : (

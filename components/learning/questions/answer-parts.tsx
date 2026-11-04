@@ -9,6 +9,11 @@ export function MarkIcon({ name, className }: { name: Mark; className: string })
   return <Icon name={name} className={className} />;
 }
 
+// The tick or cross beside a feedback line in the picture questions, at the line's text size.
+export function FeedbackMark({ name }: { name: Mark }) {
+  return <MarkIcon name={name} className="size-[1.1em] shrink-0" />;
+}
+
 export type OptionState = "plain" | "selected" | "correct" | "wrong";
 
 const OPTION_TONES: Record<OptionState, string> = {

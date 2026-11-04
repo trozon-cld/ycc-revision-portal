@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { LeaveDialog, useLeaveGuard } from "@/components/admin/leave-guard";
 import { Badge } from "@/components/admin/badge";
 import { Cell, Row, Table } from "@/components/admin/table";
-import { buttonClass, cardClass, fileInputClass, labelClass } from "@/components/admin/styles";
+import { buttonClass, cardClass, fileInputClass, labelClass, errorNoteClass } from "@/components/admin/styles";
 import { NOT_THROUGH_MESSAGE } from "@/lib/forms";
 import { countOf } from "@/lib/format";
 import type { CheckReport, ChangeCounts } from "@/lib/content/import/check";
@@ -95,7 +95,7 @@ export function UploadCheck() {
         <div aria-live="polite">
           {state.status === "working" && <p className="text-sm text-slate-600">{state.step}</p>}
           {state.status === "failed" && (
-            <p role="alert" className="rounded-md bg-danger-bg px-3 py-2 text-sm text-danger-strong">
+            <p role="alert" className={errorNoteClass}>
               {state.message}
             </p>
           )}
@@ -106,7 +106,7 @@ export function UploadCheck() {
         <ImportPanel report={state.report} message={state.status === "importFailed" ? state.message : null} onImport={() => runImport(state.fileName, state.report, state.opened)} />
       )}
       {state.status === "importFailed" && !state.report.ok && (
-        <p role="alert" className="rounded-md bg-danger-bg px-3 py-2 text-sm text-danger-strong">
+        <p role="alert" className={errorNoteClass}>
           {state.message}
         </p>
       )}
@@ -145,7 +145,7 @@ function ImportPanel({ report, message, onImport }: { report: CheckReport; messa
         </p>
       )}
       {message && (
-        <p role="alert" className="rounded-md bg-danger-bg px-3 py-2 text-sm text-danger-strong">
+        <p role="alert" className={errorNoteClass}>
           {message}
         </p>
       )}

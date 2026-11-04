@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/admin/page-header";
 import { countOf } from "@/lib/format";
 import { PreviewControls, PreviewReader } from "./preview-client";
 import { Breadcrumbs } from "@/components/admin/breadcrumbs";
+import { warnNoteClass } from "@/components/admin/styles";
 
 export const metadata: Metadata = { title: "Book Preview" };
 
@@ -53,7 +54,7 @@ export default async function BookPreviewPage({ searchParams }: PageProps<"/admi
       />
 
       {book.leftOut.length > 0 && (
-        <div role="note" className="mb-3 rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25">
+        <div role="note" className={`mb-3 ${warnNoteClass}`}>
           <p className="font-medium">
             {book.leftOut.length === 1 ? "1 item is" : `${book.leftOut.length} items are`} left out because {book.leftOut.length === 1 ? "it doesn't" : "they don't"} pass the checks yet:
           </p>
