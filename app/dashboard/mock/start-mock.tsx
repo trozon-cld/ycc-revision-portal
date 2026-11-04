@@ -1,13 +1,14 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, type ReactNode } from "react";
 import { ERROR_BOX, PRIMARY_BUTTON } from "@/components/candidate/buttons";
 import { NOT_THROUGH_MESSAGE, reachServer } from "@/lib/forms";
 import { submitKeepingChoices } from "@/components/candidate/submit-form";
 import { startMockForm, type MockStartState } from "./actions";
 
 // Start mock test: disabled while starting, so a double tap can't start two tests.
-export function StartMock() {
+// `back`: the page's Back to home, beside the button on tablets and laptops (stacked on phones).
+export function StartMock({ back }: { back: ReactNode }) {
   const [state, action, pending] = useActionState<MockStartState, FormData>(
     async () => (await reachServer(() => startMockForm())) ?? { error: NOT_THROUGH_MESSAGE },
     { error: null }
@@ -21,9 +22,12 @@ export function StartMock() {
           </p>
         )}
       </div>
-      <button type="submit" disabled={pending} className={`${PRIMARY_BUTTON} w-full sm:w-auto`}>
-        {pending ? "Starting…" : "Start mock test"}
-      </button>
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <button type="submit" disabled={pending} className={`${PRIMARY_BUTTON} w-full sm:w-auto`}>
+          {pending ? "Starting…" : "Start mock test"}
+        </button>
+        {back}
+      </div>
     </form>
   );
 }

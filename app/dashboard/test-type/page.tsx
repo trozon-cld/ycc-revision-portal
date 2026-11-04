@@ -10,7 +10,7 @@ import { loadPracticeInProgress } from "@/lib/practice/sessions";
 import { ERROR_BOX, PAGE_TITLE, PRIMARY_BUTTON, SECONDARY_BUTTON, WARN_BOX } from "@/components/candidate/buttons";
 import { TestTypeForm } from "./test-type-form";
 
-export const metadata: Metadata = { title: "Change test type" };
+export const metadata: Metadata = { title: "Change Test Type" };
 
 const ERRORS: Record<string, string> = {
   choose: "Please choose a test type.",
@@ -36,7 +36,7 @@ export default async function ChangeTestTypePage({ searchParams }: PageProps<"/d
   return (
     <PageBody>
       <div className="max-w-3xl">
-        <h1 className={`${PAGE_TITLE}`}>Change test type</h1>
+        <h1 className={`${PAGE_TITLE}`}>Change Test Type</h1>
         <p className="mt-3 text-base leading-relaxed text-ink">
           Your Handbook, Practice questions and mock tests follow the test type you choose. You can change it again at
           any time.

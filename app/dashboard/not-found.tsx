@@ -8,7 +8,7 @@ export default function CandidateNotFound() {
     <PageBody>
       <div className={`${CARD} max-w-xl p-6`}>
         <h1 className={`${PAGE_TITLE}`}>We can’t find that page</h1>
-        <p className="mt-3 text-base leading-relaxed text-ink">It may have been removed, or the link may be wrong.</p>
+        <p className="mt-3 text-base leading-relaxed text-ink">The link may be wrong, or the page may have moved.</p>
         <Link href="/dashboard" className={`${PRIMARY_BUTTON} mt-5 lg:mt-6 w-full sm:w-auto`}>
           Back to home
         </Link>

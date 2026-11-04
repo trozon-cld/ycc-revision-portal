@@ -5,8 +5,9 @@ import { LogoutButton } from "@/components/logout-button";
 import { SESSION_ENDED_LOGIN } from "@/lib/auth/constants";
 import { getSignedInAccount, hasAccess } from "@/lib/auth/guard";
 import { getSession } from "@/lib/auth/session";
+import { PageLogo } from "@/components/candidate/page-logo";
 
-export const metadata: Metadata = { title: "Access ended" };
+export const metadata: Metadata = { title: "Access Ended" };
 
 export default async function AccessExpiredPage() {
   if (!(await getSession())) redirect("/login");
@@ -17,7 +18,8 @@ export default async function AccessExpiredPage() {
   if (hasAccess(live.account)) redirect("/dashboard");
 
   return (
-    <main className="flex flex-1 items-center justify-center bg-page p-4">
+    <main className="flex flex-1 flex-col items-center justify-center bg-page p-4">
+      <PageLogo />
       <div className={`${CARD} flex w-full max-w-md flex-col items-center gap-4 p-6 text-center sm:p-8`}>
         <h1 className={`${PAGE_TITLE}`}>
           Your access has ended

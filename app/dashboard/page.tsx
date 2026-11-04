@@ -130,7 +130,7 @@ export default async function CandidateHomePage({ searchParams }: PageProps<"/da
             </li>
             <li>
               <SectionCard
-                title="Mock test"
+                title="Mock Test"
                 description={
                   mock
                     ? `Continue your mock test: ${timeLeftText(mock.secondsLeft).toLowerCase()}.`
@@ -144,7 +144,7 @@ export default async function CandidateHomePage({ searchParams }: PageProps<"/da
             </li>
             <li>
               <SectionCard
-                title="My progress"
+                title="My Progress"
                 description="Your results from every section in one place."
                 icon={SectionIcons.progress}
                 href="/dashboard/progress"
@@ -180,7 +180,7 @@ export default async function CandidateHomePage({ searchParams }: PageProps<"/da
             <span aria-hidden="true" className={`${BAR_TRACK} mt-3 block h-3.5`}>
               <span className={`${BAR_FILL} block`} style={{ width: `${Math.min(100, readiness.score)}%` }} />
             </span>
-            <span className="mt-3 block text-base font-semibold text-primary underline underline-offset-4">See My progress</span>
+            <span className="mt-3 block text-base font-semibold text-primary underline underline-offset-4">See My Progress</span>
           </Link>
         )}
 

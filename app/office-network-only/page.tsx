@@ -8,8 +8,9 @@ import { getSignedInAccount, isOffNetwork } from "@/lib/auth/guard";
 import { OFFICE_ONLY_MESSAGE } from "@/lib/auth/office-network";
 import { getSession } from "@/lib/auth/session";
 import { ipFromHeaders } from "@/lib/audit/log";
+import { PageLogo } from "@/components/candidate/page-logo";
 
-export const metadata: Metadata = { title: "Office network only" };
+export const metadata: Metadata = { title: "Office Network Only" };
 
 // Where an Admin outside the office network lands. Back in the office (or exempt, or the check off): straight back in.
 export default async function OfficeNetworkOnlyPage() {
@@ -20,9 +21,10 @@ export default async function OfficeNetworkOnlyPage() {
   const address = ipFromHeaders(await headers());
 
   return (
-    <main className="flex flex-1 items-center justify-center bg-page p-4">
+    <main className="flex flex-1 flex-col items-center justify-center bg-page p-4">
+      <PageLogo />
       <div className={`${CARD} flex w-full max-w-md flex-col items-center gap-4 p-6 text-center sm:p-8`}>
-        <h1 className={PAGE_TITLE}>Office network only</h1>
+        <h1 className={PAGE_TITLE}>Office Network Only</h1>
         <p className="text-base text-muted">{OFFICE_ONLY_MESSAGE}</p>
         <p className="text-base text-muted">
           If you need access from somewhere else, ask the Superadmin.

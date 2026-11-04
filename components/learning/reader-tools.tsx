@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useDeviceSwitch } from "@/components/use-browser-value";
 import { Spinner } from "@/components/spinner";
 import { Icon, type IconName } from "@/components/icons";
-import { BAR_SHADOW_TOP, READER_BAR_LAYER } from "@/components/candidate/buttons";
+import { BAR_SHADOW_TOP, PRIMARY_BUTTON, READER_BAR_LAYER } from "@/components/candidate/buttons";
 import { useLatest } from "@/components/use-latest";
 import { TEXT_SIZES, type BookPageData, type Sheet, type TextSize } from "@/lib/content/book";
 import { READING_SPEEDS, READING_SPEED_LABELS, type ListenBar, type ReadingSpeed } from "./listen";
@@ -480,7 +480,7 @@ export function GoToPanel({ total, onGo, onClose }: { total: number; onGo: (numb
             }}
             className="h-14 w-32 rounded-xl border-2 border-ink/50 px-4 text-center text-2xl text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary"
           />
-          <button type="submit" className="inline-flex h-14 min-w-24 items-center justify-center rounded-xl bg-primary shadow-[inset_0_-4px_0_var(--ycc-ink)] px-6 text-lg font-semibold text-white hover:bg-primary/90 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary">
+          <button type="submit" className={`${PRIMARY_BUTTON} h-14 min-w-24`}>
             Go
           </button>
         </div>

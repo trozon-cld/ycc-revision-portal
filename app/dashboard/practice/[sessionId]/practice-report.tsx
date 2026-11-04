@@ -2,8 +2,7 @@ import Link from "next/link";
 import { formatUkDate } from "@/lib/candidates/access";
 import type { PracticeReport } from "@/lib/practice/sessions";
 import { PageBody } from "@/components/candidate/page-body";
-import { BAR_FILL, BAR_TRACK, CARD, ERROR_BOX, PAGE_TITLE, PRIMARY_BUTTON, SECONDARY_BUTTON, SECTION_TITLE } from "@/components/candidate/buttons";
-import { Icon } from "@/components/icons";
+import { CARD, ERROR_BOX, PAGE_TITLE, PRIMARY_BUTTON, SECONDARY_BUTTON, SECTION_TITLE } from "@/components/candidate/buttons";
 import { ArrivalHeading } from "@/components/candidate/arrival-heading";
 import { ChapterResults } from "@/components/candidate/chapter-results";
 import { InlineText } from "@/components/learning/inline-text";
@@ -12,6 +11,7 @@ import { FocusedShell } from "@/components/learning/focused-shell";
 import { practiseAgain } from "../actions";
 import { FlagButton } from "../flag-button";
 import { RetryForm } from "./retry-button";
+import { ScoreHeadline } from "@/components/candidate/score-headline";
 
 const MODE_NAMES: Record<PracticeReport["mode"], string> = {
   smart: "Smart practice",
@@ -47,38 +47,17 @@ export function PracticeReportView({ report, againUnavailable }: { report: Pract
   const notAll = report.answered + report.skipped < report.total;
 
   return (
-    <FocusedShell label="Practice tools" status="Your results">
+    <FocusedShell label="Practice tools" status="Your Results">
       <PageBody>
         <div className="max-w-3xl">
-          <ArrivalHeading className={`${PAGE_TITLE}`}>Your practice results</ArrivalHeading>
+          <ArrivalHeading className={`${PAGE_TITLE}`}>Your Practice Results</ArrivalHeading>
           <p className="mt-2 text-base text-muted [overflow-wrap:anywhere]">
             {report.testTypeName} · {what} · {date}
           </p>
 
-          <section aria-labelledby="score-heading" className={`mt-5 lg:mt-6 ${CARD} p-4 lg:p-5 lg:p-6`}>
-            <div className="flex items-center gap-3">
-              {report.answered > 0 && (
-                <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full bg-ok-bg text-ok">
-                  <Icon name="tick" />
-                </span>
-              )}
-              <h2 id="score-heading" className="text-base font-semibold text-muted">
-                Your score
-              </h2>
-            </div>
-            <p className="mt-1 text-ink">
-              <span className="text-4xl font-bold">{report.rightCount}</span>
-              <span className="text-2xl font-semibold"> of {report.answered} right</span>
-            </p>
-            {report.answered > 0 && (
-              <>
-                <p className="mt-1 text-xl font-semibold text-ink">{percent}%</p>
-                <div aria-hidden="true" className={`${BAR_TRACK} mt-3 h-4`}>
-                  <div className={BAR_FILL} style={{ width: `${percent}%` }} />
-                </div>
-              </>
-            )}
-            <p className="mt-3 text-base leading-relaxed text-ink">{report.answered > 0 ? encouragement(percent) : "No questions were answered."}</p>
+          <section aria-labelledby="score-heading" className={`mt-5 lg:mt-6 ${CARD} p-4 lg:p-5`}>
+            <ScoreHeadline right={report.rightCount} outOf={report.answered} percent={report.answered > 0 ? percent : null} fill={percent / 100} />
+            <p className="mt-4 text-base leading-relaxed text-ink">{report.answered > 0 ? encouragement(percent) : "No questions were answered."}</p>
             {notAll && (
               <p className="mt-2 text-base text-muted">
                 {report.detailsKept

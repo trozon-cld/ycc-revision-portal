@@ -70,10 +70,16 @@ export default async function PracticePage({ searchParams }: PageProps<"/dashboa
             </div>
           ) : (
             <>
-              <PracticeSetup options={options} hasOpen={Boolean(open)} initialChapters={initialChapters} />
-              <Link href="/dashboard" className={`${SECONDARY_BUTTON} mt-3 w-full sm:w-auto`}>
-                Back to home
-              </Link>
+              <PracticeSetup
+                options={options}
+                hasOpen={Boolean(open)}
+                initialChapters={initialChapters}
+                back={
+                  <Link href="/dashboard" className={`${SECONDARY_BUTTON} w-full sm:w-auto`}>
+                    Back to home
+                  </Link>
+                }
+              />
             </>
           )}
         </div>

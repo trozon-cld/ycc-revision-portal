@@ -2,11 +2,12 @@ import Link from "next/link";
 import { countOf, formatDuration } from "@/lib/format";
 import { MOCK_KEEP_ANSWERS, READINESS_TARGET, scorePercent, type MockEnd, type MockResults } from "@/lib/mock/types";
 import { PageBody } from "@/components/candidate/page-body";
-import { BAR_FILL, BAR_TRACK, CARD, ERROR_BOX, NOTE_BOX, PAGE_TITLE, PRIMARY_BUTTON, SECONDARY_BUTTON, SECTION_TITLE } from "@/components/candidate/buttons";
+import { CARD, ERROR_BOX, NOTE_BOX, PAGE_TITLE, PRIMARY_BUTTON, SECONDARY_BUTTON, SECTION_TITLE } from "@/components/candidate/buttons";
 import { ArrivalHeading } from "@/components/candidate/arrival-heading";
 import { ChapterSummary } from "./chapter-summary";
 import { practiseMockMisses } from "@/app/dashboard/practice/actions";
 import { RetryForm } from "@/app/dashboard/practice/[sessionId]/retry-button";
+import { ScoreHeadline } from "@/components/candidate/score-headline";
 
 const ENDINGS: Record<MockEnd, { title: string; text: string }> = {
   submitted: { title: "Test submitted", text: "Your mock test has been submitted." },
@@ -33,16 +34,7 @@ export function MockResultsView({ attemptId, results, practiceUnavailable }: { a
         <p className="mt-3 text-base leading-relaxed text-ink">{ending.text}</p>
 
         <section aria-labelledby="score-heading" className={`mt-5 lg:mt-6 ${CARD} p-4 lg:p-5`}>
-          <h2 id="score-heading" className="text-base font-semibold text-muted">
-            Your score
-          </h2>
-          <p className="mt-1 text-3xl font-bold text-ink">
-            {results.rightCount} of {results.outOf} right{" "}
-            <span className="ml-2 text-2xl font-semibold text-muted">{scorePercent(results.rightCount, results.outOf)}%</span>
-          </p>
-          <div aria-hidden="true" className={`${BAR_TRACK} mt-4 h-4`}>
-            <div className={BAR_FILL} style={{ width: `${share * 100}%` }} />
-          </div>
+          <ScoreHeadline right={results.rightCount} outOf={results.outOf} percent={scorePercent(results.rightCount, results.outOf)} fill={share} />
           <p
             className={`mt-4 rounded-xl border-l-4 px-4 py-3 text-base font-semibold ${
               ready ? "border-ok bg-ok-bg text-ok-strong" : "border-primary bg-primary/5 text-ink"

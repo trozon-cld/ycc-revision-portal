@@ -11,7 +11,7 @@ import { PAGE_TITLE, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { FocusedShell } from "@/components/learning/focused-shell";
 import { ReviewList } from "./review-list";
 
-export const metadata: Metadata = { title: "Your answers" };
+export const metadata: Metadata = { title: "Your Answers" };
 
 const FILTERS: { key: string; label: string; match: (item: MockReviewItem) => boolean; none: string }[] = [
   { key: "wrong", label: "Wrong", match: (item) => item.mark === "W", none: "No wrong answers in this test." },
@@ -43,13 +43,13 @@ export default async function MockReviewPage({ params, searchParams }: PageProps
   const resultsHref = `/dashboard/mock/${attemptId}`;
 
   return (
-    <FocusedShell label="Mock test tools" status="Your answers">
+    <FocusedShell label="Mock test tools" status="Your Answers">
       <PageBody>
         <div className="max-w-3xl">
           <Link href={resultsHref} className={`${SECONDARY_BUTTON} mb-4 w-full sm:w-auto`}>
             Back to your results
           </Link>
-          <h1 className={`${PAGE_TITLE}`}>Your answers</h1>
+          <h1 className={`${PAGE_TITLE}`}>Your Answers</h1>
           {!review.kept ? (
             <p className="mt-4 text-base leading-relaxed text-ink">
               Answers are kept for your {MOCK_KEEP_ANSWERS} newest mock tests, so this test’s answers are no longer available. Its score and

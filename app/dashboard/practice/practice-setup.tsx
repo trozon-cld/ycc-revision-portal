@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, type ReactNode } from "react";
 import { PRACTICE_SIZES, type PracticeOptions, type PracticeWay } from "@/lib/practice/types";
 import { CHOICE_INPUT, CHOICE_ROW, CHOICE_TILE, ERROR_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { countOf } from "@/lib/format";
@@ -23,7 +23,18 @@ const FOCUS: { way: PracticeWay; title: string; none: string }[] = [
 ];
 
 // `initialChapters` (e.g. a mock test's weakest chapters) opens "By chapter" with those ticked.
-export function PracticeSetup({ options, hasOpen, initialChapters = [] }: { options: PracticeOptions; hasOpen: boolean; initialChapters?: string[] }) {
+// `back`: the page's Back to home, beside the start button on tablets and laptops (stacked on phones).
+export function PracticeSetup({
+  options,
+  hasOpen,
+  initialChapters = [],
+  back,
+}: {
+  options: PracticeOptions;
+  hasOpen: boolean;
+  initialChapters?: string[];
+  back: ReactNode;
+}) {
   const [state, action, pending] = useActionState<StartState, FormData>(
     async (previous, formData) => (await reachServer(() => startPracticeForm(previous, formData))) ?? { error: NOT_THROUGH_MESSAGE },
     { error: null }
@@ -188,9 +199,12 @@ export function PracticeSetup({ options, hasOpen, initialChapters = [] }: { opti
       </div>
 
       {/* With a practice open, Continue (above) is the main button; this one starts over. */}
-      <button type="submit" disabled={pending} className={`${hasOpen ? SECONDARY_BUTTON : PRIMARY_BUTTON} mt-2 w-full sm:w-auto`}>
-        {pending ? "Starting…" : hasOpen ? "Start a new practice" : "Start practice"}
-      </button>
+      <div className="mt-2 flex flex-col gap-3 sm:flex-row">
+        <button type="submit" disabled={pending} className={`${hasOpen ? SECONDARY_BUTTON : PRIMARY_BUTTON} w-full sm:w-auto`}>
+          {pending ? "Starting…" : hasOpen ? "Start a new practice" : "Start practice"}
+        </button>
+        {back}
+      </div>
     </form>
   );
 }
