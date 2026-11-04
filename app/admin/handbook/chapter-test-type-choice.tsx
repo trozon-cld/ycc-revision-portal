@@ -29,7 +29,7 @@ export function ChapterTestTypeChoice({
   const testTypes = testAreas.flatMap((testArea) => testArea.testTypes);
 
   if (testTypes.length === 0) {
-    return <p className="text-sm text-slate-600">There are no test types yet. Add them on the Test types page.</p>;
+    return <p className="text-sm text-slate-600">There are no test types yet. Add them on the Test Types page.</p>;
   }
   if (!linking) return <p className="text-sm text-slate-600">Choose a section to see which test types the chapter can be in.</p>;
   if (linking.linkedToAll) {

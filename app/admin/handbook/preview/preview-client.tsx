@@ -78,6 +78,6 @@ export function PreviewControls({
 
 export function PreviewReader({ pages, media, covers }: { pages: BookPageData[]; media: ResolvedMedia; covers?: BookCovers }) {
   return (
-    <BookPreview pages={pages} media={media} label="Book preview" initialDevice="full" readerTools allowFullWindow covers={covers} />
+    <BookPreview pages={pages} media={media} label="Book Preview" initialDevice="full" readerTools allowFullWindow covers={covers} />
   );
 }

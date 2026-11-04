@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { requireRole } from "@/lib/auth/guard";
 import { CONTENT_EDITORS } from "@/lib/auth/content-editors";
 import { loadBookCovers, loadPreviewBook, loadPreviewOptions } from "@/lib/content/preview";
@@ -8,8 +7,9 @@ import { firstParam } from "@/lib/params";
 import { PageHeader } from "@/components/admin/page-header";
 import { countOf } from "@/lib/format";
 import { PreviewControls, PreviewReader } from "./preview-client";
+import { Breadcrumbs } from "@/components/admin/breadcrumbs";
 
-export const metadata: Metadata = { title: "Book preview" };
+export const metadata: Metadata = { title: "Book Preview" };
 
 export default async function BookPreviewPage({ searchParams }: PageProps<"/admin/handbook/preview">) {
   await requireRole(CONTENT_EDITORS);
@@ -35,22 +35,14 @@ export default async function BookPreviewPage({ searchParams }: PageProps<"/admi
 
   return (
     <>
-      <nav aria-label="Breadcrumb" className="mb-2 text-sm">
-        <Link href="/admin/handbook" className="text-primary underline underline-offset-2 hover:text-ink">
-          Handbook
-        </Link>
-        {chapter && (
-          <>
-            <span aria-hidden="true" className="mx-1.5 text-slate-500">/</span>
-            <Link href={`/admin/handbook/chapters/${chapter.id}`} className="text-primary underline underline-offset-2 hover:text-ink">
-              {chapter.label}
-            </Link>
-          </>
-        )}
-        <span aria-hidden="true" className="mx-1.5 text-slate-500">/</span>
-        <span aria-current="page" className="text-slate-700">Preview</span>
-      </nav>
-      <PageHeader title="Book preview" description="The Handbook as candidates will read it. Only you can see this preview." />
+      <Breadcrumbs
+        items={[
+          { label: "Handbook", href: "/admin/handbook" },
+          ...(chapter ? [{ label: chapter.label, href: `/admin/handbook/chapters/${chapter.id}` }] : []),
+          { label: "Preview", current: true },
+        ]}
+      />
+      <PageHeader title="Book Preview" description="The Handbook as candidates will read it. Only you can see this preview." />
 
       <PreviewControls
         chapters={options.chapters}

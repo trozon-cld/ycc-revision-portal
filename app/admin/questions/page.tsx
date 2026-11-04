@@ -19,7 +19,7 @@ import { RememberListPlace } from "@/components/admin/list-place";
 import { Cell, Row, Table } from "@/components/admin/table";
 import { NewQuestionButton, QuestionRowActions } from "./question-row-actions";
 
-export const metadata: Metadata = { title: "Question bank" };
+export const metadata: Metadata = { title: "Question Bank" };
 
 // The Status filter's extra choice: drafts still waiting for their areas.
 const NEEDS_AREAS_FILTER = "needs-areas";
@@ -66,7 +66,7 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
     <>
       <RememberListPlace list="questions" search={listSearch(query, page)} />
       <PageHeader
-        title="Question bank"
+        title="Question Bank"
         description={
           isFiltered
             ? `${matching.toLocaleString("en-GB")} of ${totalLabel} match your filters`

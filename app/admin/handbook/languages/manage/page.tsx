@@ -15,6 +15,8 @@ import { phraseKeysFor, type LanguageStatus } from "@/lib/voice/languages";
 import { voiceUsageSummary } from "@/lib/voice/quota";
 import { VoiceUsage } from "../voice-usage";
 import { AddLanguageButton, LanguageRowActions } from "./language-row-actions";
+import { Breadcrumbs } from "@/components/admin/breadcrumbs";
+import { LanguageLabel } from "@/components/admin/language-label";
 
 export const metadata: Metadata = { title: "Languages" };
 
@@ -37,17 +39,13 @@ export default async function ManageLanguagesPage() {
 
   return (
     <>
-      <nav aria-label="Breadcrumb" className="mb-2 text-sm">
-        <Link href="/admin/handbook" className="text-primary underline underline-offset-2 hover:text-ink">
-          Handbook
-        </Link>
-      </nav>
+      <Breadcrumbs items={[{ label: "Handbook", href: "/admin/handbook" }, { label: "Languages and Audio", current: true }]} />
       <PageHeader
-        title="Languages and audio"
+        title="Languages and Audio"
         description={`${countOf(languages.length, "language")} · ${live} live`}
         actions={<AddLanguageButton options={addable} />}
       />
-      <PageTabs label="Languages and audio" tabs={LANGUAGE_TABS} current={LANGUAGES_MANAGE_PATH} />
+      <PageTabs label="Languages and Audio" tabs={LANGUAGE_TABS} current={LANGUAGES_MANAGE_PATH} />
       <VoiceUsage usage={usage} />
 
       <p className="mb-4 max-w-3xl text-sm text-slate-600">
@@ -65,11 +63,8 @@ export default async function ManageLanguagesPage() {
           <Row key={language.code}>
             <Cell kind="primary">
               <Link href={`${LANGUAGES_MANAGE_PATH}/${language.code}`} className="text-primary underline underline-offset-2 hover:text-ink">
-                {language.name}
-              </Link>{" "}
-              <span lang={language.code} className="text-slate-600">
-                {language.nativeName}
-              </span>
+                <LanguageLabel language={language} />
+              </Link>
             </Cell>
             <Cell label="Status" nowrap>
               <Badge tone={STATUS[language.status].tone}>{STATUS[language.status].label}</Badge>

@@ -83,7 +83,7 @@ export default async function HandbookPage() {
               Preview book
             </Link>
             <Link href={LANGUAGES_MANAGE_PATH} className={buttonClass("secondary")}>
-              Languages and audio
+              Languages and Audio
             </Link>
             {!lock.locked && (
               <>

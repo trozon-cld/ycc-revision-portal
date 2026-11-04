@@ -40,7 +40,7 @@ export function BackupDownload() {
           pictures, translations, languages and spoken phrases. Restoring it brings all of this back into an empty project.
         </p>
         <p className="text-sm text-slate-600">
-          Not included: General queries and support contact (re-enter them after a restore), audio (downloaded per language under Audio backups, below), and never
+          Not included: General Queries and support contact (re-enter them after a restore), audio (downloaded per language under Audio backups, below), and never
           accounts, candidates&apos; data or logs.
         </p>
         <p className="text-sm text-slate-600">Keep this page open until the file is saved. Large backups take a few minutes.</p>

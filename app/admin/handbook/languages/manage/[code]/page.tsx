@@ -5,7 +5,7 @@ import { requireRole } from "@/lib/auth/guard";
 import { loadLanguagePhrases } from "@/lib/voice/language-admin";
 import { PhrasesEditor } from "./phrases-editor";
 
-export const metadata: Metadata = { title: "Spoken phrases" };
+export const metadata: Metadata = { title: "Spoken Phrases" };
 
 export default async function LanguagePhrasesPage({ params }: PageProps<"/admin/handbook/languages/manage/[code]">) {
   await requireRole(CONTENT_EDITORS);

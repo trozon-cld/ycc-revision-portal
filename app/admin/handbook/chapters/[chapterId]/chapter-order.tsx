@@ -262,7 +262,7 @@ function AddQuestionsForm({ chapterId, questions, close }: { chapterId: string; 
           <p>
             Questions are written in the{" "}
             <Link href={`/admin/questions?chapter=${chapterId}`} className="text-primary underline underline-offset-2">
-              Question bank
+              Question Bank
             </Link>
             . A question from another chapter can be moved to this one in its editor.
           </p>

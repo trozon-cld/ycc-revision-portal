@@ -1,6 +1,5 @@
 "use client";
 
-import { ListBackLink } from "@/components/admin/list-place";
 import { useRouter } from "next/navigation";
 import { useCallback, useDeferredValue, useEffect, useMemo, useState, useTransition } from "react";
 import type { PictureAlign, PictureSize } from "@/lib/content/blocks";
@@ -24,6 +23,7 @@ import { TYPE_EDITORS } from "./type-editors";
 import { LanguagesStrip } from "@/app/admin/handbook/languages/languages-strip";
 import type { LanguageName } from "@/lib/voice/languages";
 import { QUESTION_CURRENT_VERSION, type QuestionVoice } from "@/lib/voice/question-listen";
+import { Breadcrumbs } from "@/components/admin/breadcrumbs";
 
 export type QuestionDraft = {
   chapterId: string;
@@ -209,18 +209,17 @@ export function QuestionEditor({
 
   return (
     <>
-      <nav aria-label="Breadcrumb" className="mb-2 text-sm">
-        <ListBackLink list="questions" href="/admin/questions" className="text-primary underline underline-offset-2 hover:text-ink">
-          Question bank
-        </ListBackLink>
-        <span aria-hidden="true" className="mx-1.5 text-slate-500">/</span>
-        <span aria-current="page" className="text-slate-700">{refLabel ?? "New question"}</span>
-      </nav>
+      <Breadcrumbs
+        items={[
+          { label: "Question Bank", href: "/admin/questions", list: "questions" },
+          { label: refLabel ?? "New Question", current: true },
+        ]}
+      />
 
       {/* On tablets and laptops the title, status and Save stay in view while scrolling. */}
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3 md:sticky md:top-14 md:z-10 md:[@media(max-height:500px)]:top-0 md:-mx-6 md:border-b md:border-slate-200 md:bg-slate-50/95 md:px-6 md:py-3 md:backdrop-blur lg:top-0 lg:-mx-8 lg:px-8">
         <div className="min-w-0">
-          <h1 className="text-xl font-semibold text-ink">{refLabel ? `Question ${refLabel}` : "New question"}</h1>
+          <h1 className="text-xl font-semibold text-ink">{refLabel ? `Question ${refLabel}` : "New Question"}</h1>
           <p className="mt-0.5 text-sm text-slate-600">
             {questionTypeLabel(type)}
             {source && ` · Source: ${source}`}

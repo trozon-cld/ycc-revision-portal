@@ -6,7 +6,7 @@ import { buttonClass, cardClass } from "@/components/admin/styles";
 import { LogoutEverywhere, type LogoutEverywhereStyles } from "@/components/logout-everywhere";
 import { ChangeEmailForm, ChangeNameForm, ChangePasswordForm } from "./account-forms";
 
-export const metadata: Metadata = { title: "My account" };
+export const metadata: Metadata = { title: "My Account" };
 
 const LOGOUT_EVERYWHERE: LogoutEverywhereStyles = {
   button: buttonClass("secondary"),
@@ -30,7 +30,7 @@ export default async function AccountPage() {
 
   return (
     <>
-      <PageHeader title="My account" description={me?.email ?? session.email} />
+      <PageHeader title="My Account" description={me?.email ?? session.email} />
 
       <div className="grid gap-4 md:max-w-2xl">
         <section className={`${cardClass} p-5`}>

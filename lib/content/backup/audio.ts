@@ -230,7 +230,7 @@ async function planRestore(raw: unknown): Promise<Plan | { problems: string[] }>
   }
 
   const { rows: found } = await pool.query<{ name: string }>(`select name from voice_languages where code = $1`, [code]);
-  if (!found[0]) return { problems: [`This project has no ${lang.name} language. Add it under Languages and audio, then restore again.`] };
+  if (!found[0]) return { problems: [`This project has no ${lang.name} language. Add it under Languages and Audio, then restore again.`] };
 
   const restore = {} as Record<AudioTable, AudioRow[]>;
   const reasons: string[] = [];

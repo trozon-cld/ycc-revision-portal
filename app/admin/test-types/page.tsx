@@ -17,7 +17,7 @@ import { TestAreaRowActions, NewTestAreaButton } from "./test-area-row-actions";
 import { loadStructureLockView } from "@/lib/handbook/structure-lock";
 import { StructureLockBar } from "../handbook/structure-lock-bar";
 
-export const metadata: Metadata = { title: "Test types" };
+export const metadata: Metadata = { title: "Test Types" };
 
 interface TestAreaRow {
   id: string;
@@ -134,7 +134,7 @@ export default async function TestTypesPage() {
   return (
     <>
       <PageHeader
-        title="Test types"
+        title="Test Types"
         description={`${countOf(testAreas.length, "test area", "test areas")} · ${countOf(testTypes.length, "test type", "test types")}`}
         actions={
           <>

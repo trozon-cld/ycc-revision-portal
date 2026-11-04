@@ -1,9 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
-import { ListBackLink } from "@/components/admin/list-place";
 import { LeaveDialog, useLeaveGuard } from "@/components/admin/leave-guard";
 import { cardClass, inputClass, textareaClass } from "@/components/admin/styles";
 import { useToast } from "@/components/admin/toast";
@@ -16,6 +14,7 @@ import { translationState } from "@/lib/voice/status";
 import { TranslationLanguagePicker } from "@/app/admin/handbook/pages/translation-language-picker";
 import { TranslationToolbar, type TranslationProblem } from "@/app/admin/handbook/pages/translation-toolbar";
 import { checkQuestionTranslation, saveQuestionTranslation, translateQuestionLanguage } from "../../voice-actions";
+import { Breadcrumbs } from "@/components/admin/breadcrumbs";
 
 type Texts = { stem: string; options: Record<string, string>; instruction: string };
 
@@ -105,15 +104,12 @@ export function QuestionTranslationsEditor({
 
   return (
     <>
-      <nav aria-label="Breadcrumb" className="mb-2 text-sm">
-        <ListBackLink list="questions" href="/admin/questions" className="text-primary underline underline-offset-2 hover:text-ink">
-          Question bank
-        </ListBackLink>
-        <span aria-hidden="true" className="mx-1.5 text-slate-500">/</span>
-        <Link href={`/admin/questions/${questionId}`} className="text-primary underline underline-offset-2 hover:text-ink">
-          {refLabel}
-        </Link>
-      </nav>
+      <Breadcrumbs
+        items={[
+          { label: "Question Bank", href: "/admin/questions", list: "questions" },
+          { label: refLabel, href: `/admin/questions/${questionId}` },
+        ]}
+      />
       <h1 className="text-xl font-semibold text-ink">Translations</h1>
       <p className="mt-0.5 text-sm text-slate-600">
         The question and its options are drafted by the voice service from the saved English question. The explanation isn&apos;t translated: Listen

@@ -15,7 +15,7 @@ import { cardClass } from "@/components/admin/styles";
 import { Cell, Row, Table } from "@/components/admin/table";
 import { AddAddressButton, OfficeAddressActions, OfficeSwitchButton } from "./office-network-controls";
 
-export const metadata: Metadata = { title: "Office network" };
+export const metadata: Metadata = { title: "Office Network" };
 
 const NOTE = "rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25";
 
@@ -38,7 +38,7 @@ export default async function OfficeNetworkPage() {
     <div className="space-y-8">
       <div>
         <PageHeader
-          title="Office network"
+          title="Office Network"
           description={`${isOn ? "On" : "Off"} · ${countOf(addresses.length, "address", "addresses")}`}
           actions={
             <>

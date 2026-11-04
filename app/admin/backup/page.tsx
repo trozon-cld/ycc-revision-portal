@@ -6,7 +6,7 @@ import { PageTabs } from "@/components/admin/page-tabs";
 import { UPLOAD_PATH, backupTabs } from "@/lib/content/backup/access";
 import { UploadCheck } from "./upload-check";
 
-export const metadata: Metadata = { title: "Upload content" };
+export const metadata: Metadata = { title: "Upload Content" };
 
 export default async function UploadContentPage() {
   const session = await requireRole(CONTENT_EDITORS);

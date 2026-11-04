@@ -12,7 +12,7 @@ import { isUuid } from "@/lib/ids";
 import { firstParam } from "@/lib/params";
 import { QuestionEditor } from "../question-editor";
 
-export const metadata: Metadata = { title: "New question" };
+export const metadata: Metadata = { title: "New Question" };
 
 export default async function NewQuestionPage({ searchParams }: PageProps<"/admin/questions/new">) {
   await requireRole(CONTENT_EDITORS);

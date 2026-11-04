@@ -129,7 +129,7 @@ export function TestTypeChaptersForm({
       <div>
         <div className="space-y-3 px-5 py-4">
           <p className="rounded-md bg-slate-50 px-3 py-2 text-sm text-ink ring-1 ring-slate-200">
-            The structure is locked, so these can&apos;t be changed. Unlock it at the top of the Handbook or Test types page.
+            The structure is locked, so these can&apos;t be changed. Unlock it at the top of the Handbook or Test Types page.
           </p>
           {count}
           {sections}

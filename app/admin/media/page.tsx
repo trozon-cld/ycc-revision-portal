@@ -113,7 +113,7 @@ export default async function MediaPage({ searchParams }: PageProps<"/admin/medi
       )}
 
       <FilterBar action="/admin/media" clearHref="/admin/media" isFiltered={Boolean(search)}>
-        <FilterSearch name="q" label="Search descriptions or file names" defaultValue={search} wide />
+        <FilterSearch name="q" label="Search descriptions or file names" defaultValue={search} />
       </FilterBar>
 
       {media.length === 0 ? (

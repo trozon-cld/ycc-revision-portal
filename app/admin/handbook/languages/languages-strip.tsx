@@ -13,6 +13,7 @@ import { deleteQuestionAudioFile, generateQuestionAudioFile, questionAudioLink, 
 import { deletePageAudio, generatePageAudio, pageAudioLink } from "../pages/audio-actions";
 import { translatePageLanguage } from "../pages/translation-actions";
 import { AudioBadge, TranslationBadge } from "../pages/translation-badge";
+import { LanguageLabel } from "@/components/admin/language-label";
 
 // `index` of `total`: where a "Translate all" or "Generate all audio" run has got to.
 type Job = { kind: "translate" | "audio"; code: string; index: number; total: number };
@@ -268,7 +269,7 @@ export function LanguagesStrip({
                   href={`${translationsHref}?lang=${code}`}
                   className="inline-flex min-h-6 items-center gap-1 text-sm text-primary underline underline-offset-2 hover:text-ink"
                 >
-                  {language.name} <span lang={code}>{language.nativeName}</span>
+                  <LanguageLabel language={language} />
                 </Link>
               )}
 

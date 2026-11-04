@@ -19,6 +19,7 @@ import { ChapterTestTypesButton, ChapterStatusButton, PublishAllButton, type Pub
 import { describeHeldBack, planChapterPublish } from "@/lib/handbook/publish-all";
 import { readStructureLock } from "@/lib/handbook/structure-lock";
 import { Badge } from "@/components/admin/badge";
+import { Breadcrumbs } from "@/components/admin/breadcrumbs";
 
 export const metadata: Metadata = { title: "Chapter" };
 
@@ -143,13 +144,7 @@ export default async function ChapterPagesPage({ params }: PageProps<"/admin/han
   };
   return (
     <>
-      <nav aria-label="Breadcrumb" className="mb-2 text-sm">
-        <Link href="/admin/handbook" className="text-primary underline underline-offset-2 hover:text-ink">
-          Handbook
-        </Link>
-        <span aria-hidden="true" className="mx-1.5 text-slate-500">/</span>
-        <span className="text-slate-700">{chapter.sectionLabel}</span>
-      </nav>
+      <Breadcrumbs items={[{ label: "Handbook", href: "/admin/handbook" }, { label: chapter.sectionLabel }]} />
       <PageHeader
         title={chapter.chapterLabel}
         description={

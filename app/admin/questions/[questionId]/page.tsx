@@ -20,7 +20,7 @@ import { languageNames } from "@/lib/voice/languages";
 import { loadQuestionVoice } from "@/lib/voice/question-voice";
 import { QuestionEditor } from "../question-editor";
 
-export const metadata: Metadata = { title: "Edit question" };
+export const metadata: Metadata = { title: "Edit Question" };
 
 export default async function EditQuestionPage({ params }: PageProps<"/admin/questions/[questionId]">) {
   await requireRole(CONTENT_EDITORS);

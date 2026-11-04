@@ -92,12 +92,12 @@ export const ACTIVITY_ACTIONS = {
   "media.replaced": "Replaced picture",
   "media.alt_text_changed": "Changed picture description",
   "media.deleted": "Deleted picture",
-  "faq.created": "Created question in General queries",
-  "faq.updated": "Edited question in General queries",
-  "faq.reordered": "Reordered question in General queries",
-  "faq.published": "Published question in General queries",
-  "faq.unpublished": "Unpublished question in General queries",
-  "faq.deleted": "Deleted question in General queries",
+  "faq.created": "Created question in General Queries",
+  "faq.updated": "Edited question in General Queries",
+  "faq.reordered": "Reordered question in General Queries",
+  "faq.published": "Published question in General Queries",
+  "faq.unpublished": "Unpublished question in General Queries",
+  "faq.deleted": "Deleted question in General Queries",
   "support_contact.changed": "Changed support contact details",
   "account.email_changed": "Changed own email",
   "account.name_changed": "Changed own name",
@@ -118,17 +118,17 @@ export const ADMIN_ACTIONS = (Object.keys(ACTIVITY_ACTIONS) as ActivityAction[])
 // Groups actions by area for the "Type of action" filter; matched by the part before the dot.
 export const ACTION_AREAS: { label: string; prefixes: string[] }[] = [
   { label: "Admins", prefixes: ["admin"] },
-  { label: "Office network", prefixes: ["office_network"] },
+  { label: "Office Network", prefixes: ["office_network"] },
   { label: "Candidates", prefixes: ["candidate"] },
-  { label: "Test types", prefixes: ["test_area", "test_type"] },
+  { label: "Test Types", prefixes: ["test_area", "test_type"] },
   { label: "Handbook", prefixes: ["structure", "section", "chapter", "content_page", "page_translation", "page_audio"] },
-  { label: "Question bank", prefixes: ["question", "question_translation", "question_audio"] },
+  { label: "Question Bank", prefixes: ["question", "question_translation", "question_audio"] },
   { label: "Languages", prefixes: ["language", "listen"] },
   { label: "Media", prefixes: ["media"] },
-  { label: "General queries", prefixes: ["faq", "support_contact"] },
+  { label: "General Queries", prefixes: ["faq", "support_contact"] },
   { label: "Backup & Restore", prefixes: ["content"] },
-  { label: "Own account", prefixes: ["account"] },
-  { label: "Log archives", prefixes: ["log"] },
+  { label: "Own Account", prefixes: ["account"] },
+  { label: "Log Archives", prefixes: ["log"] },
 ];
 
 // Keys renamed in 0037 (groups became test areas, categories test types). Older log entries keep the old key.
@@ -167,7 +167,7 @@ export const AUTH_EVENTS = {
   logout: "Logged out",
   // Written once when too many failed attempts pause logins for an email or address (lib/auth/rate-limit.ts).
   login_paused: "Logins paused (too many failed attempts)",
-  password_check_failed: "Wrong current password (My account)",
+  password_check_failed: "Wrong current password (My Account)",
   // Right password, but an Admin outside the office network while that check is on (lib/auth/office-network.ts).
   login_refused_network: "Refused: outside the office network",
 } as const;

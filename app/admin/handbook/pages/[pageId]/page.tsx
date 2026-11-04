@@ -15,7 +15,7 @@ import { loadAudioSummaries } from "@/lib/voice/page-audio";
 import { loadTranslationSummaries } from "@/lib/voice/page-translations";
 import { PageEditor } from "./page-editor";
 
-export const metadata: Metadata = { title: "Edit page" };
+export const metadata: Metadata = { title: "Edit Page" };
 
 export default async function EditPagePage({ params }: PageProps<"/admin/handbook/pages/[pageId]">) {
   await requireRole(CONTENT_EDITORS);

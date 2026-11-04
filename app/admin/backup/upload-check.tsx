@@ -69,7 +69,7 @@ export function UploadCheck() {
 
   return (
     <div className="space-y-6">
-      <section className={`${cardClass} space-y-3 p-4`}>
+      <section className={`${cardClass} max-w-3xl space-y-3 p-4`}>
         <div>
           <label htmlFor="batch-zip" className={labelClass}>
             Batch zip
@@ -111,7 +111,7 @@ export function UploadCheck() {
         </p>
       )}
       {importing && (
-        <p aria-live="polite" className={`${cardClass} p-4 text-sm text-ink`}>
+        <p aria-live="polite" className={`${cardClass} max-w-3xl p-4 text-sm text-ink`}>
           {state.step} Please keep this page open.
         </p>
       )}
@@ -127,10 +127,10 @@ function ImportPanel({ report, message, onImport }: { report: CheckReport; messa
   const questions = report.questions.new + report.questions.update;
   const pictures = report.pictures.new + report.pictures.update;
   if (pages + questions + pictures === 0) {
-    return <p className={`${cardClass} p-4 text-sm text-ink`}>Everything in this batch is already in the portal, unchanged. There&apos;s nothing to import.</p>;
+    return <p className={`${cardClass} max-w-3xl p-4 text-sm text-ink`}>Everything in this batch is already in the portal, unchanged. There&apos;s nothing to import.</p>;
   }
   return (
-    <section aria-labelledby="import-heading" className={`${cardClass} space-y-3 p-4`}>
+    <section aria-labelledby="import-heading" className={`${cardClass} max-w-3xl space-y-3 p-4`}>
       <h2 id="import-heading" className="text-base font-semibold text-ink">
         Import
       </h2>

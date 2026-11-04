@@ -22,6 +22,7 @@ import { buttonClass } from "@/components/admin/styles";
 import { Cell, Row, Table } from "@/components/admin/table";
 import { VoiceUsage } from "../voice-usage";
 import { BulkRunner, type BulkLimits } from "./bulk-runner";
+import { Breadcrumbs } from "@/components/admin/breadcrumbs";
 
 export const metadata: Metadata = { title: "Batch Generate" };
 
@@ -72,13 +73,9 @@ export default async function BulkListenPage({ searchParams }: PageProps<"/admin
 
   return (
     <>
-      <nav aria-label="Breadcrumb" className="mb-2 text-sm">
-        <Link href="/admin/handbook" className="text-primary underline underline-offset-2 hover:text-ink">
-          Handbook
-        </Link>
-      </nav>
-      <PageHeader title="Languages and audio" description={`Batch Generate · ${shown.name}: ${formatCount(totals.ready)} of ${formatCount(totals.total, "item")} done`} />
-      <PageTabs label="Languages and audio" tabs={LANGUAGE_TABS} current={LANGUAGES_BULK_PATH} />
+      <Breadcrumbs items={[{ label: "Handbook", href: "/admin/handbook" }, { label: "Languages and Audio", current: true }]} />
+      <PageHeader title="Languages and Audio" description={`Batch Generate · ${shown.name}: ${formatCount(totals.ready)} of ${formatCount(totals.total, "item")} done`} />
+      <PageTabs label="Languages and Audio" tabs={LANGUAGE_TABS} current={LANGUAGES_BULK_PATH} />
       <VoiceUsage usage={usage} />
 
       <p className="mb-4 max-w-3xl text-sm text-slate-600">

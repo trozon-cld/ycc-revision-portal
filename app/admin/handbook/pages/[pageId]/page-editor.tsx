@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { BLOCK_LIMITS, parseBlocks, type Block, type BlockType } from "@/lib/content/blocks";
@@ -21,6 +20,7 @@ import { LanguagesStrip } from "../../languages/languages-strip";
 import type { AudioSummary } from "@/lib/voice/audio-files";
 import type { LanguageName } from "@/lib/voice/languages";
 import type { TranslationSummary } from "@/lib/voice/page-translations";
+import { Breadcrumbs } from "@/components/admin/breadcrumbs";
 
 const ADD_ORDER: BlockType[] = ["heading", "paragraph", "list", "picture", "callout"];
 
@@ -209,15 +209,12 @@ export function PageEditor({
 
   return (
     <>
-      <nav aria-label="Breadcrumb" className="mb-2 text-sm">
-        <Link href="/admin/handbook" className="text-primary underline underline-offset-2 hover:text-ink">
-          Handbook
-        </Link>
-        <span aria-hidden="true" className="mx-1.5 text-slate-500">/</span>
-        <Link href={`/admin/handbook/chapters/${chapter.id}`} className="text-primary underline underline-offset-2 hover:text-ink">
-          {chapter.chapterLabel}
-        </Link>
-      </nav>
+      <Breadcrumbs
+        items={[
+          { label: "Handbook", href: "/admin/handbook" },
+          { label: chapter.chapterLabel, href: `/admin/handbook/chapters/${chapter.id}` },
+        ]}
+      />
 
       <h1 className="sr-only">Edit page: {title.trim() || "Untitled page"}</h1>
       {/* On tablets and laptops the title, status and Save stay in view while scrolling. */}

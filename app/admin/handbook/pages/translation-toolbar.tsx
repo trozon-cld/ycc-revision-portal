@@ -7,6 +7,7 @@ import type { LanguageName } from "@/lib/voice/languages";
 import type { TranslationSummary } from "@/lib/voice/page-translations";
 import type { TranslationState } from "@/lib/voice/status";
 import { TranslationBadge } from "./translation-badge";
+import { LanguageLabel } from "@/components/admin/language-label";
 
 export type TranslationProblem = { message: string; conflict?: boolean };
 
@@ -65,7 +66,7 @@ export function TranslationToolbar({
         <div className="mr-auto min-w-0 text-sm text-slate-700">
           <p className="flex flex-wrap items-center gap-2">
             <span className="font-medium text-ink">
-              {language.name} <span lang={language.code}>{language.nativeName}</span>
+              <LanguageLabel language={language} />
             </span>
             <TranslationBadge state={state} auto={auto} />
           </p>
