@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getLiveSession } from "@/lib/auth/guard";
 import { CONTENT_EDITORS } from "@/lib/auth/content-editors";
 import { isSameOrigin } from "@/lib/auth/request";
-import { MAX_UPLOAD_BYTES, MAX_UPLOAD_REQUEST_BYTES } from "@/lib/media/limits";
+import { formatBytes } from "@/lib/format";
+import { MAX_PICTURE_BYTES, MAX_PICTURE_REQUEST_BYTES } from "@/lib/hosting";
 import { saveUpload } from "@/lib/media/upload";
 
 // Picture uploads have their own address, so only signed-in content editors can send a large request: the login
@@ -17,8 +18,8 @@ export async function POST(request: NextRequest) {
   }
   const length = Number(request.headers.get("content-length"));
   if (!length) return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 411 });
-  if (length > MAX_UPLOAD_REQUEST_BYTES) {
-    return NextResponse.json({ error: `The picture must be ${Math.round(MAX_UPLOAD_BYTES / 1024 / 1024)} MB or smaller.` }, { status: 413 });
+  if (length > MAX_PICTURE_REQUEST_BYTES) {
+    return NextResponse.json({ error: `The picture must be ${formatBytes(MAX_PICTURE_BYTES)} or smaller.` }, { status: 413 });
   }
   const formData = await request.formData().catch(() => null);
   if (!formData) return NextResponse.json({ error: "Choose a picture to upload." }, { status: 400 });

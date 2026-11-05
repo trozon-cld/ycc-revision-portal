@@ -6,6 +6,8 @@ import { logAuthEvent } from "@/lib/audit/log";
 export const LOGIN_LIMITS = { perEmailAndAddress: 5, perAddress: 30, pauseMinutes: 15 };
 
 const PAUSE_MS = LOGIN_LIMITS.pauseMinutes * 60 * 1000;
+// Refused sign-ins (outside the office network) count like failed ones; matches the indexes in schema.sql.
+const COUNTED = "('login_failed', 'login_refused_network')";
 
 // Seconds until logins are allowed again, or 0 when not paused.
 export async function loginPause(db: Pool | PoolClient, email: string, ip: string | null): Promise<number> {
@@ -14,14 +16,14 @@ export async function loginPause(db: Pool | PoolClient, email: string, ip: strin
   const [{ rows: pair }, { rows: all }] = await Promise.all([
     db.query<{ created_at: Date }>(
       `select created_at from auth_events
-       where event = 'login_failed' and email = $${addressValues.length + 1} and ${address}
+       where event in ${COUNTED} and email = $${addressValues.length + 1} and ${address}
          and created_at > now() - interval '${2 * LOGIN_LIMITS.pauseMinutes} minutes'
        order by created_at desc limit ${LOGIN_LIMITS.perEmailAndAddress}`,
       [...addressValues, email]
     ),
     db.query<{ created_at: Date }>(
       `select created_at from auth_events
-       where event = 'login_failed' and ${address}
+       where event in ${COUNTED} and ${address}
          and created_at > now() - interval '${2 * LOGIN_LIMITS.pauseMinutes} minutes'
        order by created_at desc limit ${LOGIN_LIMITS.perAddress}`,
       addressValues

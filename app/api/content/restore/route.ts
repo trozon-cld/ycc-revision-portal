@@ -6,6 +6,7 @@ import { isSameOrigin, readSmallBody } from "@/lib/auth/request";
 import { BACKUP_ROLES } from "@/lib/content/backup/access";
 import { MAX_RESTORE_DATA_BYTES, MAX_RESTORE_JSON_BYTES } from "@/lib/content/backup/limits";
 import { restoreBackup } from "@/lib/content/backup/restore";
+import { withinHostLimit } from "@/lib/hosting";
 
 // The backup's data (gzipped JSON from the browser), saved in one transaction once its pictures are uploaded.
 export async function POST(request: NextRequest) {
@@ -14,7 +15,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, problems: ["Your sign-in has ended. Log in again to restore."] }, { status: 401 });
   }
   if (!isSameOrigin(request.headers)) return NextResponse.json({ ok: false, problems: ["Something went wrong. Please try again."] }, { status: 403 });
-  const body = await readSmallBody(request, MAX_RESTORE_DATA_BYTES);
+  const body = await readSmallBody(request, withinHostLimit(MAX_RESTORE_DATA_BYTES));
   if (!body.ok) return NextResponse.json({ ok: false, problems: [body.tooLarge ? "This backup is too large to restore." : "Something went wrong. Please try again."] }, { status: body.tooLarge ? 413 : 400 });
   let data: unknown;
   try {

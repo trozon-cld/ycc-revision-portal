@@ -11,7 +11,7 @@ import { PAGE_TITLE, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { FocusedShell } from "@/components/learning/focused-shell";
 import { ReviewList } from "./review-list";
 
-export const metadata: Metadata = { title: "Your answers" };
+export const metadata: Metadata = { title: "Your Answers" };
 
 const FILTERS: { key: string; label: string; match: (item: MockReviewItem) => boolean; none: string }[] = [
   { key: "wrong", label: "Wrong", match: (item) => item.mark === "W", none: "No wrong answers in this test." },
@@ -30,18 +30,26 @@ export default async function MockReviewPage({ params, searchParams }: PageProps
   if (!review) redirect(`/dashboard/mock/${attemptId}`);
 
   const counts = new Map(FILTERS.map((filter) => [filter.key, review.items.filter(filter.match).length]));
-  const asked = firstParam((await searchParams).show);
+  const query = await searchParams;
+  const asked = firstParam(query.show);
+  // From the results page's chapter summary: that chapter's questions only.
+  const chapterId = firstParam(query.chapter);
+  const chapterItems = chapterId ? review.items.filter((item) => item.chapterId === chapterId) : [];
+  const chapter = chapterItems.length > 0 ? chapterItems[0].chapterLabel : null;
   // Without a choice: wrong answers first, then unanswered, then all.
   const filter =
     FILTERS.find((item) => item.key === asked) ?? FILTERS.find((item) => item.key !== "flagged" && (counts.get(item.key) ?? 0) > 0) ?? FILTERS[3];
-  const items = review.items.filter(filter.match);
+  const items = chapter ? chapterItems : review.items.filter(filter.match);
   const resultsHref = `/dashboard/mock/${attemptId}`;
 
   return (
-    <FocusedShell label="Mock test tools" status="Your answers">
+    <FocusedShell label="Mock test tools" status="Your Answers">
       <PageBody>
         <div className="max-w-3xl">
-          <h1 className={`${PAGE_TITLE}`}>Your answers</h1>
+          <Link href={resultsHref} className={`${SECONDARY_BUTTON} mb-4 w-full sm:w-auto`}>
+            Back to your results
+          </Link>
+          <h1 className={`${PAGE_TITLE}`}>Your Answers</h1>
           {!review.kept ? (
             <p className="mt-4 text-base leading-relaxed text-ink">
               Answers are kept for your {MOCK_KEEP_ANSWERS} newest mock tests, so this test’s answers are no longer available. Its score and
@@ -52,7 +60,7 @@ export default async function MockReviewPage({ params, searchParams }: PageProps
               <p className="mt-2 text-base text-ink">See your answer, the correct answer and why, for each question.</p>
               <nav aria-label="Show questions" className="mt-5 flex flex-wrap gap-2">
                 {FILTERS.map((item) => {
-                  const current = item.key === filter.key;
+                  const current = !chapter && item.key === filter.key;
                   return (
                     <Link
                       key={item.key}
@@ -69,6 +77,14 @@ export default async function MockReviewPage({ params, searchParams }: PageProps
               </nav>
               {review.items.some((item) => item.practiceFlag !== null) && (
                 <p className="mt-4 text-base text-muted">Flag a question to practise it later. You’ll find it in Practice, under Flagged questions.</p>
+              )}
+              {chapter && (
+                <p className="mt-4 text-base text-ink">
+                  Showing <span className="font-semibold">{chapter}</span> ({chapterItems.length === 1 ? "1 question" : `${chapterItems.length} questions`}).{" "}
+                  <Link href={`/dashboard/mock/${attemptId}/review?show=all`} className="font-semibold text-primary underline underline-offset-2">
+                    Show all chapters
+                  </Link>
+                </p>
               )}
               {items.length === 0 ? (
                 <p className="mt-5 lg:mt-6 text-base text-ink">{filter.none}</p>

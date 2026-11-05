@@ -12,7 +12,7 @@ export async function generateMetadata({ params }: PageProps<"/dashboard/mock/[a
   const session = await requireRole(["candidate"]);
   const { attemptId } = await params;
   const view = isUuid(attemptId) ? await loadMockRun(session.sub, attemptId) : null;
-  return { title: view?.kind === "ended" ? "Mock test results" : "Mock test" };
+  return { title: view?.kind === "ended" ? "Mock Test Results" : "Mock Test" };
 }
 
 // The test while it runs; its results once it has ended.
@@ -32,7 +32,7 @@ export default async function MockAttemptPage({ params, searchParams }: PageProp
   const results = await loadMockResults(session.sub, attemptId);
   if (!results) redirect("/dashboard/mock");
   return (
-    <FocusedShell label="Mock test tools" status="Your results">
+    <FocusedShell label="Mock test tools" status="Your Results">
       <MockResultsView attemptId={attemptId} results={results} practiceUnavailable={(await searchParams).practice === "unavailable"} />
     </FocusedShell>
   );

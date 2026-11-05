@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Children, isValidElement, type ReactNode } from "react";
+import { Children, isValidElement, type CSSProperties, type ReactNode } from "react";
 import { FilterApplyButton, FilterForm } from "./filter-form";
 import { buttonClass, inputClass } from "./styles";
 
@@ -39,9 +39,11 @@ export function FilterBar({
   );
 }
 
-export function FilterSearch({ name, label, defaultValue, wide = false }: { name: string; label: string; defaultValue: string; wide?: boolean }) {
+// Wide enough for its whole placeholder on tablets and laptops (at least 16rem), so it's never cut off.
+export function FilterSearch({ name, label, defaultValue }: { name: string; label: string; defaultValue: string }) {
+  const width = { "--filter-search": `max(16rem, calc(${label.length} * 0.47em + 1.75rem))` } as CSSProperties;
   return (
-    <div className={`col-span-2 max-[359px]:col-span-1 sm:w-64 ${wide ? "md:w-80" : ""}`}>
+    <div style={width} className="col-span-2 max-[359px]:col-span-1 sm:w-(--filter-search) sm:max-w-full">
       <label htmlFor={`filter-${name}`} className="sr-only">
         {label}
       </label>
@@ -61,15 +63,18 @@ export function FilterSelect({
   name,
   label,
   defaultValue,
+  wide = false,
   children,
 }: {
   name: string;
   label: string;
   defaultValue: string;
+  // For choices with longer names, so the chosen one isn't cut off.
+  wide?: boolean;
   children: ReactNode;
 }) {
   return (
-    <div className="min-w-0 sm:w-48 lg:w-44">
+    <div className={`min-w-0 ${wide ? "sm:w-56" : "sm:w-48 lg:w-44"}`}>
       <label htmlFor={`filter-${name}`} className="sr-only">
         {label}
       </label>

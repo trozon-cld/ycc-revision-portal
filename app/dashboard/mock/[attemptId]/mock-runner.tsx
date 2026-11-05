@@ -7,7 +7,7 @@ import type { MockRun, MockSaveReply } from "@/lib/mock/types";
 import { QuestionView } from "@/components/learning/questions/question-view";
 import { CARD, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { FlagToggle } from "@/components/candidate/flag-toggle";
-import { FocusedShell } from "@/components/learning/focused-shell";
+import { FocusedShell, type FocusedExit } from "@/components/learning/focused-shell";
 import { saveTextSize } from "@/app/dashboard/prepare/actions";
 import { submitMockTest } from "../actions";
 import { MockClock } from "./mock-clock";
@@ -34,6 +34,8 @@ const isBlank = (response: unknown) =>
   (typeof response === "object" && !Array.isArray(response) && Object.keys(response as object).length === 0);
 
 // The mock test: one question at a time, no marking, answers saved as they change; the clock is the server's.
+const LEAVE_TEST: FocusedExit = { label: "Leave test", icon: "leave", href: "/dashboard" };
+
 // A review screen lists every question before Submit; at 0 the test submits itself.
 export function MockRunner({ run, initialTextSize }: { run: MockRun; initialTextSize: TextSize }) {
   const router = useRouter();
@@ -101,8 +103,7 @@ export function MockRunner({ run, initialTextSize }: { run: MockRun; initialText
   useEffect(() => {
     if (!timeUp) return;
     finish().catch(() => router.refresh());
-    // Runs once, when time runs out.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once, when time runs out (finish and router don't change that)
   }, [timeUp]);
 
   async function submit() {
@@ -172,6 +173,8 @@ export function MockRunner({ run, initialTextSize }: { run: MockRun; initialText
       timer={(place) => <MockClock seconds={secondsLeft} place={place} />}
       accountInSettings
       leaveWarning={timeUp ? undefined : "Your timer keeps running while you’re away. Your answers so far are saved."}
+      onReview={openReview}
+      exit={timeUp ? undefined : LEAVE_TEST}
       scrollRef={scrollRef}
     >
       <div className="mx-auto w-full max-w-3xl px-4 pt-5 pb-12 sm:pt-8">

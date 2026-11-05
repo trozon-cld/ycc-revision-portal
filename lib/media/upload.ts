@@ -4,9 +4,11 @@ import { withTransaction } from "@/lib/db/transaction";
 import { logActivity } from "@/lib/audit/log";
 import { EXTENSION_BY_MIME, readImageInfo, type ImageInfo } from "@/lib/media/image-info";
 import { storedBytes } from "@/lib/storage/usage";
-import { MAX_THUMB_BYTES, MAX_UPLOAD_BYTES, STORAGE_LIMIT_BYTES } from "@/lib/media/limits";
-import { StorageConfigError, deleteObjects, storeObject } from "@/lib/storage/storage";
+import { MAX_PICTURE_BYTES, STORAGE_LIMIT_BYTES } from "@/lib/hosting";
+import { MAX_THUMB_BYTES } from "@/lib/media/limits";
+import { STORAGE_SETTINGS_TEXT, StorageConfigError, deleteObjects, storeObject } from "@/lib/storage/storage";
 import { ALT_TEXT_MAX_LENGTH } from "@/lib/limits";
+import { formatBytes } from "@/lib/format";
 import { cleanLine } from "@/lib/text";
 import type { FormState } from "@/lib/forms";
 
@@ -17,7 +19,7 @@ export type MediaUploadState = FormState & { mediaId?: string };
 
 const MAX_NAME_LENGTH = 255;
 export const MEDIA_PAGE_PATH = "/admin/media";
-export const NOT_CONFIGURED = "Image storage isn't set up yet. Add the Supabase settings to the server's environment.";
+export const NOT_CONFIGURED = `Image storage isn't set up yet. Add ${STORAGE_SETTINGS_TEXT}.`;
 export const STORAGE_FULL = "Picture storage is full. Delete pictures you no longer use in Media, then try again.";
 
 export async function saveUpload(session: SessionPayload, formData: FormData): Promise<MediaUploadState> {
@@ -54,7 +56,7 @@ export async function saveUpload(session: SessionPayload, formData: FormData): P
 export type PreparedUpload = { main: { file: File; info: ImageInfo }; thumb: { file: File; info: ImageInfo } };
 
 export async function readPreparedUpload(formData: FormData): Promise<PreparedUpload | { error: string }> {
-  const main = await readUpload(formData.get("file"), MAX_UPLOAD_BYTES);
+  const main = await readUpload(formData.get("file"), MAX_PICTURE_BYTES);
   if ("error" in main) return { error: main.error };
   const thumb = await readUpload(formData.get("thumb"), MAX_THUMB_BYTES);
   if ("error" in thumb) return { error: "The preview image couldn't be prepared. Please choose the picture again." };
@@ -82,7 +84,7 @@ type ReadUpload = { file: File; info: ImageInfo } | { error: string };
 
 async function readUpload(value: FormDataEntryValue | null, maxBytes: number): Promise<ReadUpload> {
   if (!(value instanceof File) || value.size === 0) return { error: "Choose a picture to upload." };
-  if (value.size > maxBytes) return { error: `The picture must be ${Math.round(maxBytes / 1024 / 1024)} MB or smaller.` };
+  if (value.size > maxBytes) return { error: `The picture must be ${formatBytes(maxBytes)} or smaller.` };
 
   const info = readImageInfo(new Uint8Array(await value.arrayBuffer()));
   if (!info) return { error: "Only PNG, JPEG and WebP pictures can be uploaded." };

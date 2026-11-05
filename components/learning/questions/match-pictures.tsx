@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import type { ResolvedMedia } from "@/lib/content/book";
 import { seededShuffle } from "@/lib/questions/shuffle";
 import type { MatchAnswer, MatchContent, MatchItem, MatchResponse } from "@/lib/questions/types/match-pictures";
-import { Icon } from "./hotspot";
+import { FeedbackMark } from "./answer-parts";
 import type { AnswerAreaProps } from "./renderers";
 import { usePictureSrc } from "../measuring";
 
@@ -220,7 +220,7 @@ export function MatchPicturesAnswer({
                           <Picture media={media} item={itemById(right)} />
                           <span className="sr-only">Right picture: {alt(itemById(right))}</span>
                           <span aria-hidden="true" className="absolute -right-[0.4em] -top-[0.4em] grid size-[1.3em] place-items-center rounded-full bg-ok text-[0.8em] text-white">
-                            <Icon name="tick" />
+                            <FeedbackMark name="tick" />
                           </span>
                         </span>
                       )}
@@ -233,7 +233,7 @@ export function MatchPicturesAnswer({
                         isRight ? "bg-ok" : "bg-warn-strong"
                       }`}
                     >
-                      <Icon name={isRight ? "tick" : "cross"} />
+                      <FeedbackMark name={isRight ? "tick" : "cross"} />
                       {isRight ? "Correct" : "Not this one"}
                     </span>
                   )}

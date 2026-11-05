@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { MediaUploadForm } from "@/components/admin/media-upload-form";
 import { PanelButton } from "@/components/admin/row-actions";
-import { buttonClass } from "@/components/admin/styles";
+import { panelFooterClass, buttonClass } from "@/components/admin/styles";
 
 export function UploadMediaButton({ configured }: { configured: boolean }) {
   const router = useRouter();
@@ -22,9 +22,9 @@ export function UploadMediaButton({ configured }: { configured: boolean }) {
         ) : (
           <div>
             <p className="px-5 py-4 text-sm">
-              Image storage isn&apos;t set up yet. Add the Supabase settings to the server&apos;s environment first.
+              Image storage isn&apos;t set up yet. Add the storage settings to the server&apos;s environment first (see README).
             </p>
-            <div className="flex justify-end border-t border-slate-200 px-5 py-3">
+            <div className={panelFooterClass}>
               <button type="button" onClick={close} className={buttonClass("secondary")}>
                 Close
               </button>

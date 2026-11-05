@@ -8,10 +8,13 @@ import { QuestionView, type QuestionViewState } from "@/components/learning/ques
 import { CARD, ERROR_BOX, NOTE_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { useConfirmFocus } from "@/components/candidate/use-confirm-focus";
 import { NOT_THROUGH_MESSAGE, reachServer } from "@/lib/forms";
-import { FocusedShell } from "@/components/learning/focused-shell";
+import { FocusedShell, type FocusedExit } from "@/components/learning/focused-shell";
 import { saveTextSize } from "@/app/dashboard/prepare/actions";
 import { checkPracticeAnswer, endPracticeRun, nextPracticeQuestion } from "../actions";
 import { FlagButton } from "../flag-button";
+
+// Home, telling Home the practice was kept for later.
+const LEAVE_PRACTICE: FocusedExit = { label: "Home", icon: "home", href: "/dashboard?practice=saved" };
 
 // One practice question at a time: Check answer (marked on the server), then Next question.
 export function PracticeRunner({ initialStep, initialTextSize }: { initialStep: PracticeStep; initialTextSize: TextSize }) {
@@ -141,7 +144,9 @@ export function PracticeRunner({ initialStep, initialTextSize }: { initialStep: 
   const nextLabel = busy ? "Loading…" : isLast ? "See your results" : "Next question";
 
   return (
-    <FocusedShell label="Practice tools"
+    <FocusedShell
+      label="Practice tools"
+      exit={LEAVE_PRACTICE}
       status={`Question ${step.position + 1} of ${step.total}`}
       shortStatus={`${step.position + 1} of ${step.total}`}
       progress={{ done: step.answered, total: step.total }}

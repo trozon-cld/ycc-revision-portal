@@ -2,7 +2,8 @@
 
 import { useId, type KeyboardEvent, useContext } from "react";
 import type { AreaChoiceAnswer, AreaChoiceContent, ChoiceArea } from "@/lib/questions/types/area-choice";
-import { Icon, TapPicture, pictureWidth } from "./hotspot";
+import { TapPicture, pictureWidth } from "./hotspot";
+import { FeedbackMark } from "./answer-parts";
 import type { AnswerAreaProps } from "./renderers";
 import { MeasuringContext } from "../measuring";
 
@@ -114,7 +115,7 @@ function Choice({
           aria-hidden="true"
           className="absolute left-1/2 top-1/2 grid size-[max(28px,1.7em)] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-2 border-white bg-primary text-white shadow-[0_0_0_2px_rgba(15,23,42,0.6)]"
         >
-          <Icon name="tick" />
+          <FeedbackMark name="tick" />
         </span>
       )}
       {(correct === true || wrongChoice) && (
@@ -124,7 +125,7 @@ function Choice({
             correct ? "bg-ok" : "bg-warn-strong"
           }`}
         >
-          <Icon name={correct ? "tick" : "cross"} />
+          <FeedbackMark name={correct ? "tick" : "cross"} />
           <span className="truncate">{correct ? label || "Correct answer" : "Your answer"}</span>
         </span>
       )}

@@ -1,7 +1,8 @@
 // Browser-only: shrinks and converts a chosen picture to WebP before upload, so pages load fast.
 // Quality is kept high enough that the change isn't visible at normal viewing size.
 
-import { MAX_SOURCE_BYTES, MAX_UPLOAD_BYTES } from "./limits";
+import { formatBytes } from "@/lib/format";
+import { MAX_SOURCE_BYTES } from "./limits";
 
 const MAX_EDGE = 2000;
 const THUMB_EDGE = 400;
@@ -19,7 +20,8 @@ export type PreparedImage = {
   originalBytes: number;
 };
 
-export async function prepareImage(file: File): Promise<PreparedImage> {
+// maxBytes: the largest prepared picture the server accepts (usePictureLimit).
+export async function prepareImage(file: File, maxBytes: number): Promise<PreparedImage> {
   if (!ACCEPTED.includes(file.type)) throw new Error("Choose a PNG, JPEG or WebP picture.");
   if (file.size > MAX_SOURCE_BYTES) throw new Error("This picture is larger than 25 MB. Please choose a smaller one.");
 
@@ -37,13 +39,13 @@ export async function prepareImage(file: File): Promise<PreparedImage> {
     const thumb = await encode(bitmap, THUMB_EDGE, QUALITY_THUMB);
 
     // Keep the original if converting didn't help and it already fits the limits.
-    const fitsAsIs = Math.max(bitmap.width, bitmap.height) <= MAX_EDGE && file.size <= MAX_UPLOAD_BYTES;
+    const fitsAsIs = Math.max(bitmap.width, bitmap.height) <= MAX_EDGE && file.size <= maxBytes;
     const useOriginal = fitsAsIs && (main.blob.type !== "image/webp" || main.blob.size >= file.size);
     const mainFile = useOriginal ? file : toFile(main.blob, baseName);
     const size = useOriginal ? { width: bitmap.width, height: bitmap.height } : main;
 
-    if (mainFile.size > MAX_UPLOAD_BYTES) {
-      throw new Error("This picture is still larger than 5 MB after shrinking. Please choose a smaller one.");
+    if (mainFile.size > maxBytes) {
+      throw new Error(`This picture is still larger than ${formatBytes(maxBytes)} after shrinking. Please choose a smaller one.`);
     }
     return {
       main: mainFile,

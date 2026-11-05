@@ -7,8 +7,9 @@ import { prepareImage, type PreparedImage } from "@/lib/media/prepare-image";
 import { formatBytes } from "@/lib/format";
 import { ALT_TEXT_MAX_LENGTH } from "@/lib/limits";
 import { ActionForm } from "./action-form";
+import { usePictureLimit } from "./picture-limit";
 import { Field } from "./field";
-import { fileInputClass, textareaClass } from "./styles";
+import { fileInputClass, errorNoteClass, textareaClass } from "./styles";
 
 type Selection =
   | { status: "empty" }
@@ -32,6 +33,7 @@ export function MediaUploadForm({
   hint?: string;
 }) {
   const uploaded = useRef("");
+  const pictureLimit = usePictureLimit();
   const [selection, setSelection] = useState<Selection>({ status: "empty" });
   const previewUrl = selection.status === "ready" ? selection.previewUrl : null;
 
@@ -47,7 +49,7 @@ export function MediaUploadForm({
     }
     setSelection({ status: "preparing" });
     try {
-      const image = await prepareImage(file);
+      const image = await prepareImage(file, pictureLimit);
       setSelection({ status: "ready", image, originalName: file.name, previewUrl: URL.createObjectURL(image.thumb) });
     } catch (error) {
       setSelection({ status: "error", message: error instanceof Error ? error.message : "This picture couldn't be read." });
@@ -82,7 +84,7 @@ export function MediaUploadForm({
       <div aria-live="polite">
         {selection.status === "preparing" && <p className="text-sm text-slate-600">Preparing picture…</p>}
         {selection.status === "error" && (
-          <p role="alert" className="rounded-md bg-danger-bg px-3 py-2 text-sm text-danger-strong">
+          <p role="alert" className={errorNoteClass}>
             {selection.message}
           </p>
         )}

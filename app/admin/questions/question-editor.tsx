@@ -1,6 +1,5 @@
 "use client";
 
-import { ListBackLink } from "@/components/admin/list-place";
 import { useRouter } from "next/navigation";
 import { useCallback, useDeferredValue, useEffect, useMemo, useState, useTransition } from "react";
 import type { PictureAlign, PictureSize } from "@/lib/content/blocks";
@@ -16,7 +15,7 @@ import { Dialog } from "@/components/admin/dialog";
 import { BoldTextarea, Segmented } from "@/components/admin/editor-fields";
 import { PicturePicker } from "@/components/admin/picture-picker";
 import { QuestionPreview } from "@/components/admin/question-preview";
-import { buttonClass, cardClass, inputClass, labelClass } from "@/components/admin/styles";
+import { panelFooterClass, buttonClass, cardClass, inputClass, labelClass, errorNoteClass, warnNoteClass } from "@/components/admin/styles";
 import { useToast } from "@/components/admin/toast";
 import { getPreviewMedia, listPickerMedia, type PickerItem } from "@/app/admin/handbook/pages/actions";
 import { saveQuestion, setQuestionStatus } from "./actions";
@@ -24,6 +23,7 @@ import { TYPE_EDITORS } from "./type-editors";
 import { LanguagesStrip } from "@/app/admin/handbook/languages/languages-strip";
 import type { LanguageName } from "@/lib/voice/languages";
 import { QUESTION_CURRENT_VERSION, type QuestionVoice } from "@/lib/voice/question-listen";
+import { Breadcrumbs } from "@/components/admin/breadcrumbs";
 
 export type QuestionDraft = {
   chapterId: string;
@@ -209,18 +209,17 @@ export function QuestionEditor({
 
   return (
     <>
-      <nav aria-label="Breadcrumb" className="mb-2 text-sm">
-        <ListBackLink list="questions" href="/admin/questions" className="text-primary underline underline-offset-2 hover:text-ink">
-          Question bank
-        </ListBackLink>
-        <span aria-hidden="true" className="mx-1.5 text-slate-500">/</span>
-        <span aria-current="page" className="text-slate-700">{refLabel ?? "New question"}</span>
-      </nav>
+      <Breadcrumbs
+        items={[
+          { label: "Question Bank", href: "/admin/questions", list: "questions" },
+          { label: refLabel ?? "New Question", current: true },
+        ]}
+      />
 
       {/* On tablets and laptops the title, status and Save stay in view while scrolling. */}
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3 md:sticky md:top-14 md:z-10 md:[@media(max-height:500px)]:top-0 md:-mx-6 md:border-b md:border-slate-200 md:bg-slate-50/95 md:px-6 md:py-3 md:backdrop-blur lg:top-0 lg:-mx-8 lg:px-8">
         <div className="min-w-0">
-          <h1 className="text-xl font-semibold text-ink">{refLabel ? `Question ${refLabel}` : "New question"}</h1>
+          <h1 className="text-xl font-semibold text-ink">{refLabel ? `Question ${refLabel}` : "New Question"}</h1>
           <p className="mt-0.5 text-sm text-slate-600">
             {questionTypeLabel(type)}
             {source && ` · Source: ${source}`}
@@ -267,7 +266,7 @@ export function QuestionEditor({
         />
       )}
       {unmarked && status !== "published" && (
-        <p className="mb-3 rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25">
+        <p className={`mb-3 ${warnNoteClass}`}>
           No areas yet. {NEEDS_AREAS_MESSAGE} Until then it stays a draft, so candidates don&apos;t see it.
         </p>
       )}
@@ -275,12 +274,12 @@ export function QuestionEditor({
         <p className="mb-3 text-sm text-slate-700">The question is added to the bank when you first save it. New questions start as drafts.</p>
       )}
       {loadProblem && (
-        <p role="alert" className="mb-3 rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25">
+        <p role="alert" className={`mb-3 ${warnNoteClass}`}>
           This question no longer passes the checks: {loadProblem} Fix it and save.
         </p>
       )}
       {problem && (
-        <div role="alert" className="mb-3 flex flex-wrap items-center gap-3 rounded-md bg-danger-bg px-3 py-2 text-sm text-danger-strong">
+        <div role="alert" className={`mb-3 flex flex-wrap items-center gap-3 ${errorNoteClass}`}>
           <p className="min-w-0 flex-1">{problem.message}</p>
           {problem.conflict && (
             <button type="button" onClick={() => window.location.reload()} className={buttonClass("secondary", "sm")}>
@@ -474,7 +473,7 @@ export function QuestionEditor({
           <p className="px-5 py-4 text-sm">
             {isNew ? "This question hasn't been saved yet." : "Your changes to this question haven't been saved yet."}
           </p>
-          <div className="flex justify-end gap-2 border-t border-slate-200 px-5 py-3">
+          <div className={panelFooterClass}>
             <button type="button" onClick={() => setLeaveTo(null)} className={buttonClass("secondary")}>
               Stay
             </button>

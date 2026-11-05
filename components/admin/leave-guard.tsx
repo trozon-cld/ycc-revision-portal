@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Dialog } from "@/components/admin/dialog";
-import { buttonClass } from "@/components/admin/styles";
+import { panelFooterClass, buttonClass } from "@/components/admin/styles";
 
 // Unsaved edits: warns on closing the tab and catches in-app links; `leaveTo` is where a caught link was going.
 export function useLeaveGuard(dirty: boolean): [string | null, (to: string | null) => void] {
@@ -35,7 +35,7 @@ export function LeaveDialog({ what, onStay, onLeave, running }: { what: string; 
   return (
     <Dialog title={running ? "Leave and stop?" : "Leave without saving?"} variant="confirm" onClose={onStay}>
       <p className="px-5 py-4 text-sm">{running ?? <>Your changes to {what} haven&apos;t been saved yet.</>}</p>
-      <div className="flex justify-end gap-2 border-t border-slate-200 px-5 py-3">
+      <div className={panelFooterClass}>
         <button type="button" onClick={onStay} className={buttonClass("secondary")}>
           Stay
         </button>

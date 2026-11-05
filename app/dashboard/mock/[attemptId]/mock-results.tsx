@@ -2,11 +2,12 @@ import Link from "next/link";
 import { countOf, formatDuration } from "@/lib/format";
 import { MOCK_KEEP_ANSWERS, READINESS_TARGET, scorePercent, type MockEnd, type MockResults } from "@/lib/mock/types";
 import { PageBody } from "@/components/candidate/page-body";
-import { BAR_FILL, BAR_TRACK, CARD, ERROR_BOX, NOTE_BOX, PAGE_TITLE, PRIMARY_BUTTON, SECONDARY_BUTTON, SECTION_TITLE } from "@/components/candidate/buttons";
+import { CARD, ERROR_BOX, NOTE_BOX, PAGE_TITLE, PRIMARY_BUTTON, SECONDARY_BUTTON, SECTION_TITLE } from "@/components/candidate/buttons";
 import { ArrivalHeading } from "@/components/candidate/arrival-heading";
-import { ChapterResults } from "@/components/candidate/chapter-results";
+import { ChapterSummary } from "./chapter-summary";
 import { practiseMockMisses } from "@/app/dashboard/practice/actions";
 import { RetryForm } from "@/app/dashboard/practice/[sessionId]/retry-button";
+import { ScoreHeadline } from "@/components/candidate/score-headline";
 
 const ENDINGS: Record<MockEnd, { title: string; text: string }> = {
   submitted: { title: "Test submitted", text: "Your mock test has been submitted." },
@@ -24,7 +25,6 @@ export function MockResultsView({ attemptId, results, practiceUnavailable }: { a
   const wrong = results.answered - results.rightCount;
   const unanswered = results.outOf - results.answered;
   const removed = results.total - results.outOf;
-  const weakIds = new Set(results.weakest.map((topic) => topic.id));
   const { next } = results;
 
   return (
@@ -34,16 +34,7 @@ export function MockResultsView({ attemptId, results, practiceUnavailable }: { a
         <p className="mt-3 text-base leading-relaxed text-ink">{ending.text}</p>
 
         <section aria-labelledby="score-heading" className={`mt-5 lg:mt-6 ${CARD} p-4 lg:p-5`}>
-          <h2 id="score-heading" className="text-base font-semibold text-muted">
-            Your score
-          </h2>
-          <p className="mt-1 text-3xl font-bold text-ink">
-            {results.rightCount} of {results.outOf} right{" "}
-            <span className="ml-2 text-2xl font-semibold text-muted">{scorePercent(results.rightCount, results.outOf)}%</span>
-          </p>
-          <div aria-hidden="true" className={`${BAR_TRACK} mt-4 h-4`}>
-            <div className={BAR_FILL} style={{ width: `${share * 100}%` }} />
-          </div>
+          <ScoreHeadline right={results.rightCount} outOf={results.outOf} percent={scorePercent(results.rightCount, results.outOf)} fill={share} />
           <p
             className={`mt-4 rounded-xl border-l-4 px-4 py-3 text-base font-semibold ${
               ready ? "border-ok bg-ok-bg text-ok-strong" : "border-primary bg-primary/5 text-ink"
@@ -72,6 +63,8 @@ export function MockResultsView({ attemptId, results, practiceUnavailable }: { a
             </p>
           )}
         </section>
+
+        {results.topics.length > 0 && <ChapterSummary attemptId={attemptId} results={results} />}
 
         {practiceUnavailable && (
           <p role="alert" className={`mt-4 ${ERROR_BOX}`}>
@@ -137,15 +130,6 @@ export function MockResultsView({ attemptId, results, practiceUnavailable }: { a
             </>
           )}
         </section>
-
-        {results.topics.length > 0 && (
-          <ChapterResults
-            id="topics-heading"
-            title="Results by chapter"
-            showPercent
-            items={results.topics.map((topic) => ({ key: topic.id, label: topic.label, right: topic.right, outOf: topic.outOf, badge: weakIds.has(topic.id) ? "Weakest" : undefined }))}
-          />
-        )}
 
         <p className="mt-5 lg:mt-6 text-base text-muted">Mock test results are for practice and aren’t an official CITB result.</p>
 

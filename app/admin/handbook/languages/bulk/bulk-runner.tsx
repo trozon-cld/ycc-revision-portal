@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LeaveDialog, useLeaveGuard } from "@/components/admin/leave-guard";
-import { buttonClass, cardClass } from "@/components/admin/styles";
+import { buttonClass, cardClass, errorNoteClass, warnNoteClass } from "@/components/admin/styles";
 import { formatBytes, formatCount, formatDuration } from "@/lib/format";
 import { NOT_THROUGH_MESSAGE, reachServer } from "@/lib/forms";
 import type { BulkItem, BulkOutcome, BulkPlan, BulkStep, BulkStepResult } from "@/lib/voice/bulk";
@@ -238,7 +238,7 @@ export function BulkRunner({ plan, limits, closeHref }: { plan: BulkPlan; limits
       {view.phase === "idle" && <Estimate plan={plan} limits={limits} />}
 
       {view.error && (
-        <p role="alert" className="rounded-md bg-danger-bg px-3 py-2 text-sm text-danger-strong">
+        <p role="alert" className={errorNoteClass}>
           {view.error}
         </p>
       )}
@@ -254,7 +254,7 @@ export function BulkRunner({ plan, limits, closeHref }: { plan: BulkPlan; limits
             </div>
             <div
               role="progressbar"
-              aria-label="Bulk Listen progress"
+              aria-label="Batch Generate progress"
               aria-valuemin={0}
               aria-valuemax={view.total || plan.todo.length}
               aria-valuenow={view.processed}
@@ -267,7 +267,7 @@ export function BulkRunner({ plan, limits, closeHref }: { plan: BulkPlan; limits
           <p aria-live="polite" className="min-h-5 text-sm text-ink [overflow-wrap:anywhere]">
             {view.current}
           </p>
-          {view.wait && <p className="rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25">{view.wait}</p>}
+          {view.wait && <p className={warnNoteClass}>{view.wait}</p>}
           <dl className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-3 lg:grid-cols-6">
             {plan.language.code !== SOURCE_LANGUAGE && <Figure label="Translated and checked" value={view.translated} />}
             <Figure label="Audio made" value={view.audio} />

@@ -11,7 +11,7 @@ import { plainText } from "@/lib/content/inline";
 import { questionTypeLabel } from "@/lib/questions/registry";
 import type { QuestionType } from "@/lib/questions/types";
 import { PageHeader } from "@/components/admin/page-header";
-import { buttonClass } from "@/components/admin/styles";
+import { buttonClass, warnNoteClass } from "@/components/admin/styles";
 import { countOf } from "@/lib/format";
 import { AddQuestionsButton, ChapterOrder, type AddableQuestion, type OrderItem } from "./chapter-order";
 import { NewPageButton } from "./page-row-actions";
@@ -19,6 +19,7 @@ import { ChapterTestTypesButton, ChapterStatusButton, PublishAllButton, type Pub
 import { describeHeldBack, planChapterPublish } from "@/lib/handbook/publish-all";
 import { readStructureLock } from "@/lib/handbook/structure-lock";
 import { Badge } from "@/components/admin/badge";
+import { Breadcrumbs } from "@/components/admin/breadcrumbs";
 
 export const metadata: Metadata = { title: "Chapter" };
 
@@ -143,13 +144,7 @@ export default async function ChapterPagesPage({ params }: PageProps<"/admin/han
   };
   return (
     <>
-      <nav aria-label="Breadcrumb" className="mb-2 text-sm">
-        <Link href="/admin/handbook" className="text-primary underline underline-offset-2 hover:text-ink">
-          Handbook
-        </Link>
-        <span aria-hidden="true" className="mx-1.5 text-slate-500">/</span>
-        <span className="text-slate-700">{chapter.sectionLabel}</span>
-      </nav>
+      <Breadcrumbs items={[{ label: "Handbook", href: "/admin/handbook" }, { label: chapter.sectionLabel }]} />
       <PageHeader
         title={chapter.chapterLabel}
         description={
@@ -196,7 +191,7 @@ export default async function ChapterPagesPage({ params }: PageProps<"/admin/han
           <span className="font-medium text-ink">In test types:</span> {listNames(testTypeNames, 12)}
         </p>
       ) : (
-        <p className="mb-3 rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25">
+        <p className={`mb-3 ${warnNoteClass}`}>
           Not in any test type yet. Candidates won&apos;t see this chapter until it&apos;s added to one with Test types.
         </p>
       )}
@@ -208,7 +203,7 @@ export default async function ChapterPagesPage({ params }: PageProps<"/admin/han
       )}
 
       {drafts > 0 && (
-        <p className="mb-3 rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25">
+        <p className={`mb-3 ${warnNoteClass}`}>
           {drafts === 1 ? "1 item is a draft. Candidates won't see it" : `${drafts} items are drafts. Candidates won't see them`} until
           {drafts === 1 ? " it's" : " they're"} published.
         </p>

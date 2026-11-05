@@ -9,6 +9,7 @@ import { MAX_EMAIL_LENGTH, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from "@/li
 import { createCandidate } from "./actions";
 import { AccessLengthField } from "./access-length-field";
 import { TestTypeOptions, type TestTypeChoice } from "./test-type-options";
+import { PasswordInput } from "@/components/password-input";
 
 export function NewCandidateButton({
   testTypes,
@@ -42,10 +43,10 @@ export function NewCandidateButton({
             <input id="new-candidate-email" name="email" type="email" maxLength={MAX_EMAIL_LENGTH} required autoComplete="off" className={inputClass} />
           </Field>
           <Field id="new-candidate-password" label="Password" hint={`At least ${MIN_PASSWORD_LENGTH} characters.`}>
-            <input
+            <PasswordInput
+              look="staff"
               id="new-candidate-password"
               name="password"
-              type="password"
               required
               minLength={MIN_PASSWORD_LENGTH}
               maxLength={MAX_PASSWORD_LENGTH}

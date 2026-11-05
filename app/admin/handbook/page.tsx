@@ -13,6 +13,7 @@ import { countOf } from "@/lib/format";
 import { ChapterRowActions, NewChapterButton } from "./chapter-row-actions";
 import { NewSectionButton, SectionRowActions, type SectionOption } from "./section-row-actions";
 import { loadStructureLockView } from "@/lib/handbook/structure-lock";
+import { LANGUAGES_MANAGE_PATH } from "@/lib/voice/language-tabs";
 import { StructureLockBar } from "./structure-lock-bar";
 
 export const metadata: Metadata = { title: "Handbook" };
@@ -81,8 +82,8 @@ export default async function HandbookPage() {
             <Link href="/admin/handbook/preview" className={buttonClass("secondary")}>
               Preview book
             </Link>
-            <Link href="/admin/handbook/languages" className={buttonClass("secondary")}>
-              Languages and audio
+            <Link href={LANGUAGES_MANAGE_PATH} className={buttonClass("secondary")}>
+              Languages and Audio
             </Link>
             {!lock.locked && (
               <>

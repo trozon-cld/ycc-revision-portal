@@ -3,10 +3,11 @@
 import { ActionForm } from "@/components/admin/action-form";
 import { Field } from "@/components/admin/field";
 import { PanelButton, RowActions, type RowAction } from "@/components/admin/row-actions";
-import { buttonClass, inputClass } from "@/components/admin/styles";
+import { panelFooterClass, buttonClass, inputClass } from "@/components/admin/styles";
 import { NAME_MAX_LENGTH } from "@/lib/users/name";
 import { MAX_EMAIL_LENGTH, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from "@/lib/users/credentials";
-import { createAdmin, deleteAdmin, moveAllCandidates, updateAdminEmail, updateAdminName, updateAdminPassword } from "./actions";
+import { createAdmin, deleteAdmin, moveAllCandidates, setAdminOfficeExempt, updateAdminEmail, updateAdminName, updateAdminPassword } from "./actions";
+import { PasswordInput } from "@/components/password-input";
 
 export function NewAdminButton() {
   return (
@@ -27,10 +28,10 @@ export function NewAdminButton() {
             <input id="new-admin-email" name="email" type="email" maxLength={MAX_EMAIL_LENGTH} required autoComplete="off" className={inputClass} />
           </Field>
           <Field id="new-admin-password" label="Password" hint={`At least ${MIN_PASSWORD_LENGTH} characters.`}>
-            <input
+            <PasswordInput
+              look="staff"
               id="new-admin-password"
               name="password"
-              type="password"
               required
               minLength={MIN_PASSWORD_LENGTH}
               maxLength={MAX_PASSWORD_LENGTH}
@@ -49,12 +50,14 @@ export function AdminRowActions({
   email,
   name,
   candidateCount,
+  officeExempt,
   otherAdmins,
 }: {
   id: string;
   email: string;
   name: string | null;
   candidateCount: number;
+  officeExempt: boolean;
   // label: "Name (email)", or the email when there is no name.
   otherAdmins: { id: string; label: string }[];
 }) {
@@ -131,10 +134,10 @@ export function AdminRowActions({
           onCancel={close}
         >
           <Field id={`password-${id}`} label="New password" hint={`At least ${MIN_PASSWORD_LENGTH} characters. Share it with them securely.`}>
-            <input
+            <PasswordInput
+              look="staff"
               id={`password-${id}`}
               name="password"
-              type="password"
               required
               minLength={MIN_PASSWORD_LENGTH}
               maxLength={MAX_PASSWORD_LENGTH}
@@ -143,10 +146,10 @@ export function AdminRowActions({
             />
           </Field>
           <Field id={`confirm-${id}`} label="Type the new password again">
-            <input
+            <PasswordInput
+              look="staff"
               id={`confirm-${id}`}
               name="confirmPassword"
-              type="password"
               required
               minLength={MIN_PASSWORD_LENGTH}
               maxLength={MAX_PASSWORD_LENGTH}
@@ -157,6 +160,17 @@ export function AdminRowActions({
         </ActionForm>
       ),
     },
+    officeExempt
+      ? {
+          label: "Office network only",
+          run: () => setAdminOfficeExempt(id, false),
+          successMessage: "This Admin can now work only from the office network (when the check is on).",
+        }
+      : {
+          label: "Allow from any network",
+          run: () => setAdminOfficeExempt(id, true),
+          successMessage: "This Admin can now work from any network.",
+        },
     {
       label: "Delete",
       danger: true,
@@ -170,7 +184,7 @@ export function AdminRowActions({
                 <strong className="font-medium [overflow-wrap:anywhere]">{email}</strong> owns {countLabel}. Add another
                 Admin first, so they can be moved there.
               </p>
-              <div className="flex justify-end border-t border-slate-200 px-5 py-3">
+              <div className={panelFooterClass}>
                 <button type="button" onClick={close} className={buttonClass("secondary")}>
                   Close
                 </button>

@@ -13,7 +13,7 @@ import { Accordion } from "@/components/candidate/accordion";
 import { ChapterResults } from "@/components/candidate/chapter-results";
 import { MockHistoryList } from "@/app/dashboard/mock/mock-history";
 
-export const metadata: Metadata = { title: "My progress" };
+export const metadata: Metadata = { title: "My Progress" };
 
 // My progress: Handbook, Practice and mock tests in the current test type.
 export default async function ProgressPage() {
@@ -27,7 +27,7 @@ export default async function ProgressPage() {
   return (
     <PageBody>
       <div className="max-w-3xl">
-        <h1 className={`${PAGE_TITLE}`}>My progress</h1>
+        <h1 className={`${PAGE_TITLE}`}>My Progress</h1>
         <p className="mt-2 text-base text-ink [overflow-wrap:anywhere]">Your Handbook, Practice and mock tests for {progress.testTypeName}.</p>
 
         <div className="mt-5 flex flex-col gap-4 lg:mt-6">
@@ -54,7 +54,7 @@ export default async function ProgressPage() {
               </>
             ) : (
               <Link href="/dashboard/mock" className={`${PRIMARY_BUTTON} w-full sm:w-auto`}>
-                Go to Mock test
+                Go to Mock Test
               </Link>
             )}
           </Accordion>
@@ -155,7 +155,7 @@ export default async function ProgressPage() {
           >
             {mock.count === 0 ? (
               <Link href="/dashboard/mock" className={`${PRIMARY_BUTTON} w-full sm:w-auto`}>
-                Go to Mock test
+                Go to Mock Test
               </Link>
             ) : (
               <MockHistoryList

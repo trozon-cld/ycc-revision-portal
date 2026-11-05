@@ -13,7 +13,7 @@ import { Accordion } from "@/components/candidate/accordion";
 import { MockHistoryList } from "./mock-history";
 import { StartMock } from "./start-mock";
 
-export const metadata: Metadata = { title: "Mock test" };
+export const metadata: Metadata = { title: "Mock Test" };
 
 // Show more stops here.
 const HISTORY_MAX = 500;
@@ -38,10 +38,10 @@ export default async function MockTestPage({ searchParams }: PageProps<"/dashboa
   const more = history.count > history.items.length && shown < HISTORY_MAX ? `/dashboard/mock?shown=${shown + MOCK_HISTORY_STEP}#history-heading` : null;
 
   return (
-    <FocusedShell label="Mock test tools" status="Mock test">
+    <FocusedShell label="Mock test tools" status="Mock Test">
       <PageBody>
         <div className="max-w-3xl">
-          <h1 className={`${PAGE_TITLE}`}>Mock test</h1>
+          <h1 className={`${PAGE_TITLE}`}>Mock Test</h1>
           <p className="mt-1 text-base text-muted [overflow-wrap:anywhere]">Questions for {home.testTypeName}</p>
 
           {home.open ? (
@@ -83,13 +83,21 @@ export default async function MockTestPage({ searchParams }: PageProps<"/dashboa
                   </ul>
                 </Accordion>
               </div>
-              <StartMock />
+              <StartMock
+                back={
+                  <Link href="/dashboard" className={`${SECONDARY_BUTTON} w-full sm:w-auto`}>
+                    Back to home
+                  </Link>
+                }
+              />
             </>
           )}
 
-          <Link href="/dashboard" className={`${!home.open && home.size === 0 ? PRIMARY_BUTTON : SECONDARY_BUTTON} mt-3 w-full sm:w-auto`}>
-            Back to home
-          </Link>
+          {(home.open || home.size === 0) && (
+            <Link href="/dashboard" className={`${!home.open && home.size === 0 ? PRIMARY_BUTTON : SECONDARY_BUTTON} mt-3 w-full sm:w-auto`}>
+              Back to home
+            </Link>
+          )}
 
           {history.count > 0 && <MockHistoryList history={history} moreHref={more} collapse="all" open={showing} />}
         </div>

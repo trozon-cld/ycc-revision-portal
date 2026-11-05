@@ -9,7 +9,7 @@ import { BANK_PAGE_SIZE, countBankQuestions, countQuestions, listBankQuestions, 
 import { availableQuestionTypes, QUESTION_TYPES } from "@/lib/questions/registry";
 import { isQuestionType, QUESTION_TYPE_KEYS } from "@/lib/questions/types";
 import { loadTestAreas } from "@/lib/handbook/test-types";
-import { isUuid } from "@/lib/ids";
+import { uuidOrNull } from "@/lib/ids";
 import { firstParam } from "@/lib/params";
 import { Badge } from "@/components/admin/badge";
 import { FilterBar, FilterSearch, FilterSelect } from "@/components/admin/filter-bar";
@@ -19,7 +19,7 @@ import { RememberListPlace } from "@/components/admin/list-place";
 import { Cell, Row, Table } from "@/components/admin/table";
 import { NewQuestionButton, QuestionRowActions } from "./question-row-actions";
 
-export const metadata: Metadata = { title: "Question bank" };
+export const metadata: Metadata = { title: "Question Bank" };
 
 // The Status filter's extra choice: drafts still waiting for their areas.
 const NEEDS_AREAS_FILTER = "needs-areas";
@@ -66,7 +66,7 @@ export default async function QuestionBankPage({ searchParams }: PageProps<"/adm
     <>
       <RememberListPlace list="questions" search={listSearch(query, page)} />
       <PageHeader
-        title="Question bank"
+        title="Question Bank"
         description={
           isFiltered
             ? `${matching.toLocaleString("en-GB")} of ${totalLabel} match your filters`
@@ -214,9 +214,6 @@ function PictureIcon() {
   return <Icon name="picture" size={14} weight="regular" className="mr-0.5 inline align-[-2px]" />;
 }
 
-function uuidOrNull(value: string | undefined): string | null {
-  return value && isUuid(value) ? value : null;
-}
 
 // Where the question is set to appear: placed in its chapter's Handbook pages, and its Practice / Mock test switches.
 function usedIn(row: BankRow): string[] {

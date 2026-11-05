@@ -9,7 +9,7 @@ const TABS: { href: string; label: string; icon: IconName }[] = [
   { href: "/dashboard", label: "Home", icon: "home" },
   { href: "/dashboard/prepare", label: "Prepare", icon: "book" },
   { href: "/dashboard/practice", label: "Practice", icon: "practice" },
-  { href: "/dashboard/mock", label: "Mock test", icon: "timer" },
+  { href: "/dashboard/mock", label: "Mock Test", icon: "timer" },
   { href: "/dashboard/progress", label: "Progress", icon: "progress" },
 ];
 

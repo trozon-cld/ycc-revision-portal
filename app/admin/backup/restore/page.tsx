@@ -5,15 +5,19 @@ import { PageTabs } from "@/components/admin/page-tabs";
 import { BACKUP_ROLES, RESTORE_PATH, backupTabs } from "@/lib/content/backup/access";
 import { RestoreAudio } from "./restore-audio";
 import { RestoreBackup } from "./restore-backup";
+import { DatabaseStatus } from "@/components/admin/database-status";
+import { loadSchemaStatus } from "@/lib/db/schema-version";
 
 export const metadata: Metadata = { title: "Restore" };
 
 export default async function RestorePage() {
   const session = await requireRole(BACKUP_ROLES);
+  const schema = await loadSchemaStatus();
   return (
     <>
       <PageHeader title="Backup & Restore" description="Put a backup back into an empty project, for example when moving to a new one." />
       <PageTabs label="Backup & Restore" tabs={backupTabs(session.role)} current={RESTORE_PATH} />
+      <DatabaseStatus status={schema} />
       <div className="space-y-6">
         <RestoreBackup />
         <RestoreAudio />

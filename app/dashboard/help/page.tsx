@@ -8,7 +8,7 @@ import { loadMockInProgress } from "@/lib/mock/attempts";
 import { loadPracticeInProgress } from "@/lib/practice/sessions";
 import { Icon } from "@/components/icons";
 
-export const metadata: Metadata = { title: "Help: general queries" };
+export const metadata: Metadata = { title: "Help: General Queries" };
 
 const LINK = "inline-flex min-h-11 items-center font-semibold text-primary underline underline-offset-4 [overflow-wrap:anywhere] hover:no-underline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary";
 
@@ -40,7 +40,7 @@ export default async function CandidateHelpPage() {
   return (
     <PageBody>
       <div className="max-w-3xl">
-        <h1 className={`${PAGE_TITLE}`}>Help: general queries</h1>
+        <h1 className={`${PAGE_TITLE}`}>Help: General Queries</h1>
         <p className="mt-2 text-base text-ink">Answers to common questions about using the portal. Tap a question to see its answer.</p>
 
         {items.length === 0 ? (

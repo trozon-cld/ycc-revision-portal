@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ActionForm } from "@/components/admin/action-form";
-import { buttonClass } from "@/components/admin/styles";
+import { panelFooterClass, buttonClass, warnNoteClass } from "@/components/admin/styles";
 import { countOf } from "@/lib/format";
 import { saveTestTypeChapters } from "./actions";
 
@@ -129,7 +129,7 @@ export function TestTypeChaptersForm({
       <div>
         <div className="space-y-3 px-5 py-4">
           <p className="rounded-md bg-slate-50 px-3 py-2 text-sm text-ink ring-1 ring-slate-200">
-            The structure is locked, so these can&apos;t be changed. Unlock it at the top of the Handbook or Test types page.
+            The structure is locked, so these can&apos;t be changed. Unlock it at the top of the Handbook or Test Types page.
           </p>
           {count}
           {sections}
@@ -151,7 +151,7 @@ export function TestTypeChaptersForm({
       {count}
       {sections}
       {removed.length > 0 && (
-        <p role="status" className="rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25">
+        <p role="status" className={warnNoteClass}>
           {studying > 0 ? `${countOf(studying, "candidate")} ${studying === 1 ? "studies" : "study"} ${testTypeName}. ` : ""}
           Removing {removed.map((chapter) => `${chapter.number} ${chapter.title}`).join(", ")} takes{" "}
           {removed.length === 1 ? "it" : "them"} out of {testTypeName}&apos;s book, Practice and Mock test
@@ -164,7 +164,7 @@ export function TestTypeChaptersForm({
 
 function CloseBar({ onClose }: { onClose: () => void }) {
   return (
-    <div className="flex justify-end border-t border-slate-200 px-5 py-3">
+    <div className={panelFooterClass}>
       <button type="button" onClick={onClose} className={buttonClass("secondary")}>
         Close
       </button>

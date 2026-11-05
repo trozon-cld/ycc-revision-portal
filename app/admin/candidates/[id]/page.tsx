@@ -16,7 +16,7 @@ import { loadProgress } from "@/lib/progress/overview";
 import { Badge } from "@/components/admin/badge";
 import { PersonLabel } from "@/components/admin/person-label";
 import { PageHeader } from "@/components/admin/page-header";
-import { ListBackLink } from "@/components/admin/list-place";
+import { Breadcrumbs } from "@/components/admin/breadcrumbs";
 import { Pagination, pageFromParam } from "@/components/admin/pagination";
 import { buttonClass, cardClass } from "@/components/admin/styles";
 import { Cell, Row, Table } from "@/components/admin/table";
@@ -24,6 +24,7 @@ import { CandidateStatusBadge } from "../status-badge";
 import { AdminCandidateActions, SuperadminCandidateActions } from "../candidate-row-actions";
 import { loadAdminOptions, loadTestTypeChoices } from "../options";
 import { toRowCandidate } from "../row-candidate";
+import { LinkPending } from "@/components/admin/link-pending";
 
 export const metadata: Metadata = { title: "Candidate" };
 
@@ -123,9 +124,7 @@ export default async function CandidateProgressPage({ params, searchParams }: Pa
 
   return (
     <>
-      <ListBackLink list="candidates" href="/admin/candidates" className={`${buttonClass("ghost", "sm")} mb-3 -ml-2.5`}>
-        ← Candidates
-      </ListBackLink>
+      <Breadcrumbs items={[{ label: "Candidates", href: "/admin/candidates", list: "candidates" }, { label: candidate.name ?? candidate.email, current: true }]} />
       <PageHeader
         title={candidate.name ?? candidate.email}
         description={candidate.name ? candidate.email : "No name yet"}
@@ -161,11 +160,12 @@ export default async function CandidateProgressPage({ params, searchParams }: Pa
                     key={item.id}
                     href={item.isCurrent ? path : `${path}?testType=${item.id}`}
                     aria-current={item.id === testType.id ? "page" : undefined}
-                    className={buttonClass(item.id === testType.id ? "primary" : "secondary", "sm")}
+                    className={`relative ${buttonClass(item.id === testType.id ? "primary" : "secondary", "sm")}`}
                   >
                     {item.name}
                     {item.isCurrent && <span className="sr-only"> (current test type)</span>}
                     {item.isCurrent && <span aria-hidden="true">·&nbsp;current</span>}
+                    <LinkPending />
                   </Link>
                 ))}
               </nav>

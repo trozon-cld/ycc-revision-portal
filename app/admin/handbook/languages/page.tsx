@@ -32,8 +32,10 @@ import { Cell, Row, Table } from "@/components/admin/table";
 import { voiceUsageSummary } from "@/lib/voice/quota";
 import { AudioBadge, TranslationBadge } from "../pages/translation-badge";
 import { VoiceUsage } from "./voice-usage";
+import { Breadcrumbs } from "@/components/admin/breadcrumbs";
+import { linkClass } from "@/components/admin/styles";
 
-export const metadata: Metadata = { title: "Languages and audio" };
+export const metadata: Metadata = { title: "Languages and Audio" };
 
 const BASE_PATH = LANGUAGES_PAGES_PATH;
 
@@ -78,16 +80,12 @@ export default async function LanguagesPage({ searchParams }: PageProps<"/admin/
 
   return (
     <>
-      <nav aria-label="Breadcrumb" className="mb-2 text-sm">
-        <Link href="/admin/handbook" className="text-primary underline underline-offset-2 hover:text-ink">
-          Handbook
-        </Link>
-      </nav>
+      <Breadcrumbs items={[{ label: "Handbook", href: "/admin/handbook" }, { label: "Languages and Audio", current: true }]} />
       <PageHeader
-        title="Languages and audio"
+        title="Languages and Audio"
         description={isFiltered ? `${formatCount(matching)} of ${formatCount(total, "page")} match your filters` : pagesLabel}
       />
-      <PageTabs label="Languages and audio" tabs={LANGUAGE_TABS} current={LANGUAGES_PAGES_PATH} />
+      <PageTabs label="Languages and Audio" tabs={LANGUAGE_TABS} current={LANGUAGES_PAGES_PATH} />
       <VoiceUsage usage={usage} />
 
       <section aria-labelledby="language-totals" className="mb-2">
@@ -113,7 +111,7 @@ export default async function LanguagesPage({ searchParams }: PageProps<"/admin/
                     <Link
                       href={showHref(language.code)}
                       aria-current={isShown ? "true" : undefined}
-                      className="text-primary underline underline-offset-2 hover:text-ink"
+                      className={linkClass}
                     >
                       {language.name}
                     </Link>
@@ -138,7 +136,7 @@ export default async function LanguagesPage({ searchParams }: PageProps<"/admin/
 
       <FilterBar action={BASE_PATH} clearHref={languageOnly} isFiltered={isFiltered}>
         <FilterSearch name="q" label="Search titles, questions or Q numbers" defaultValue={filters.search} />
-        <FilterSelect name="kind" label="Pages" defaultValue={filters.kind ?? ""}>
+        <FilterSelect name="kind" label="Pages" wide defaultValue={filters.kind ?? ""}>
           <option value="">Text and question pages</option>
           {LANGUAGE_KINDS.map((kind) => (
             <option key={kind} value={kind}>

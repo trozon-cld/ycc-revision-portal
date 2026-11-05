@@ -39,7 +39,6 @@ import {
   ReaderLabelsContext,
   useReaderLabels,
   ResultsPanel,
-  PANEL_LINK,
   SettingsPanel,
   BAR_BUTTON_DENSE,
   barButton,
@@ -229,8 +228,8 @@ export function BookReader({
   barEnd?: ReactNode;
   // A test type's whole book: unnumbered front and back covers. A new reader opens on the front cover.
   covers?: BookCovers;
-  // Candidate page on phones: the header is hidden, so the bar gets a Home button and Settings gets
-  // Back to home plus these links (Help, Log out).
+  // Candidate page: the header is hidden, so the bar gets a Home button (every screen) and, on phones,
+  // Settings gets these links (Help, Log out).
   homeHref?: string;
   accountLinks?: ReactNode;
   // Candidate progress: content pages shown to their last part, and questions checked or revealed.
@@ -841,7 +840,7 @@ export function BookReader({
           centreStatus={!sideways}
           start={wide ? barStart : undefined}
           end={wide ? barEnd : undefined}
-          home={phone ? homeHref : undefined}
+          home={homeHref}
           textSizeInBar={!compact && !sideways && !(player && (stageSize?.width ?? 0) < TEXT_SIZE_WITH_LISTEN_MIN)}
           listen={player?.bar}
         />
@@ -910,16 +909,7 @@ export function BookReader({
             readingSpeed={player ? readingSpeed : undefined}
             onReadingSpeedChange={player ? setReadingSpeed : undefined}
             onGoToPage={player && compact ? () => setPanel("goto") : undefined}
-            links={
-              phone && homeHref ? (
-                <>
-                  <Link href={homeHref} className={PANEL_LINK}>
-                    Back to home
-                  </Link>
-                  {accountLinks}
-                </>
-              ) : undefined
-            }
+            links={phone && homeHref ? accountLinks : undefined}
             onClose={() => setPanel(null)}
           />
         )}

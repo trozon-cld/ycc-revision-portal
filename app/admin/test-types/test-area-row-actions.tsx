@@ -3,7 +3,7 @@
 import { ActionForm } from "@/components/admin/action-form";
 import { Field } from "@/components/admin/field";
 import { PanelButton, RowActions, type RowAction } from "@/components/admin/row-actions";
-import { buttonClass, inputClass } from "@/components/admin/styles";
+import { panelFooterClass, buttonClass, inputClass } from "@/components/admin/styles";
 import { TEST_TYPE_NAME_MAX_LENGTH } from "@/lib/limits";
 import { createTestArea, deleteTestArea, moveTestArea, renameTestArea } from "./test-area-actions";
 
@@ -90,7 +90,7 @@ export function TestAreaRowActions({
             <strong className="font-medium">{name}</strong> still has {testTypeCount} test type
             {testTypeCount === 1 ? "" : "s"}. Move them to another test area or delete them first.
           </p>
-          <div className="flex justify-end border-t border-slate-200 px-5 py-3">
+          <div className={panelFooterClass}>
             <button type="button" onClick={close} className={buttonClass("secondary")}>
               Close
             </button>

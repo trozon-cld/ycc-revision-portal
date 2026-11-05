@@ -6,6 +6,7 @@ import { ArrowCounterClockwiseIcon } from "@phosphor-icons/react/dist/ssr/ArrowC
 import { ArrowDownIcon } from "@phosphor-icons/react/dist/ssr/ArrowDown";
 import { ArrowUpIcon } from "@phosphor-icons/react/dist/ssr/ArrowUp";
 import { BookOpenIcon } from "@phosphor-icons/react/dist/ssr/BookOpen";
+import { BuildingsIcon } from "@phosphor-icons/react/dist/ssr/Buildings";
 import { CaretDownIcon } from "@phosphor-icons/react/dist/ssr/CaretDown";
 import { CaretLeftIcon } from "@phosphor-icons/react/dist/ssr/CaretLeft";
 import { CaretRightIcon } from "@phosphor-icons/react/dist/ssr/CaretRight";
@@ -17,6 +18,9 @@ import { ClockCounterClockwiseIcon } from "@phosphor-icons/react/dist/ssr/ClockC
 import { CopyIcon } from "@phosphor-icons/react/dist/ssr/Copy";
 import { DotsSixVerticalIcon } from "@phosphor-icons/react/dist/ssr/DotsSixVertical";
 import { DotsThreeIcon } from "@phosphor-icons/react/dist/ssr/DotsThree";
+import { DoorOpenIcon } from "@phosphor-icons/react/dist/ssr/DoorOpen";
+import { EyeIcon } from "@phosphor-icons/react/dist/ssr/Eye";
+import { EyeSlashIcon } from "@phosphor-icons/react/dist/ssr/EyeSlash";
 import { FileTextIcon } from "@phosphor-icons/react/dist/ssr/FileText";
 import { FlagIcon } from "@phosphor-icons/react/dist/ssr/Flag";
 import { GearSixIcon } from "@phosphor-icons/react/dist/ssr/GearSix";
@@ -57,6 +61,7 @@ const ICONS = {
   pause: PauseIcon,
   "listen-back": ArrowCounterClockwiseIcon,
   flag: FlagIcon,
+  leave: DoorOpenIcon,
   // Marks and movement
   tick: CheckIcon,
   cross: XIcon,
@@ -78,12 +83,16 @@ const ICONS = {
   admins: UserGearIcon,
   candidates: UsersIcon,
   testTypes: TagIcon,
+  office: BuildingsIcon,
   faq: ChatCircleTextIcon,
   archive: ArchiveIcon,
   activity: ClockCounterClockwiseIcon,
   account: GearSixIcon,
   locked: LockIcon,
   unlocked: LockOpenIcon,
+  // Password fields
+  show: EyeIcon,
+  hide: EyeSlashIcon,
 } as const;
 
 export type IconName = keyof typeof ICONS;

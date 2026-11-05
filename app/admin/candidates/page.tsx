@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { requireRole } from "@/lib/auth/guard";
 import { pool } from "@/lib/db/pool";
 import { accessEnded, customDateBounds, formatUkDate } from "@/lib/candidates/access";
-import { isUuid } from "@/lib/ids";
+import { uuidOrNull } from "@/lib/ids";
 import { firstParam } from "@/lib/params";
 import { escapeLike } from "@/lib/db/like";
 import { FilterBar, FilterSearch, FilterSelect } from "@/components/admin/filter-bar";
@@ -250,6 +250,3 @@ export default async function CandidatesPage({ searchParams }: PageProps<"/admin
 }
 
 
-function uuidOrNull(value: string | undefined): string | null {
-  return isUuid(value) ? value : null;
-}

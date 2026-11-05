@@ -21,7 +21,7 @@ export default function AdminError({ error, retry }: { error: Error & { digest?:
           Try again
         </button>
         <Link href="/admin" className={buttonClass("secondary")}>
-          Back to main list
+          Back to home
         </Link>
       </div>
       {error.digest && <p className="mt-5 text-xs text-slate-600">Reference: {error.digest}</p>}

@@ -18,16 +18,17 @@ import { Badge } from "@/components/admin/badge";
 import { FilterBar, FilterSelect } from "@/components/admin/filter-bar";
 import { PageHeader } from "@/components/admin/page-header";
 import { PageTabs } from "@/components/admin/page-tabs";
-import { buttonClass } from "@/components/admin/styles";
+import { buttonClass, warnNoteClass } from "@/components/admin/styles";
 import { Cell, Row, Table } from "@/components/admin/table";
 import { VoiceUsage } from "../voice-usage";
 import { BulkRunner, type BulkLimits } from "./bulk-runner";
+import { Breadcrumbs } from "@/components/admin/breadcrumbs";
 
-export const metadata: Metadata = { title: "Bulk Listen" };
+export const metadata: Metadata = { title: "Batch Generate" };
 
 const BASE_PATH = LANGUAGES_BULK_PATH;
 
-// The Bulk tab: one language at a time, its progress per chapter, and a run for one chapter.
+// The Batch Generate tab: one language at a time, its progress per chapter, and a run for one chapter.
 export default async function BulkListenPage({ searchParams }: PageProps<"/admin/handbook/languages/bulk">) {
   const session = await requireRole(CONTENT_EDITORS);
   const params = await searchParams;
@@ -72,13 +73,9 @@ export default async function BulkListenPage({ searchParams }: PageProps<"/admin
 
   return (
     <>
-      <nav aria-label="Breadcrumb" className="mb-2 text-sm">
-        <Link href="/admin/handbook" className="text-primary underline underline-offset-2 hover:text-ink">
-          Handbook
-        </Link>
-      </nav>
-      <PageHeader title="Languages and audio" description={`Bulk Listen · ${shown.name}: ${formatCount(totals.ready)} of ${formatCount(totals.total, "item")} done`} />
-      <PageTabs label="Languages and audio" tabs={LANGUAGE_TABS} current={LANGUAGES_BULK_PATH} />
+      <Breadcrumbs items={[{ label: "Handbook", href: "/admin/handbook" }, { label: "Languages and Audio", current: true }]} />
+      <PageHeader title="Languages and Audio" description={`Batch Generate · ${shown.name}: ${formatCount(totals.ready)} of ${formatCount(totals.total, "item")} done`} />
+      <PageTabs label="Languages and Audio" tabs={LANGUAGE_TABS} current={LANGUAGES_BULK_PATH} />
       <VoiceUsage usage={usage} />
 
       <p className="mb-4 max-w-3xl text-sm text-slate-600">
@@ -98,7 +95,7 @@ export default async function BulkListenPage({ searchParams }: PageProps<"/admin
       </FilterBar>
 
       {chapterParam && !plan && (
-        <p role="alert" className="mb-4 rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25">
+        <p role="alert" className={`mb-4 ${warnNoteClass}`}>
           That chapter no longer exists. Choose one below.
         </p>
       )}

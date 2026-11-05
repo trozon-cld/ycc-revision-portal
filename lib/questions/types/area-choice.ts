@@ -1,7 +1,7 @@
 import { cleanLine, isRecord } from "@/lib/text";
 import { isUuid } from "@/lib/ids";
 import { defineQuestionType } from "../define";
-import { HOTSPOT_LIMITS, HOTSPOT_SHAPES, roundTenth, type HotspotArea, type HotspotShape } from "./hotspot";
+import { HOTSPOT_LIMITS, HOTSPOT_SHAPES, readNumber, roundTenth, type HotspotArea, type HotspotShape } from "./hotspot";
 
 // Choose the area: 2–6 visible areas on a picture, exactly one right. Unlike "Tap the area", the areas
 // are in the content; only which one is correct is in the answer.
@@ -28,10 +28,6 @@ export function overlappingPairs(areas: HotspotArea[]): [number, number][] {
   const pairs: [number, number][] = [];
   areas.forEach((a, i) => areas.forEach((b, j) => j > i && boxesOverlap(a, b) && pairs.push([i, j])));
   return pairs;
-}
-
-function readNumber(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? roundTenth(value) : null;
 }
 
 export const areaChoiceDef = defineQuestionType<AreaChoiceContent, AreaChoiceAnswer, string>({

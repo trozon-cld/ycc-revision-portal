@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { buttonClass, cardClass } from "@/components/admin/styles";
+import { buttonClass, cardClass, errorNoteClass, warnNoteClass } from "@/components/admin/styles";
 import { formatUkDateTime } from "@/lib/candidates/access";
 import type { LanguageName } from "@/lib/voice/languages";
 import type { TranslationSummary } from "@/lib/voice/page-translations";
 import type { TranslationState } from "@/lib/voice/status";
 import { TranslationBadge } from "./translation-badge";
+import { LanguageLabel } from "@/components/admin/language-label";
 
 export type TranslationProblem = { message: string; conflict?: boolean };
 
@@ -65,7 +66,7 @@ export function TranslationToolbar({
         <div className="mr-auto min-w-0 text-sm text-slate-700">
           <p className="flex flex-wrap items-center gap-2">
             <span className="font-medium text-ink">
-              {language.name} <span lang={language.code}>{language.nativeName}</span>
+              <LanguageLabel language={language} />
             </span>
             <TranslationBadge state={state} auto={auto} />
           </p>
@@ -114,7 +115,7 @@ export function TranslationToolbar({
 
       {notice}
       {problem && (
-        <div role="alert" className="mt-3 flex flex-wrap items-center gap-3 rounded-md bg-danger-bg px-3 py-2 text-sm text-danger-strong">
+        <div role="alert" className={`mt-3 flex flex-wrap items-center gap-3 ${errorNoteClass}`}>
           <p className="min-w-0 flex-1">{problem.message}</p>
           {problem.conflict && (
             <button type="button" onClick={() => window.location.reload()} className={buttonClass("secondary", "sm")}>
@@ -124,7 +125,7 @@ export function TranslationToolbar({
         </div>
       )}
       {confirmAgain && (
-        <div role="alertdialog" aria-labelledby="again-title" className="mt-3 rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25">
+        <div role="alertdialog" aria-labelledby="again-title" className={`mt-3 ${warnNoteClass}`}>
           <p id="again-title" className="font-medium">
             Translate the {what} into {language.name} again?
           </p>
@@ -145,7 +146,7 @@ export function TranslationToolbar({
 
 function stateLine(state: TranslationState, summary: TranslationSummary, outdatedLine: string): string {
   if (state === "checked" && summary.checkedAutomatically) {
-    return `Checked automatically by bulk Listen ${formatUkDateTime(summary.checkedAt ?? summary.updatedAt)}. Read it, then mark it as checked.`;
+    return `Checked automatically by Batch Generate ${formatUkDateTime(summary.checkedAt ?? summary.updatedAt)}. Read it, then mark it as checked.`;
   }
   if (state === "checked") return `Checked ${formatUkDateTime(summary.checkedAt ?? summary.updatedAt)}.`;
   if (state === "outdated") return outdatedLine;

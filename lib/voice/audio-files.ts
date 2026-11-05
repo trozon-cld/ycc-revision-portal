@@ -1,5 +1,5 @@
-import { STORAGE_LIMIT_BYTES } from "@/lib/media/limits";
-import { StorageConfigError, deleteObjects, getSignedUrls, isStorageConfigured, storeObject } from "@/lib/storage/storage";
+import { STORAGE_LIMIT_BYTES } from "@/lib/hosting";
+import { STORAGE_SETTINGS_TEXT, StorageConfigError, deleteObjects, getSignedUrls, isStorageConfigured, storeObject } from "@/lib/storage/storage";
 import { storedBytes } from "@/lib/storage/usage";
 import type { VoiceFailure } from "./services";
 
@@ -11,7 +11,7 @@ export type AudioResult = { ok: true; audio: AudioSummary } | { ok: false; error
 export type AudioDeleteResult = { ok: true } | { ok: false; error: string };
 export type AudioLinkResult = { ok: true; url: string } | { ok: false; error: string };
 
-export const AUDIO_NOT_CONFIGURED = "Audio storage isn't set up yet. Add the Supabase settings to the server's environment.";
+export const AUDIO_NOT_CONFIGURED = `Audio storage isn't set up yet. Add ${STORAGE_SETTINGS_TEXT}.`;
 const STORAGE_FULL = "Storage is full, so no new audio can be made. Delete pictures in Media or audio you no longer need, then try again.";
 const SAVE_FAILED = "The audio couldn't be saved. Please try again.";
 const MISSING = "This audio no longer exists. Reload the page.";

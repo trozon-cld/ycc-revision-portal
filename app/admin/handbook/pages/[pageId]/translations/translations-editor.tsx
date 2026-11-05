@@ -1,13 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useDeferredValue, useMemo, useState, useTransition } from "react";
 import type { Block } from "@/lib/content/blocks";
 import type { BookPageData, ResolvedMedia } from "@/lib/content/book";
 import type { ChapterContext } from "@/lib/content/pages";
 import { BookPreview } from "@/components/admin/book-preview";
-import { cardClass, inputClass, textareaClass } from "@/components/admin/styles";
+import { cardClass, inputClass, warnNoteClass, textareaClass } from "@/components/admin/styles";
 import { useToast } from "@/components/admin/toast";
 import { LeaveDialog, useLeaveGuard } from "@/components/admin/leave-guard";
 import { NOT_THROUGH_MESSAGE, reachServer } from "@/lib/forms";
@@ -18,6 +17,7 @@ import { toTranslatable } from "@/lib/voice/translation";
 import { checkTranslation, saveTranslation, translatePageLanguage } from "../../translation-actions";
 import { TranslationLanguagePicker } from "../../translation-language-picker";
 import { TranslationToolbar, type TranslationProblem } from "../../translation-toolbar";
+import { Breadcrumbs } from "@/components/admin/breadcrumbs";
 
 type Texts = Record<string, string[]>;
 
@@ -116,19 +116,13 @@ export function TranslationsEditor({
 
   return (
     <>
-      <nav aria-label="Breadcrumb" className="mb-2 text-sm">
-        <Link href="/admin/handbook" className="text-primary underline underline-offset-2 hover:text-ink">
-          Handbook
-        </Link>
-        <span aria-hidden="true" className="mx-1.5 text-slate-500">/</span>
-        <Link href={`/admin/handbook/chapters/${chapter.id}`} className="text-primary underline underline-offset-2 hover:text-ink">
-          {chapter.chapterLabel}
-        </Link>
-        <span aria-hidden="true" className="mx-1.5 text-slate-500">/</span>
-        <Link href={`/admin/handbook/pages/${pageId}`} className="text-primary underline underline-offset-2 hover:text-ink">
-          {pageTitle}
-        </Link>
-      </nav>
+      <Breadcrumbs
+        items={[
+          { label: "Handbook", href: "/admin/handbook" },
+          { label: chapter.chapterLabel, href: `/admin/handbook/chapters/${chapter.id}` },
+          { label: pageTitle, href: `/admin/handbook/pages/${pageId}` },
+        ]}
+      />
       <h1 className="text-xl font-semibold text-ink">Translations</h1>
       <p className="mt-0.5 text-sm text-slate-600">
         Translations are drafted by the voice service from the saved English page. Read each one through and correct it, then mark it as checked.
@@ -161,7 +155,7 @@ export function TranslationsEditor({
         onSave={save}
       />
       {missingBlocks > 0 && (
-        <p className="mt-3 rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25">
+        <p className={`mt-3 ${warnNoteClass}`}>
           The English page has {missingBlocks} new block{missingBlocks === 1 ? "" : "s"} that {missingBlocks === 1 ? "isn't" : "aren't"} translated yet. Fill {missingBlocks === 1 ? "it" : "them"} in below, or translate the page again.
         </p>
       )}

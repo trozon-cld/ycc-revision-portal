@@ -4,7 +4,7 @@ import { DESCRIPTION_HINT } from "@/components/admin/media-upload-form";
 import { ActionForm } from "@/components/admin/action-form";
 import { Field } from "@/components/admin/field";
 import { RowActions, type RowAction } from "@/components/admin/row-actions";
-import { buttonClass, textareaClass } from "@/components/admin/styles";
+import { panelFooterClass, buttonClass, textareaClass } from "@/components/admin/styles";
 import Link from "next/link";
 import { describeMediaUse, type MediaUse } from "@/lib/media/usage";
 import { ALT_TEXT_MAX_LENGTH } from "@/lib/limits";
@@ -90,7 +90,7 @@ export function MediaRowActions({
                 )}
               </ul>
             )}
-            <div className="flex justify-end border-t border-slate-200 px-5 py-3">
+            <div className={panelFooterClass}>
               <button type="button" onClick={close} className={buttonClass("secondary")}>
                 Close
               </button>
@@ -120,8 +120,8 @@ export function MediaRowActions({
 
 function removeFrom(pages: number, questions: number, covers: number): string {
   const kinds = [pages > 0, questions > 0, covers > 0].filter(Boolean).length;
-  if (kinds > 1) return `Remove it from all of them first${covers > 0 ? " (covers are chosen on the Test types page)" : ""}.`;
-  if (covers > 0) return `Choose another picture for ${covers === 1 ? "that cover" : "those covers"} on the Test types page first.`;
+  if (kinds > 1) return `Remove it from all of them first${covers > 0 ? " (covers are chosen on the Test Types page)" : ""}.`;
+  if (covers > 0) return `Choose another picture for ${covers === 1 ? "that cover" : "those covers"} on the Test Types page first.`;
   if (questions === 0) return `Remove it from ${pages === 1 ? "that page" : "those pages"} first.`;
   return `Remove it from ${questions === 1 ? "that question" : "those questions"} first.`;
 }

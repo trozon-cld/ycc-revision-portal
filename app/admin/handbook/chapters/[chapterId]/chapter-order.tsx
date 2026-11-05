@@ -7,7 +7,7 @@ import { useId, useMemo, useRef, useState, useTransition, type KeyboardEvent, ty
 import { ActionForm } from "@/components/admin/action-form";
 import { Badge } from "@/components/admin/badge";
 import { PanelButton, RowActions, type RowAction } from "@/components/admin/row-actions";
-import { buttonClass, inputClass } from "@/components/admin/styles";
+import { buttonClass, inputClass, errorNoteClass } from "@/components/admin/styles";
 import { Cell, Row, Table } from "@/components/admin/table";
 import { useToast } from "@/components/admin/toast";
 import { NOT_THROUGH_MESSAGE, reachServer } from "@/lib/forms";
@@ -262,7 +262,7 @@ function AddQuestionsForm({ chapterId, questions, close }: { chapterId: string; 
           <p>
             Questions are written in the{" "}
             <Link href={`/admin/questions?chapter=${chapterId}`} className="text-primary underline underline-offset-2">
-              Question bank
+              Question Bank
             </Link>
             . A question from another chapter can be moved to this one in its editor.
           </p>
@@ -327,7 +327,7 @@ function AddQuestionsForm({ chapterId, questions, close }: { chapterId: string; 
           />
         </div>
         {error && (
-          <p role="alert" className="rounded-md bg-danger-bg px-3 py-2 text-sm text-danger-strong">
+          <p role="alert" className={errorNoteClass}>
             {error}
           </p>
         )}

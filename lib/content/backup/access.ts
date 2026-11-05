@@ -8,7 +8,7 @@ export const RESTORE_PATH = "/admin/backup/restore";
 export const BACKUP_ROLES: readonly UserRole[] = ["superadmin"];
 
 export function backupTabs(role: UserRole): { href: string; label: string }[] {
-  const upload = { href: UPLOAD_PATH, label: "Upload content" };
+  const upload = { href: UPLOAD_PATH, label: "Upload Content" };
   if (!BACKUP_ROLES.includes(role)) return [upload];
   return [upload, { href: BACKUP_PATH, label: "Backup" }, { href: RESTORE_PATH, label: "Restore" }];
 }

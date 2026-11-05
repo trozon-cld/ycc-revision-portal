@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import { requireRole } from "@/lib/auth/guard";
 import { pool } from "@/lib/db/pool";
 import { PageHeader } from "@/components/admin/page-header";
-import { buttonClass, cardClass } from "@/components/admin/styles";
+import { buttonClass, cardClass, errorNoteClass } from "@/components/admin/styles";
 import { LogoutEverywhere, type LogoutEverywhereStyles } from "@/components/logout-everywhere";
 import { ChangeEmailForm, ChangeNameForm, ChangePasswordForm } from "./account-forms";
 
-export const metadata: Metadata = { title: "My account" };
+export const metadata: Metadata = { title: "My Account" };
 
 const LOGOUT_EVERYWHERE: LogoutEverywhereStyles = {
   button: buttonClass("secondary"),
@@ -15,7 +15,7 @@ const LOGOUT_EVERYWHERE: LogoutEverywhereStyles = {
   box: "rounded-md border border-primary/40 bg-primary/5 p-4",
   heading: "text-sm font-semibold text-ink focus:outline-none",
   text: "mt-1 text-sm text-slate-700",
-  error: "mt-3 rounded-md bg-danger-bg px-3 py-2 text-sm text-danger-strong",
+  error: `mt-3 ${errorNoteClass}`,
 };
 
 // Admins can set their own name here; their email and password are managed by the Superadmin.
@@ -30,7 +30,7 @@ export default async function AccountPage() {
 
   return (
     <>
-      <PageHeader title="My account" description={me?.email ?? session.email} />
+      <PageHeader title="My Account" description={me?.email ?? session.email} />
 
       <div className="grid gap-4 md:max-w-2xl">
         <section className={`${cardClass} p-5`}>

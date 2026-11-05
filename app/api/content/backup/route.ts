@@ -4,6 +4,7 @@ import { getLiveSession } from "@/lib/auth/guard";
 import { isSameOrigin } from "@/lib/auth/request";
 import { BACKUP_ROLES } from "@/lib/content/backup/access";
 import { readBackup } from "@/lib/content/backup/export";
+import { tooLargeForHost } from "@/lib/hosting";
 
 // Everything a backup holds, gzipped (the browser fetches the pictures and builds the zip). Read only; logged by ./saved.
 export async function POST(request: NextRequest) {
@@ -16,7 +17,10 @@ export async function POST(request: NextRequest) {
   }
   const result = await readBackup(live.session);
   if (!result.ok) return NextResponse.json(result, { status: 409 });
-  return new NextResponse(gzipSync(JSON.stringify(result.data)), {
+  const body = gzipSync(JSON.stringify(result.data));
+  const tooLarge = tooLargeForHost("The backup's data", body.length);
+  if (tooLarge) return NextResponse.json({ ok: false, error: tooLarge }, { status: 413 });
+  return new NextResponse(body, {
     headers: { "content-type": "application/gzip", "cache-control": "no-store" },
   });
 }

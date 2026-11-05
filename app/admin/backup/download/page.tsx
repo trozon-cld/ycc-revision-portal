@@ -8,11 +8,14 @@ import { BACKUP_PATH, BACKUP_ROLES, backupTabs } from "@/lib/content/backup/acce
 import { listAudioLanguages } from "@/lib/content/backup/audio";
 import { AudioBackups } from "./audio-backups";
 import { BackupDownload } from "./backup-download";
+import { DatabaseStatus } from "@/components/admin/database-status";
+import { loadSchemaStatus } from "@/lib/db/schema-version";
 
 export const metadata: Metadata = { title: "Backup" };
 
 export default async function BackupPage() {
   const session = await requireRole(BACKUP_ROLES);
+  const schema = await loadSchemaStatus();
   const [{ rows }, audio] = await Promise.all([
     pool.query<{ created_at: Date; actor_email: string }>(
       `select created_at, actor_email from activity_logs where action = 'content.backup_downloaded' order by created_at desc limit 1`
@@ -27,6 +30,7 @@ export default async function BackupPage() {
         description={last ? `Last backup: ${formatUkDateTime(last.created_at)} by ${last.actor_email}` : "No backup has been made yet."}
       />
       <PageTabs label="Backup & Restore" tabs={backupTabs(session.role)} current={BACKUP_PATH} />
+      <DatabaseStatus status={schema} />
       <div className="space-y-6">
         <BackupDownload />
         <AudioBackups languages={audio} />

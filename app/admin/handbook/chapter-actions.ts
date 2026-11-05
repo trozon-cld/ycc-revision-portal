@@ -19,6 +19,7 @@ import {
   validateTitle,
   type StructureActionState,
 } from "@/lib/handbook/structure";
+import { nameInUse } from "@/lib/db/names";
 
 const DUPLICATE_TITLE = "A chapter with this title already exists.";
 const NOT_FOUND = "This chapter no longer exists.";
@@ -50,7 +51,7 @@ export async function createChapter(
       await lockHandbookStructure(client);
       const section = isUuid(sectionId) ? await sectionLinking(client, sectionId) : null;
       if (!section) return { error: SECTION_NOT_FOUND };
-      if (await titleTaken(client, title, null)) return { error: DUPLICATE_TITLE };
+      if (await nameInUse(client, "chapters", title, null)) return { error: DUPLICATE_TITLE };
       // A section linked to every test type ignores the choice; any other takes one test type at most.
       const chosen = section.linkedToAll ? [] : testTypeIds;
       if (chosen.length > 1) return { error: oneTestTypeOnly(section.label) };
@@ -194,7 +195,7 @@ export async function renameChapter(
       );
       if (!rows[0]) return { error: NOT_FOUND };
       if (rows[0].title === title) return { success: true };
-      if (await titleTaken(client, title, chapterId)) return { error: DUPLICATE_TITLE };
+      if (await nameInUse(client, "chapters", title, chapterId)) return { error: DUPLICATE_TITLE };
 
       await client.query(`update chapters set title = $2, updated_at = now() where id = $1`, [chapterId, title]);
       await logActivity(
@@ -540,10 +541,3 @@ async function sectionTitleOf(client: PoolClient, sectionId: string): Promise<st
   return rows[0]?.title;
 }
 
-async function titleTaken(client: PoolClient, title: string, exceptId: string | null) {
-  const { rows } = await client.query(
-    `select 1 from chapters where lower(title) = lower($1) and ($2::uuid is null or id <> $2::uuid)`,
-    [title, exceptId]
-  );
-  return rows.length > 0;
-}

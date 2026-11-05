@@ -1,3 +1,5 @@
+import { asciiAt } from "@/lib/bytes";
+
 // Reads an image's real type and size from its first bytes, so uploads are judged by
 // content, not by file name or the browser's claim. Supports PNG, JPEG and WebP.
 
@@ -18,7 +20,7 @@ export function readImageInfo(bytes: Uint8Array): ImageInfo | null {
 function readPng(b: Uint8Array): ImageInfo | null {
   const signature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
   if (b.length < 24 || !signature.every((byte, i) => b[i] === byte)) return null;
-  if (ascii(b, 12, 4) !== "IHDR") return null;
+  if (asciiAt(b, 12, 4) !== "IHDR") return null;
   return { mime: "image/png", width: u32be(b, 16), height: u32be(b, 20) };
 }
 
@@ -49,8 +51,8 @@ function readJpeg(b: Uint8Array): ImageInfo | null {
 }
 
 function readWebp(b: Uint8Array): ImageInfo | null {
-  if (b.length < 30 || ascii(b, 0, 4) !== "RIFF" || ascii(b, 8, 4) !== "WEBP") return null;
-  const chunk = ascii(b, 12, 4);
+  if (b.length < 30 || asciiAt(b, 0, 4) !== "RIFF" || asciiAt(b, 8, 4) !== "WEBP") return null;
+  const chunk = asciiAt(b, 12, 4);
   if (chunk === "VP8 ") {
     if (b[23] !== 0x9d || b[24] !== 0x01 || b[25] !== 0x2a) return null;
     return { mime: "image/webp", width: u16le(b, 26) & 0x3fff, height: u16le(b, 28) & 0x3fff };
@@ -67,9 +69,6 @@ function readWebp(b: Uint8Array): ImageInfo | null {
   return null;
 }
 
-function ascii(b: Uint8Array, start: number, length: number) {
-  return String.fromCharCode(...b.subarray(start, start + length));
-}
 function u16be(b: Uint8Array, i: number) {
   return (b[i] << 8) | b[i + 1];
 }

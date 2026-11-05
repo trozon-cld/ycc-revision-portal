@@ -6,6 +6,7 @@ import { inputClass } from "@/components/admin/styles";
 import { NAME_MAX_LENGTH } from "@/lib/users/name";
 import { MAX_EMAIL_LENGTH, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from "@/lib/users/credentials";
 import { updateOwnEmail, updateOwnName, updateOwnPassword } from "./actions";
+import { PasswordInput } from "@/components/password-input";
 
 export function ChangeNameForm({ currentName }: { currentName: string | null }) {
   return (
@@ -46,10 +47,10 @@ export function ChangeEmailForm({ currentEmail }: { currentEmail: string }) {
         />
       </Field>
       <Field id="account-email-password" label="Current password">
-        <input
+        <PasswordInput
+          look="staff"
           id="account-email-password"
           name="currentPassword"
-          type="password"
           required
           autoComplete="current-password"
           className={inputClass}
@@ -68,20 +69,20 @@ export function ChangePasswordForm() {
       successMessage="Password updated. Use it next time you log in."
     >
       <Field id="account-current-password" label="Current password">
-        <input
+        <PasswordInput
+          look="staff"
           id="account-current-password"
           name="currentPassword"
-          type="password"
           required
           autoComplete="current-password"
           className={inputClass}
         />
       </Field>
       <Field id="account-new-password" label="New password" hint={`At least ${MIN_PASSWORD_LENGTH} characters.`}>
-        <input
+        <PasswordInput
+          look="staff"
           id="account-new-password"
           name="password"
-          type="password"
           required
           minLength={MIN_PASSWORD_LENGTH}
           maxLength={MAX_PASSWORD_LENGTH}
@@ -90,10 +91,10 @@ export function ChangePasswordForm() {
         />
       </Field>
       <Field id="account-confirm-password" label="Type the new password again">
-        <input
+        <PasswordInput
+          look="staff"
           id="account-confirm-password"
           name="confirmPassword"
-          type="password"
           required
           minLength={MIN_PASSWORD_LENGTH}
           maxLength={MAX_PASSWORD_LENGTH}

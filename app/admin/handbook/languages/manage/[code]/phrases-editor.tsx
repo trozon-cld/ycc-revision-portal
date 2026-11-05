@@ -1,11 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Badge } from "@/components/admin/badge";
 import { LeaveDialog, useLeaveGuard } from "@/components/admin/leave-guard";
-import { buttonClass, cardClass, inputClass } from "@/components/admin/styles";
+import { buttonClass, cardClass, inputClass, errorNoteClass, warnNoteClass } from "@/components/admin/styles";
 import { useToast } from "@/components/admin/toast";
 import { NOT_THROUGH_MESSAGE, reachServer } from "@/lib/forms";
 import type { ExpectedPhrases, LanguagePhrases, LanguageResult } from "@/lib/voice/language-admin";
@@ -14,6 +13,8 @@ import { phraseKeysFor, SOURCE_LANGUAGE, type PhraseKey } from "@/lib/voice/lang
 import { VOICE_PHRASE_MAX_LENGTH } from "@/lib/voice/limits";
 import { PHRASE_INFO } from "@/lib/voice/phrases";
 import { checkLanguagePhrases, draftLanguagePhrases, publishLanguageNow, saveLanguagePhrases } from "../actions";
+import { Breadcrumbs } from "@/components/admin/breadcrumbs";
+import { LanguageLabel } from "@/components/admin/language-label";
 
 type Texts = Partial<Record<PhraseKey, string>>;
 type Confirm = "draft" | "live" | null;
@@ -70,22 +71,14 @@ export function PhrasesEditor({ view }: { view: LanguagePhrases }) {
 
   return (
     <>
-      <nav aria-label="Breadcrumb" className="mb-2 text-sm">
-        <Link href="/admin/handbook" className="text-primary underline underline-offset-2 hover:text-ink">
-          Handbook
-        </Link>
-        <span aria-hidden="true" className="mx-1.5 text-slate-500">/</span>
-        <Link href={LANGUAGES_MANAGE_PATH} className="text-primary underline underline-offset-2 hover:text-ink">
-          Languages
-        </Link>
-      </nav>
+      <Breadcrumbs
+        items={[
+          { label: "Handbook", href: "/admin/handbook" },
+          { label: "Languages and Audio", href: LANGUAGES_MANAGE_PATH },
+        ]}
+      />
       <h1 className="text-xl font-semibold text-ink">
-        {language.name} spoken phrases{" "}
-        {!isSource && (
-          <span lang={language.code} className="font-normal text-slate-600">
-            {language.nativeName}
-          </span>
-        )}
+        Spoken Phrases: <LanguageLabel language={language} />
       </h1>
       <p className="mt-0.5 max-w-3xl text-sm text-slate-600">
         {isSource
@@ -155,7 +148,7 @@ export function PhrasesEditor({ view }: { view: LanguagePhrases }) {
         </p>
       )}
       {problem && (
-        <div role="alert" className="mt-3 flex flex-wrap items-center gap-3 rounded-md bg-danger-bg px-3 py-2 text-sm text-danger-strong">
+        <div role="alert" className={`mt-3 flex flex-wrap items-center gap-3 ${errorNoteClass}`}>
           <p className="min-w-0 flex-1">{problem.message}</p>
           {problem.conflict && (
             <button type="button" onClick={() => window.location.reload()} className={buttonClass("secondary", "sm")}>
@@ -165,7 +158,7 @@ export function PhrasesEditor({ view }: { view: LanguagePhrases }) {
         </div>
       )}
       {confirming && (
-        <div role="alertdialog" aria-labelledby="confirm-title" className="mt-3 rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25">
+        <div role="alertdialog" aria-labelledby="confirm-title" className={`mt-3 ${warnNoteClass}`}>
           <p id="confirm-title" className="font-medium">
             {confirming === "draft" ? `Draft the ${language.name} phrases again?` : `Make ${language.name} live?`}
           </p>

@@ -3,7 +3,7 @@
 import { ActionForm } from "@/components/admin/action-form";
 import { Field } from "@/components/admin/field";
 import { PanelButton, RowActions, type RowAction } from "@/components/admin/row-actions";
-import { buttonClass, inputClass } from "@/components/admin/styles";
+import { panelFooterClass, buttonClass, inputClass } from "@/components/admin/styles";
 import { TITLE_MAX_LENGTH } from "@/lib/limits";
 import { createSection, deleteSection, moveSection, renameSection, setSectionLinking } from "./section-actions";
 
@@ -96,7 +96,7 @@ export function SectionRowActions({
               : "Each chapter in this section belongs to one test type at most."}{" "}
             This can only be changed while the section has no chapters.
           </p>
-          <div className="flex justify-end border-t border-slate-200 px-5 py-3">
+          <div className={panelFooterClass}>
             <button type="button" onClick={close} className={buttonClass("secondary")}>
               Close
             </button>
@@ -135,7 +135,7 @@ export function SectionRowActions({
             <strong className="font-medium">{label}</strong> still has {chapterCount} chapter
             {chapterCount === 1 ? "" : "s"}. Move them to another section or delete them first.
           </p>
-          <div className="flex justify-end border-t border-slate-200 px-5 py-3">
+          <div className={panelFooterClass}>
             <button type="button" onClick={close} className={buttonClass("secondary")}>
               Close
             </button>

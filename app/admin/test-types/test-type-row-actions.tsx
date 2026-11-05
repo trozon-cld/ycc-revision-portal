@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ActionForm } from "@/components/admin/action-form";
 import { Field } from "@/components/admin/field";
 import { PanelButton, RowActions, type RowAction } from "@/components/admin/row-actions";
-import { buttonClass, inputClass } from "@/components/admin/styles";
+import { panelFooterClass, buttonClass, inputClass } from "@/components/admin/styles";
 import { TEST_TYPE_NAME_MAX_LENGTH } from "@/lib/limits";
 import type { ListenMode } from "@/lib/voice/language-store";
 import { createTestType, deleteTestType, moveTestType, moveTestTypeToTestArea, renameTestType } from "./actions";
@@ -169,7 +169,7 @@ export function TestTypeRowActions({
               <strong className="font-medium">{name}</strong> has {countLabel}. Their Admins need to move them to
               another test type first.
             </p>
-            <div className="flex justify-end gap-2 border-t border-slate-200 px-5 py-3">
+            <div className={panelFooterClass}>
               <button type="button" onClick={close} className={buttonClass("secondary")}>
                 Close
               </button>
@@ -211,7 +211,7 @@ export function TestTypeRowActions({
               <strong className="font-medium">{name}</strong> has {countLabel}. Candidates can only switch within their
               test area, so it can&apos;t move while they use it.
             </p>
-            <div className="flex justify-end gap-2 border-t border-slate-200 px-5 py-3">
+            <div className={panelFooterClass}>
               <button type="button" onClick={close} className={buttonClass("secondary")}>
                 Close
               </button>

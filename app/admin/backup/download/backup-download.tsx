@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { buttonClass, cardClass } from "@/components/admin/styles";
+import { buttonClass, cardClass, errorNoteClass } from "@/components/admin/styles";
 import { formatBytes } from "@/lib/format";
 import { backupCounts, type BackupManifest } from "@/lib/content/backup/format";
 import { buildBackup, reportSaved } from "@/lib/content/backup/zip";
@@ -40,7 +40,7 @@ export function BackupDownload() {
           pictures, translations, languages and spoken phrases. Restoring it brings all of this back into an empty project.
         </p>
         <p className="text-sm text-slate-600">
-          Not included: General queries and support contact (re-enter them after a restore), audio (downloaded per language under Audio backups, below), and never
+          Not included: General Queries and support contact (re-enter them after a restore), audio (downloaded per language under Audio backups, below), and never
           accounts, candidates&apos; data or logs.
         </p>
         <p className="text-sm text-slate-600">Keep this page open until the file is saved. Large backups take a few minutes.</p>
@@ -50,7 +50,7 @@ export function BackupDownload() {
         <div aria-live="polite">
           {state.status === "working" && <p className="text-sm text-slate-600">{state.step}</p>}
           {state.status === "failed" && (
-            <p role="alert" className="rounded-md bg-danger-bg px-3 py-2 text-sm text-danger-strong">
+            <p role="alert" className={errorNoteClass}>
               {state.message}
             </p>
           )}

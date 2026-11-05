@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { ActionForm } from "@/components/admin/action-form";
 import { Field } from "@/components/admin/field";
 import { PanelButton, RowActions, type RowAction } from "@/components/admin/row-actions";
-import { buttonClass, inputClass } from "@/components/admin/styles";
+import { panelFooterClass, buttonClass, inputClass } from "@/components/admin/styles";
 import type { SectionOptions } from "@/lib/questions/queries";
 import type { QuestionType } from "@/lib/questions/types";
 import { deleteQuestion, setQuestionStatus } from "./actions";
@@ -111,7 +111,7 @@ export function QuestionRowActions({
               <strong className="font-medium">{refLabel}</strong> is in the Handbook, in chapter {bookChapter}. Remove it
               from that chapter&apos;s page order first.
             </p>
-            <div className="flex justify-end border-t border-slate-200 px-5 py-3">
+            <div className={panelFooterClass}>
               <button type="button" onClick={close} className={buttonClass("secondary")}>
                 Close
               </button>

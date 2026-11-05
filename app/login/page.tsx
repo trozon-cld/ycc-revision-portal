@@ -4,6 +4,8 @@ import { useState, type FormEvent } from "react";
 import { useBrowserValue } from "@/components/use-browser-value";
 import { CARD, ERROR_BOX, NOTE_BOX, PAGE_TITLE, PRIMARY_BUTTON } from "@/components/candidate/buttons";
 import { NOT_THROUGH_MESSAGE } from "@/lib/forms";
+import { PasswordInput } from "@/components/password-input";
+import { PageLogo } from "@/components/candidate/page-logo";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -41,13 +43,14 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex flex-1 items-center justify-center bg-page p-4">
+    <main className="flex flex-1 flex-col items-center justify-center bg-page p-4">
+      <PageLogo />
       <form
         onSubmit={handleSubmit}
         className={`${CARD} w-full max-w-sm space-y-5 p-6 sm:p-8`}
       >
         <div>
-          <h1 className={`${PAGE_TITLE}`}>Log in</h1>
+          <h1 className={`${PAGE_TITLE}`}>Log In</h1>
           <p className="mt-1 text-base text-muted">YCC Revision Portal</p>
         </div>
 
@@ -83,10 +86,10 @@ export default function LoginPage() {
           >
             Password
           </label>
-          <input
+          <PasswordInput
+            look="candidate"
             id="password"
             name="password"
-            type="password"
             autoComplete="current-password"
             required
             value={password}

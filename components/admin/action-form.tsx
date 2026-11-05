@@ -2,7 +2,7 @@
 
 import { startTransition, useActionState, useRef, type FormEvent, type ReactNode } from "react";
 import { NOT_THROUGH_MESSAGE, reachServer, type FormState } from "@/lib/forms";
-import { buttonClass, type ButtonVariant } from "./styles";
+import { buttonClass, type ButtonVariant, errorNoteClass } from "./styles";
 import { useToast } from "./toast";
 
 export type FormAction = (prev: FormState, formData: FormData) => Promise<FormState>;
@@ -66,7 +66,7 @@ export function ActionForm({
       <div className={isPanel ? "flex-1 space-y-4 px-5 py-4" : "space-y-4"}>
         {children}
         {state.error && (
-          <p role="alert" className="rounded-md bg-danger-bg px-3 py-2 text-sm text-danger-strong">
+          <p role="alert" className={errorNoteClass}>
             {state.error}
           </p>
         )}

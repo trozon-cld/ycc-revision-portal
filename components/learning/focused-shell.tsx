@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { DEFAULT_TEXT_SIZE, type TextSize } from "@/lib/content/book";
 import { BAR_SHADOW_TOP, NOTE_BOX, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { AccountLinks, HomeLogo } from "@/components/candidate/header";
-import { Icon } from "@/components/icons";
+import { Icon, type IconName } from "@/components/icons";
 import { logOut } from "@/components/logout-button";
 import {
   BAR_BUTTON_DENSE,
@@ -36,6 +36,10 @@ const PICTURE_LIMITS = {
   "--book-option-picture-max": `max(140px, calc(${PAGE_HEIGHT} * 0.22))`,
 } as CSSProperties;
 
+// The way out at the start of the bar, on every screen: Home, or e.g. "Leave test" in a running mock test.
+export type FocusedExit = { label: string; icon: IconName; href: string };
+const HOME_EXIT: FocusedExit = { label: "Home", icon: "home", href: "/dashboard" };
+
 function subscribeWide(onChange: () => void) {
   const query = window.matchMedia(WIDE_QUERY);
   query.addEventListener("change", onChange);
@@ -53,6 +57,8 @@ export function FocusedShell({
   timer,
   accountInSettings = false,
   leaveWarning,
+  onReview,
+  exit = HOME_EXIT,
   scrollRef,
   children,
 }: {
@@ -74,6 +80,9 @@ export function FocusedShell({
   accountInSettings?: boolean;
   // Mock test: leaving (Home, Help, Log out) asks first, on the page, with this text.
   leaveWarning?: string;
+  // Mock test: the leave question also offers "Review and submit".
+  onReview?: () => void;
+  exit?: FocusedExit;
   scrollRef?: RefObject<HTMLDivElement | null>;
   children: ReactNode;
 }) {
@@ -83,7 +92,7 @@ export function FocusedShell({
   const wasOpen = useRef(false);
   const wide = useSyncExternalStore(subscribeWide, () => window.matchMedia(WIDE_QUERY).matches, () => false);
   const router = useRouter();
-  const [leaving, setLeaving] = useState<{ href: string } | { logout: true } | null>(null);
+  const [leaving, setLeaving] = useState<{ href: string } | { logout: true } | { back: true } | null>(null);
   const stayButton = useRef<HTMLButtonElement>(null);
 
   // With a leave warning, a tap on a link or Log out inside the frame asks first.
@@ -103,8 +112,24 @@ export function FocusedShell({
   function leave() {
     if (!leaving) return;
     if ("href" in leaving) router.push(leaving.href);
+    else if ("back" in leaving) window.history.go(-2);
     else logOut().catch(() => setLeaving(null));
   }
+
+  // With a leave warning, the browser's or phone's Back button asks first too: an extra history entry for this
+  // page catches it (closing the tab can't be stopped).
+  useEffect(() => {
+    if (!leaveWarning) return;
+    if (!window.history.state?.yccLeaveGuard) window.history.pushState({ ...window.history.state, yccLeaveGuard: true }, "", window.location.href);
+    const onBack = () => {
+      if (window.history.state?.yccLeaveGuard) return;
+      window.history.pushState({ ...window.history.state, yccLeaveGuard: true }, "", window.location.href);
+      setSettings(false);
+      setLeaving({ back: true });
+    };
+    window.addEventListener("popstate", onBack);
+    return () => window.removeEventListener("popstate", onBack);
+  }, [leaveWarning]);
 
   useEffect(() => {
     if (leaving) stayButton.current?.focus();
@@ -129,13 +154,13 @@ export function FocusedShell({
           aria-label={label}
           className={`grid grid-cols-[minmax(max-content,1fr)_minmax(0,auto)_minmax(max-content,1fr)] items-center gap-2 border-b border-line bg-card px-3 py-2 lg:px-6 ${BAR_SHADOW_TOP}`}
         >
-          <div className="flex min-w-0 items-center">
+          <div className="flex min-w-0 items-center gap-3">
             <div className="hidden shrink-0 lg:flex">
               <HomeLogo showName={false} />
             </div>
-            <Link href="/dashboard" title={showLabels ? undefined : "Home"} className={`${barButton} ${size} lg:hidden`}>
-              <Icon name="home" />
-              {word("Home")}
+            <Link href={exit.href} title={showLabels ? undefined : exit.label} className={`${barButton} ${size}`}>
+              <Icon name={exit.icon} />
+              {word(exit.label)}
             </Link>
           </div>
           <span className="min-w-0 truncate px-1 text-center text-base font-semibold text-ink">
@@ -193,16 +218,7 @@ export function FocusedShell({
               showLabels={showLabels}
               onToggleLabels={toggleLabels}
               actions={actions}
-              links={
-                wide && !accountInSettings ? undefined : (
-                  <>
-                    <Link href="/dashboard" className={PANEL_LINK}>
-                      Back to home
-                    </Link>
-                    <AccountLinks buttonClass={PANEL_LINK} />
-                  </>
-                )
-              }
+              links={wide && !accountInSettings ? undefined : <AccountLinks buttonClass={PANEL_LINK} />}
               onClose={() => setSettings(false)}
             />
           )}
@@ -221,10 +237,22 @@ export function FocusedShell({
                 <p id="leave-text" className="mt-2 text-lg leading-relaxed text-ink">
                   {leaveWarning}
                 </p>
-                <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                   <button ref={stayButton} type="button" onClick={() => setLeaving(null)} className={PRIMARY_BUTTON}>
                     Stay in the test
                   </button>
+                  {onReview && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLeaving(null);
+                        onReview();
+                      }}
+                      className={SECONDARY_BUTTON}
+                    >
+                      Review and submit
+                    </button>
+                  )}
                   <button type="button" onClick={leave} className={SECONDARY_BUTTON}>
                     {"logout" in leaving ? "Leave and log out" : "Leave"}
                   </button>

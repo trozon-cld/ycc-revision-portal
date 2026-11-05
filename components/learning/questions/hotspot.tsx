@@ -3,7 +3,7 @@
 import { type KeyboardEvent, type MouseEvent, useContext } from "react";
 import { roundTenth, type HotspotAnswer, type HotspotArea, type HotspotContent, type HotspotPoint } from "@/lib/questions/types/hotspot";
 import type { ResolvedMedia } from "@/lib/content/book";
-import { MarkIcon, type Mark } from "./answer-parts";
+import { FeedbackMark } from "./answer-parts";
 import type { AnswerAreaProps } from "./renderers";
 import { MeasuringContext } from "../measuring";
 
@@ -123,7 +123,7 @@ function AreaOutline({ area, label }: { area: HotspotArea; label?: string }) {
       <span
         className={`absolute ${vertical} ${horizontal} flex max-w-[14em] items-center gap-[0.25em] whitespace-nowrap rounded-full bg-ok px-[0.55em] py-[0.08em] text-[max(14px,0.8em)] font-semibold leading-tight text-white shadow-[0_0_0_2px_white]`}
       >
-        <Icon name="tick" />
+        <FeedbackMark name="tick" />
         <span className="truncate">{label || "Correct area"}</span>
       </span>
     </span>
@@ -139,7 +139,7 @@ function Marker({ point, marked }: { point: HotspotPoint; marked: "right" | "wro
       className={`pointer-events-none absolute grid size-[max(32px,2em)] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-[3px] border-white text-white shadow-[0_0_0_2px_rgba(15,23,42,0.85)] ${tone}`}
       style={{ left: `${point.x}%`, top: `${point.y}%` }}
     >
-      {marked ? <Icon name={marked === "right" ? "tick" : "cross"} /> : <span className="size-[0.45em] rounded-full bg-card" />}
+      {marked ? <FeedbackMark name={marked === "right" ? "tick" : "cross"} /> : <span className="size-[0.45em] rounded-full bg-card" />}
     </span>
   );
 }
@@ -167,6 +167,3 @@ export function TapPicture({ picture, ratio, measuring }: { picture: ResolvedMed
 }
 
 // The bolder mark used on pictures (hotspot, area and match questions).
-export function Icon({ name }: { name: Mark }) {
-  return <MarkIcon name={name} className="size-[1.1em] shrink-0" />;
-}

@@ -3,7 +3,7 @@ import Image from "next/image";
 import { requireRole } from "@/lib/auth/guard";
 import { CONTENT_EDITORS } from "@/lib/auth/content-editors";
 import { pool } from "@/lib/db/pool";
-import { getSignedUrls, isStorageConfigured } from "@/lib/storage/storage";
+import { STORAGE_SETTINGS, getSignedUrls, isStorageConfigured } from "@/lib/storage/storage";
 import { firstParam } from "@/lib/params";
 import { escapeLike } from "@/lib/db/like";
 import { FilterBar, FilterSearch } from "@/components/admin/filter-bar";
@@ -102,7 +102,7 @@ export default async function MediaPage({ searchParams }: PageProps<"/admin/medi
 
       {!configured && (
         <p role="status" className="mb-4 rounded-md bg-warn-bg px-4 py-3 text-sm text-warn-strong ring-1 ring-warn/25">
-          Image storage isn&apos;t set up yet. Add <code>SUPABASE_URL</code> and <code>SUPABASE_SERVICE_ROLE_KEY</code> to
+          Image storage isn&apos;t set up yet. Add <code>{STORAGE_SETTINGS[0]}</code> and <code>{STORAGE_SETTINGS[1]}</code> to
           the server&apos;s environment and restart it.
         </p>
       )}
@@ -113,7 +113,7 @@ export default async function MediaPage({ searchParams }: PageProps<"/admin/medi
       )}
 
       <FilterBar action="/admin/media" clearHref="/admin/media" isFiltered={Boolean(search)}>
-        <FilterSearch name="q" label="Search descriptions or file names" defaultValue={search} wide />
+        <FilterSearch name="q" label="Search descriptions or file names" defaultValue={search} />
       </FilterBar>
 
       {media.length === 0 ? (

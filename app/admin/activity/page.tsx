@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { requireRole } from "@/lib/auth/guard";
 import { pool } from "@/lib/db/pool";
 import { formatUkDate, formatUkDateTime } from "@/lib/candidates/access";
@@ -21,6 +20,7 @@ import { PageHeader } from "@/components/admin/page-header";
 import { buttonClass } from "@/components/admin/styles";
 import { Pagination, pageFromParam } from "@/components/admin/pagination";
 import { Cell, Row, Table } from "@/components/admin/table";
+import { PageTabs } from "@/components/admin/page-tabs";
 import { ActionForm } from "@/components/admin/action-form";
 import { ARCHIVE_AFTER_DAYS, archiveMonthText, listArchives, loadArchiveStatus } from "@/lib/audit/archive";
 import { formatBytes } from "@/lib/format";
@@ -59,10 +59,12 @@ interface ActorRow {
   actor_role: RoleKey;
 }
 
+const ACTIVITY_TAB_HREF = { activity: "/admin/activity", logins: "/admin/activity?tab=logins", archives: "/admin/activity?tab=archives" } as const;
+
 // Named like the page heading: Admins see only their own activity.
 export async function generateMetadata(): Promise<Metadata> {
   const session = await requireRole(["admin", "superadmin"]);
-  return { title: session.role === "superadmin" ? "Activity" : "My activity" };
+  return { title: session.role === "superadmin" ? "Activity" : "My Activity" };
 }
 
 export default async function ActivityPage({ searchParams }: PageProps<"/admin/activity">) {
@@ -96,7 +98,7 @@ export default async function ActivityPage({ searchParams }: PageProps<"/admin/a
   return (
     <>
       <PageHeader
-        title={isSuperadmin ? "Activity" : "My activity"}
+        title={isSuperadmin ? "Activity" : "My Activity"}
         description={
           isSuperadmin
             ? "Everything Admins and the Superadmin have changed, candidates' test type and language changes, and every login."
@@ -104,11 +106,15 @@ export default async function ActivityPage({ searchParams }: PageProps<"/admin/a
         }
       />
 
-      <nav aria-label="Log type" className="mb-4 inline-flex rounded-md border border-slate-300 bg-white p-0.5">
-        <TabLink href="/admin/activity" isCurrent={tab === "activity"} label="Actions" />
-        <TabLink href="/admin/activity?tab=logins" isCurrent={tab === "logins"} label="Logins" />
-        {isSuperadmin && <TabLink href="/admin/activity?tab=archives" isCurrent={tab === "archives"} label="Archives" />}
-      </nav>
+      <PageTabs
+        label="Log type"
+        tabs={[
+          { href: ACTIVITY_TAB_HREF.activity, label: "Actions" },
+          { href: ACTIVITY_TAB_HREF.logins, label: "Logins" },
+          ...(isSuperadmin ? [{ href: ACTIVITY_TAB_HREF.archives, label: "Archives" }] : []),
+        ]}
+        current={ACTIVITY_TAB_HREF[tab]}
+      />
 
       {tab === "activity" ? (
         <ActivityTab
@@ -331,7 +337,7 @@ async function LoginsTab({
               </span>
             </Cell>
             <Cell label="Event">
-              <Badge tone={entry.event === "login_failed" || entry.event === "password_check_failed" ? "danger" : entry.event === "login_paused" ? "warning" : entry.event === "logout" ? "neutral" : "success"}>
+              <Badge tone={entry.event === "login_failed" || entry.event === "password_check_failed" ? "danger" : entry.event === "login_paused" || entry.event === "login_refused_network" ? "warning" : entry.event === "logout" ? "neutral" : "success"}>
                 {AUTH_EVENTS[entry.event]}
               </Badge>
             </Cell>
@@ -427,19 +433,6 @@ async function ArchivesTab({ page }: { page: number }) {
   );
 }
 
-function TabLink({ href, isCurrent, label }: { href: string; isCurrent: boolean; label: string }) {
-  return (
-    <Link
-      href={href}
-      aria-current={isCurrent ? "page" : undefined}
-      className={`inline-flex h-9 items-center rounded px-4 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:h-8 ${
-        isCurrent ? "bg-primary text-white" : "text-slate-700 hover:bg-slate-100"
-      }`}
-    >
-      {label}
-    </Link>
-  );
-}
 
 function actionLabel(stored: string): string {
   const action = currentAction(stored);

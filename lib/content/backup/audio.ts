@@ -4,7 +4,7 @@ import { ACCESS_TIME_ZONE } from "@/lib/candidates/access";
 import { pool } from "@/lib/db/pool";
 import { withTransaction } from "@/lib/db/transaction";
 import { countOf, formatBytes } from "@/lib/format";
-import { STORAGE_LIMIT_BYTES } from "@/lib/media/limits";
+import { STORAGE_LIMIT_BYTES, withinHostLimit } from "@/lib/hosting";
 import { getSignedUrls, isStorageConfigured, storeObject } from "@/lib/storage/storage";
 import { storedBytes } from "@/lib/storage/usage";
 import { isRecord } from "@/lib/text";
@@ -153,7 +153,7 @@ export async function checkAudioRestore(raw: unknown): Promise<AudioCheck> {
 // One MP3 from an audio backup, stored at its own path (replaced if it's already there from an earlier try).
 export async function restoreAudioFile(path: string, bytes: Uint8Array): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!isStorageConfigured()) return { ok: false, error: AUDIO_NOT_CONFIGURED };
-  if (!AUDIO_PATH.test(path) || bytes.length === 0 || bytes.length > MAX_AUDIO_FILE_BYTES || !isMp3(bytes)) {
+  if (!AUDIO_PATH.test(path) || bytes.length === 0 || bytes.length > withinHostLimit(MAX_AUDIO_FILE_BYTES) || !isMp3(bytes)) {
     return { ok: false, error: `${DAMAGED} (${path.slice(0, 100)} isn't an audio file the portal saved).` };
   }
   if ((await storedBytes()) + bytes.length > STORAGE_LIMIT_BYTES) {
@@ -228,9 +228,13 @@ async function planRestore(raw: unknown): Promise<Plan | { problems: string[] }>
     }
     rows[table] = list as AudioRow[];
   }
+  const largest = Math.max(0, ...AUDIO_TABLES.flatMap((table) => rows[table].map((row) => Number(row.byte_size))));
+  if (largest > withinHostLimit(MAX_AUDIO_FILE_BYTES)) {
+    return { problems: [`An audio file in this backup (${formatBytes(largest)}) is larger than this host lets through (${formatBytes(withinHostLimit(MAX_AUDIO_FILE_BYTES))}).`] };
+  }
 
   const { rows: found } = await pool.query<{ name: string }>(`select name from voice_languages where code = $1`, [code]);
-  if (!found[0]) return { problems: [`This project has no ${lang.name} language. Add it under Languages and audio, then restore again.`] };
+  if (!found[0]) return { problems: [`This project has no ${lang.name} language. Add it under Languages and Audio, then restore again.`] };
 
   const restore = {} as Record<AudioTable, AudioRow[]>;
   const reasons: string[] = [];

@@ -15,7 +15,7 @@ export async function archiveOldLoginRecords(): Promise<FormState> {
     console.error("Login record archive failed", error);
     revalidatePath("/admin/activity");
     if (error instanceof StorageConfigError) {
-      return { error: "Archive storage isn't set up: create the private log-archives bucket in Supabase Storage (see README). Nothing was archived." };
+      return { error: "Archive storage isn't set up: create the private log-archives storage bucket (see README). Nothing was archived." };
     }
     return { error: "The archive couldn't be completed. Any month already listed below was saved; nothing else was deleted. Please try again." };
   }

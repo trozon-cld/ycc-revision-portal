@@ -19,6 +19,7 @@ import { NAME_MAX_LENGTH } from "@/lib/users/name";
 import { MAX_EMAIL_LENGTH, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from "@/lib/users/credentials";
 import { AccessLengthField } from "./access-length-field";
 import { TestTypeOptions, type TestTypeChoice } from "./test-type-options";
+import { PasswordInput } from "@/components/password-input";
 
 export interface RowCandidate {
   id: string;
@@ -309,10 +310,10 @@ function PasswordFields({ id }: { id: string }) {
   return (
     <>
       <Field id={`password-${id}`} label="New password" hint={`At least ${MIN_PASSWORD_LENGTH} characters. Share it with them securely.`}>
-        <input
+        <PasswordInput
+          look="staff"
           id={`password-${id}`}
           name="password"
-          type="password"
           required
           minLength={MIN_PASSWORD_LENGTH}
           maxLength={MAX_PASSWORD_LENGTH}
@@ -321,10 +322,10 @@ function PasswordFields({ id }: { id: string }) {
         />
       </Field>
       <Field id={`confirm-${id}`} label="Type the new password again">
-        <input
+        <PasswordInput
+          look="staff"
           id={`confirm-${id}`}
           name="confirmPassword"
-          type="password"
           required
           minLength={MIN_PASSWORD_LENGTH}
           maxLength={MAX_PASSWORD_LENGTH}

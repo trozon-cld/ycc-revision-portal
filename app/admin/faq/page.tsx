@@ -11,7 +11,7 @@ import { cardClass } from "@/components/admin/styles";
 import { Cell, Row, Table } from "@/components/admin/table";
 import { FaqRowActions, NewFaqButton, SupportContactButton } from "./faq-row-actions";
 
-export const metadata: Metadata = { title: "General queries" };
+export const metadata: Metadata = { title: "General Queries" };
 
 // General queries: the questions candidates see, and the support contact details. Superadmin only.
 export default async function FaqAdminPage() {
@@ -23,7 +23,7 @@ export default async function FaqAdminPage() {
     <div className="space-y-8">
       <div>
         <PageHeader
-          title="General queries"
+          title="General Queries"
           description={`${countOf(items.length, "question", "questions")} · ${published} published`}
           actions={items.length < FAQ_MAX_ITEMS ? <NewFaqButton /> : undefined}
         />

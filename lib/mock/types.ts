@@ -71,6 +71,12 @@ export type MockRun = {
 };
 
 // A test that has ended, as its results page shows it. Topics are chapters, in Handbook order.
+// Results by chapter, grouped by the book's sections. Per question (wrong/not answered split, question list) only
+// while the test's answers are kept; older tests have right and out-of only.
+export type MockChapterQuestion = { position: number; mark: MockMark };
+export type MockChapterResult = TopicResult & { unanswered: number | null; questions: MockChapterQuestion[] | null };
+export type MockSectionResult = { key: string; label: string; right: number; outOf: number; chapters: MockChapterResult[] };
+
 export type MockResults = {
   how: MockEnd;
   rightCount: number;
@@ -85,6 +91,11 @@ export type MockResults = {
   answersKept: boolean;
   // Wrong or unanswered questions that can be practised now (in the current test type's Practice).
   practiceCount: number;
+  sections: MockSectionResult[];
+  // Chapters of the test's book that had no questions in this test.
+  notInTest: string[];
+  // The test's test type is still the candidate's current one (practice links only then).
+  sameTestType: boolean;
 };
 
 // An ended test in the candidate's history.
@@ -98,6 +109,7 @@ export type MockReviewItem = {
   position: number;
   mark: MockMark;
   flaggedInTest: boolean;
+  chapterId: string;
   chapterLabel: string;
   question: ClientQuestion;
   response: unknown;

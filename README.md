@@ -4,16 +4,18 @@ Revision platform for construction site workers preparing for the CITB HS&E test
 
 Status: in active development.
 
+More in [`docs/`](docs/README.md): architecture, key decisions, code conventions, operations, the go-live checklist, the Vercel and Supabase setup list, and what changes for a move to AWS.
+
 ## Stack
 
-- Next.js 16 (App Router, TypeScript, Tailwind CSS v4)
+- Next.js 16.4 (App Router, TypeScript, Tailwind CSS v4)
 - PostgreSQL on Supabase (raw SQL via `pg`), plus Supabase Storage for pictures, log archives and Handbook audio
 - Handbook translations and audio through Google Cloud Translation and Text-to-Speech, Welsh audio through the Gemini API (plain `fetch`); MP3 encoding with `@breezystack/lamejs`
 - Custom JWT auth (jose + bcryptjs, HTTP-only cookies)
 
 ## Roles
 
-- **Superadmin** — manages Admins, test areas and test types, the Handbook, question bank and media, and sees all candidates and logs.
+- **Superadmin** — manages Admins (incl. which may work away from the office network), the office network, test areas and test types, the Handbook, question bank and media, and sees all candidates and logs.
 - **Admin** — creates and manages candidates, each with an assigned test type and an access expiry.
 - **Candidate** — logs in with an allotted credential and revises one test type at a time, starting with the assigned one; they can switch within its test area.
 
@@ -33,15 +35,17 @@ Status: in active development.
 
 ## Getting started
 
-1. Install dependencies:
+Use **Node.js 24** (the version is in `.nvmrc`; `nvm use` or `fnm use` picks it up).
+
+1. Install dependencies exactly as recorded in `package-lock.json`:
 
    ```bash
-   npm install
+   npm ci
    ```
 
-2. Copy `.env.example` to `.env.local` and fill in `DATABASE_URL` (Supabase pooler string) and `JWT_SECRET`. `DATABASE_POOL_MAX` is optional (default 10; use 1–3 on serverless hosting).
+2. Copy `.env.example` to `.env.local` and fill in `DATABASE_URL` (Supabase pooler string) and `JWT_SECRET`. `DATABASE_POOL_MAX` is optional (default 10; use 1–3 on serverless hosting). `HOST_REQUEST_LIMIT_MB` (default 4.5) and `STORAGE_LIMIT_MB` (default 900) are optional too; see `docs/operations.md`.
 
-3. In the Supabase SQL editor, run `supabase/schema.sql` for a fresh database. The files in `supabase/migrations/` are changes for databases created from an earlier version of the schema, so skip them on a fresh setup. A fresh database has English only; add the other Listen languages on Languages and audio → Languages.
+3. In the Supabase SQL editor, run `supabase/schema.sql` for a fresh database. The files in `supabase/migrations/` are changes for databases created from an earlier version of the schema, so skip them on a fresh setup (`schema.sql` already records them all as run). A fresh database has English only; add the other Listen languages on Languages and audio → Languages.
 
 4. For the image library (Admin → Media), in Supabase:
    - **Storage → New bucket**, name `handbook-media`, **Public bucket off** (pictures are served through short-lived signed links).
@@ -64,11 +68,22 @@ Status: in active development.
 
 7. Before delivering a change, `npm run lint` should report nothing (Next's lint setup, including React's hook rules).
 
+## Database migrations
+
+- Each database keeps a record of the migrations it has had in `schema_migrations`. To see where a database is: `select name, applied_at from schema_migrations order by name;`
+- To bring one up to date, run the files in `supabase/migrations/` that aren't in that list, in number order, in the SQL editor. The Superadmin also sees on Backup & Restore whether the database matches the code.
+- A new migration: the next number (`NNNN_what_it_does.sql`), the same change in `supabase/schema.sql` (including its name in the `schema_migrations` list there), ending with `insert into schema_migrations (name) values ('NNNN_what_it_does');`, and `EXPECTED_MIGRATION` in `lib/db/schema-version.ts` raised to it.
+
+## Updating packages
+
+- `npm ci` for everyday installs. Change a package only on purpose: `npm install <package>@<version>`, then lint, build and test, and commit `package.json` and `package-lock.json` together.
+- Check `npm audit` every month or so. Use `npm audit fix` (it stays within the allowed versions); never `npm audit fix --force`, which can install much older or breaking versions (e.g. an older `eslint-config-next`).
+
 ## Project structure
 
 - `app/` — routes:
-  - `/login`, `/access-expired`
-  - `/admin/*` (Admin/Superadmin): `/admin/candidates` (`[id]` a candidate's progress, read only), `/admin/admins`, `/admin/test-types` (test areas and test types; the old `/admin/categories` redirects), `/admin/handbook` (sections and chapters; `chapters/[id]` a chapter's pages and questions; `pages/[id]` the page editor (with each language's translation and audio), `pages/[id]/translations` its translations; `preview` the book as candidates see it; `languages` every text page's and question page's translation and audio state (Pages tab), `languages/manage` the Languages tab (add a language from the built-in list, make it live, hide it, show it again, delete a hidden one (Superadmin), Gemini call limits for languages Gemini reads aloud; `[code]` its spoken phrases), `languages/bulk` the Bulk tab (bulk Listen: one chapter in one language at a time, run from the browser step by step; its translations are "checked automatically" until a person checks them; one log entry per run)), `/admin/questions` (bank; `new`, `[id]` (with Listen languages for Handbook questions), `[id]/translations` the question's translations), `/admin/media`, `/admin/faq` (General queries and support contact details; Superadmin only), `/admin/backup` (Backup & Restore: Upload content checks a batch zip, then imports it on request; `download` Backup and `restore` Restore, Superadmin only), `/admin/activity` (actions, logins and login-record archives), `/admin/account`
+  - `/login`, `/access-expired`, `/office-network-only` (an Admin outside the office network while that check is on)
+  - `/admin/*` (Admin/Superadmin): `/admin/candidates` (`[id]` a candidate's progress, read only), `/admin/admins`, `/admin/office-network` (Superadmin: the office addresses Admins may work from, and the on/off switch), `/admin/test-types` (test areas and test types; the old `/admin/categories` redirects), `/admin/handbook` (sections and chapters; `chapters/[id]` a chapter's pages and questions; `pages/[id]` the page editor (with each language's translation and audio), `pages/[id]/translations` its translations; `preview` the book as candidates see it; `languages` every text page's and question page's translation and audio state (Pages tab), `languages/manage` the Languages tab, opened first from the sidebar (add a language from the built-in list, make it live, hide it, show it again, delete a hidden one (Superadmin), Gemini call limits for languages Gemini reads aloud; `[code]` its spoken phrases), `languages/bulk` the Batch Generate tab (one chapter in one language at a time, run from the browser step by step; its translations are "checked automatically" until a person checks them; one log entry per run)), `/admin/questions` (bank; `new`, `[id]` (with Listen languages for Handbook questions), `[id]/translations` the question's translations), `/admin/media`, `/admin/faq` (General queries and support contact details; Superadmin only), `/admin/backup` (Backup & Restore: Upload content checks a batch zip, then imports it on request; `download` Backup and `restore` Restore, Superadmin only), `/admin/activity` (actions, logins and login-record archives), `/admin/account`
   - `/dashboard` (Candidate home): `test-type` to switch within the test area (the old `category` address redirects), `prepare` the Handbook, `practice` Practice setup and `practice/[id]` a run or its report, `mock` the Mock test start page and `mock/[id]` a test (its results and `review` once ended), `progress` My progress, `account` (details, listening language, sign-ins), `help` (also Log out of all devices)
   - `/api/auth/login`, `/api/auth/logout` (also "log out of all devices"), `/api/media/upload` (picture uploads: sign-in, origin and size are checked before the file is read), `/api/content/check` (bulk upload check: the same checks before reading; the browser opens the zip and sends content.json and the picture list), `/api/content/picture` (one picture of a bulk upload, prepared in the browser as on the Media page; the same checks), `/api/content/import` (saves a checked batch; the same checks), `/api/content/backup` (backup data, Superadmin; read only) and `/api/content/backup/saved` (logs a finished backup), `/api/content/restore/check`, `/api/content/restore/picture` and `/api/content/restore` (restore, Superadmin; see Restore above), `/api/handbook/audio/[itemId]` (Listen: checks the candidate's live sign-in, test type and up-to-date audio in their listening language, then sends the browser to a short-lived private link)
 - `components/admin/` — compact admin console UI (sidebar shell, tables, row menus, slide-in panels, `ActionForm`, `Pagination`); admin pages must build from these. Candidate pages keep the large, simple style.
@@ -76,9 +91,9 @@ Status: in active development.
 - `components/icons.tsx` — every icon in the app (Phosphor Icons, MIT licence), used as `<Icon name="…" />`; colours are the named set in `app/globals.css`
 - `components/use-latest.ts`, `components/use-browser-value.ts` — shared client hooks: the latest value for handlers and effects; values only the browser knows (address, saved on/off choices)
 - `components/learning/` — candidate-facing renderers: blocks, questions (`questions/`), the fixed-page book reader, the reader bar/Settings, and the focused frame shared by Practice and the Mock test (`focused-shell.tsx`)
-- `lib/auth/` — JWT signing/verification, session cookie, role guard, login and record limits, who edits content (`content-editors.ts`), small-request checks
+- `lib/auth/` — JWT signing/verification, session cookie, role guard, the office network check (`office-network.ts`; the visitor's address is read in one place, `ipFromHeaders` in `lib/audit/log.ts`), login and record limits, who edits content (`content-editors.ts`), small-request checks
 - `lib/audit/` — activity and login logs (every loggable action is listed in `lib/audit/actions.ts`) and login-record archiving
-- `lib/db/` — shared Postgres pool, transaction helper, LIKE escaping
+- `lib/db/` — shared Postgres pool, transaction helper, LIKE escaping, quoted names, case-insensitive unique names (`names.ts`), the migration record check (`schema-version.ts`)
 - `lib/users/` — display-name and sign-in (email/password) rules shared by account, admin and candidate forms
 - `lib/candidates/` — access dates (UK time), test type switching, the candidate home, and one candidate for staff (`detail.ts`, `paths.ts`)
 - `lib/content/import/` — bulk upload: the batch format (`format.ts`, browser-safe), the check against the portal and the database (`check.ts`), item conversion to the portal's shapes (`convert.ts`), the browser zip reader (`zip.ts`, fflate), picture import (`pictures.ts`), the import itself (`run.ts`) and limits
@@ -93,11 +108,13 @@ Status: in active development.
 - `lib/storage/` — the only code that talks to the storage provider (upload, delete, signed links; pictures, archive and audio buckets) and the total stored (`usage.ts`, for the storage cap)
 - `lib/voice/` — Handbook translations and audio: languages (kept in the database, read through `language-store.ts`; the list of languages that can be added is `language-catalogue.ts` (one line each); managing them is `language-admin.ts`, the spoken phrases' rules `phrases.ts`), what is read aloud, translation checks, saving translations (`page-translations.ts`), page audio (`page-audio.ts`; the audio files themselves in `audio-files.ts`), question pages' translations and audio (`question-voice.ts`, shared parts in `question-listen.ts`), the Handbook-wide list (`overview.ts`), what candidates hear and their listening language (`listen.ts`), the voice services behind `services.ts` (Google Cloud Translation and Text-to-Speech in `google.ts`; Gemini in `gemini.ts` for languages the list gives to it (Welsh audio); a stand-in in `fake.ts`), MP3 encoding and each staff member's hourly allowance in characters (`quota.ts`, with monthly totals per service)
 - `lib/media/` — image checks (real type and size from the file), in-browser WebP conversion, saving uploads and the storage cap (`upload.ts`)
-- `lib/ids.ts`, `lib/text.ts`, `lib/format.ts`, `lib/limits.ts`, `lib/forms.ts`, `lib/params.ts` — small shared helpers (id checks, text clean-up, display formats, length limits, form results, URL parameters)
+- `lib/hosting.ts` — sizes set by the host and the storage plan (`HOST_REQUEST_LIMIT_MB`, `STORAGE_LIMIT_MB`; server only)
+- `lib/ids.ts`, `lib/bytes.ts`, `lib/text.ts`, `lib/format.ts`, `lib/limits.ts`, `lib/forms.ts`, `lib/params.ts` — small shared helpers (id checks, text clean-up, display formats, length limits, form results, URL parameters)
 - `lib/brand.ts`, `lib/layout.ts` — logo and phone screen sizes
 - `proxy.ts` — route protection by role, block and expiry
 - `scripts/` — `generate-hash.mjs` (`npm run hash`)
 - `supabase/` — schema, migrations and seed
+- `docs/` — architecture, decisions, conventions, operations, the go-live checklist, Vercel and Supabase setup, moving to AWS
 
 This project runs Next.js 16, which differs from older versions. See `AGENTS.md` and `node_modules/next/dist/docs/` before changing routing, data fetching or config.
 

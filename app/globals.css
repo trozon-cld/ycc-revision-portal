@@ -118,6 +118,37 @@ body {
   animation: loading-fade-in 200ms ease-out 150ms both;
 }
 
+/* Staff tabs and Previous/Next: a bar along the clicked link and the page faded while the next page loads. Both wait a
+   moment, so quick pages don't flash them; the bar sits on the link's bottom edge, so nothing moves. */
+.link-pending {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--color-primary);
+  pointer-events: none;
+  visibility: hidden;
+}
+.link-pending.is-pending {
+  visibility: visible;
+  animation: loading-fade-in 150ms ease-out 150ms both;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .link-pending.is-pending {
+    animation: loading-fade-in 150ms ease-out 150ms both, link-pending-pulse 900ms ease-in-out 300ms infinite;
+  }
+}
+[data-busy-fade] {
+  opacity: 0.55;
+  transition: opacity 150ms ease-out 150ms;
+}
+
+@keyframes link-pending-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
 /* Practice result panel on phones and tablets (only without reduced motion). */
 @keyframes panel-up {
   from {

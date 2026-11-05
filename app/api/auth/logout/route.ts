@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { pool } from "@/lib/db/pool";
 import { getSession } from "@/lib/auth/session";
-import { getLiveSession } from "@/lib/auth/guard";
+import { getSignedInAccount } from "@/lib/auth/guard";
 import { clearAuthCookie } from "@/lib/auth/cookies";
 import { isJsonRequest } from "@/lib/auth/constants";
 import { MAX_LOGIN_BODY_BYTES, readSmallJson } from "@/lib/auth/request";
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
   const session = await getSession();
   // "Log out of all devices": raising the version ends every sign-in, as a password change does.
   if (everywhere) {
-    const live = await getLiveSession();
+    const live = await getSignedInAccount();
     if (live) {
       await pool.query(`update users set session_version = session_version + 1 where id = $1 and session_version = $2`, [live.session.sub, live.session.ver]);
     }

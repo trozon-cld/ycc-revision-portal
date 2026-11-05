@@ -5,7 +5,7 @@ import type { PickerItem } from "@/app/admin/handbook/pages/actions";
 import { Dialog } from "./dialog";
 import { MediaUploadForm } from "./media-upload-form";
 import { PICKER_LIMIT } from "@/lib/media/limits";
-import { buttonClass, inputClass } from "./styles";
+import { buttonClass, inputClass, errorNoteClass } from "./styles";
 
 // Media library picker, shared by the page and question editors and the covers. `load` is a server action.
 // "Upload new" adds a picture to the library without leaving the editor; it then shows selected, ready to use.
@@ -81,7 +81,7 @@ export function PicturePicker({
               className={inputClass}
             />
             {failed && (
-              <p role="alert" className="rounded-md bg-danger-bg px-3 py-2 text-sm text-danger-strong">
+              <p role="alert" className={errorNoteClass}>
                 Pictures couldn&apos;t be loaded. Try again in a moment.
               </p>
             )}

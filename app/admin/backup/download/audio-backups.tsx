@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Cell, Row, Table } from "@/components/admin/table";
-import { buttonClass, cardClass } from "@/components/admin/styles";
+import { buttonClass, cardClass, errorNoteClass } from "@/components/admin/styles";
 import { countOf, formatBytes } from "@/lib/format";
 import type { AudioLanguageRow } from "@/lib/content/backup/audio-format";
 import { buildAudioBackup, reportAudioSaved } from "@/lib/content/backup/audio-zip";
@@ -71,7 +71,7 @@ export function AudioBackups({ languages }: { languages: AudioLanguageRow[] }) {
           </p>
         )}
         {state.status === "failed" && (
-          <p role="alert" className="rounded-md bg-danger-bg px-3 py-2 text-sm text-danger-strong">
+          <p role="alert" className={errorNoteClass}>
             {current?.name}: {state.message}
           </p>
         )}

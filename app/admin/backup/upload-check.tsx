@@ -4,9 +4,10 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LeaveDialog, useLeaveGuard } from "@/components/admin/leave-guard";
+import { usePictureLimit } from "@/components/admin/picture-limit";
 import { Badge } from "@/components/admin/badge";
 import { Cell, Row, Table } from "@/components/admin/table";
-import { buttonClass, cardClass, fileInputClass, labelClass } from "@/components/admin/styles";
+import { buttonClass, cardClass, fileInputClass, labelClass, errorNoteClass } from "@/components/admin/styles";
 import { NOT_THROUGH_MESSAGE } from "@/lib/forms";
 import { countOf } from "@/lib/format";
 import type { CheckReport, ChangeCounts } from "@/lib/content/import/check";
@@ -31,6 +32,7 @@ export function UploadCheck() {
   const importing = state.status === "importing";
   const [leaveTo, setLeaveTo] = useLeaveGuard(importing);
   const router = useRouter();
+  const pictureLimit = usePictureLimit();
 
   async function onFile(file: File | undefined) {
     if (!file) {
@@ -52,7 +54,7 @@ export function UploadCheck() {
     const toSend = report.pictureChanges.filter((picture) => picture.change !== "same");
     for (const [index, picture] of toSend.entries()) {
       setState({ status: "importing", fileName, report, step: `Uploading pictures: ${index + 1} of ${toSend.length} (${picture.file})…` });
-      const sent = await sendPicture(picture.file, opened);
+      const sent = await sendPicture(picture.file, opened, pictureLimit);
       if (!sent.ok) {
         setState({ status: "importFailed", fileName, report, opened, message: `${sent.error} Nothing else was saved; import again to carry on.` });
         return;
@@ -69,7 +71,7 @@ export function UploadCheck() {
 
   return (
     <div className="space-y-6">
-      <section className={`${cardClass} space-y-3 p-4`}>
+      <section className={`${cardClass} max-w-3xl space-y-3 p-4`}>
         <div>
           <label htmlFor="batch-zip" className={labelClass}>
             Batch zip
@@ -95,7 +97,7 @@ export function UploadCheck() {
         <div aria-live="polite">
           {state.status === "working" && <p className="text-sm text-slate-600">{state.step}</p>}
           {state.status === "failed" && (
-            <p role="alert" className="rounded-md bg-danger-bg px-3 py-2 text-sm text-danger-strong">
+            <p role="alert" className={errorNoteClass}>
               {state.message}
             </p>
           )}
@@ -106,12 +108,12 @@ export function UploadCheck() {
         <ImportPanel report={state.report} message={state.status === "importFailed" ? state.message : null} onImport={() => runImport(state.fileName, state.report, state.opened)} />
       )}
       {state.status === "importFailed" && !state.report.ok && (
-        <p role="alert" className="rounded-md bg-danger-bg px-3 py-2 text-sm text-danger-strong">
+        <p role="alert" className={errorNoteClass}>
           {state.message}
         </p>
       )}
       {importing && (
-        <p aria-live="polite" className={`${cardClass} p-4 text-sm text-ink`}>
+        <p aria-live="polite" className={`${cardClass} max-w-3xl p-4 text-sm text-ink`}>
           {state.step} Please keep this page open.
         </p>
       )}
@@ -127,10 +129,10 @@ function ImportPanel({ report, message, onImport }: { report: CheckReport; messa
   const questions = report.questions.new + report.questions.update;
   const pictures = report.pictures.new + report.pictures.update;
   if (pages + questions + pictures === 0) {
-    return <p className={`${cardClass} p-4 text-sm text-ink`}>Everything in this batch is already in the portal, unchanged. There&apos;s nothing to import.</p>;
+    return <p className={`${cardClass} max-w-3xl p-4 text-sm text-ink`}>Everything in this batch is already in the portal, unchanged. There&apos;s nothing to import.</p>;
   }
   return (
-    <section aria-labelledby="import-heading" className={`${cardClass} space-y-3 p-4`}>
+    <section aria-labelledby="import-heading" className={`${cardClass} max-w-3xl space-y-3 p-4`}>
       <h2 id="import-heading" className="text-base font-semibold text-ink">
         Import
       </h2>
@@ -145,7 +147,7 @@ function ImportPanel({ report, message, onImport }: { report: CheckReport; messa
         </p>
       )}
       {message && (
-        <p role="alert" className="rounded-md bg-danger-bg px-3 py-2 text-sm text-danger-strong">
+        <p role="alert" className={errorNoteClass}>
           {message}
         </p>
       )}
@@ -280,14 +282,14 @@ async function sendCheck(body: unknown): Promise<{ report: CheckReport } | { err
 }
 
 // One picture of the batch, prepared as on the Media page and sent to /api/content/picture.
-async function sendPicture(file: string, opened: Opened): Promise<{ ok: true } | { ok: false; error: string }> {
+async function sendPicture(file: string, opened: Opened, maxBytes: number): Promise<{ ok: true } | { ok: false; error: string }> {
   const data = opened.pictures.get(file.toLowerCase());
   const info = opened.files.find((entry) => entry.name.toLowerCase() === file.toLowerCase());
   const type = data ? pictureType(data) : null;
   if (!data || !info?.sha256 || !type) return { ok: false, error: `${file} couldn't be read from the zip.` };
   const description = readDescription(opened.content, file);
   try {
-    const image = await prepareImage(new File([data as BlobPart], file, { type }));
+    const image = await prepareImage(new File([data as BlobPart], file, { type }), maxBytes);
     const form = new FormData();
     form.set("file", image.main);
     form.set("thumb", image.thumb);

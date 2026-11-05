@@ -65,16 +65,19 @@ export function CandidateHeader() {
   const ownBar = OWN_BAR_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
   return (
     <header className={`candidate-header h-(--candidate-header) shrink-0 border-b border-line bg-card ${BAR_SHADOW_TOP} ${ownBar ? "lg:hidden" : ""}`}>
-      <div className="mx-auto flex h-full w-full max-w-5xl items-center justify-between gap-2 px-3 sm:px-4">
+      <div className="relative mx-auto flex h-full w-full max-w-5xl items-center justify-between gap-2 px-3 sm:px-4">
         <Link
           href="/dashboard"
           className="flex min-h-11 min-w-0 items-center gap-2 rounded-lg text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           {/* Room for a wide logo (about 5:1, up to 157 x 32). */}
           <Image src={LOGO.src} width={LOGO.width} height={LOGO.height} alt="YCC" unoptimized loading="eager" className="h-8 w-auto max-w-[157px] object-contain object-left" />
-          <span className="hidden text-base font-semibold lg:inline">Revision Portal</span>
-          <span className="sr-only lg:hidden">Revision Portal, home</span>
+          <span className="sr-only">Revision Portal, home</span>
         </Link>
+        {/* Laptops and desktops: the name centred in the bar (the logo link already says it to screen readers). */}
+        <span aria-hidden="true" className="pointer-events-none absolute left-1/2 hidden -translate-x-1/2 text-base font-semibold text-ink lg:block">
+          Revision Portal
+        </span>
         <nav aria-label="Help and account" className="flex items-center gap-1">
           <TopLink href="/dashboard/help" icon="help" label="Help" pathname={pathname} />
           <TopLink href="/dashboard/account" icon="person" label="Account" pathname={pathname} />

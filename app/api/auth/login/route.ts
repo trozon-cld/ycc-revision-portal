@@ -8,6 +8,7 @@ import { SITE_WIDE_MESSAGE, loginPause, pausedMessage, shouldRecordLogin, siteWi
 import { MAX_LOGIN_BODY_BYTES, readSmallJson } from "@/lib/auth/request";
 import { MAX_EMAIL_LENGTH } from "@/lib/users/credentials";
 import { ipFromHeaders, logAuthEvent } from "@/lib/audit/log";
+import { OFFICE_ONLY_MESSAGE, isOutsideOffice } from "@/lib/auth/office-network";
 
 // Valid credentials always log in, even if blocked/expired — requireRole then sends that candidate
 // to /access-expired.
@@ -65,8 +66,8 @@ export async function POST(request: NextRequest) {
     );
   };
 
-  const { rows } = await pool.query<{ id: string; email: string; password_hash: string; role: UserRole; session_version: number }>(
-    `select id, email, password_hash, role, session_version
+  const { rows } = await pool.query<{ id: string; email: string; password_hash: string; role: UserRole; session_version: number; office_exempt: boolean }>(
+    `select id, email, password_hash, role, session_version, office_exempt
      from users where email = $1`,
     [email]
   );
@@ -83,6 +84,12 @@ export async function POST(request: NextRequest) {
   }
   if (!passwordMatches) {
     return invalidCredentials({ id: user.id, role: user.role });
+  }
+
+  // Said only after the right password, so it doesn't reveal which emails are Admins. Counts towards the pauses.
+  if (await isOutsideOffice(user, ipAddress)) {
+    await logAuthEvent(pool, "login_refused_network", { id: user.id, email: user.email, role: user.role }, ipAddress);
+    return NextResponse.json({ error: OFFICE_ONLY_MESSAGE }, { status: 403 });
   }
 
   if (await shouldRecordLogin(pool, user.id)) {

@@ -10,7 +10,7 @@ import { SOURCE_LANGUAGE, translatedLanguages } from "@/lib/voice/languages";
 import { loadQuestionTranslations } from "@/lib/voice/question-voice";
 import { QuestionTranslationsEditor } from "./question-translations-editor";
 
-export const metadata: Metadata = { title: "Question translations" };
+export const metadata: Metadata = { title: "Question Translations" };
 
 export default async function QuestionTranslationsPage({ params, searchParams }: PageProps<"/admin/questions/[questionId]/translations">) {
   await requireRole(CONTENT_EDITORS);

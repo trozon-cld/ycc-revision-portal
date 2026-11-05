@@ -38,3 +38,13 @@ export const textareaClass =
 
 export const fileInputClass =
   "block w-full text-sm text-ink file:mr-3 file:h-10 file:cursor-pointer file:rounded-md file:border file:border-slate-300 file:bg-white file:px-3 file:text-sm file:font-medium file:text-ink hover:file:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:file:h-9";
+
+// Staff text links (breadcrumbs, links inside sentences and tables).
+export const linkClass = "text-primary underline underline-offset-2 hover:text-ink";
+
+// Notes inside panels and pages: an error (red) and a warning (amber).
+export const errorNoteClass = "rounded-md bg-danger-bg px-3 py-2 text-sm text-danger-strong";
+export const warnNoteClass = "rounded-md bg-warn-bg px-3 py-2 text-sm text-warn-strong ring-1 ring-warn/25";
+
+// The bottom row of a slide-in panel or confirm box (Close / Cancel and the main button).
+export const panelFooterClass = "flex justify-end gap-2 border-t border-slate-200 px-5 py-3";

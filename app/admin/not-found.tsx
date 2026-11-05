@@ -6,10 +6,10 @@ export default function AdminNotFound() {
   return (
     <div className={`${cardClass} max-w-xl p-6`}>
       <h1 className="text-xl font-semibold text-ink">We can&apos;t find that page</h1>
-      <p className="mt-2 text-sm text-slate-700">It may have been deleted, or the link may be wrong.</p>
+      <p className="mt-2 text-sm text-slate-700">The link may be wrong, or the page may have moved.</p>
       <div className="mt-5">
         <Link href="/admin" className={buttonClass("secondary")}>
-          Back to main list
+          Back to home
         </Link>
       </div>
     </div>

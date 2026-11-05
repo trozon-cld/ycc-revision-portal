@@ -1,5 +1,6 @@
 import { Mp3Encoder } from "@breezystack/lamejs";
 import { MP3_KBPS } from "./limits";
+import { asciiAt } from "@/lib/bytes";
 
 // Speech arrives as 16-bit mono PCM (in a WAV file or raw); it's joined and stored as MP3.
 export type Pcm = { samples: Int16Array; sampleRate: number };
@@ -18,11 +19,7 @@ export function readSpeechAudio(bytes: Uint8Array, mimeType: string): Pcm {
 }
 
 function isRiff(bytes: Uint8Array) {
-  return bytes.length >= 12 && ascii(bytes, 0, 4) === "RIFF" && ascii(bytes, 8, 4) === "WAVE";
-}
-
-function ascii(bytes: Uint8Array, start: number, length: number) {
-  return String.fromCharCode(...bytes.subarray(start, start + length));
+  return bytes.length >= 12 && asciiAt(bytes, 0, 4) === "RIFF" && asciiAt(bytes, 8, 4) === "WAVE";
 }
 
 function readWav(bytes: Uint8Array): Pcm {
@@ -31,7 +28,7 @@ function readWav(bytes: Uint8Array): Pcm {
   let offset = 12;
   let sampleRate = 0;
   while (offset + 8 <= bytes.length) {
-    const id = ascii(bytes, offset, 4);
+    const id = asciiAt(bytes, offset, 4);
     // Streamed WAVs may give 0 or 0xFFFFFFFF as the data size: read to the end then.
     const declared = view.getUint32(offset + 4, true);
     const size = id === "data" && (declared === 0 || offset + 8 + declared > bytes.length) ? bytes.length - offset - 8 : declared;
