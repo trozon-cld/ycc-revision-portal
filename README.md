@@ -4,7 +4,7 @@ Revision platform for construction site workers preparing for the CITB HS&E test
 
 Status: in active development.
 
-More in [`docs/`](docs/README.md): architecture, key decisions, code conventions, operations and the go-live checklist.
+More in [`docs/`](docs/README.md): architecture, key decisions, code conventions, operations, the go-live checklist, the Vercel and Supabase setup list, and what changes for a move to AWS.
 
 ## Stack
 
@@ -114,7 +114,7 @@ Use **Node.js 24** (the version is in `.nvmrc`; `nvm use` or `fnm use` picks it 
 - `proxy.ts` — route protection by role, block and expiry
 - `scripts/` — `generate-hash.mjs` (`npm run hash`)
 - `supabase/` — schema, migrations and seed
-- `docs/` — architecture, decisions, conventions, operations and the go-live checklist
+- `docs/` — architecture, decisions, conventions, operations, the go-live checklist, Vercel and Supabase setup, moving to AWS
 
 This project runs Next.js 16, which differs from older versions. See `AGENTS.md` and `node_modules/next/dist/docs/` before changing routing, data fetching or config.
 
