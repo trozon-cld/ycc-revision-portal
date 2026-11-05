@@ -33,15 +33,17 @@ Status: in active development.
 
 ## Getting started
 
-1. Install dependencies:
+Use **Node.js 24** (the version is in `.nvmrc`; `nvm use` or `fnm use` picks it up).
+
+1. Install dependencies exactly as recorded in `package-lock.json`:
 
    ```bash
-   npm install
+   npm ci
    ```
 
 2. Copy `.env.example` to `.env.local` and fill in `DATABASE_URL` (Supabase pooler string) and `JWT_SECRET`. `DATABASE_POOL_MAX` is optional (default 10; use 1–3 on serverless hosting).
 
-3. In the Supabase SQL editor, run `supabase/schema.sql` for a fresh database. The files in `supabase/migrations/` are changes for databases created from an earlier version of the schema, so skip them on a fresh setup. A fresh database has English only; add the other Listen languages on Languages and audio → Languages.
+3. In the Supabase SQL editor, run `supabase/schema.sql` for a fresh database. The files in `supabase/migrations/` are changes for databases created from an earlier version of the schema, so skip them on a fresh setup (`schema.sql` already records them all as run). A fresh database has English only; add the other Listen languages on Languages and audio → Languages.
 
 4. For the image library (Admin → Media), in Supabase:
    - **Storage → New bucket**, name `handbook-media`, **Public bucket off** (pictures are served through short-lived signed links).
@@ -64,6 +66,17 @@ Status: in active development.
 
 7. Before delivering a change, `npm run lint` should report nothing (Next's lint setup, including React's hook rules).
 
+## Database migrations
+
+- Each database keeps a record of the migrations it has had in `schema_migrations`. To see where a database is: `select name, applied_at from schema_migrations order by name;`
+- To bring one up to date, run the files in `supabase/migrations/` that aren't in that list, in number order, in the SQL editor. The Superadmin also sees on Backup & Restore whether the database matches the code.
+- A new migration: the next number (`NNNN_what_it_does.sql`), the same change in `supabase/schema.sql` (including its name in the `schema_migrations` list there), ending with `insert into schema_migrations (name) values ('NNNN_what_it_does');`, and `EXPECTED_MIGRATION` in `lib/db/schema-version.ts` raised to it.
+
+## Updating packages
+
+- `npm ci` for everyday installs. Change a package only on purpose: `npm install <package>@<version>`, then lint, build and test, and commit `package.json` and `package-lock.json` together.
+- Check `npm audit` every month or so. Use `npm audit fix` (it stays within the allowed versions); never `npm audit fix --force`, which can install much older or breaking versions (e.g. an older `eslint-config-next`).
+
 ## Project structure
 
 - `app/` — routes:
@@ -78,7 +91,7 @@ Status: in active development.
 - `components/learning/` — candidate-facing renderers: blocks, questions (`questions/`), the fixed-page book reader, the reader bar/Settings, and the focused frame shared by Practice and the Mock test (`focused-shell.tsx`)
 - `lib/auth/` — JWT signing/verification, session cookie, role guard, the office network check (`office-network.ts`; the visitor's address is read in one place, `ipFromHeaders` in `lib/audit/log.ts`), login and record limits, who edits content (`content-editors.ts`), small-request checks
 - `lib/audit/` — activity and login logs (every loggable action is listed in `lib/audit/actions.ts`) and login-record archiving
-- `lib/db/` — shared Postgres pool, transaction helper, LIKE escaping, quoted names, case-insensitive unique names (`names.ts`)
+- `lib/db/` — shared Postgres pool, transaction helper, LIKE escaping, quoted names, case-insensitive unique names (`names.ts`), the migration record check (`schema-version.ts`)
 - `lib/users/` — display-name and sign-in (email/password) rules shared by account, admin and candidate forms
 - `lib/candidates/` — access dates (UK time), test type switching, the candidate home, and one candidate for staff (`detail.ts`, `paths.ts`)
 - `lib/content/import/` — bulk upload: the batch format (`format.ts`, browser-safe), the check against the portal and the database (`check.ts`), item conversion to the portal's shapes (`convert.ts`), the browser zip reader (`zip.ts`, fflate), picture import (`pictures.ts`), the import itself (`run.ts`) and limits
