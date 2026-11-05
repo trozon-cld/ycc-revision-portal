@@ -4,9 +4,11 @@ Revision platform for construction site workers preparing for the CITB HS&E test
 
 Status: in active development.
 
+More in [`docs/`](docs/README.md): architecture, key decisions, code conventions, operations and the go-live checklist.
+
 ## Stack
 
-- Next.js 16 (App Router, TypeScript, Tailwind CSS v4)
+- Next.js 16.4 (App Router, TypeScript, Tailwind CSS v4)
 - PostgreSQL on Supabase (raw SQL via `pg`), plus Supabase Storage for pictures, log archives and Handbook audio
 - Handbook translations and audio through Google Cloud Translation and Text-to-Speech, Welsh audio through the Gemini API (plain `fetch`); MP3 encoding with `@breezystack/lamejs`
 - Custom JWT auth (jose + bcryptjs, HTTP-only cookies)
@@ -111,6 +113,7 @@ Use **Node.js 24** (the version is in `.nvmrc`; `nvm use` or `fnm use` picks it 
 - `proxy.ts` — route protection by role, block and expiry
 - `scripts/` — `generate-hash.mjs` (`npm run hash`)
 - `supabase/` — schema, migrations and seed
+- `docs/` — architecture, decisions, conventions, operations and the go-live checklist
 
 This project runs Next.js 16, which differs from older versions. See `AGENTS.md` and `node_modules/next/dist/docs/` before changing routing, data fetching or config.
 
