@@ -1,6 +1,8 @@
 import { requireRole } from "@/lib/auth/guard";
 import { pool } from "@/lib/db/pool";
 import { AdminShell } from "@/components/admin/shell";
+import { PictureLimitProvider } from "@/components/admin/picture-limit";
+import { MAX_PICTURE_BYTES } from "@/lib/hosting";
 
 // Every page below still calls requireRole itself for its own, narrower check.
 export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
@@ -11,7 +13,7 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
 
   return (
     <AdminShell role={role} email={session.email} name={rows[0]?.full_name ?? null}>
-      {children}
+      <PictureLimitProvider bytes={MAX_PICTURE_BYTES}>{children}</PictureLimitProvider>
     </AdminShell>
   );
 }

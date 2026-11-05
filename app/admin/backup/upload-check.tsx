@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LeaveDialog, useLeaveGuard } from "@/components/admin/leave-guard";
+import { usePictureLimit } from "@/components/admin/picture-limit";
 import { Badge } from "@/components/admin/badge";
 import { Cell, Row, Table } from "@/components/admin/table";
 import { buttonClass, cardClass, fileInputClass, labelClass, errorNoteClass } from "@/components/admin/styles";
@@ -31,6 +32,7 @@ export function UploadCheck() {
   const importing = state.status === "importing";
   const [leaveTo, setLeaveTo] = useLeaveGuard(importing);
   const router = useRouter();
+  const pictureLimit = usePictureLimit();
 
   async function onFile(file: File | undefined) {
     if (!file) {
@@ -52,7 +54,7 @@ export function UploadCheck() {
     const toSend = report.pictureChanges.filter((picture) => picture.change !== "same");
     for (const [index, picture] of toSend.entries()) {
       setState({ status: "importing", fileName, report, step: `Uploading pictures: ${index + 1} of ${toSend.length} (${picture.file})…` });
-      const sent = await sendPicture(picture.file, opened);
+      const sent = await sendPicture(picture.file, opened, pictureLimit);
       if (!sent.ok) {
         setState({ status: "importFailed", fileName, report, opened, message: `${sent.error} Nothing else was saved; import again to carry on.` });
         return;
@@ -280,14 +282,14 @@ async function sendCheck(body: unknown): Promise<{ report: CheckReport } | { err
 }
 
 // One picture of the batch, prepared as on the Media page and sent to /api/content/picture.
-async function sendPicture(file: string, opened: Opened): Promise<{ ok: true } | { ok: false; error: string }> {
+async function sendPicture(file: string, opened: Opened, maxBytes: number): Promise<{ ok: true } | { ok: false; error: string }> {
   const data = opened.pictures.get(file.toLowerCase());
   const info = opened.files.find((entry) => entry.name.toLowerCase() === file.toLowerCase());
   const type = data ? pictureType(data) : null;
   if (!data || !info?.sha256 || !type) return { ok: false, error: `${file} couldn't be read from the zip.` };
   const description = readDescription(opened.content, file);
   try {
-    const image = await prepareImage(new File([data as BlobPart], file, { type }));
+    const image = await prepareImage(new File([data as BlobPart], file, { type }), maxBytes);
     const form = new FormData();
     form.set("file", image.main);
     form.set("thumb", image.thumb);

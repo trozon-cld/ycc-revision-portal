@@ -6,6 +6,10 @@ import { isSameOrigin, readSmallJson } from "@/lib/auth/request";
 import { importBatch } from "@/lib/content/import/run";
 import { readPictureList } from "@/lib/content/import/format";
 import { MAX_CHECK_REQUEST_BYTES } from "@/lib/content/import/limits";
+import { withinHostLimit } from "@/lib/hosting";
+import { formatBytes } from "@/lib/format";
+
+const MAX_BYTES = withinHostLimit(MAX_CHECK_REQUEST_BYTES);
 import { isRecord } from "@/lib/text";
 
 // Bulk upload import: after the pictures, the browser sends content.json and the picture list again; the batch is
@@ -18,10 +22,10 @@ export async function POST(request: NextRequest) {
   if (!isSameOrigin(request.headers)) {
     return NextResponse.json({ ok: false, error: "Something went wrong. Please try again." }, { status: 403 });
   }
-  const body = await readSmallJson(request, MAX_CHECK_REQUEST_BYTES);
+  const body = await readSmallJson(request, MAX_BYTES);
   if (!body.ok) {
     return body.tooLarge
-      ? NextResponse.json({ ok: false, error: `content.json must be ${MAX_CHECK_REQUEST_BYTES / 1024 / 1024} MB or smaller. Split the batch.` }, { status: 413 })
+      ? NextResponse.json({ ok: false, error: `content.json must be ${formatBytes(MAX_BYTES)} or smaller. Split the batch.` }, { status: 413 })
       : NextResponse.json({ ok: false, error: "Something went wrong. Please try again." }, { status: 400 });
   }
   const files = readPictureList(isRecord(body.value) ? body.value.pictures : null);

@@ -1,4 +1,4 @@
-import { STORAGE_LIMIT_BYTES } from "@/lib/media/limits";
+import { STORAGE_LIMIT_BYTES } from "@/lib/hosting";
 import { STORAGE_SETTINGS_TEXT, StorageConfigError, deleteObjects, getSignedUrls, isStorageConfigured, storeObject } from "@/lib/storage/storage";
 import { storedBytes } from "@/lib/storage/usage";
 import type { VoiceFailure } from "./services";

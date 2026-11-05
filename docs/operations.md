@@ -10,6 +10,8 @@ First-time setup is in the main `README.md` ("Getting started"). This page cover
 | --- | --- |
 | `DATABASE_URL` | Postgres connection string. On Supabase, the pooler string on port 6543. |
 | `DATABASE_POOL_MAX` | Optional. Connections per running copy of the site (default 10; 1–3 on serverless hosting). |
+| `HOST_REQUEST_LIMIT_MB` | Optional. The largest request or response the host lets through (default 4.5, Vercel Functions). Uploads, restores and backup downloads stay under it. Set it when moving to another host. |
+| `STORAGE_LIMIT_MB` | Optional. Total storage cap for pictures, login archives and audio (default 900, for Supabase Free's 1 GB). Raise it when the storage plan grows, leaving a margin (e.g. 90000 on Supabase Pro). |
 | `JWT_SECRET` | Long random value (at least 32 characters; e.g. `openssl rand -base64 48`). Changing it signs everyone out. |
 | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Storage access (Project Settings → API). |
 | `SUPABASE_STORAGE_BUCKET`, `SUPABASE_ARCHIVE_BUCKET`, `SUPABASE_AUDIO_BUCKET` | Bucket names; default `handbook-media`, `log-archives`, `handbook-audio`. |
@@ -20,7 +22,7 @@ First-time setup is in the main `README.md` ("Getting started"). This page cover
 
 ## Storage buckets
 
-Three **private** buckets: `handbook-media` (pictures), `log-archives` (archived login records, `application/gzip`), `handbook-audio` (Listen audio, `audio/mpeg`). Leave allowed file types open or allow those types. Total uploads are capped at 900 MB (`STORAGE_LIMIT_BYTES` in `lib/media/limits.ts`).
+Three **private** buckets: `handbook-media` (pictures), `log-archives` (archived login records, `application/gzip`), `handbook-audio` (Listen audio, `audio/mpeg`). Leave allowed file types open or allow those types. Total uploads are capped at 900 MB by default (`STORAGE_LIMIT_MB`, read in `lib/hosting.ts`).
 
 ## Database migrations
 

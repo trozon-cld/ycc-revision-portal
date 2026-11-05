@@ -7,6 +7,7 @@ import { prepareImage, type PreparedImage } from "@/lib/media/prepare-image";
 import { formatBytes } from "@/lib/format";
 import { ALT_TEXT_MAX_LENGTH } from "@/lib/limits";
 import { ActionForm } from "./action-form";
+import { usePictureLimit } from "./picture-limit";
 import { Field } from "./field";
 import { fileInputClass, errorNoteClass, textareaClass } from "./styles";
 
@@ -32,6 +33,7 @@ export function MediaUploadForm({
   hint?: string;
 }) {
   const uploaded = useRef("");
+  const pictureLimit = usePictureLimit();
   const [selection, setSelection] = useState<Selection>({ status: "empty" });
   const previewUrl = selection.status === "ready" ? selection.previewUrl : null;
 
@@ -47,7 +49,7 @@ export function MediaUploadForm({
     }
     setSelection({ status: "preparing" });
     try {
-      const image = await prepareImage(file);
+      const image = await prepareImage(file, pictureLimit);
       setSelection({ status: "ready", image, originalName: file.name, previewUrl: URL.createObjectURL(image.thumb) });
     } catch (error) {
       setSelection({ status: "error", message: error instanceof Error ? error.message : "This picture couldn't be read." });

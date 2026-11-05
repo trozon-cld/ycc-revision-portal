@@ -22,7 +22,8 @@ The working copy of this list is the "Final checklist (before go-live)" in the p
 - [ ] Host chosen; the site in the same region as the database.
 - [ ] Visitor address: `ipFromHeaders` (`lib/audit/log.ts`) matches the host (Vercel: as is; AWS behind a load balancer: the last entry). Login limits and the office network depend on it.
 - [ ] Office network tested from the office and from outside.
-- [ ] Upload size fits the host's request limit (Vercel functions: 4.5 MB; picture uploads can be ~5.3 MB today, `MAX_UPLOAD_BYTES` in `lib/media/limits.ts`). Bulk upload and backup request sizes checked too.
+- [ ] `HOST_REQUEST_LIMIT_MB` matches the host's request limit (default 4.5 for Vercel). **Moving off Vercel: set it to the new host's limit.**
+- [ ] `STORAGE_LIMIT_MB` fits the storage plan (default 900 for Supabase Free). **Upgrading Supabase or changing storage provider: raise it, leaving a margin (e.g. 90000 on Pro's 100 GB).**
 - [ ] Host request time limit enough for audio generation and backups.
 - [ ] Database: the pooler connection string, `DATABASE_POOL_MAX` 1–3 on serverless, and the database certificate verified (`lib/db/pool.ts`, `rejectUnauthorized: false` today).
 - [ ] A long random `JWT_SECRET`; all keys set in the host's settings, none in the code.

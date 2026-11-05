@@ -4,6 +4,7 @@ import { getLiveSession } from "@/lib/auth/guard";
 import { isSameOrigin, readSmallJson } from "@/lib/auth/request";
 import { BACKUP_ROLES } from "@/lib/content/backup/access";
 import { readAudioBackup } from "@/lib/content/backup/audio";
+import { tooLargeForHost } from "@/lib/hosting";
 import { isRecord } from "@/lib/text";
 
 // One language's audio records and file links, gzipped (the browser fetches the files and builds the zip). Read only;
@@ -18,5 +19,8 @@ export async function POST(request: NextRequest) {
   if (!body.ok || !isRecord(body.value)) return NextResponse.json({ ok: false, error: "Choose a language." }, { status: 400 });
   const result = await readAudioBackup(live.session, body.value.language);
   if (!result.ok) return NextResponse.json(result, { status: 409 });
-  return new NextResponse(gzipSync(JSON.stringify(result.data)), { headers: { "content-type": "application/gzip", "cache-control": "no-store" } });
+  const gzipped = gzipSync(JSON.stringify(result.data));
+  const tooLarge = tooLargeForHost("This language's audio records", gzipped.length);
+  if (tooLarge) return NextResponse.json({ ok: false, error: tooLarge }, { status: 413 });
+  return new NextResponse(gzipped, { headers: { "content-type": "application/gzip", "cache-control": "no-store" } });
 }

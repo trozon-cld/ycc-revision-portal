@@ -43,7 +43,7 @@ Use **Node.js 24** (the version is in `.nvmrc`; `nvm use` or `fnm use` picks it 
    npm ci
    ```
 
-2. Copy `.env.example` to `.env.local` and fill in `DATABASE_URL` (Supabase pooler string) and `JWT_SECRET`. `DATABASE_POOL_MAX` is optional (default 10; use 1–3 on serverless hosting).
+2. Copy `.env.example` to `.env.local` and fill in `DATABASE_URL` (Supabase pooler string) and `JWT_SECRET`. `DATABASE_POOL_MAX` is optional (default 10; use 1–3 on serverless hosting). `HOST_REQUEST_LIMIT_MB` (default 4.5) and `STORAGE_LIMIT_MB` (default 900) are optional too; see `docs/operations.md`.
 
 3. In the Supabase SQL editor, run `supabase/schema.sql` for a fresh database. The files in `supabase/migrations/` are changes for databases created from an earlier version of the schema, so skip them on a fresh setup (`schema.sql` already records them all as run). A fresh database has English only; add the other Listen languages on Languages and audio → Languages.
 
@@ -108,6 +108,7 @@ Use **Node.js 24** (the version is in `.nvmrc`; `nvm use` or `fnm use` picks it 
 - `lib/storage/` — the only code that talks to the storage provider (upload, delete, signed links; pictures, archive and audio buckets) and the total stored (`usage.ts`, for the storage cap)
 - `lib/voice/` — Handbook translations and audio: languages (kept in the database, read through `language-store.ts`; the list of languages that can be added is `language-catalogue.ts` (one line each); managing them is `language-admin.ts`, the spoken phrases' rules `phrases.ts`), what is read aloud, translation checks, saving translations (`page-translations.ts`), page audio (`page-audio.ts`; the audio files themselves in `audio-files.ts`), question pages' translations and audio (`question-voice.ts`, shared parts in `question-listen.ts`), the Handbook-wide list (`overview.ts`), what candidates hear and their listening language (`listen.ts`), the voice services behind `services.ts` (Google Cloud Translation and Text-to-Speech in `google.ts`; Gemini in `gemini.ts` for languages the list gives to it (Welsh audio); a stand-in in `fake.ts`), MP3 encoding and each staff member's hourly allowance in characters (`quota.ts`, with monthly totals per service)
 - `lib/media/` — image checks (real type and size from the file), in-browser WebP conversion, saving uploads and the storage cap (`upload.ts`)
+- `lib/hosting.ts` — sizes set by the host and the storage plan (`HOST_REQUEST_LIMIT_MB`, `STORAGE_LIMIT_MB`; server only)
 - `lib/ids.ts`, `lib/bytes.ts`, `lib/text.ts`, `lib/format.ts`, `lib/limits.ts`, `lib/forms.ts`, `lib/params.ts` — small shared helpers (id checks, text clean-up, display formats, length limits, form results, URL parameters)
 - `lib/brand.ts`, `lib/layout.ts` — logo and phone screen sizes
 - `proxy.ts` — route protection by role, block and expiry

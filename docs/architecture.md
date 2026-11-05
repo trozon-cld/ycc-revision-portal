@@ -51,7 +51,7 @@ Content editing is Superadmin-only for launch. The one switch is `CONTENT_EDITOR
 ## Storage
 
 - `lib/storage/storage.ts` is the only code that talks to the storage provider: upload, delete, short-lived signed links. Buckets: `handbook-media` (pictures), `log-archives` (archived login records), `handbook-audio` (Listen MP3s).
-- Pictures are checked by their real content, converted to WebP in the browser, and capped at 5 MB each and 900 MB in total (`lib/media/limits.ts`).
+- Pictures are checked by their real content and converted to WebP in the browser. Each is capped at 5 MB, or less if the host's request limit needs it (about 3.2 MB on Vercel); the total is capped at 900 MB by default. Both host-dependent sizes are host settings read in `lib/hosting.ts`.
 - Moving to S3 or similar means rewriting that one file and copying the buckets.
 
 ## Voice (Listen)

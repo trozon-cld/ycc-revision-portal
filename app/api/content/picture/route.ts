@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getLiveSession } from "@/lib/auth/guard";
 import { CONTENT_EDITORS } from "@/lib/auth/content-editors";
 import { isSameOrigin } from "@/lib/auth/request";
-import { MAX_UPLOAD_BYTES, MAX_UPLOAD_REQUEST_BYTES } from "@/lib/media/limits";
+import { formatBytes } from "@/lib/format";
+import { MAX_PICTURE_BYTES, MAX_PICTURE_REQUEST_BYTES } from "@/lib/hosting";
 import { importPicture } from "@/lib/content/import/pictures";
 
 // One picture of a bulk upload, prepared in the browser as on the Media page. Same checks as /api/media/upload:
@@ -17,8 +18,8 @@ export async function POST(request: NextRequest) {
   }
   const length = Number(request.headers.get("content-length"));
   if (!length) return NextResponse.json({ ok: false, error: "Something went wrong. Please try again." }, { status: 411 });
-  if (length > MAX_UPLOAD_REQUEST_BYTES) {
-    return NextResponse.json({ ok: false, error: `Each picture must be ${Math.round(MAX_UPLOAD_BYTES / 1024 / 1024)} MB or smaller after preparing.` }, { status: 413 });
+  if (length > MAX_PICTURE_REQUEST_BYTES) {
+    return NextResponse.json({ ok: false, error: `Each picture must be ${formatBytes(MAX_PICTURE_BYTES)} or smaller after preparing.` }, { status: 413 });
   }
   const formData = await request.formData().catch(() => null);
   if (!formData) return NextResponse.json({ ok: false, error: "Something went wrong. Please try again." }, { status: 400 });
