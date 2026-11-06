@@ -36,6 +36,7 @@ Four **private** buckets: `handbook-media` (pictures), `log-archives` (archived 
 - **Database backups** (Backup & Restore → Backup): everything in the database, daily and by hand. Restoring one is done outside the portal; see `database-backups.md`.
 - **Content backup** (Backup & Restore → Backup): one zip of the structure, pages, questions, languages and pictures. Not included: General queries, support contact, audio, accounts, candidates' data, logs.
 - **Audio backups** (Backup → Audio backups): one file per language.
+- **Put back missing files** (Backup & Restore → Restore): after a database backup is restored, uploads the pictures (from a content backup) and audio (from each audio backup) that the database lists and storage lacks. Never changes data or replaces a file.
 - **Restore** (Backup & Restore → Restore): only into an empty project. Afterwards re-enter General queries and the support contact, restore each language's audio backup, and lock the structure again.
 - The content and audio backups are also the only copies of the pictures and audio outside Supabase: download them again after big content changes.
 

@@ -30,7 +30,7 @@ A database backup isn't restored from inside the portal: if the database is lost
 
    It refuses a database that already has accounts or is at another migration, loads every table in one transaction (all or nothing), and prints each table's row count.
 4. **Point the site at it:** set `DATABASE_URL` (the pooler string, port 6543) and the storage settings on the host to the new project, then redeploy.
-5. **Put back the files:** if the old project's pictures and audio are lost too, restore them from the content backup and the audio backups (Restore tab, "files only" once that's added; until then, ask the developer).
+5. **Put back the files:** if the old project's pictures and audio are lost too, log in as the Superadmin and use Backup & Restore → Restore → **Put back missing files**: choose the content backup (pictures), then each language's audio backup. It uploads only files the database lists and storage lacks, never changes data and never replaces a file; it names any file the backup doesn't have (for example, a picture added after that backup was made).
 6. **Check:** log in as the Superadmin and as a candidate; Backup & Restore shows the database version matches; make a backup with Back Up Now.
 
 The list of backups starts empty in the new database (the old files belong to the old project).

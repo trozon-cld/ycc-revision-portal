@@ -58,6 +58,7 @@ export const ACTIVITY_ACTIONS = {
   "content.backup_restored": "Restored backup",
   "content.audio_backup_downloaded": "Downloaded audio backup",
   "content.audio_restored": "Restored audio",
+  "content.files_restored": "Put back missing files",
   "database.backup_created": "Made a database backup",
   "database.backup_downloaded": "Downloaded database backup",
   "page_translation.generated": "Translated page",
