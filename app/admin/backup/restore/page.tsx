@@ -15,9 +15,13 @@ export default async function RestorePage() {
   const schema = await loadSchemaStatus();
   return (
     <>
-      <PageHeader title="Backup & Restore" description="Put a backup back into an empty project, for example when moving to a new one." />
+      <PageHeader title="Backup & Restore" description="Put a content or audio backup back into an empty project, for example when moving to a new one." />
       <PageTabs label="Backup & Restore" tabs={backupTabs(session.role)} current={RESTORE_PATH} />
       <DatabaseStatus status={schema} />
+      <p className="mb-4 max-w-3xl text-sm text-slate-600">
+        Database backups (from the Backup tab) aren&apos;t restored here: if the database is lost, the site can&apos;t run, so a developer loads the backup into
+        a fresh database by the steps in <code>docs/database-backups.md</code>.
+      </p>
       <div className="space-y-6">
         <RestoreBackup />
         <RestoreAudio />

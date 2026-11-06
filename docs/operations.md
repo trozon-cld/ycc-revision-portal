@@ -14,7 +14,8 @@ First-time setup is in the main `README.md` ("Getting started"). This page cover
 | `STORAGE_LIMIT_MB` | Optional. Total storage cap for pictures, login archives and audio (default 900, for Supabase Free's 1 GB). Raise it when the storage plan grows, leaving a margin (e.g. 90000 on Supabase Pro). |
 | `JWT_SECRET` | Long random value (at least 32 characters; e.g. `openssl rand -base64 48`). Changing it signs everyone out. |
 | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Storage access (Project Settings → API). |
-| `SUPABASE_STORAGE_BUCKET`, `SUPABASE_ARCHIVE_BUCKET`, `SUPABASE_AUDIO_BUCKET` | Bucket names; default `handbook-media`, `log-archives`, `handbook-audio`. |
+| `SUPABASE_STORAGE_BUCKET`, `SUPABASE_ARCHIVE_BUCKET`, `SUPABASE_AUDIO_BUCKET`, `SUPABASE_BACKUP_BUCKET` | Bucket names; default `handbook-media`, `log-archives`, `handbook-audio`, `db-backups`. |
+| `CRON_SECRET` | At least 16 random characters. The daily database backup's schedule sends it; without it the schedule's link stays closed. |
 | `GOOGLE_CLOUD_API_KEY` | Google Cloud key restricted to Cloud Translation and Text-to-Speech (billed project). |
 | `GEMINI_API_KEY` | Gemini key for Welsh audio (billed before candidates hear it). |
 | `VOICE_PROVIDER` | `google` (default) or `fake` for local tests (refused in production). |
@@ -22,7 +23,7 @@ First-time setup is in the main `README.md` ("Getting started"). This page cover
 
 ## Storage buckets
 
-Three **private** buckets: `handbook-media` (pictures), `log-archives` (archived login records, `application/gzip`), `handbook-audio` (Listen audio, `audio/mpeg`). Leave allowed file types open or allow those types. Total uploads are capped at 900 MB by default (`STORAGE_LIMIT_MB`, read in `lib/hosting.ts`).
+Four **private** buckets: `handbook-media` (pictures), `log-archives` (archived login records, `application/gzip`), `handbook-audio` (Listen audio, `audio/mpeg`), `db-backups` (database backups, `application/gzip`). Leave allowed file types open or allow those types. Total uploads are capped at 900 MB by default (`STORAGE_LIMIT_MB`, read in `lib/hosting.ts`).
 
 ## Database migrations
 
@@ -32,10 +33,11 @@ Three **private** buckets: `handbook-media` (pictures), `log-archives` (archived
 
 ## Backups
 
+- **Database backups** (Backup & Restore → Backup): everything in the database, daily and by hand. Restoring one is done outside the portal; see `database-backups.md`.
 - **Content backup** (Backup & Restore → Backup): one zip of the structure, pages, questions, languages and pictures. Not included: General queries, support contact, audio, accounts, candidates' data, logs.
 - **Audio backups** (Backup → Audio backups): one file per language.
 - **Restore** (Backup & Restore → Restore): only into an empty project. Afterwards re-enter General queries and the support contact, restore each language's audio backup, and lock the structure again.
-- These are content backups, not database backups. Accounts, candidates' progress and logs need a database backup (a paid plan's daily backups or a scheduled `pg_dump` kept elsewhere).
+- The content and audio backups are also the only copies of the pictures and audio outside Supabase: download them again after big content changes.
 
 ## Login records
 

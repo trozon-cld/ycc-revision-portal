@@ -28,6 +28,10 @@ export function ipFromHeaders(requestHeaders: Headers): string | null {
   return requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() || null;
 }
 
+// Who did it, for actions the site does by itself on a schedule (no account has this id).
+export const SYSTEM_ACTOR_ID = "00000000-0000-0000-0000-000000000000";
+export const SYSTEM_ACTOR: SessionPayload = { sub: SYSTEM_ACTOR_ID, email: "Daily schedule", role: "superadmin", ver: 0, loginAt: 0 };
+
 // Call inside the same transaction as the change, so neither exists without the other.
 // Actor email is read live because a session can carry an email changed since login.
 export async function logActivity(

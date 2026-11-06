@@ -33,6 +33,7 @@ The decisions most likely to be questioned later, newest areas last. Dates are 2
 
 - **Bulk upload** (27–30 Oct): batches keep a source key (e.g. `AD-p012`) so a re-upload updates instead of duplicating; new items arrive as drafts.
 - **Backup & Restore** covers shared content only (structure, pages, questions, pictures, languages). Not in backups: General queries, the support contact, audio, accounts, candidates' data, logs. Restore works only into an empty project.
+- **Database backups by the portal itself** (6 Nov, migration 0044): a daily copy of every table in a private bucket, plus Back Up Now, independent of Supabase's paid backups and of the host (any scheduler calls one protected link). Restored outside the portal into a fresh database (`scripts/restore-database.mjs`), since a lost database can't run the site. The weekly download keeps a copy outside Supabase.
 - **Fresh production database** (23 Oct): `schema.sql` plus a seed with only the required rows (support contact row, English and its spoken phrases, the Superadmin). Anything the app can create is not seeded.
 
 ## Listen

@@ -23,6 +23,7 @@ import { Cell, Row, Table } from "@/components/admin/table";
 import { PageTabs } from "@/components/admin/page-tabs";
 import { ActionForm } from "@/components/admin/action-form";
 import { ARCHIVE_AFTER_DAYS, archiveMonthText, listArchives, loadArchiveStatus } from "@/lib/audit/archive";
+import { SYSTEM_ACTOR_ID } from "@/lib/audit/log";
 import { formatBytes } from "@/lib/format";
 import { isUuid } from "@/lib/ids";
 import { firstParam } from "@/lib/params";
@@ -36,6 +37,7 @@ type RoleKey = keyof typeof ROLE_LABELS;
 interface ActivityRow {
   id: string;
   created_at: string;
+  actor_id: string;
   actor_email: string;
   actor_role: RoleKey;
   action: ActivityAction;
@@ -171,7 +173,7 @@ async function ActivityTab({
   const page = pageFromParam(pageParam, total, PAGE_SIZE);
   const [{ rows }, { rows: actors }] = await Promise.all([
     pool.query<ActivityRow>(
-      `select id, created_at, actor_email, actor_role, action, target_label, details, ip_address
+      `select id, created_at, actor_id, actor_email, actor_role, action, target_label, details, ip_address
        from activity_logs
        ${where}
        order by created_at desc, id
@@ -255,7 +257,7 @@ async function ActivityTab({
             {isSuperadmin && (
               <Cell label="Done by" breakAnywhere>
                 <Breakable text={entry.actor_email} />
-                <span className="text-slate-600"> ({ROLE_LABELS[entry.actor_role]})</span>
+                <span className="text-slate-600"> ({entry.actor_id === SYSTEM_ACTOR_ID ? "automatic" : ROLE_LABELS[entry.actor_role]})</span>
               </Cell>
             )}
             <Cell label="IP" nowrap>{entry.ip_address ?? "—"}</Cell>

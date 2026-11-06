@@ -14,7 +14,7 @@ The portal was built so a move touches only a few known places. Pages, logins, c
 | Several copies of the site | Set `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` so all copies accept the same forms; deploy without stopping everyone at once. | setting |
 | Compression | Make sure pages are sent compressed (gzip or Brotli). | host setup |
 | Region | Site and database in the same region. | host setup |
-| Backups | Turn on the database's automated backups. | host setup |
+| Database backups | Point the new host's scheduler (e.g. EventBridge) at `/api/cron/database-backup` once a day with `Authorization: Bearer <CRON_SECRET>`; the files move with the storage rewrite. Turning on the database's own automated backups is an extra layer. | host setup |
 
 ## Order of work
 

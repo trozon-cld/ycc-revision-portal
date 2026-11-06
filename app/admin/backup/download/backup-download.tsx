@@ -33,7 +33,7 @@ export function BackupDownload() {
     <div className="max-w-3xl space-y-6">
       <section aria-labelledby="backup-heading" className={`${cardClass} space-y-3 p-4`}>
         <h2 id="backup-heading" className="text-base font-semibold text-ink">
-          Download a backup
+          Content backup
         </h2>
         <p className="text-sm text-ink">
           One zip file with the test areas and test types, sections and chapters, every page and question (drafts included), the Handbook order,

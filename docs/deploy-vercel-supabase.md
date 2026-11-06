@@ -6,10 +6,10 @@ A tick list for the live site. The code needs no changes for this setup: everyth
 
 - [ ] Choose the project's region close to your candidates, and use the same region for Vercel (step 2).
 - [ ] Database: run `supabase/schema.sql` once, then the production seed with the Superadmin's email and password hash (see the main README).
-- [ ] Storage: three private buckets, `handbook-media`, `log-archives` and `handbook-audio` (see `operations.md`).
+- [ ] Storage: four private buckets, `handbook-media`, `log-archives`, `handbook-audio` and `db-backups` (see `operations.md`).
 - [ ] Copy the **transaction pooler** connection string (port **6543**) from the project's Connect panel. Not the direct one on port 5432.
 - [ ] Copy the project URL and the secret (service role) key for storage.
-- [ ] Plan a database backup (daily backups on a paid plan, or a scheduled `pg_dump` kept elsewhere).
+- [ ] Database backups are made by the portal itself (`database-backups.md`); Supabase's own daily backups on a paid plan are an extra layer.
 
 ## 2. Vercel (the project)
 
@@ -25,6 +25,7 @@ A tick list for the live site. The code needs no changes for this setup: everyth
 | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | from step 1 |
 | `SUPABASE_STORAGE_BUCKET`, `SUPABASE_ARCHIVE_BUCKET`, `SUPABASE_AUDIO_BUCKET` | only if the bucket names differ from the defaults |
 | `GOOGLE_CLOUD_API_KEY`, `GEMINI_API_KEY` | keys on billed accounts |
+| `CRON_SECRET` | a long random value (e.g. `openssl rand -base64 32`); the daily database backup's schedule uses it |
 | `HOST_REQUEST_LIMIT_MB` | leave unset (4.5 is Vercel's limit) |
 | `STORAGE_LIMIT_MB` | leave unset on Supabase Free (900); raise it on a paid plan (e.g. `90000` on Pro) |
 
@@ -35,7 +36,8 @@ A tick list for the live site. The code needs no changes for this setup: everyth
 
 - [ ] Log in as the Superadmin. Backup & Restore says the database matches this version.
 - [ ] Upload a picture on Media; open a Handbook page with pictures; play Listen audio.
-- [ ] Download a backup.
+- [ ] Download a content backup. Make a database backup with Back Up Now.
+- [ ] Vercel → the project's Cron Jobs shows `/api/cron/database-backup`; the next day, the Backup tab shows a last automatic backup.
 - [ ] Office network: an Admin logs in from the office (allowed) and from outside (refused). This also confirms the visitor address is read correctly (`ipFromHeaders` in `lib/audit/log.ts`; Vercel sets the address itself, so no change is needed).
 - [ ] A candidate on a real phone: log in, read, practise, start and finish a mock test.
 - [ ] The server log has no warnings about `JWT_SECRET`, `HOST_REQUEST_LIMIT_MB` or `STORAGE_LIMIT_MB`.

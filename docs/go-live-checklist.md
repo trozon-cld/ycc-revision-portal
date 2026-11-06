@@ -29,7 +29,7 @@ The working copy of this list is the "Final checklist (before go-live)" in the p
 - [ ] A long random `JWT_SECRET`; all keys set in the host's settings, none in the code.
 - [ ] Pages sent compressed (gzip or Brotli).
 - [ ] `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` if more than one copy runs.
-- [ ] A database backup plan (paid daily backups or a scheduled `pg_dump` kept elsewhere).
+- [ ] Database backups: `CRON_SECRET` set, the `db-backups` bucket made, the daily backup seen on the Backup tab, and one practice restore done (`database-backups.md`).
 - [ ] Free-tier limits understood (e.g. Vercel Hobby is non-commercial only; Supabase Free's 5 GB egress is the likely first limit, mostly picture downloads).
 
 ## Listen

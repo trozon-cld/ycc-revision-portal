@@ -58,6 +58,8 @@ export const ACTIVITY_ACTIONS = {
   "content.backup_restored": "Restored backup",
   "content.audio_backup_downloaded": "Downloaded audio backup",
   "content.audio_restored": "Restored audio",
+  "database.backup_created": "Made a database backup",
+  "database.backup_downloaded": "Downloaded database backup",
   "page_translation.generated": "Translated page",
   "page_translation.edited": "Edited page translation",
   "page_translation.checked": "Checked page translation",
@@ -126,7 +128,7 @@ export const ACTION_AREAS: { label: string; prefixes: string[] }[] = [
   { label: "Languages", prefixes: ["language", "listen"] },
   { label: "Media", prefixes: ["media"] },
   { label: "General Queries", prefixes: ["faq", "support_contact"] },
-  { label: "Backup & Restore", prefixes: ["content"] },
+  { label: "Backup & Restore", prefixes: ["content", "database"] },
   { label: "Own Account", prefixes: ["account"] },
   { label: "Log Archives", prefixes: ["log"] },
 ];
