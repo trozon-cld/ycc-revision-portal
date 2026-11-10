@@ -52,6 +52,7 @@ Superadmin → Office Network: add the office's addresses (up to 20, single or r
 
 - Add a language on Languages and Audio → Languages, from the built-in list (`lib/voice/language-catalogue.ts`). Make it live when its spoken phrases are checked.
 - Batch Generate makes translations and audio for one chapter in one language per run; keep the page open while it runs.
+- To undo a run in the wrong chapter (or keep a language out of a chapter): Batch Generate, pick the language, then the chapter row's ⋯ → **Remove <language>**. It removes that language's translations and audio (database rows and storage files) from that chapter only; English can't be removed. Download the language's audio backup first if you may want the files back.
 - Each staff member has an hourly character allowance; monthly totals per service are shown for cost checks.
 
 ## Updating packages

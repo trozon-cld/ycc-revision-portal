@@ -13,6 +13,10 @@ import {
   type BulkStep,
   type BulkStepResult,
 } from "@/lib/voice/bulk";
+import { removeChapterLanguage } from "@/lib/voice/chapter-removal";
+import type { FormState } from "@/lib/forms";
+
+export type RemoveChapterLanguageState = FormState;
 
 // Bulk Listen: the browser starts a run, sends one step at a time, then finishes it (the run's one log entry).
 
@@ -36,4 +40,13 @@ export async function finishBulkRunAction(input: { runId: string; outcome: BulkO
   const result = await finishBulkRun(session, String(input?.runId ?? ""), input?.outcome, Number(input?.failed ?? 0));
   revalidatePath("/admin/handbook/languages", "layout");
   return result;
+}
+
+// Remove: one language's translations and audio in one chapter (form fields "chapterId" and "language").
+export async function removeChapterLanguageAction(_prev: RemoveChapterLanguageState | undefined, formData: FormData): Promise<RemoveChapterLanguageState> {
+  const session = await requireRole(CONTENT_EDITORS);
+  const result = await removeChapterLanguage(session, String(formData.get("chapterId") ?? ""), String(formData.get("language") ?? "").slice(0, 10));
+  if (!result.ok) return { error: result.error };
+  revalidatePath("/admin/handbook/languages", "layout");
+  return { success: true };
 }

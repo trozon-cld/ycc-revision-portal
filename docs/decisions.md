@@ -47,3 +47,5 @@ The decisions most likely to be questioned later, newest areas last. Dates are 2
 - Candidate side: the "15-to-80" bar, mobile-first, Duolingo as inspiration for the look refresh (Oct).
 - Title Case for every page name and heading, staff and candidate (4 Nov).
 - Staff loading: a loading screen for pages inside a section; tab switches keep the page and show a bar on the clicked tab (4 Nov).
+- **No page caching for v1** (6 Nov): every staff page is built fresh with the live login check; a slow page gets its own fix (query or size) after measuring on the deployed site.
+- **Listen languages per chapter** (9 Nov): which languages candidates can choose stays per test type; Batch Generate's Remove takes one language's translations and audio out of one chapter (e.g. the specialist chapters kept to English and Welsh).
