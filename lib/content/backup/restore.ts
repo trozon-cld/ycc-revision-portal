@@ -127,15 +127,22 @@ export async function restoreBackup(session: SessionPayload, raw: unknown): Prom
 // real pictures (checked by content) at a path shaped like the portal's own.
 const PICTURE_PATH = /^media\/[A-Za-z0-9][A-Za-z0-9-]{0,79}\.(png|jpg|webp)$/;
 
+// The picture's type, if the file is a real picture at a path shaped like the portal's own (null otherwise).
+export function pictureFileType(path: string, bytes: Uint8Array): string | null {
+  const info = readImageInfo(bytes);
+  if (!PICTURE_PATH.test(path) || !info || !path.endsWith(`.${EXTENSION_BY_MIME[info.mime]}`) || bytes.length > MAX_UPLOAD_BYTES) return null;
+  return info.mime;
+}
+
 export async function restorePicture(path: string, bytes: Uint8Array): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!isStorageConfigured()) return { ok: false, error: NOT_CONFIGURED };
-  const info = readImageInfo(bytes);
-  if (!PICTURE_PATH.test(path) || !info || !path.endsWith(`.${EXTENSION_BY_MIME[info.mime]}`) || bytes.length > MAX_UPLOAD_BYTES) {
+  const mime = pictureFileType(path, bytes);
+  if (!mime) {
     return { ok: false, error: `The backup is damaged (${path.slice(0, 100)} isn't a picture the portal saved).` };
   }
   const { rows } = await pool.query<{ pictures: number }>(`select count(*)::int as pictures from media`);
   if (rows[0].pictures > 0) return { ok: false, error: "This project already has pictures. Restore only works on an empty project." };
-  await storeObject(path, new Blob([bytes as BlobPart], { type: info.mime }), info.mime, { restore: true });
+  await storeObject(path, new Blob([bytes as BlobPart], { type: mime }), mime, { restore: true });
   return { ok: true };
 }
 

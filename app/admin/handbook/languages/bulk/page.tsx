@@ -11,6 +11,7 @@ import { loadVoiceLanguages } from "@/lib/voice/language-store";
 import { LANGUAGE_TABS, LANGUAGES_BULK_PATH } from "@/lib/voice/language-tabs";
 import { SOURCE_LANGUAGE } from "@/lib/voice/languages";
 import { GOOGLE_FREE_CHARACTERS_PER_MONTH, GOOGLE_PRICE_PER_MILLION, VOICE_CHARACTERS_PER_HOUR } from "@/lib/voice/limits";
+import { chapterLanguageAssets } from "@/lib/voice/chapter-removal";
 import { chapterLanguageCounts } from "@/lib/voice/overview";
 import { geminiToday, voiceUsageSummary } from "@/lib/voice/quota";
 import { formatUkTime } from "@/lib/candidates/access";
@@ -22,6 +23,7 @@ import { buttonClass, warnNoteClass } from "@/components/admin/styles";
 import { Cell, Row, Table } from "@/components/admin/table";
 import { VoiceUsage } from "../voice-usage";
 import { BulkRunner, type BulkLimits } from "./bulk-runner";
+import { RemoveChapterLanguage } from "./remove-chapter-language";
 import { Breadcrumbs } from "@/components/admin/breadcrumbs";
 
 export const metadata: Metadata = { title: "Batch Generate" };
@@ -40,7 +42,12 @@ export default async function BulkListenPage({ searchParams }: PageProps<"/admin
     languages[0];
   const chapterParam = firstParam(params.chapter);
 
-  const [sections, counts, usage] = await Promise.all([listChapterOptions(), chapterLanguageCounts(shown.code), voiceUsageSummary(session.sub)]);
+  const [sections, counts, usage, assets] = await Promise.all([
+    listChapterOptions(),
+    chapterLanguageCounts(shown.code),
+    voiceUsageSummary(session.sub),
+    chapterLanguageAssets(shown.code),
+  ]);
   const chapters = sections.flatMap((section) => section.chapters);
   const chosen = chapterParam && isUuid(chapterParam) ? chapters.find((chapter) => chapter.id === chapterParam) : undefined;
   const plan = chosen ? await planBulkRun(chosen.id, shown.code) : null;
@@ -109,13 +116,14 @@ export default async function BulkListenPage({ searchParams }: PageProps<"/admin
 
       <Table
         columns={["Chapter", "Items", "Done", "To do", "Waiting for check", ""]}
-        widths={["", "md:w-20", "md:w-24", "md:w-24", "md:w-36", "md:w-28"]}
+        widths={["", "md:w-20", "md:w-24", "md:w-24", "md:w-36", "md:w-36"]}
         isEmpty={chapters.length === 0}
         emptyMessage="No chapters yet."
       >
         {chapters.map((chapter) => {
           const row = byChapter.get(chapter.id) ?? { total: 0, ready: 0, todo: 0, waiting: 0 };
           const isChosen = chapter.id === chosen?.id;
+          const has = assets.get(chapter.id);
           return (
             <Row key={chapter.id}>
               <Cell kind="primary">
@@ -128,15 +136,28 @@ export default async function BulkListenPage({ searchParams }: PageProps<"/admin
               <Cell label="To do">{row.todo > 0 ? <Badge tone="warning">{String(row.todo)}</Badge> : 0}</Cell>
               <Cell label="Waiting for check">{row.waiting}</Cell>
               <Cell label="Run">
-                {row.todo > 0 && (
-                  <Link
-                    href={chapterHref(chapter.id)}
-                    aria-label={`Choose ${chapter.label} in ${shown.name}`}
-                    className={buttonClass(isChosen ? "primary" : "secondary", "sm")}
-                  >
-                    Choose
-                  </Link>
-                )}
+                <div className="flex items-center justify-end gap-2 md:justify-start">
+                  {row.todo > 0 && (
+                    <Link
+                      href={chapterHref(chapter.id)}
+                      aria-label={`Choose ${chapter.label} in ${shown.name}`}
+                      className={buttonClass(isChosen ? "primary" : "secondary", "sm")}
+                    >
+                      Choose
+                    </Link>
+                  )}
+                  {has && (
+                    <RemoveChapterLanguage
+                      chapterId={chapter.id}
+                      chapterLabel={chapter.label}
+                      language={shown.code}
+                      languageName={shown.name}
+                      translations={has.translations}
+                      audio={has.audio}
+                      bytes={has.bytes}
+                    />
+                  )}
+                </div>
               </Cell>
             </Row>
           );

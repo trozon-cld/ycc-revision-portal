@@ -260,7 +260,7 @@ async function planRestore(raw: unknown): Promise<Plan | { problems: string[] }>
 }
 
 // An MP3 starts with an ID3 tag or an MPEG audio frame (11 set bits).
-function isMp3(bytes: Uint8Array): boolean {
+export function isMp3(bytes: Uint8Array): boolean {
   if (bytes.length >= 3 && bytes[0] === 0x49 && bytes[1] === 0x44 && bytes[2] === 0x33) return true;
   return bytes.length >= 2 && bytes[0] === 0xff && (bytes[1] & 0xe0) === 0xe0;
 }

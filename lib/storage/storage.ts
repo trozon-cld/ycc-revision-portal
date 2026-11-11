@@ -2,11 +2,12 @@
 // it reads the service key, so never import it from a client component.
 
 // Pictures, log archives and Handbook audio live in separate private buckets.
-export type StorageArea = "media" | "archives" | "audio";
+export type StorageArea = "media" | "archives" | "audio" | "backups";
 const BUCKETS: Record<StorageArea, { env: string; fallback: string }> = {
   media: { env: "SUPABASE_STORAGE_BUCKET", fallback: "handbook-media" },
   archives: { env: "SUPABASE_ARCHIVE_BUCKET", fallback: "log-archives" },
   audio: { env: "SUPABASE_AUDIO_BUCKET", fallback: "handbook-audio" },
+  backups: { env: "SUPABASE_BACKUP_BUCKET", fallback: "db-backups" },
 };
 const IMMUTABLE_MAX_AGE = "max-age=31536000";
 
@@ -94,6 +95,12 @@ export async function getSignedUrls(paths: string[], expiresInSeconds: number, a
     if (result.path && result.signedURL) urls.set(result.path, `${base}${result.signedURL}`);
   }
   return urls;
+}
+
+// A short-lived link that downloads the object under the given file name, or null when it's missing.
+export async function getDownloadUrl(path: string, expiresInSeconds: number, fileName: string, area: StorageArea): Promise<string | null> {
+  const url = (await getSignedUrls([path], expiresInSeconds, area)).get(path);
+  return url ? `${url}${url.includes("?") ? "&" : "?"}download=${encodeURIComponent(fileName)}` : null;
 }
 
 async function safeText(response: Response) {

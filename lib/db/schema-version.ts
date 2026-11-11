@@ -2,7 +2,7 @@ import { pool } from "./pool";
 import { getErrorCode } from "./transaction";
 
 // The newest migration this code needs. Raise it in every delivery that adds a migration (supabase/migrations).
-export const EXPECTED_MIGRATION = "0043_schema_migrations";
+export const EXPECTED_MIGRATION = "0044_database_backups";
 
 export type SchemaStatus =
   | { state: "current"; latest: string }

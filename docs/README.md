@@ -8,6 +8,7 @@ For anyone working on the YCC Revision Portal later. The main `README.md` covers
 - [operations.md](operations.md): running it: settings, buckets, migrations, backups, languages, office network, packages, troubleshooting.
 - [go-live-checklist.md](go-live-checklist.md): what to settle before and at launch.
 - [deploy-vercel-supabase.md](deploy-vercel-supabase.md): the setup tick list for the live site on Vercel and Supabase.
+- [database-backups.md](database-backups.md): the daily database backup, Back Up Now, and how to restore one.
 - [moving-to-aws.md](moving-to-aws.md): what changes, and where, if the portal moves to AWS or another provider.
 
 Keep these up to date when something changes. No secrets, passwords or keys go in these files.

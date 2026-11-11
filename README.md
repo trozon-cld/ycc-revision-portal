@@ -52,6 +52,7 @@ Use **Node.js 24** (the version is in `.nvmrc`; `nvm use` or `fnm use` picks it 
    - Add `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (Project Settings → API; the secret or legacy service_role key) to `.env.local`. They are server-only; never prefix them with `NEXT_PUBLIC_`.
    - **Storage → New bucket**, name `log-archives`, **Public bucket off**, for archived login records (Activity → Archives). Leave its allowed file types open, or allow `application/gzip`.
    - **Storage → New bucket**, name `handbook-audio`, **Public bucket off**, for Handbook audio (MP3). Leave its allowed file types open, or allow `audio/mpeg`.
+   - **Storage → New bucket**, name `db-backups`, **Public bucket off**, for database backups. Leave its allowed file types open, or allow `application/gzip`.
    - For Handbook translations and audio, add `GOOGLE_CLOUD_API_KEY` to `.env.local`, and `GEMINI_API_KEY` for Welsh audio (server only; see `.env.example`). Use billed keys before candidates hear any audio.
 
 5. Generate the Superadmin password hash, paste it and the email into `supabase/seed.sql`, then run that file:
@@ -105,14 +106,15 @@ Use **Node.js 24** (the version is in `.nvmrc`; `nvm use` or `fnm use` picks it 
 - `lib/mock/` — Mock test: the draw (50 questions spread across chapters), tests in progress, deadline and marking
 - `lib/faq/` — General queries: questions in order and the support contact details (`types.ts` safe in forms)
 - `lib/progress/` — candidates' progress per test type (Handbook pages done, question results), the My progress overview and the readiness score (`readiness.ts`, pure); not activity-log data
-- `lib/storage/` — the only code that talks to the storage provider (upload, delete, signed links; pictures, archive and audio buckets) and the total stored (`usage.ts`, for the storage cap)
+- `lib/storage/` — the only code that talks to the storage provider (upload, delete, signed links; pictures, archive, audio and database backup buckets) and the total stored (`usage.ts`, for the storage cap)
 - `lib/voice/` — Handbook translations and audio: languages (kept in the database, read through `language-store.ts`; the list of languages that can be added is `language-catalogue.ts` (one line each); managing them is `language-admin.ts`, the spoken phrases' rules `phrases.ts`), what is read aloud, translation checks, saving translations (`page-translations.ts`), page audio (`page-audio.ts`; the audio files themselves in `audio-files.ts`), question pages' translations and audio (`question-voice.ts`, shared parts in `question-listen.ts`), the Handbook-wide list (`overview.ts`), what candidates hear and their listening language (`listen.ts`), the voice services behind `services.ts` (Google Cloud Translation and Text-to-Speech in `google.ts`; Gemini in `gemini.ts` for languages the list gives to it (Welsh audio); a stand-in in `fake.ts`), MP3 encoding and each staff member's hourly allowance in characters (`quota.ts`, with monthly totals per service)
 - `lib/media/` — image checks (real type and size from the file), in-browser WebP conversion, saving uploads and the storage cap (`upload.ts`)
+- `lib/database-backup/` — the daily and manual database backups (see `docs/database-backups.md`)
 - `lib/hosting.ts` — sizes set by the host and the storage plan (`HOST_REQUEST_LIMIT_MB`, `STORAGE_LIMIT_MB`; server only)
 - `lib/ids.ts`, `lib/bytes.ts`, `lib/text.ts`, `lib/format.ts`, `lib/limits.ts`, `lib/forms.ts`, `lib/params.ts` — small shared helpers (id checks, text clean-up, display formats, length limits, form results, URL parameters)
 - `lib/brand.ts`, `lib/layout.ts` — logo and phone screen sizes
 - `proxy.ts` — route protection by role, block and expiry
-- `scripts/` — `generate-hash.mjs` (`npm run hash`)
+- `scripts/` — `generate-hash.mjs` (`npm run hash`), `restore-database.mjs` (`npm run restore-database`, loads a database backup into a fresh database)
 - `supabase/` — schema, migrations and seed
 - `docs/` — architecture, decisions, conventions, operations, the go-live checklist, Vercel and Supabase setup, moving to AWS
 
