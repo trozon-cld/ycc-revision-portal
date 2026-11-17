@@ -5,7 +5,7 @@
 - Next.js 16.4 (App Router, Turbopack, React 19, React Compiler lint rules), TypeScript, Tailwind CSS 4. Next 16 differs from older versions: read `AGENTS.md` and `node_modules/next/dist/docs/` before changing routing, data fetching or config.
 - Node.js 24 (`.nvmrc`, `engines` in `package.json`).
 - PostgreSQL through the `pg` library (plain SQL, one shared pool in `lib/db/pool.ts`). Hosted on Supabase today, but no Supabase Auth, client library, Row-Level Security or Realtime is used.
-- File storage: Supabase Storage, private buckets only, reached only from `lib/storage/storage.ts`.
+- File storage: Amazon S3 (AWS SDK), private buckets only, reached only from `lib/storage/storage.ts`. Signed links are made on the server without asking S3, so code that needs to know a file exists uses `existingPaths`.
 - Sign-in: our own JWT (jose) in an HTTP-only cookie, passwords hashed with bcryptjs.
 - Voice: Google Cloud Translation and Text-to-Speech; Gemini for languages Google can't read aloud (Welsh).
 
@@ -52,7 +52,7 @@ Content editing is Superadmin-only for launch. The one switch is `CONTENT_EDITOR
 
 - `lib/storage/storage.ts` is the only code that talks to the storage provider: upload, delete, short-lived signed links. Buckets: `handbook-media` (pictures), `log-archives` (archived login records), `handbook-audio` (Listen MP3s), `db-backups` (database backups).
 - Pictures are checked by their real content and converted to WebP in the browser. Each is capped at 5 MB, or less if the host's request limit needs it (about 3.2 MB on Vercel); the total is capped at 900 MB by default. Both host-dependent sizes are host settings read in `lib/hosting.ts`.
-- Moving to S3 or similar means rewriting that one file and copying the buckets.
+- Changing storage provider again means rewriting that one file and copying the buckets.
 
 ## Voice (Listen)
 

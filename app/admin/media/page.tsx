@@ -102,8 +102,14 @@ export default async function MediaPage({ searchParams }: PageProps<"/admin/medi
 
       {!configured && (
         <p role="status" className="mb-4 rounded-md bg-warn-bg px-4 py-3 text-sm text-warn-strong ring-1 ring-warn/25">
-          Image storage isn&apos;t set up yet. Add <code>{STORAGE_SETTINGS[0]}</code> and <code>{STORAGE_SETTINGS[1]}</code> to
-          the server&apos;s environment and restart it.
+          Image storage isn&apos;t set up yet. Add{" "}
+          {STORAGE_SETTINGS.map((name, index) => (
+            <span key={name}>
+              {index === 0 ? "" : index === STORAGE_SETTINGS.length - 1 ? " and " : ", "}
+              <code>{name}</code>
+            </span>
+          ))}{" "}
+          to the server&apos;s environment and restart it.
         </p>
       )}
       {linksFailed && (

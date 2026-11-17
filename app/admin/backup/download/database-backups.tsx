@@ -59,7 +59,7 @@ export function DatabaseBackups({
       </p>
       <p className="text-sm text-slate-600">
         Last automatic backup: {newestAutomatic ? `${newestAutomatic.when} (${newestAutomatic.size})` : "none yet"}. Download one about once a week and keep it
-        away from Supabase.
+        outside AWS.
       </p>
       {!scheduleSetUp && (
         <p className={warnNoteClass}>The daily schedule isn&apos;t set up: CRON_SECRET is missing on the server, so only backups made here are being saved.</p>

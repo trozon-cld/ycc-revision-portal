@@ -3,7 +3,7 @@ import { logActivity } from "@/lib/audit/log";
 import { pool } from "@/lib/db/pool";
 import { withTransaction } from "@/lib/db/transaction";
 import { countOf } from "@/lib/format";
-import { getSignedUrls, isStorageConfigured, storeObject, type StorageArea } from "@/lib/storage/storage";
+import { existingPaths, isStorageConfigured, storeObject, type StorageArea } from "@/lib/storage/storage";
 import { isMp3 } from "./audio";
 import { pictureFileType } from "./restore";
 
@@ -15,8 +15,6 @@ const AREA: Record<FileKind, StorageArea> = { pictures: "media", audio: "audio" 
 const NOUN: Record<FileKind, string> = { pictures: "picture file", audio: "audio file" };
 // Paths per check (a language's audio is a few thousand files at most).
 export const MAX_CHECK_PATHS = 20_000;
-// Storage is asked about this many files at a time.
-const SIGN_BATCH = 500;
 // "Put back missing files" entries in the activity log: at most this many an hour.
 const RUNS_PER_HOUR = 30;
 const NOT_SET_UP = "Storage isn't set up on the server, so files can't be put back.";
@@ -33,13 +31,8 @@ async function expectedFiles(kind: FileKind): Promise<Expected> {
   return new Map(rows.map((row) => [row.path, row.bytes === null ? null : Number(row.bytes)]));
 }
 
-async function storedOf(paths: string[], area: StorageArea): Promise<Set<string>> {
-  const stored = new Set<string>();
-  for (let start = 0; start < paths.length; start += SIGN_BATCH) {
-    const urls = await getSignedUrls(paths.slice(start, start + SIGN_BATCH), 60, area);
-    for (const path of urls.keys()) stored.add(path);
-  }
-  return stored;
+function storedOf(paths: string[], area: StorageArea): Promise<Set<string>> {
+  return existingPaths(paths, area);
 }
 
 export type MissingCheck =

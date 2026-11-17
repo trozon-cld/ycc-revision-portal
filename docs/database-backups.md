@@ -6,13 +6,13 @@ Everything in the database, saved as one compressed file: accounts and password 
 
 - **Daily, automatically:** the host's scheduler calls `/api/cron/database-backup` with `Authorization: Bearer <CRON_SECRET>` (on Vercel, `vercel.json` sets this up; it runs once a day at about 01:30 UTC). The link stays closed until `CRON_SECRET` is set, and makes at most one backup in 20 hours however often it's called.
 - **By hand:** Backup & Restore → Backup → **Back Up Now** makes one at once and downloads it. Up to 10 in 24 hours.
-- **Where:** the private bucket `db-backups` (setting `SUPABASE_BACKUP_BUCKET`), through `lib/storage/storage.ts`. The list is the `database_backups` table.
+- **Where:** the private bucket `db-backups` (setting `S3_BACKUP_BUCKET`), through `lib/storage/storage.ts`. The list is the `database_backups` table.
 - **Copies kept:** the newest 7 automatic ones, the first of each week for 4 weeks, and the last 5 made by hand. Older files are deleted after each backup.
 - **Space:** the files count towards the storage cap (`STORAGE_LIMIT_MB`). Expect about 1–3 MB per backup at first.
 - **Logged:** every backup (the daily one as "Daily schedule (automatic)") and every download.
 - **Code:** `lib/database-backup/` (`make.ts` reads every table in one consistent snapshot; `format.ts` has the limits), the cron route in `app/api/cron/database-backup/`, the restore script in `scripts/restore-database.mjs`.
 
-**Habit:** download one about once a week and keep it outside Supabase (your computer and a cloud drive). The files hold emails and password hashes: keep them private.
+**Habit:** download one about once a week and keep it outside AWS (your computer and a cloud drive). The files hold emails and password hashes: keep them private.
 
 ## Restoring a database backup
 

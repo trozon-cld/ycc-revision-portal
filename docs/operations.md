@@ -13,8 +13,10 @@ First-time setup is in the main `README.md` ("Getting started"). This page cover
 | `HOST_REQUEST_LIMIT_MB` | Optional. The largest request or response the host lets through (default 4.5, Vercel Functions). Uploads, restores and backup downloads stay under it. Set it when moving to another host. |
 | `STORAGE_LIMIT_MB` | Optional. Total storage cap for pictures, login archives and audio (default 900, for Supabase Free's 1 GB). Raise it when the storage plan grows, leaving a margin (e.g. 90000 on Supabase Pro). |
 | `JWT_SECRET` | Long random value (at least 32 characters; e.g. `openssl rand -base64 48`). Changing it signs everyone out. |
-| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Storage access (Project Settings → API). |
-| `SUPABASE_STORAGE_BUCKET`, `SUPABASE_ARCHIVE_BUCKET`, `SUPABASE_AUDIO_BUCKET`, `SUPABASE_BACKUP_BUCKET` | Bucket names; default `handbook-media`, `log-archives`, `handbook-audio`, `db-backups`. |
+| `S3_REGION` | The buckets' region (`eu-west-2`, London). |
+| `S3_MEDIA_BUCKET`, `S3_ARCHIVE_BUCKET`, `S3_AUDIO_BUCKET`, `S3_BACKUP_BUCKET` | The four private S3 buckets (pictures, login archives, audio, database backups). All required; names are unique across AWS. The media and audio buckets need a CORS rule allowing `GET` from the site's address (Backup builds its zip in the browser). |
+| `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | Developer's PC only: a dev-only IAM user's key, limited to the dev buckets. On AWS the host's role gives permission; never store keys there. |
+| `S3_ENDPOINT` | Tests and S3-compatible stores only; unset on AWS. |
 | `CRON_SECRET` | At least 16 random characters. The daily database backup's schedule sends it; without it the schedule's link stays closed. |
 | `GOOGLE_CLOUD_API_KEY` | Google Cloud key restricted to Cloud Translation and Text-to-Speech (billed project). |
 | `GEMINI_API_KEY` | Gemini key for Welsh audio (billed before candidates hear it). |
@@ -38,7 +40,7 @@ Four **private** buckets: `handbook-media` (pictures), `log-archives` (archived 
 - **Audio backups** (Backup → Audio backups): one file per language.
 - **Put back missing files** (Backup & Restore → Restore): after a database backup is restored, uploads the pictures (from a content backup) and audio (from each audio backup) that the database lists and storage lacks. Never changes data or replaces a file.
 - **Restore** (Backup & Restore → Restore): only into an empty project. Afterwards re-enter General queries and the support contact, restore each language's audio backup, and lock the structure again.
-- The content and audio backups are also the only copies of the pictures and audio outside Supabase: download them again after big content changes.
+- The content and audio backups are also the only copies of the pictures and audio outside S3: download them again after big content changes.
 
 ## Login records
 

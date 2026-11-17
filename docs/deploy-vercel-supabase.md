@@ -1,5 +1,7 @@
 # Setting up on Vercel and Supabase
 
+> **Out of date (Nov 2026):** launch moved to AWS, and file storage is now Amazon S3 (`S3_*` settings, see `operations.md`). This list will be replaced by an AWS guide.
+
 A tick list for the live site. The code needs no changes for this setup: everything is settings and checks. Do the clicks in your own Vercel and Supabase accounts; never put keys or passwords in the code or in these docs.
 
 ## 1. Supabase (the launch project)

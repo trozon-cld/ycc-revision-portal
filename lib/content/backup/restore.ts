@@ -14,7 +14,7 @@ import { parseQuestion } from "@/lib/questions/validate";
 import { EXTENSION_BY_MIME, readImageInfo } from "@/lib/media/image-info";
 import { STORAGE_LIMIT_BYTES } from "@/lib/hosting";
 import { MAX_UPLOAD_BYTES } from "@/lib/media/limits";
-import { getSignedUrls, isStorageConfigured, storeObject } from "@/lib/storage/storage";
+import { existingPaths, isStorageConfigured, storeObject } from "@/lib/storage/storage";
 import { storedBytes } from "@/lib/storage/usage";
 import { isRecord } from "@/lib/text";
 import { backupSummary } from "./export";
@@ -54,7 +54,6 @@ const STRUCTURE_ROWS = [
   { table: "test_types", name: "name" },
 ] as const;
 const STRUCTURE_LINKS: readonly BackupTable[] = ["test_type_chapters", "test_type_languages"];
-const SIGN_BATCH = 200;
 const LIST_MAX = 5;
 
 // Before any picture is uploaded: the file's shape, this project is empty, nothing would be left pointing nowhere.
@@ -239,10 +238,7 @@ async function candidateProblems(client: PoolClient, testTypeIds: string[]): Pro
 
 async function missingPictures(media: BackupRow[]): Promise<string[]> {
   const wanted = media.flatMap((row) => [String(row.storage_path), String(row.thumb_path)]);
-  const found = new Set<string>();
-  for (let start = 0; start < wanted.length; start += SIGN_BATCH) {
-    for (const path of (await getSignedUrls(wanted.slice(start, start + SIGN_BATCH), 60)).keys()) found.add(path);
-  }
+  const found = await existingPaths(wanted);
   return [...new Set(media.filter((row) => !found.has(String(row.storage_path)) || !found.has(String(row.thumb_path))).map((row) => String(row.original_name)))];
 }
 

@@ -9,7 +9,7 @@ More in [`docs/`](docs/README.md): architecture, key decisions, code conventions
 ## Stack
 
 - Next.js 16.4 (App Router, TypeScript, Tailwind CSS v4)
-- PostgreSQL on Supabase (raw SQL via `pg`), plus Supabase Storage for pictures, log archives and Handbook audio
+- PostgreSQL on Supabase (raw SQL via `pg`), plus Amazon S3 for pictures, log archives, Handbook audio and database backups
 - Handbook translations and audio through Google Cloud Translation and Text-to-Speech, Welsh audio through the Gemini API (plain `fetch`); MP3 encoding with `@breezystack/lamejs`
 - Custom JWT auth (jose + bcryptjs, HTTP-only cookies)
 
@@ -47,12 +47,10 @@ Use **Node.js 24** (the version is in `.nvmrc`; `nvm use` or `fnm use` picks it 
 
 3. In the Supabase SQL editor, run `supabase/schema.sql` for a fresh database. The files in `supabase/migrations/` are changes for databases created from an earlier version of the schema, so skip them on a fresh setup (`schema.sql` already records them all as run). A fresh database has English only; add the other Listen languages on Languages and audio → Languages.
 
-4. For the image library (Admin → Media), in Supabase:
-   - **Storage → New bucket**, name `handbook-media`, **Public bucket off** (pictures are served through short-lived signed links).
-   - Add `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (Project Settings → API; the secret or legacy service_role key) to `.env.local`. They are server-only; never prefix them with `NEXT_PUBLIC_`.
-   - **Storage → New bucket**, name `log-archives`, **Public bucket off**, for archived login records (Activity → Archives). Leave its allowed file types open, or allow `application/gzip`.
-   - **Storage → New bucket**, name `handbook-audio`, **Public bucket off**, for Handbook audio (MP3). Leave its allowed file types open, or allow `audio/mpeg`.
-   - **Storage → New bucket**, name `db-backups`, **Public bucket off**, for database backups. Leave its allowed file types open, or allow `application/gzip`.
+4. For file storage, in Amazon S3 (region London, `eu-west-2`):
+   - Four buckets with **Block all public access** on: pictures, archived login records, Handbook audio, database backups. Names are unique across AWS, so add your own ending (e.g. `ycc-dev-handbook-media-k7p2`). Put the names in `S3_MEDIA_BUCKET`, `S3_ARCHIVE_BUCKET`, `S3_AUDIO_BUCKET`, `S3_BACKUP_BUCKET`, and the region in `S3_REGION`.
+   - The pictures and audio buckets need a CORS rule allowing `GET` from the site's address (Backup builds its zip in the browser).
+   - On your PC, permission comes from a dev-only IAM user's access key (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` in `.env.local`), limited to the dev buckets. On AWS the host's role gives it. Never use a root key; never prefix these with `NEXT_PUBLIC_`.
    - For Handbook translations and audio, add `GOOGLE_CLOUD_API_KEY` to `.env.local`, and `GEMINI_API_KEY` for Welsh audio (server only; see `.env.example`). Use billed keys before candidates hear any audio.
 
 5. Generate the Superadmin password hash, paste it and the email into `supabase/seed.sql`, then run that file:

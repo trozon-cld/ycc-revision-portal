@@ -7,7 +7,7 @@ import { withTransaction } from "@/lib/db/transaction";
 import { countOf } from "@/lib/format";
 import { isRecord } from "@/lib/text";
 import { NOT_CONFIGURED } from "@/lib/media/upload";
-import { getSignedUrls, isStorageConfigured } from "@/lib/storage/storage";
+import { existingPaths, getSignedUrls, isStorageConfigured } from "@/lib/storage/storage";
 import {
   BACKUP_FORMAT,
   BACKUP_PARTS,
@@ -29,7 +29,6 @@ export type BackupResult = { ok: true; data: BackupData } | { ok: false; error: 
 const LINK_SECONDS = 60 * 60;
 const EXACT_TIME = 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"';
 const BACKUP_FILE_NAME = /^ycc-backup-\d{4}-\d\d-\d\d-\d{4}\.zip$/;
-const SIGN_BATCH = 200;
 
 export async function readBackup(session: SessionPayload): Promise<BackupResult> {
   if (!isStorageConfigured()) return { ok: false, error: NOT_CONFIGURED };
@@ -115,15 +114,12 @@ async function pictureFiles(media: BackupRow[]): Promise<{ files: BackupPictureF
     { path: String(row.storage_path), bytes: typeof row.byte_size === "number" ? row.byte_size : null, name: String(row.original_name) },
     { path: String(row.thumb_path), bytes: null, name: String(row.original_name) },
   ]);
-  const urls = new Map<string, string>();
-  for (let start = 0; start < wanted.length; start += SIGN_BATCH) {
-    const batch = await getSignedUrls(wanted.slice(start, start + SIGN_BATCH).map((file) => file.path), LINK_SECONDS);
-    for (const [path, url] of batch) urls.set(path, url);
-  }
-  const missing = [...new Set(wanted.filter((file) => !urls.has(file.path)).map((file) => file.name))];
+  const stored = await existingPaths(wanted.map((file) => file.path));
+  const missing = [...new Set(wanted.filter((file) => !stored.has(file.path)).map((file) => file.name))];
   if (missing.length > 0) {
     return { error: `${countOf(missing.length, "picture")} can't be found in storage (${missing.slice(0, 5).join(", ")}${missing.length > 5 ? ", …" : ""}). Replace or delete ${missing.length === 1 ? "it" : "them"} in Media, then try again.` };
   }
+  const urls = await getSignedUrls(wanted.map((file) => file.path), LINK_SECONDS);
   return { files: wanted.map((file) => ({ zipPath: `${PICTURES_FOLDER}/${file.path}`, name: file.name, bytes: file.bytes, url: urls.get(file.path) as string })) };
 }
 
