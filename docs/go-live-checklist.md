@@ -25,7 +25,7 @@ The working copy of this list is the "Final checklist (before go-live)" in the p
 - [ ] `HOST_REQUEST_LIMIT_MB` matches the host's request limit (default 4.5 for Vercel). **Moving off Vercel: set it to the new host's limit.**
 - [ ] `STORAGE_LIMIT_MB` fits the storage plan (default 900 for Supabase Free). **Upgrading Supabase or changing storage provider: raise it, leaving a margin (e.g. 90000 on Pro's 100 GB).**
 - [ ] Host request time limit enough for audio generation and backups.
-- [ ] Database: the pooler connection string, `DATABASE_POOL_MAX` 1–3 on serverless, and the database certificate verified (`lib/db/pool.ts`, `rejectUnauthorized: false` today; optional, a small code change with the provider's certificate file).
+- [ ] Database: the pooler connection string, `DATABASE_POOL_MAX` 1–3 on serverless, and the database certificate checked (`DATABASE_SSL` unset or `verify`; never `no-verify` on AWS).
 - [ ] A long random `JWT_SECRET`; all keys set in the host's settings, none in the code.
 - [ ] Pages sent compressed (gzip or Brotli).
 - [ ] `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` if more than one copy runs.

@@ -1,7 +1,8 @@
 import { Pool, type PoolClient } from "pg";
+import { certificateProblem, databaseSsl, withoutSslOptions } from "./ssl.mjs";
 
 // Route Handlers / Server Actions only — proxy.ts uses JWT claims instead
-// (see its comment). DATABASE_URL should be the pooler string; see .env.example.
+// (see its comment). DATABASE_URL and the certificate check (DATABASE_SSL): see .env.example.
 
 declare global {
   var pgPool: Pool | undefined;
@@ -36,9 +37,11 @@ function createPool() {
   if (!connectionString) {
     throw new Error("DATABASE_URL is not set");
   }
+  const { ssl, warnings } = databaseSsl();
+  for (const warning of warnings) console.warn(warning);
   const created = new Pool({
-    connectionString,
-    ssl: { rejectUnauthorized: false },
+    connectionString: withoutSslOptions(connectionString),
+    ssl,
     connectionTimeoutMillis: CONNECT_TIMEOUT_MS,
     query_timeout: QUERY_TIMEOUT_MS,
     idleTimeoutMillis: IDLE_TIMEOUT_MS,
@@ -55,6 +58,8 @@ function createPool() {
     try {
       return await run();
     } catch (error) {
+      const problem = certificateProblem(error);
+      if (problem) console.error(problem);
       if (!isConnectTimeout(error)) throw error;
       console.warn(
         `Database: no connection within ${CONNECT_TIMEOUT_MS / 1000} s (${created.totalCount} open, ${created.idleCount} idle, ${created.waitingCount} waiting); trying once more`

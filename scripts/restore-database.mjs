@@ -5,6 +5,7 @@
 import fs from "node:fs";
 import zlib from "node:zlib";
 import pg from "pg";
+import { certificateProblem, databaseSsl, withoutSslOptions } from "../lib/db/ssl.mjs";
 
 const FORMAT = "ycc-database-backup";
 const VERSION = 1;
@@ -28,8 +29,12 @@ try {
 if (backup?.format !== FORMAT || backup?.version !== VERSION || typeof backup.tables !== "object") fail("this isn't a database backup file.");
 
 const q = (name) => `"${String(name).replace(/"/g, '""')}"`;
-const client = new pg.Client({ connectionString: url, ssl: url.includes("sslmode=disable") ? false : { rejectUnauthorized: false } });
-await client.connect();
+// sslmode=disable only for a local database without SSL; otherwise the same check as the site.
+const plain = url.includes("sslmode=disable");
+const { ssl, warnings } = plain ? { ssl: false, warnings: [] } : databaseSsl();
+for (const warning of warnings) console.warn(warning);
+const client = new pg.Client({ connectionString: plain ? url : withoutSslOptions(url), ssl });
+await client.connect().catch((error) => fail(certificateProblem(error) ?? `can't connect to the database (${error.message}).`));
 
 try {
   // Safety first: only a fresh database at the backup's version, so a live site can never be overwritten.

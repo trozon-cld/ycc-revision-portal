@@ -43,7 +43,7 @@ Use **Node.js 24** (the version is in `.nvmrc`; `nvm use` or `fnm use` picks it 
    npm ci
    ```
 
-2. Copy `.env.example` to `.env.local` and fill in `DATABASE_URL` (Supabase pooler string) and `JWT_SECRET`. `DATABASE_POOL_MAX` is optional (default 10; use 1–3 on serverless hosting). `HOST_REQUEST_LIMIT_MB` (default 4.5) and `STORAGE_LIMIT_MB` (default 900) are optional too; see `docs/operations.md`.
+2. Copy `.env.example` to `.env.local` and fill in `DATABASE_URL` (the RDS endpoint; the certificate is checked, see `DATABASE_SSL`) and `JWT_SECRET`. `DATABASE_POOL_MAX` is optional (default 10; use 1–3 on serverless hosting). `HOST_REQUEST_LIMIT_MB` (default 4.5) and `STORAGE_LIMIT_MB` (default 900) are optional too; see `docs/operations.md`.
 
 3. In the Supabase SQL editor, run `supabase/schema.sql` for a fresh database. The files in `supabase/migrations/` are changes for databases created from an earlier version of the schema, so skip them on a fresh setup (`schema.sql` already records them all as run). A fresh database has English only; add the other Listen languages on Languages and audio → Languages.
 

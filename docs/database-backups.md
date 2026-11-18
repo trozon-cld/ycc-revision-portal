@@ -18,18 +18,18 @@ Everything in the database, saved as one compressed file: accounts and password 
 
 A database backup isn't restored from inside the portal: if the database is lost, the site can't run. Restore it into a **fresh** database and point the site at it.
 
-1. **Make the new database.** A new Supabase project (or any Postgres). Run `supabase/schema.sql` from the version of the code that made the backup (the backup's list on the Backup tab shows its database version, e.g. 0044). **Don't** run the seed: the backup brings its own accounts.
-2. **Create the storage buckets** in the new project: `handbook-media`, `log-archives`, `handbook-audio`, `db-backups` (all private).
-3. **Load the backup** from your copy of the project folder (with `npm ci` done), using the new database's **direct** connection string (port 5432, the `postgres` user), not the pooler:
+1. **Make the new database.** A new RDS PostgreSQL 17 database (or any Postgres). Run `supabase/schema.sql` from the version of the code that made the backup (the backup's list on the Backup tab shows its database version, e.g. 0044). **Don't** run the seed: the backup brings its own accounts.
+2. **Create the storage buckets** if they're lost too: four private S3 buckets (pictures, login archives, audio, database backups; see `S3_*` in `operations.md`).
+3. **Load the backup** from your copy of the project folder (with `npm ci` done), using the new database's connection string (its RDS endpoint name, port 5432). The certificate is checked as on the site (`DATABASE_SSL`); `sslmode=disable` in the string is only for a local database without SSL:
 
    ```bash
-   DATABASE_URL="postgresql://postgres:…@db.….supabase.co:5432/postgres" npm run restore-database -- ycc-database-2026-11-06-0130-daily.json.gz
+   DATABASE_URL="postgresql://ycc_db_admin:…@ycc-….eu-west-2.rds.amazonaws.com:5432/ycc" npm run restore-database -- ycc-database-2026-11-06-0130-daily.json.gz
    ```
 
    On Windows PowerShell: `$env:DATABASE_URL="…"; npm run restore-database -- file.json.gz`.
 
    It refuses a database that already has accounts or is at another migration, loads every table in one transaction (all or nothing), and prints each table's row count.
-4. **Point the site at it:** set `DATABASE_URL` (the pooler string, port 6543) and the storage settings on the host to the new project, then redeploy.
+4. **Point the site at it:** set `DATABASE_URL` and the storage settings on the host to the new database and buckets, then redeploy.
 5. **Put back the files:** if the old project's pictures and audio are lost too, log in as the Superadmin and use Backup & Restore → Restore → **Put back missing files**: choose the content backup (pictures), then each language's audio backup. It uploads only files the database lists and storage lacks, never changes data and never replaces a file; it names any file the backup doesn't have (for example, a picture added after that backup was made).
 6. **Check:** log in as the Superadmin and as a candidate; Backup & Restore shows the database version matches; make a backup with Back Up Now.
 

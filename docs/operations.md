@@ -8,7 +8,9 @@ First-time setup is in the main `README.md` ("Getting started"). This page cover
 
 | Setting | What it is |
 | --- | --- |
-| `DATABASE_URL` | Postgres connection string. On Supabase, the pooler string on port 6543. |
+| `DATABASE_URL` | Postgres connection string: the RDS endpoint name (not an IP address), port 5432. No `sslmode` in it (removed before connecting). |
+| `DATABASE_SSL` | Optional. `verify` (default): the connection is encrypted and the server's certificate and name are checked against AWS's RDS certificates (`lib/db/aws-rds-ca.mjs`). `no-verify`: encrypted only, for another provider; logs a warning. A failed check logs "Database: the server's certificate couldn't be verified (…)". |
+| `DATABASE_SSL_CA_FILE` | Optional. Another provider's certificate file, used instead of AWS's. |
 | `DATABASE_POOL_MAX` | Optional. Connections per running copy of the site (default 10; 1–3 on serverless hosting). |
 | `HOST_REQUEST_LIMIT_MB` | Optional. The largest request or response the host lets through (default 4.5, Vercel Functions). Uploads, restores and backup downloads stay under it. Set it when moving to another host. |
 | `STORAGE_LIMIT_MB` | Optional. Total storage cap for pictures, login archives and audio (default 900, for Supabase Free's 1 GB). Raise it when the storage plan grows, leaving a margin (e.g. 90000 on Supabase Pro). |

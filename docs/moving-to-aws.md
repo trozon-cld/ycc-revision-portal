@@ -6,7 +6,7 @@ The portal was built so a move touches only a few known places. Pages, logins, c
 | --- | --- | --- |
 | Database | Copy it with `pg_dump` / restore to RDS or Aurora (Postgres; the only extension is `pgcrypto`), then set the new `DATABASE_URL`. | settings only |
 | Connection sharing | Use RDS Proxy or PgBouncer in place of Supabase's pooler; keep `DATABASE_POOL_MAX` small if the site runs as many copies. | setup |
-| Database certificate | Check the database's certificate with AWS's certificate file. | `lib/db/pool.ts` |
+| Database certificate | **Done (Nov 2026):** checked by default with AWS's RDS certificates (`DATABASE_SSL`, `lib/db/ssl.mjs`, `lib/db/aws-rds-ca.mjs`); the restore script checks the same way. | `lib/db/pool.ts` |
 | File storage | **Done (Nov 2026):** `lib/storage/storage.ts` uses S3 (settings `S3_REGION`, `S3_*_BUCKET`); signed links no longer prove a file exists, so existence checks use `existingPaths`. Still to do: copy the four buckets' files (Backup & Restore). Keep `PICTURE_LINK_SECONDS` (`lib/content/book.ts`) within S3's limit (7 days); links signed with a role's temporary credentials stop when those credentials expire, which the Handbook's link refresh already handles. | `lib/storage/storage.ts` |
 | Visitor address | Behind an AWS load balancer the real address is the **last** entry of `x-forwarded-for`, not the first. Login limits and the office network depend on it. | `ipFromHeaders` in `lib/audit/log.ts` |
 | Request size | Set `HOST_REQUEST_LIMIT_MB` to the new host's limit. | setting |
