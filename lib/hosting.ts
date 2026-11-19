@@ -4,10 +4,10 @@ import { MAX_THUMB_BYTES, MAX_UPLOAD_BYTES } from "@/lib/media/limits";
 // Server only: sizes set by the host and the storage plan, from the host's settings (see docs/operations.md).
 // A missing or invalid setting falls back to the default below, so a typo never removes a limit.
 
-// Vercel Functions take at most 4.5 MB in a request or a response; hosts state it in decimal megabytes.
+// Under Amplify's largest response (5.72 MB) and Vercel's limit (4.5 MB); hosts state it in decimal megabytes.
 const DEFAULT_HOST_REQUEST_LIMIT_MB = 4.5;
-// Supabase Free includes 1 GB of storage; counted in binary megabytes, as the Media page shows it.
-const DEFAULT_STORAGE_LIMIT_MB = 900;
+// S3 has no fixed size, so this is our own cost cap (about $0.50 a month when full in London); binary megabytes, as the Media page shows it.
+const DEFAULT_STORAGE_LIMIT_MB = 20_000;
 // Room for the form's own fields alongside a picture and its thumbnail.
 const FORM_MARGIN_BYTES = 64 * 1024;
 
