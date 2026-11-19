@@ -4,12 +4,13 @@ Revision platform for construction site workers preparing for the CITB HS&E test
 
 Status: in active development.
 
-More in [`docs/`](docs/README.md): architecture, key decisions, code conventions, operations, the go-live checklist, the Vercel and Supabase setup list, and what changes for a move to AWS.
+More in [`docs/`](docs/README.md): architecture, key decisions, code conventions, operations, the go-live checklist, the AWS setup list, and switching host later.
 
 ## Stack
 
 - Next.js 16.4 (App Router, TypeScript, Tailwind CSS v4)
-- PostgreSQL on Supabase (raw SQL via `pg`), plus Amazon S3 for pictures, log archives, Handbook audio and database backups
+- PostgreSQL 17 on AWS RDS (raw SQL via `pg`), plus Amazon S3 for pictures, log archives, Handbook audio and database backups
+- Hosted on AWS Amplify (`amplify.yml`); the daily database backup is called by EventBridge (see `docs/deploy-aws.md`)
 - Handbook translations and audio through Google Cloud Translation and Text-to-Speech, Welsh audio through the Gemini API (plain `fetch`); MP3 encoding with `@breezystack/lamejs`
 - Custom JWT auth (jose + bcryptjs, HTTP-only cookies)
 
@@ -43,9 +44,9 @@ Use **Node.js 24** (the version is in `.nvmrc`; `nvm use` or `fnm use` picks it 
    npm ci
    ```
 
-2. Copy `.env.example` to `.env.local` and fill in `DATABASE_URL` (the RDS endpoint; the certificate is checked, see `DATABASE_SSL`) and `JWT_SECRET`. `DATABASE_POOL_MAX` is optional (default 10; use 1–3 on serverless hosting). `HOST_REQUEST_LIMIT_MB` (default 4.5) and `STORAGE_LIMIT_MB` (default 900) are optional too; see `docs/operations.md`.
+2. Copy `.env.example` to `.env.local` and fill in `DATABASE_URL` (the RDS endpoint; the certificate is checked, see `DATABASE_SSL`) and `JWT_SECRET`. `DATABASE_POOL_MAX` is optional (default 10; use 1–3 on serverless hosting). `HOST_REQUEST_LIMIT_MB` (default 4.5) and `STORAGE_LIMIT_MB` (default 20000, about 20 GB) are optional too; see `docs/operations.md`.
 
-3. In the Supabase SQL editor, run `supabase/schema.sql` for a fresh database. The files in `supabase/migrations/` are changes for databases created from an earlier version of the schema, so skip them on a fresh setup (`schema.sql` already records them all as run). A fresh database has English only; add the other Listen languages on Languages and audio → Languages.
+3. With psql (on Windows, `\encoding UTF8` first), run `supabase/schema.sql` for a fresh database (the folder name is historical; the files are plain Postgres). The files in `supabase/migrations/` are changes for databases created from an earlier version of the schema, so skip them on a fresh setup (`schema.sql` already records them all as run). A fresh database has English only; add the other Listen languages on Languages and audio → Languages.
 
 4. For file storage, in Amazon S3 (region London, `eu-west-2`):
    - Four buckets with **Block all public access** on: pictures, archived login records, Handbook audio, database backups. Names are unique across AWS, so add your own ending (e.g. `ycc-dev-handbook-media-k7p2`). Put the names in `S3_MEDIA_BUCKET`, `S3_ARCHIVE_BUCKET`, `S3_AUDIO_BUCKET`, `S3_BACKUP_BUCKET`, and the region in `S3_REGION`.
@@ -70,7 +71,7 @@ Use **Node.js 24** (the version is in `.nvmrc`; `nvm use` or `fnm use` picks it 
 ## Database migrations
 
 - Each database keeps a record of the migrations it has had in `schema_migrations`. To see where a database is: `select name, applied_at from schema_migrations order by name;`
-- To bring one up to date, run the files in `supabase/migrations/` that aren't in that list, in number order, in the SQL editor. The Superadmin also sees on Backup & Restore whether the database matches the code.
+- To bring one up to date, run the files in `supabase/migrations/` that aren't in that list, in number order, with psql. The Superadmin also sees on Backup & Restore whether the database matches the code.
 - A new migration: the next number (`NNNN_what_it_does.sql`), the same change in `supabase/schema.sql` (including its name in the `schema_migrations` list there), ending with `insert into schema_migrations (name) values ('NNNN_what_it_does');`, and `EXPECTED_MIGRATION` in `lib/db/schema-version.ts` raised to it.
 
 ## Updating packages
@@ -114,7 +115,7 @@ Use **Node.js 24** (the version is in `.nvmrc`; `nvm use` or `fnm use` picks it 
 - `proxy.ts` — route protection by role, block and expiry
 - `scripts/` — `generate-hash.mjs` (`npm run hash`), `restore-database.mjs` (`npm run restore-database`, loads a database backup into a fresh database)
 - `supabase/` — schema, migrations and seed
-- `docs/` — architecture, decisions, conventions, operations, the go-live checklist, Vercel and Supabase setup, moving to AWS
+- `docs/` — architecture, decisions, conventions, operations, the go-live checklist, AWS setup, switching host later
 
 This project runs Next.js 16, which differs from older versions. See `AGENTS.md` and `node_modules/next/dist/docs/` before changing routing, data fetching or config.
 

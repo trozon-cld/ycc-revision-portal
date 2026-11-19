@@ -6,9 +6,13 @@ The decisions most likely to be questioned later, newest areas last. Dates are 2
 
 - **Own JWT sign-in, not Supabase Auth** (deliberate): keeps the database plain Postgres and the provider replaceable.
 - **Plain Postgres and one storage file** (`lib/storage/storage.ts`): no Supabase client, RLS, Realtime or Edge Functions, so a move (e.g. to AWS) stays small.
-- **Host not fixed** at the time of writing; host-dependent items are kept in the go-live checklist.
+- **AWS only** (11 Nov): no Vercel, no Supabase. London region; RDS PostgreSQL 17, S3, EventBridge.
+- **Amplify Hosting now, ECS later if needed** (19 Nov, after a trial): far cheaper (~$20–25 a month in total against ~$70–75), but Amplify can't reach a private database, so RDS is open to the internet and hardened. Switching keeps the same database and buckets (`moving-to-aws.md`).
+- **Database certificate checked** (18 Nov): AWS's global RDS bundle travels with the code (`lib/db/aws-rds-ca.mjs`).
+- **Visitor address as a setting** (19 Nov): `TRUSTED_PROXY_HOPS`, so a host change is a setting change (Amplify 2, ECS 1).
+- **Storage cap 20 GB** (19 Nov): S3 has no fixed size; `STORAGE_LIMIT_MB` is a cost cap.
 - **UK time** (Europe/London) for access dates and archive months.
-- **Supabase free tier in mind**: compact candidate data (counters and short codes), server-paginated lists, old practice runs trimmed (newest 20 kept), only the newest 10 mock tests keep their answers.
+- **Small storage in mind** (first for Supabase's free tier, still kept): compact candidate data (counters and short codes), server-paginated lists, old practice runs trimmed (newest 20 kept), only the newest 10 mock tests keep their answers.
 - **Node 24 and `npm ci`** (5 Nov); packages changed only on purpose; never `npm audit fix --force`.
 - **Migration record** (5 Nov, migration 0043): `schema_migrations` lists what each database has had, and the Superadmin sees on Backup & Restore whether it matches the code.
 
@@ -33,7 +37,7 @@ The decisions most likely to be questioned later, newest areas last. Dates are 2
 
 - **Bulk upload** (27–30 Oct): batches keep a source key (e.g. `AD-p012`) so a re-upload updates instead of duplicating; new items arrive as drafts.
 - **Backup & Restore** covers shared content only (structure, pages, questions, pictures, languages). Not in backups: General queries, the support contact, audio, accounts, candidates' data, logs. Restore works only into an empty project.
-- **Database backups by the portal itself** (6 Nov, migration 0044): a daily copy of every table in a private bucket, plus Back Up Now, independent of Supabase's paid backups and of the host (any scheduler calls one protected link). Restored outside the portal into a fresh database (`scripts/restore-database.mjs`), since a lost database can't run the site. The weekly download keeps a copy outside Supabase.
+- **Database backups by the portal itself** (6 Nov, migration 0044): a daily copy of every table in a private bucket, plus Back Up Now, independent of Supabase's paid backups and of the host (any scheduler calls one protected link). Restored outside the portal into a fresh database (`scripts/restore-database.mjs`), since a lost database can't run the site. The weekly download keeps a copy outside AWS.
 - **Fresh production database** (23 Oct): `schema.sql` plus a seed with only the required rows (support contact row, English and its spoken phrases, the Superadmin). Anything the app can create is not seeded.
 
 ## Listen

@@ -1,27 +1,29 @@
-# Moving to AWS (or another provider) later
+# Moving to AWS, and switching host later
 
-The portal was built so a move touches only a few known places. Pages, logins, content, tests and the rest of the code stay as they are. Rough size: 2–3 working days including testing, mostly the storage rewrite and copying files.
+## The move from Vercel and Supabase (done, November 2026)
 
-| Part | What changes | Where |
+The portal now runs on AWS only: the site on Amplify Hosting, the database on RDS PostgreSQL 17, files on S3, the daily backup called by EventBridge. Setting up an environment: `deploy-aws.md`. What changed in the code:
+
+| Part | What changed | Where |
 | --- | --- | --- |
-| Database | Copy it with `pg_dump` / restore to RDS or Aurora (Postgres; the only extension is `pgcrypto`), then set the new `DATABASE_URL`. | settings only |
-| Connection sharing | Use RDS Proxy or PgBouncer in place of Supabase's pooler; keep `DATABASE_POOL_MAX` small if the site runs as many copies. | setup |
-| Database certificate | **Done (Nov 2026):** checked by default with AWS's RDS certificates (`DATABASE_SSL`, `lib/db/ssl.mjs`, `lib/db/aws-rds-ca.mjs`); the restore script checks the same way. | `lib/db/pool.ts` |
-| File storage | **Done (Nov 2026):** `lib/storage/storage.ts` uses S3 (settings `S3_REGION`, `S3_*_BUCKET`); signed links no longer prove a file exists, so existence checks use `existingPaths`. Still to do: copy the four buckets' files (Backup & Restore). Keep `PICTURE_LINK_SECONDS` (`lib/content/book.ts`) within S3's limit (7 days); links signed with a role's temporary credentials stop when those credentials expire, which the Handbook's link refresh already handles. | `lib/storage/storage.ts` |
-| Visitor address | **Done (Nov 2026):** read `TRUSTED_PROXY_HOPS` entries from the end of `x-forwarded-for` (default 1, the last: right behind an AWS load balancer); earlier entries can be faked. Check Office Network → "Addresses seen by the server" on each host. Login limits and the office network depend on it. | `ipFromHeaders` in `lib/audit/visitor-address.ts` |
-| Request size | Set `HOST_REQUEST_LIMIT_MB` to the new host's limit. | setting |
-| Storage cap | Set `STORAGE_LIMIT_MB` to fit the new storage plan. | setting |
-| Several copies of the site | Set `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` so all copies accept the same forms; deploy without stopping everyone at once. | setting |
-| Compression | Make sure pages are sent compressed (gzip or Brotli). | host setup |
-| Region | Site and database in the same region. | host setup |
-| Database backups | Point the new host's scheduler (e.g. EventBridge) at `/api/cron/database-backup` once a day with `Authorization: Bearer <CRON_SECRET>`; the files move with the storage rewrite. Turning on the database's own automated backups is an extra layer. | host setup |
+| File storage | Amazon S3 (`S3_REGION`, `S3_*_BUCKET`); existence checks use `existingPaths`, since a signed link no longer proves a file exists. Keep `PICTURE_LINK_SECONDS` (`lib/content/book.ts`) within S3's limit (7 days). | `lib/storage/storage.ts` |
+| Database certificate | Checked by default with AWS's RDS certificates (`DATABASE_SSL`); the restore script checks the same way. If AWS announces new RDS certificates, update the bundle. | `lib/db/ssl.mjs`, `lib/db/aws-rds-ca.mjs` |
+| Visitor address | Read `TRUSTED_PROXY_HOPS` entries from the end of `X-Forwarded-For` (Amplify 2, ECS 1); earlier entries can be faked. Check Office Network → "Addresses seen by the server". | `lib/audit/visitor-address.ts` |
+| Host sizes | `HOST_REQUEST_LIMIT_MB` 4.5 (under Amplify's 5.72 MB response limit); `STORAGE_LIMIT_MB` about 20 GB (S3 has no fixed size; a cost cap). | `lib/hosting.ts` |
+| Build and settings | `amplify.yml` copies the listed settings into `.env.production` for the running site. | `amplify.yml` |
+| Daily backup | EventBridge calls `/api/cron/database-backup`; "busy" answers 503 with `Retry-After`, so a retry is never counted as done too early. `vercel.json` removed. | `app/api/cron/database-backup/route.ts` |
 
-## Order of work
+Nothing uses Supabase Auth, its client library, Row-Level Security, Realtime or Edge Functions. The `supabase/` folder keeps its name for history; its files are plain Postgres.
 
-1. Set up the new database and storage; copy the data and files.
-2. Make the code changes above in a test copy; run the full regression.
-3. Deploy, with the settings, to the new host.
-4. Run the "After the first deployment" checks in `deploy-vercel-supabase.md` (the office network test matters most).
-5. Switch the web address over; keep the old setup until the new one has run cleanly for a while.
+## Switching from Amplify to ECS later
 
-Nothing here uses Supabase Auth, its client library, Row-Level Security, Realtime or Edge Functions, so there is nothing else to replace.
+Why: Amplify can't reach a private database, so on Amplify the database is open to the internet (hardened: see `deploy-aws.md`). ECS can keep it reachable only from the portal, at about $50 a month more. The same RDS database and S3 buckets stay; about 1–2 days of work.
+
+1. **Image and build:** a Dockerfile (Node 24, `npm ci`, `npm run build`, `npm start`) and a CodeBuild project from GitHub, pushing to ECR.
+2. **Service:** ECS Express Mode (open "Additional configurations" before Create: port 3000, health check path, size, scaling). The same settings as on Amplify, best from Parameter Store (`/ycc/prod/…`, SecureString), except `TRUSTED_PROXY_HOPS=1` (the load balancer adds the visitor's address last). `DATABASE_POOL_MAX` can go up (long-running copies). `HOST_REQUEST_LIMIT_MB` may be raised.
+3. **Permissions:** a task role with the same four-bucket policy as Amplify's compute role (no keys); the task execution role reads the settings.
+4. **Database private:** security group inbound only from the service's security group (and you, briefly, for migrations); remove `0.0.0.0/0`.
+5. **Address:** point the domain at the load balancer; update the S3 CORS rules and the EventBridge API destination.
+6. **Check:** the "After the first deployment" list in `deploy-aws.md` (the visitor address and office network matter most). Keep the Amplify app until the ECS one has run cleanly for a while, then delete it.
+
+Cost to watch on ECS: the load balancer (~$0.54 a day even idle), public IPv4 addresses ($0.005 an hour each), no NAT gateways.

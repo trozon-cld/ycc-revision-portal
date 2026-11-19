@@ -34,7 +34,7 @@ Four **private** buckets: `handbook-media` (pictures), `log-archives` (archived 
 ## Database migrations
 
 - New database: run `supabase/schema.sql` once, then `supabase/seed.sql` with the Superadmin's email and hash (`npm run hash -- "password"`). Skip the migration files.
-- Existing database: `select name, applied_at from schema_migrations order by name;` shows what it has had. Run the missing files from `supabase/migrations/` in number order in the SQL editor. Backup & Restore shows the Superadmin whether the database matches the code.
+- Existing database: `select name, applied_at from schema_migrations order by name;` shows what it has had. Run the missing files from `supabase/migrations/` in number order with psql. Backup & Restore shows the Superadmin whether the database matches the code.
 - Before running a migration on the live database, take a database backup.
 
 ## Backups

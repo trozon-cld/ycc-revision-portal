@@ -47,4 +47,4 @@ The list of backups starts empty in the new database (the old files belong to th
 
 ## Before go-live
 
-Practise once: download a backup, restore it into a spare Supabase project with the steps above, log in there and look around, then delete the spare project.
+Practise once: download a backup, restore it into a spare RDS database with the steps above, point a local copy of the site at it (`.env.local`), log in and look around, then delete the spare database (untick the final snapshot).
