@@ -90,7 +90,7 @@ Use **Node.js 24** (the version is in `.nvmrc`; `nvm use` or `fnm use` picks it 
 - `components/icons.tsx` — every icon in the app (Phosphor Icons, MIT licence), used as `<Icon name="…" />`; colours are the named set in `app/globals.css`
 - `components/use-latest.ts`, `components/use-browser-value.ts` — shared client hooks: the latest value for handlers and effects; values only the browser knows (address, saved on/off choices)
 - `components/learning/` — candidate-facing renderers: blocks, questions (`questions/`), the fixed-page book reader, the reader bar/Settings, and the focused frame shared by Practice and the Mock test (`focused-shell.tsx`)
-- `lib/auth/` — JWT signing/verification, session cookie, role guard, the office network check (`office-network.ts`; the visitor's address is read in one place, `ipFromHeaders` in `lib/audit/log.ts`), login and record limits, who edits content (`content-editors.ts`), small-request checks
+- `lib/auth/` — JWT signing/verification, session cookie, role guard, the office network check (`office-network.ts`; the visitor's address is read in one place, `ipFromHeaders` in `lib/audit/visitor-address.ts`, setting `TRUSTED_PROXY_HOPS`), login and record limits, who edits content (`content-editors.ts`), small-request checks
 - `lib/audit/` — activity and login logs (every loggable action is listed in `lib/audit/actions.ts`) and login-record archiving
 - `lib/db/` — shared Postgres pool, transaction helper, LIKE escaping, quoted names, case-insensitive unique names (`names.ts`), the migration record check (`schema-version.ts`)
 - `lib/users/` — display-name and sign-in (email/password) rules shared by account, admin and candidate forms

@@ -2,6 +2,7 @@ import type { Pool, PoolClient } from "pg";
 import { headers } from "next/headers";
 import type { SessionPayload, UserRole } from "@/lib/auth/jwt";
 import type { ActivityAction, AuthEvent } from "./actions";
+import { ipFromHeaders } from "./visitor-address";
 
 type TargetType =
   | "admin"
@@ -24,9 +25,7 @@ type TargetType =
   | "office_network";
 type Details = Record<string, string>;
 
-export function ipFromHeaders(requestHeaders: Headers): string | null {
-  return requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() || null;
-}
+export { ipFromHeaders };
 
 // Who did it, for actions the site does by itself on a schedule (no account has this id).
 export const SYSTEM_ACTOR_ID = "00000000-0000-0000-0000-000000000000";

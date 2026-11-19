@@ -12,6 +12,7 @@ First-time setup is in the main `README.md` ("Getting started"). This page cover
 | `DATABASE_SSL` | Optional. `verify` (default): the connection is encrypted and the server's certificate and name are checked against AWS's RDS certificates (`lib/db/aws-rds-ca.mjs`). `no-verify`: encrypted only, for another provider; logs a warning. A failed check logs "Database: the server's certificate couldn't be verified (…)". |
 | `DATABASE_SSL_CA_FILE` | Optional. Another provider's certificate file, used instead of AWS's. |
 | `DATABASE_POOL_MAX` | Optional. Connections per running copy of the site (default 10; 1–3 on serverless hosting). |
+| `TRUSTED_PROXY_HOPS` | Optional. Which `X-Forwarded-For` entry is the visitor, counted from the end (default 1, the last). Hosts add the address they saw at the end; earlier entries can be faked. Check it on Office Network → "Addresses seen by the server". |
 | `HOST_REQUEST_LIMIT_MB` | Optional. The largest request or response the host lets through (default 4.5, Vercel Functions). Uploads, restores and backup downloads stay under it. Set it when moving to another host. |
 | `STORAGE_LIMIT_MB` | Optional. Total storage cap for pictures, login archives and audio (default 900, for Supabase Free's 1 GB). Raise it when the storage plan grows, leaving a margin (e.g. 90000 on Supabase Pro). |
 | `JWT_SECRET` | Long random value (at least 32 characters; e.g. `openssl rand -base64 48`). Changing it signs everyone out. |
@@ -50,7 +51,7 @@ Activity → Archives: whole UK months older than 180 days can be archived by th
 
 ## Office network (Admins)
 
-Superadmin → Office Network: add the office's addresses (up to 20, single or range), then turn it on. Admins outside those addresses can't sign in or keep working; single Admins can be set to "Any network" on the Admins page. After any change of host, check the address reading (`ipFromHeaders` in `lib/audit/log.ts`) from the office and from outside.
+Superadmin → Office Network: add the office's addresses (up to 20, single or range), then turn it on. Admins outside those addresses can't sign in or keep working; single Admins can be set to "Any network" on the Admins page. After any change of host, check the address reading (`TRUSTED_PROXY_HOPS`; Office Network → "Addresses seen by the server") from the office and from outside.
 
 ## Languages and audio
 

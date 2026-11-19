@@ -3,7 +3,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { requireRole } from "@/lib/auth/guard";
 import { isOfficeAddress, loadOfficeNetwork } from "@/lib/auth/office-network";
-import { ipFromHeaders } from "@/lib/audit/log";
+import { TRUSTED_PROXY_HOPS, forwardedAddresses, ipFromHeaders } from "@/lib/audit/visitor-address";
 import { formatUkDate } from "@/lib/candidates/access";
 import { pool } from "@/lib/db/pool";
 import { countOf } from "@/lib/format";
@@ -29,6 +29,8 @@ export default async function OfficeNetworkPage() {
   ]);
   const { isOn, addresses } = network;
   const ip = ipFromHeaders(requestHeaders);
+  const seen = forwardedAddresses(requestHeaders);
+  const usedIndex = seen.length - TRUSTED_PROXY_HOPS;
   const onList = isOfficeAddress(ip, addresses.map((entry) => entry.address));
   const hasRoom = addresses.length < OFFICE_ADDRESS_MAX_COUNT;
 
@@ -69,6 +71,30 @@ export default async function OfficeNetworkPage() {
                 </>
               ) : (
                 <span className="text-slate-600">Not known</span>
+              )}
+            </dd>
+          </div>
+          <div className="grid gap-1 px-4 py-2.5 sm:grid-cols-[12rem_1fr] sm:items-center sm:gap-4">
+            <dt className="text-slate-600">Addresses seen by the server</dt>
+            <dd className="text-ink">
+              {seen.length > 0 ? (
+                <>
+                  <span className="[overflow-wrap:anywhere]">
+                    {seen.map((entry, index) => (
+                      <span key={index}>
+                        {index > 0 && ", "}
+                        <span className={index === usedIndex ? "font-medium" : "text-slate-600"}>{entry}</span>
+                      </span>
+                    ))}
+                  </span>
+                  <span className="block text-slate-600">
+                    {usedIndex >= 0
+                      ? `Using ${TRUSTED_PROXY_HOPS === 1 ? "the last one" : `number ${TRUSTED_PROXY_HOPS} from the end`} (TRUSTED_PROXY_HOPS).`
+                      : `TRUSTED_PROXY_HOPS is ${TRUSTED_PROXY_HOPS}, but only ${countOf(seen.length, "address", "addresses")} arrived.`}
+                  </span>
+                </>
+              ) : (
+                <span className="text-slate-600">None (normal when running on your own computer)</span>
               )}
             </dd>
           </div>

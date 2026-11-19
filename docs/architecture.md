@@ -34,7 +34,7 @@ Content editing is Superadmin-only for launch. The one switch is `CONTENT_EDITOR
 - Login limits (`lib/auth/rate-limit.ts`): 5 failures per email and address, 30 per address, and a site-wide pause at 300 failures, each for 15 minutes. Successful-login and logout records are capped too.
 - Admin actions on candidates are always limited to that Admin's own candidates.
 - Who may use Backup & Restore's Backup and Restore tabs: `BACKUP_ROLES` (`lib/content/backup/access.ts`).
-- **Office network**: when the Superadmin turns it on, Admins sign in only from the listed addresses (unless marked "Any network"). The visitor's address is read in one place, `ipFromHeaders` in `lib/audit/log.ts`; it must match how the host sets the forwarded header (see the go-live checklist).
+- **Office network**: when the Superadmin turns it on, Admins sign in only from the listed addresses (unless marked "Any network"). The visitor's address is read in one place, `ipFromHeaders` in `lib/audit/visitor-address.ts`: the `X-Forwarded-For` entry `TRUSTED_PROXY_HOPS` from the end (see the go-live checklist).
 - Large requests (picture uploads, bulk upload, backup and restore) are Route Handlers under `app/api/` that check the live sign-in, role, origin and size *before* reading the body. Server actions keep Next's 1 MB default.
 
 ## Marking and what reaches the browser
