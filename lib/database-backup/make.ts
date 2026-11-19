@@ -25,7 +25,7 @@ import {
 // Server only: one database backup (every table, read in one consistent snapshot) saved to the private backups bucket.
 export type MadeBackup =
   | { ok: true; id: string; kind: DatabaseBackupKind; bytes: number }
-  | { ok: false; skipped?: true; error: string };
+  | { ok: false; skipped?: true; busy?: true; error: string };
 
 // One backup at a time across every copy of the site (a Postgres advisory lock, released when the run ends).
 const BACKUP_LOCK = 440_044;
@@ -36,7 +36,7 @@ export async function makeDatabaseBackup(by: { schedule: true } | { session: Ses
   let locked = false;
   try {
     locked = (await client.query<{ ok: boolean }>(`select pg_try_advisory_lock($1) as ok`, [BACKUP_LOCK])).rows[0].ok;
-    if (!locked) return { ok: false, skipped: true, error: "A database backup is already being made. Try again in a minute." };
+    if (!locked) return { ok: false, skipped: true, busy: true, error: "A database backup is already being made. Try again in a minute." };
 
     const refused = "schedule" in by ? await scheduleRefusal(client) : await manualRefusal(client);
     if (refused) return refused;

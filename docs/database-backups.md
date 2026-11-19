@@ -4,7 +4,7 @@ Everything in the database, saved as one compressed file: accounts and password 
 
 ## How it works
 
-- **Daily, automatically:** the host's scheduler calls `/api/cron/database-backup` with `Authorization: Bearer <CRON_SECRET>` (on Vercel, `vercel.json` sets this up; it runs once a day at about 01:30 UTC). The link stays closed until `CRON_SECRET` is set, and makes at most one backup in 20 hours however often it's called.
+- **Daily, automatically:** the host's scheduler calls `/api/cron/database-backup` with `Authorization: Bearer <CRON_SECRET>` (on AWS an EventBridge rule, set up as below; once a day at 01:30 UTC). The link stays closed until `CRON_SECRET` is set, makes at most one backup in 20 hours however often it's called, and answers "busy, try again in 5 minutes" (503, `Retry-After`) while another backup is still being made, so a retry is never counted as done too early.
 - **By hand:** Backup & Restore → Backup → **Back Up Now** makes one at once and downloads it. Up to 10 in 24 hours.
 - **Where:** the private bucket `db-backups` (setting `S3_BACKUP_BUCKET`), through `lib/storage/storage.ts`. The list is the `database_backups` table.
 - **Copies kept:** the newest 7 automatic ones, the first of each week for 4 weeks, and the last 5 made by hand. Older files are deleted after each backup.
@@ -13,6 +13,16 @@ Everything in the database, saved as one compressed file: accounts and password 
 - **Code:** `lib/database-backup/` (`make.ts` reads every table in one consistent snapshot; `format.ts` has the limits), the cron route in `app/api/cron/database-backup/`, the restore script in `scripts/restore-database.mjs`.
 
 **Habit:** download one about once a week and keep it outside AWS (your computer and a cloud drive). The files hold emails and password hashes: keep them private.
+
+## Setting up the daily schedule (AWS EventBridge)
+
+EventBridge waits at most 5 seconds for an answer and then tries again; that's fine here (one backup per 20 hours, one at a time). London region, three parts:
+
+1. **Connection** (EventBridge → API destinations → Connections → Create): authorisation type **API key**; key name `Authorization`; value `Bearer ` followed by the site's `CRON_SECRET`. EventBridge keeps it in Secrets Manager.
+2. **API destination** (API destinations → Create): endpoint `https://<site address>/api/cron/database-backup`, method **GET**, the connection above, invocation rate 1 per second.
+3. **Rule** (Rules → Create, default event bus, type **Schedule**, the older "scheduled rule" option, not EventBridge Scheduler): cron `30 1 * * ? *` (01:30 UTC every day); target **EventBridge API destination** → the one above; let it create its role; retry policy: maximum age of event **1 hour**, retry attempts **10**.
+
+Optional: a CloudWatch alarm on the rule's **FailedInvocations** (sum ≥ 1 in a day) emailing through SNS. Check the next day: Backup & Restore → Backup lists a new backup made by "Daily schedule (automatic)". When the site address changes (a domain, or moving host), update the API destination's endpoint.
 
 ## Restoring a database backup
 
