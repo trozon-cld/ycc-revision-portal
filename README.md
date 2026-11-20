@@ -71,7 +71,7 @@ Use **Node.js 24** (the version is in `.nvmrc`; `nvm use` or `fnm use` picks it 
 ## Database migrations
 
 - Each database keeps a record of the migrations it has had in `schema_migrations`. To see where a database is: `select name, applied_at from schema_migrations order by name;`
-- To bring one up to date, run the files in `supabase/migrations/` that aren't in that list, in number order, with psql. The Superadmin also sees on Backup & Restore whether the database matches the code.
+- To bring one up to date, run the files in `supabase/migrations/` that aren't in that list, in number order, with psql, logged in as the master login (`ycc_db_admin`), never the site's `ycc_portal`. The Superadmin also sees on Backup & Restore whether the database matches the code.
 - A new migration: the next number (`NNNN_what_it_does.sql`), the same change in `supabase/schema.sql` (including its name in the `schema_migrations` list there), ending with `insert into schema_migrations (name) values ('NNNN_what_it_does');`, and `EXPECTED_MIGRATION` in `lib/db/schema-version.ts` raised to it.
 
 ## Updating packages
@@ -113,6 +113,7 @@ Use **Node.js 24** (the version is in `.nvmrc`; `nvm use` or `fnm use` picks it 
 - `lib/ids.ts`, `lib/bytes.ts`, `lib/text.ts`, `lib/format.ts`, `lib/limits.ts`, `lib/forms.ts`, `lib/params.ts` — small shared helpers (id checks, text clean-up, display formats, length limits, form results, URL parameters)
 - `lib/brand.ts`, `lib/layout.ts` — logo and phone screen sizes
 - `proxy.ts` — route protection by role, block and expiry
+- `supabase/limited-login.sql` — creates the site's own database login (`ycc_portal`, rows only); see `docs/deploy-aws.md`
 - `scripts/` — `generate-hash.mjs` (`npm run hash`), `restore-database.mjs` (`npm run restore-database`, loads a database backup into a fresh database)
 - `supabase/` — schema, migrations and seed
 - `docs/` — architecture, decisions, conventions, operations, the go-live checklist, AWS setup, switching host later

@@ -38,10 +38,11 @@ A database backup isn't restored from inside the portal: if the database is lost
 
    On Windows PowerShell: `$env:DATABASE_URL="…"; npm run restore-database -- file.json.gz`.
 
-   It refuses a database that already has accounts or is at another migration, loads every table in one transaction (all or nothing), and prints each table's row count.
-4. **Point the site at it:** set `DATABASE_URL` and the storage settings on the host to the new database and buckets, then redeploy.
-5. **Put back the files:** if the old project's pictures and audio are lost too, log in as the Superadmin and use Backup & Restore → Restore → **Put back missing files**: choose the content backup (pictures), then each language's audio backup. It uploads only files the database lists and storage lacks, never changes data and never replaces a file; it names any file the backup doesn't have (for example, a picture added after that backup was made).
-6. **Check:** log in as the Superadmin and as a candidate; Backup & Restore shows the database version matches; make a backup with Back Up Now.
+   Use the master login (`ycc_db_admin`), not the site's `ycc_portal` (it would be refused, with nothing saved). It refuses a database that already has accounts or is at another migration, loads every table in one transaction (all or nothing), and prints each table's row count.
+4. **Create the site's login** on the new database: run `supabase/limited-login.sql` as `ycc_db_admin` (see `deploy-aws.md`, step 3).
+5. **Point the site at it:** set `DATABASE_URL` and the storage settings on the host to the new database and buckets, then redeploy.
+6. **Put back the files:** if the old project's pictures and audio are lost too, log in as the Superadmin and use Backup & Restore → Restore → **Put back missing files**: choose the content backup (pictures), then each language's audio backup. It uploads only files the database lists and storage lacks, never changes data and never replaces a file; it names any file the backup doesn't have (for example, a picture added after that backup was made).
+7. **Check:** log in as the Superadmin and as a candidate; Backup & Restore shows the database version matches; make a backup with Back Up Now.
 
 The list of backups starts empty in the new database (the old files belong to the old project).
 

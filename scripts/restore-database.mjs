@@ -109,7 +109,9 @@ try {
   console.log("\nNext: put back the pictures and audio (Backup & Restore → Restore), then log in and check. See docs/database-backups.md.\n");
 } catch (error) {
   await client.query("rollback").catch(() => undefined);
-  fail(error instanceof Error ? error.message : String(error));
+  const message = error instanceof Error ? error.message : String(error);
+  // 42501: not allowed, e.g. DATABASE_URL uses the site's limited login (supabase/limited-login.sql).
+  fail(error?.code === "42501" ? `${message}. Run it with the master login (e.g. ycc_db_admin), not ycc_portal. Nothing was saved.` : message);
 } finally {
   await client.end().catch(() => undefined);
 }

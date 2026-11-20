@@ -8,7 +8,7 @@ First-time setup is in the main `README.md` ("Getting started"). This page cover
 
 | Setting | What it is |
 | --- | --- |
-| `DATABASE_URL` | Postgres connection string: the RDS endpoint name (not an IP address), port 5432. No `sslmode` in it (removed before connecting). |
+| `DATABASE_URL` | Postgres connection string: the site's login `ycc_portal` (`supabase/limited-login.sql`), the RDS endpoint name (not an IP address), port 5432. No `sslmode` in it (removed before connecting). |
 | `DATABASE_SSL` | Optional. `verify` (default): the connection is encrypted and the server's certificate and name are checked against AWS's RDS certificates (`lib/db/aws-rds-ca.mjs`). `no-verify`: encrypted only, for another provider; logs a warning. A failed check logs "Database: the server's certificate couldn't be verified (…)". |
 | `DATABASE_SSL_CA_FILE` | Optional. Another provider's certificate file, used instead of AWS's. |
 | `DATABASE_POOL_MAX` | Optional. Connections per running copy of the site (default 10; 1–3 on serverless hosting; Amplify: 3). |
@@ -34,7 +34,7 @@ Four **private** buckets: `handbook-media` (pictures), `log-archives` (archived 
 ## Database migrations
 
 - New database: run `supabase/schema.sql` once, then `supabase/seed.sql` with the Superadmin's email and hash (`npm run hash -- "password"`). Skip the migration files.
-- Existing database: `select name, applied_at from schema_migrations order by name;` shows what it has had. Run the missing files from `supabase/migrations/` in number order with psql. Backup & Restore shows the Superadmin whether the database matches the code.
+- Existing database: `select name, applied_at from schema_migrations order by name;` shows what it has had. Run the missing files from `supabase/migrations/` in number order with psql, as the master login (`ycc_db_admin`); the site's own login (`ycc_portal`, `supabase/limited-login.sql`) can't change tables. Backup & Restore shows the Superadmin whether the database matches the code.
 - Before running a migration on the live database, take a database backup.
 
 ## Backups

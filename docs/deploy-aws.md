@@ -20,12 +20,19 @@ What runs where: the site on **Amplify Hosting** (built from a GitHub branch), t
 - [ ] PostgreSQL 17, db.t4g.micro to start, 20 GB gp3. Production: automated backups 7–35 days, deletion protection on, minor version upgrades on.
 - [ ] Public access **Yes**: Amplify's servers can't join a private network and have no fixed addresses, so the security group allows PostgreSQL (5432) from `0.0.0.0/0`. That makes the hardening below required, not optional (or run the site on ECS instead; see `moving-to-aws.md`).
 - [ ] Hardening (production):
-  - a separate database login for the portal with rights only to its own tables; the main admin login is never used by the site;
-  - a long random password (30+ characters, letters and numbers only, or percent-encode it in `DATABASE_URL`);
+  - the site's own login, `ycc_portal`, with rights only to the rows in the portal's tables (next step); the master login (`ycc_db_admin`) is never used by the site;
+  - long random passwords for both logins (30+ characters, letters and numbers only, so they can go in `DATABASE_URL` as they are);
   - SSL is enforced by RDS and the portal checks the certificate by default (`DATABASE_SSL` unset or `verify`; never `no-verify`);
   - a CloudWatch alarm on repeated failed database logins.
 - [ ] Load the schema with psql from your PC (on Windows run `\encoding UTF8` first): `supabase/schema.sql`, then the production seed with the Superadmin (see the main README). The `supabase/` folder name is historical; the files are plain Postgres.
-- [ ] `DATABASE_URL` uses the endpoint **name** (`….eu-west-2.rds.amazonaws.com`), never its IP address: the certificate check needs the name.
+- [ ] Create the site's login: run `supabase/limited-login.sql` once with psql **as `ycc_db_admin`**, giving the new password on the command line (it isn't stored in the file):
+
+  ```
+  psql "host=ENDPOINT port=5432 dbname=ycc user=ycc_db_admin sslmode=verify-full sslrootcert=C:/aws/global-bundle.pem" -v portal_password=NEWPASSWORD -f supabase/limited-login.sql
+  ```
+
+  `ycc_portal` can read, add, change and delete rows in every portal table (including tables later migrations add), and nothing else: it can't create, change, empty or delete tables, or make logins. Running the file again only sets a new password. **Migrations and `npm run restore-database` always run as `ycc_db_admin`** (with `ycc_portal` they're refused).
+- [ ] `DATABASE_URL` uses `ycc_portal` and the endpoint **name** (`….eu-west-2.rds.amazonaws.com`), never its IP address: the certificate check needs the name.
 
 ## 4. The compute role (the site's permission for S3)
 
@@ -46,7 +53,7 @@ What runs where: the site on **Amplify Hosting** (built from a GitHub branch), t
 
 | Setting | Value |
 | --- | --- |
-| `DATABASE_URL` | `postgresql://USER:PASSWORD@NAME.ID.eu-west-2.rds.amazonaws.com:5432/ycc` |
+| `DATABASE_URL` | `postgresql://ycc_portal:PASSWORD@NAME.ID.eu-west-2.rds.amazonaws.com:5432/ycc` |
 | `JWT_SECRET` | a new long random value |
 | `CRON_SECRET` | a new long random value (16+ characters) |
 | `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` | 32 random bytes in base64 (several copies of the site run; without it forms can fail after a redeploy) |
