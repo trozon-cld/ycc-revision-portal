@@ -4,8 +4,8 @@
 
 - Next.js 16.4 (App Router, Turbopack, React 19, React Compiler lint rules), TypeScript, Tailwind CSS 4. Next 16 differs from older versions: read `AGENTS.md` and `node_modules/next/dist/docs/` before changing routing, data fetching or config.
 - Node.js 24 (`.nvmrc`, `engines` in `package.json`).
-- PostgreSQL through the `pg` library (plain SQL, one shared pool in `lib/db/pool.ts`). Hosted on Supabase today, but no Supabase Auth, client library, Row-Level Security or Realtime is used.
-- File storage: Supabase Storage, private buckets only, reached only from `lib/storage/storage.ts`.
+- PostgreSQL through the `pg` library (plain SQL, one shared pool in `lib/db/pool.ts`). Hosted on AWS RDS; the connection is encrypted and the server's certificate checked (`lib/db/ssl.mjs`, AWS's certificates in `lib/db/aws-rds-ca.mjs`, setting `DATABASE_SSL`). No provider-specific database features are used.
+- File storage: Amazon S3 (AWS SDK), private buckets only, reached only from `lib/storage/storage.ts`. Signed links are made on the server without asking S3, so code that needs to know a file exists uses `existingPaths`.
 - Sign-in: our own JWT (jose) in an HTTP-only cookie, passwords hashed with bcryptjs.
 - Voice: Google Cloud Translation and Text-to-Speech; Gemini for languages Google can't read aloud (Welsh).
 
@@ -34,7 +34,7 @@ Content editing is Superadmin-only for launch. The one switch is `CONTENT_EDITOR
 - Login limits (`lib/auth/rate-limit.ts`): 5 failures per email and address, 30 per address, and a site-wide pause at 300 failures, each for 15 minutes. Successful-login and logout records are capped too.
 - Admin actions on candidates are always limited to that Admin's own candidates.
 - Who may use Backup & Restore's Backup and Restore tabs: `BACKUP_ROLES` (`lib/content/backup/access.ts`).
-- **Office network**: when the Superadmin turns it on, Admins sign in only from the listed addresses (unless marked "Any network"). The visitor's address is read in one place, `ipFromHeaders` in `lib/audit/log.ts`; it must match how the host sets the forwarded header (see the go-live checklist).
+- **Office network**: when the Superadmin turns it on, Admins sign in only from the listed addresses (unless marked "Any network"). The visitor's address is read in one place, `ipFromHeaders` in `lib/audit/visitor-address.ts`: the `X-Forwarded-For` entry `TRUSTED_PROXY_HOPS` from the end (see the go-live checklist).
 - Large requests (picture uploads, bulk upload, backup and restore) are Route Handlers under `app/api/` that check the live sign-in, role, origin and size *before* reading the body. Server actions keep Next's 1 MB default.
 
 ## Marking and what reaches the browser
@@ -51,8 +51,8 @@ Content editing is Superadmin-only for launch. The one switch is `CONTENT_EDITOR
 ## Storage
 
 - `lib/storage/storage.ts` is the only code that talks to the storage provider: upload, delete, short-lived signed links. Buckets: `handbook-media` (pictures), `log-archives` (archived login records), `handbook-audio` (Listen MP3s), `db-backups` (database backups).
-- Pictures are checked by their real content and converted to WebP in the browser. Each is capped at 5 MB, or less if the host's request limit needs it (about 3.2 MB on Vercel); the total is capped at 900 MB by default. Both host-dependent sizes are host settings read in `lib/hosting.ts`.
-- Moving to S3 or similar means rewriting that one file and copying the buckets.
+- Pictures are checked by their real content and converted to WebP in the browser. Each is capped at 5 MB, or less if the host's request limit needs it (about 3.2 MB at the default 4.5 MB host limit); the total is capped at about 20 GB by default. Both host-dependent sizes are host settings read in `lib/hosting.ts`.
+- Changing storage provider again means rewriting that one file and copying the buckets.
 
 ## Voice (Listen)
 

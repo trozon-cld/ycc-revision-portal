@@ -5,7 +5,7 @@ import { pool } from "@/lib/db/pool";
 import { withTransaction } from "@/lib/db/transaction";
 import { countOf, formatBytes } from "@/lib/format";
 import { STORAGE_LIMIT_BYTES, withinHostLimit } from "@/lib/hosting";
-import { getSignedUrls, isStorageConfigured, storeObject } from "@/lib/storage/storage";
+import { existingPaths, getSignedUrls, isStorageConfigured, storeObject } from "@/lib/storage/storage";
 import { storedBytes } from "@/lib/storage/usage";
 import { isRecord } from "@/lib/text";
 import { AUDIO_NOT_CONFIGURED } from "@/lib/voice/audio-files";
@@ -29,7 +29,6 @@ import { MAX_AUDIO_FILE_BYTES } from "./limits";
 // only where the page, question or translation still matches.
 
 const LINK_SECONDS = 60 * 60;
-const SIGN_BATCH = 200;
 const EXACT_TIME = 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"';
 // Columns kept in a backup (created_by links to a staff account, which doesn't exist in another project).
 const COLUMNS: Record<AudioTable, string[]> = {
@@ -80,12 +79,9 @@ export async function readAudioBackup(session: SessionPayload, language: unknown
     const all = AUDIO_TABLES.flatMap((table) => data[table]);
     if (all.length === 0) return { ok: false, error: `There's no ${found[0].name} audio to back up.` };
 
-    const urls = new Map<string, string>();
     const paths = all.map((row) => String(row.storage_path));
-    for (let start = 0; start < paths.length; start += SIGN_BATCH) {
-      for (const [path, url] of await getSignedUrls(paths.slice(start, start + SIGN_BATCH), LINK_SECONDS, "audio")) urls.set(path, url);
-    }
-    const missing = paths.filter((path) => !urls.has(path));
+    const stored = await existingPaths(paths, "audio");
+    const missing = paths.filter((path) => !stored.has(path));
     if (missing.length > 0) {
       return {
         ok: false,
@@ -109,6 +105,7 @@ export async function readAudioBackup(session: SessionPayload, language: unknown
       questions: data.question_audio.length,
       bytes: all.reduce((sum, row) => sum + Number(row.byte_size), 0),
     };
+    const urls = await getSignedUrls(paths, LINK_SECONDS, "audio");
     const files = all.map((row) => ({ zipPath: `${AUDIO_FILES_FOLDER}/${String(row.storage_path)}`, bytes: Number(row.byte_size), url: urls.get(String(row.storage_path)) as string }));
     return { ok: true, data: { fileName: `ycc-audio-${language}-${when[0].stamp}.zip`, manifest, data, files } };
   });
@@ -170,10 +167,7 @@ export async function restoreAudio(session: SessionPayload, raw: unknown): Promi
   const plan = await planRestore(raw);
   if ("problems" in plan) return { ok: false, problems: plan.problems };
   const wanted = AUDIO_TABLES.flatMap((table) => plan.restore[table].map((row) => String(row.storage_path)));
-  const stored = new Set<string>();
-  for (let start = 0; start < wanted.length; start += SIGN_BATCH) {
-    for (const path of (await getSignedUrls(wanted.slice(start, start + SIGN_BATCH), 60, "audio")).keys()) stored.add(path);
-  }
+  const stored = await existingPaths(wanted, "audio");
   const notStored = wanted.filter((path) => !stored.has(path)).length;
   return withTransaction(async (client) => {
     let restored = 0;

@@ -8,13 +8,19 @@ First-time setup is in the main `README.md` ("Getting started"). This page cover
 
 | Setting | What it is |
 | --- | --- |
-| `DATABASE_URL` | Postgres connection string. On Supabase, the pooler string on port 6543. |
-| `DATABASE_POOL_MAX` | Optional. Connections per running copy of the site (default 10; 1–3 on serverless hosting). |
-| `HOST_REQUEST_LIMIT_MB` | Optional. The largest request or response the host lets through (default 4.5, Vercel Functions). Uploads, restores and backup downloads stay under it. Set it when moving to another host. |
-| `STORAGE_LIMIT_MB` | Optional. Total storage cap for pictures, login archives and audio (default 900, for Supabase Free's 1 GB). Raise it when the storage plan grows, leaving a margin (e.g. 90000 on Supabase Pro). |
+| `DATABASE_URL` | Postgres connection string: the site's login `ycc_portal` (`supabase/limited-login.sql`), the RDS endpoint name (not an IP address), port 5432. No `sslmode` in it (removed before connecting). |
+| `DATABASE_SSL` | Optional. `verify` (default): the connection is encrypted and the server's certificate and name are checked against AWS's RDS certificates (`lib/db/aws-rds-ca.mjs`). `no-verify`: encrypted only, for another provider; logs a warning. A failed check logs "Database: the server's certificate couldn't be verified (…)". |
+| `DATABASE_SSL_CA_FILE` | Optional. Another provider's certificate file, used instead of AWS's. |
+| `DATABASE_POOL_MAX` | Optional. Connections per running copy of the site (default 10; 1–3 on serverless hosting; Amplify: 3). |
+| `TRUSTED_PROXY_HOPS` | Optional. Which `X-Forwarded-For` entry is the visitor, counted from the end (default 1, the last). Hosts add the address they saw at the end; earlier entries can be faked. Amplify: 2 (CloudFront adds one entry); ECS: 1. Check it on Office Network → "Addresses seen by the server". |
+| `HOST_REQUEST_LIMIT_MB` | Optional. The largest request or response the host lets through (default 4.5, under Amplify's 5.72 MB response limit). Uploads, restores and backup downloads stay under it. A host with a higher limit (ECS) may raise it. |
+| `STORAGE_LIMIT_MB` | Optional. Total storage cap for pictures, login archives, audio and database backups (default 20000, about 20 GB). S3 has no fixed size, so this is a cost cap (about $0.50 a month when full, London). |
+| `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` | Needed where several copies of the site run (Amplify, ECS): 32 random bytes in base64, no `$` (see `.env.example`). Without it, forms can fail after a redeploy. |
 | `JWT_SECRET` | Long random value (at least 32 characters; e.g. `openssl rand -base64 48`). Changing it signs everyone out. |
-| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Storage access (Project Settings → API). |
-| `SUPABASE_STORAGE_BUCKET`, `SUPABASE_ARCHIVE_BUCKET`, `SUPABASE_AUDIO_BUCKET`, `SUPABASE_BACKUP_BUCKET` | Bucket names; default `handbook-media`, `log-archives`, `handbook-audio`, `db-backups`. |
+| `S3_REGION` | The buckets' region (`eu-west-2`, London). |
+| `S3_MEDIA_BUCKET`, `S3_ARCHIVE_BUCKET`, `S3_AUDIO_BUCKET`, `S3_BACKUP_BUCKET` | The four private S3 buckets (pictures, login archives, audio, database backups). All required; names are unique across AWS. The media and audio buckets need a CORS rule allowing `GET` from the site's address (Backup builds its zip in the browser). |
+| `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | Developer's PC only: a dev-only IAM user's key, limited to the dev buckets. On AWS the host's role gives permission; never store keys there. |
+| `S3_ENDPOINT` | Tests and S3-compatible stores only; unset on AWS. |
 | `CRON_SECRET` | At least 16 random characters. The daily database backup's schedule sends it; without it the schedule's link stays closed. |
 | `GOOGLE_CLOUD_API_KEY` | Google Cloud key restricted to Cloud Translation and Text-to-Speech (billed project). |
 | `GEMINI_API_KEY` | Gemini key for Welsh audio (billed before candidates hear it). |
@@ -23,12 +29,12 @@ First-time setup is in the main `README.md` ("Getting started"). This page cover
 
 ## Storage buckets
 
-Four **private** buckets: `handbook-media` (pictures), `log-archives` (archived login records, `application/gzip`), `handbook-audio` (Listen audio, `audio/mpeg`), `db-backups` (database backups, `application/gzip`). Leave allowed file types open or allow those types. Total uploads are capped at 900 MB by default (`STORAGE_LIMIT_MB`, read in `lib/hosting.ts`).
+Four **private** buckets: `handbook-media` (pictures), `log-archives` (archived login records, `application/gzip`), `handbook-audio` (Listen audio, `audio/mpeg`), `db-backups` (database backups, `application/gzip`). Leave allowed file types open or allow those types. Total storage is capped at about 20 GB by default (`STORAGE_LIMIT_MB`, read in `lib/hosting.ts`).
 
 ## Database migrations
 
 - New database: run `supabase/schema.sql` once, then `supabase/seed.sql` with the Superadmin's email and hash (`npm run hash -- "password"`). Skip the migration files.
-- Existing database: `select name, applied_at from schema_migrations order by name;` shows what it has had. Run the missing files from `supabase/migrations/` in number order in the SQL editor. Backup & Restore shows the Superadmin whether the database matches the code.
+- Existing database: `select name, applied_at from schema_migrations order by name;` shows what it has had. Run the missing files from `supabase/migrations/` in number order with psql, as the master login (`ycc_db_admin`); the site's own login (`ycc_portal`, `supabase/limited-login.sql`) can't change tables. Backup & Restore shows the Superadmin whether the database matches the code.
 - Before running a migration on the live database, take a database backup.
 
 ## Backups
@@ -38,7 +44,7 @@ Four **private** buckets: `handbook-media` (pictures), `log-archives` (archived 
 - **Audio backups** (Backup → Audio backups): one file per language.
 - **Put back missing files** (Backup & Restore → Restore): after a database backup is restored, uploads the pictures (from a content backup) and audio (from each audio backup) that the database lists and storage lacks. Never changes data or replaces a file.
 - **Restore** (Backup & Restore → Restore): only into an empty project. Afterwards re-enter General queries and the support contact, restore each language's audio backup, and lock the structure again.
-- The content and audio backups are also the only copies of the pictures and audio outside Supabase: download them again after big content changes.
+- The content and audio backups are also the only copies of the pictures and audio outside S3: download them again after big content changes.
 
 ## Login records
 
@@ -46,7 +52,7 @@ Activity → Archives: whole UK months older than 180 days can be archived by th
 
 ## Office network (Admins)
 
-Superadmin → Office Network: add the office's addresses (up to 20, single or range), then turn it on. Admins outside those addresses can't sign in or keep working; single Admins can be set to "Any network" on the Admins page. After any change of host, check the address reading (`ipFromHeaders` in `lib/audit/log.ts`) from the office and from outside.
+Superadmin → Office Network: add the office's addresses (up to 20, single or range), then turn it on. Admins outside those addresses can't sign in or keep working; single Admins can be set to "Any network" on the Admins page. After any change of host, check the address reading (`TRUSTED_PROXY_HOPS`; Office Network → "Addresses seen by the server") from the office and from outside.
 
 ## Languages and audio
 

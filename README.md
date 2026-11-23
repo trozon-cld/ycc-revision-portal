@@ -4,12 +4,13 @@ Revision platform for construction site workers preparing for the CITB HS&E test
 
 Status: in active development.
 
-More in [`docs/`](docs/README.md): architecture, key decisions, code conventions, operations, the go-live checklist, the Vercel and Supabase setup list, and what changes for a move to AWS.
+More in [`docs/`](docs/README.md): architecture, key decisions, code conventions, operations, the go-live checklist, the AWS setup list, and switching host later.
 
 ## Stack
 
 - Next.js 16.4 (App Router, TypeScript, Tailwind CSS v4)
-- PostgreSQL on Supabase (raw SQL via `pg`), plus Supabase Storage for pictures, log archives and Handbook audio
+- PostgreSQL 17 on AWS RDS (raw SQL via `pg`), plus Amazon S3 for pictures, log archives, Handbook audio and database backups
+- Hosted on AWS Amplify (`amplify.yml`); the daily database backup is called by EventBridge (see `docs/deploy-aws.md`)
 - Handbook translations and audio through Google Cloud Translation and Text-to-Speech, Welsh audio through the Gemini API (plain `fetch`); MP3 encoding with `@breezystack/lamejs`
 - Custom JWT auth (jose + bcryptjs, HTTP-only cookies)
 
@@ -43,16 +44,14 @@ Use **Node.js 24** (the version is in `.nvmrc`; `nvm use` or `fnm use` picks it 
    npm ci
    ```
 
-2. Copy `.env.example` to `.env.local` and fill in `DATABASE_URL` (Supabase pooler string) and `JWT_SECRET`. `DATABASE_POOL_MAX` is optional (default 10; use 1–3 on serverless hosting). `HOST_REQUEST_LIMIT_MB` (default 4.5) and `STORAGE_LIMIT_MB` (default 900) are optional too; see `docs/operations.md`.
+2. Copy `.env.example` to `.env.local` and fill in `DATABASE_URL` (the RDS endpoint; the certificate is checked, see `DATABASE_SSL`) and `JWT_SECRET`. `DATABASE_POOL_MAX` is optional (default 10; use 1–3 on serverless hosting). `HOST_REQUEST_LIMIT_MB` (default 4.5) and `STORAGE_LIMIT_MB` (default 20000, about 20 GB) are optional too; see `docs/operations.md`.
 
-3. In the Supabase SQL editor, run `supabase/schema.sql` for a fresh database. The files in `supabase/migrations/` are changes for databases created from an earlier version of the schema, so skip them on a fresh setup (`schema.sql` already records them all as run). A fresh database has English only; add the other Listen languages on Languages and audio → Languages.
+3. With psql (on Windows, `\encoding UTF8` first), run `supabase/schema.sql` for a fresh database (the folder name is historical; the files are plain Postgres). The files in `supabase/migrations/` are changes for databases created from an earlier version of the schema, so skip them on a fresh setup (`schema.sql` already records them all as run). A fresh database has English only; add the other Listen languages on Languages and audio → Languages.
 
-4. For the image library (Admin → Media), in Supabase:
-   - **Storage → New bucket**, name `handbook-media`, **Public bucket off** (pictures are served through short-lived signed links).
-   - Add `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (Project Settings → API; the secret or legacy service_role key) to `.env.local`. They are server-only; never prefix them with `NEXT_PUBLIC_`.
-   - **Storage → New bucket**, name `log-archives`, **Public bucket off**, for archived login records (Activity → Archives). Leave its allowed file types open, or allow `application/gzip`.
-   - **Storage → New bucket**, name `handbook-audio`, **Public bucket off**, for Handbook audio (MP3). Leave its allowed file types open, or allow `audio/mpeg`.
-   - **Storage → New bucket**, name `db-backups`, **Public bucket off**, for database backups. Leave its allowed file types open, or allow `application/gzip`.
+4. For file storage, in Amazon S3 (region London, `eu-west-2`):
+   - Four buckets with **Block all public access** on: pictures, archived login records, Handbook audio, database backups. Names are unique across AWS, so add your own ending (e.g. `ycc-dev-handbook-media-k7p2`). Put the names in `S3_MEDIA_BUCKET`, `S3_ARCHIVE_BUCKET`, `S3_AUDIO_BUCKET`, `S3_BACKUP_BUCKET`, and the region in `S3_REGION`.
+   - The pictures and audio buckets need a CORS rule allowing `GET` from the site's address (Backup builds its zip in the browser).
+   - On your PC, permission comes from a dev-only IAM user's access key (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` in `.env.local`), limited to the dev buckets. On AWS the host's role gives it. Never use a root key; never prefix these with `NEXT_PUBLIC_`.
    - For Handbook translations and audio, add `GOOGLE_CLOUD_API_KEY` to `.env.local`, and `GEMINI_API_KEY` for Welsh audio (server only; see `.env.example`). Use billed keys before candidates hear any audio.
 
 5. Generate the Superadmin password hash, paste it and the email into `supabase/seed.sql`, then run that file:
@@ -72,7 +71,7 @@ Use **Node.js 24** (the version is in `.nvmrc`; `nvm use` or `fnm use` picks it 
 ## Database migrations
 
 - Each database keeps a record of the migrations it has had in `schema_migrations`. To see where a database is: `select name, applied_at from schema_migrations order by name;`
-- To bring one up to date, run the files in `supabase/migrations/` that aren't in that list, in number order, in the SQL editor. The Superadmin also sees on Backup & Restore whether the database matches the code.
+- To bring one up to date, run the files in `supabase/migrations/` that aren't in that list, in number order, with psql, logged in as the master login (`ycc_db_admin`), never the site's `ycc_portal`. The Superadmin also sees on Backup & Restore whether the database matches the code.
 - A new migration: the next number (`NNNN_what_it_does.sql`), the same change in `supabase/schema.sql` (including its name in the `schema_migrations` list there), ending with `insert into schema_migrations (name) values ('NNNN_what_it_does');`, and `EXPECTED_MIGRATION` in `lib/db/schema-version.ts` raised to it.
 
 ## Updating packages
@@ -92,7 +91,7 @@ Use **Node.js 24** (the version is in `.nvmrc`; `nvm use` or `fnm use` picks it 
 - `components/icons.tsx` — every icon in the app (Phosphor Icons, MIT licence), used as `<Icon name="…" />`; colours are the named set in `app/globals.css`
 - `components/use-latest.ts`, `components/use-browser-value.ts` — shared client hooks: the latest value for handlers and effects; values only the browser knows (address, saved on/off choices)
 - `components/learning/` — candidate-facing renderers: blocks, questions (`questions/`), the fixed-page book reader, the reader bar/Settings, and the focused frame shared by Practice and the Mock test (`focused-shell.tsx`)
-- `lib/auth/` — JWT signing/verification, session cookie, role guard, the office network check (`office-network.ts`; the visitor's address is read in one place, `ipFromHeaders` in `lib/audit/log.ts`), login and record limits, who edits content (`content-editors.ts`), small-request checks
+- `lib/auth/` — JWT signing/verification, session cookie, role guard, the office network check (`office-network.ts`; the visitor's address is read in one place, `ipFromHeaders` in `lib/audit/visitor-address.ts`, setting `TRUSTED_PROXY_HOPS`), login and record limits, who edits content (`content-editors.ts`), small-request checks
 - `lib/audit/` — activity and login logs (every loggable action is listed in `lib/audit/actions.ts`) and login-record archiving
 - `lib/db/` — shared Postgres pool, transaction helper, LIKE escaping, quoted names, case-insensitive unique names (`names.ts`), the migration record check (`schema-version.ts`)
 - `lib/users/` — display-name and sign-in (email/password) rules shared by account, admin and candidate forms
@@ -114,9 +113,10 @@ Use **Node.js 24** (the version is in `.nvmrc`; `nvm use` or `fnm use` picks it 
 - `lib/ids.ts`, `lib/bytes.ts`, `lib/text.ts`, `lib/format.ts`, `lib/limits.ts`, `lib/forms.ts`, `lib/params.ts` — small shared helpers (id checks, text clean-up, display formats, length limits, form results, URL parameters)
 - `lib/brand.ts`, `lib/layout.ts` — logo and phone screen sizes
 - `proxy.ts` — route protection by role, block and expiry
+- `supabase/limited-login.sql` — creates the site's own database login (`ycc_portal`, rows only); see `docs/deploy-aws.md`
 - `scripts/` — `generate-hash.mjs` (`npm run hash`), `restore-database.mjs` (`npm run restore-database`, loads a database backup into a fresh database)
 - `supabase/` — schema, migrations and seed
-- `docs/` — architecture, decisions, conventions, operations, the go-live checklist, Vercel and Supabase setup, moving to AWS
+- `docs/` — architecture, decisions, conventions, operations, the go-live checklist, AWS setup, switching host later
 
 This project runs Next.js 16, which differs from older versions. See `AGENTS.md` and `node_modules/next/dist/docs/` before changing routing, data fetching or config.
 
