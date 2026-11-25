@@ -94,7 +94,7 @@ export default async function ProgressPage() {
             summary={
               practice.pool === 0
                 ? `There are no practice questions for ${progress.testTypeName} yet.`
-                : `${practice.practised} of ${countOf(practice.pool, "question")} practised${practice.tries > 0 ? ` · ${scorePercent(practice.right, practice.tries)}% right` : ""}`
+                : `${practice.practised} of ${countOf(practice.pool, "question")} practised${practice.tries > 0 ? ` · ${scorePercent(practice.right, practice.tries)}% correct` : ""}`
             }
             share={practice.pool > 0 ? practice.practised / practice.pool : undefined}
           >
@@ -104,7 +104,7 @@ export default async function ProgressPage() {
               <>
                 <p className="text-base text-ink">
                   {practice.tries > 0
-                    ? `${practice.right} of ${practice.tries} answers right (${scorePercent(practice.right, practice.tries)}%).`
+                    ? `${practice.right} of ${practice.tries} answers correct (${scorePercent(practice.right, practice.tries)}%).`
                     : "You haven’t practised any questions yet."}
                   {practice.flagged > 0 && ` ${countOf(practice.flagged, "question")} flagged for review.`}
                 </p>

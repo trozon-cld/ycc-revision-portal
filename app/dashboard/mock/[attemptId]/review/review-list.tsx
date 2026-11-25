@@ -7,8 +7,8 @@ import { ReviewQuestion } from "@/components/learning/questions/review-question"
 import { FlagButton } from "@/app/dashboard/practice/flag-button";
 
 const MARKS = {
-  R: { text: "Right", tone: "border-ok bg-ok-bg text-ok-strong", icon: "tick" },
-  W: { text: "Wrong", tone: "border-warn bg-warn-bg text-warn-strong", icon: "cross" },
+  R: { text: "Correct", tone: "border-ok bg-ok-bg text-ok-strong", icon: "tick" },
+  W: { text: "Incorrect", tone: "border-warn bg-warn-bg text-warn-strong", icon: "cross" },
   U: { text: "Not answered", tone: "border-ink/30 bg-ink/5 text-ink", icon: null },
 } as const;
 

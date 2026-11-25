@@ -122,7 +122,7 @@ export default async function CandidateHomePage({ searchParams }: PageProps<"/da
                 description={
                   practice
                     ? `Continue your practice: question ${Math.min(practice.position + 1, practice.total)} of ${practice.total}.`
-                    : "Answer questions at your own pace and see the right answer each time."
+                    : "Answer questions at your own pace and see the correct answer each time."
                 }
                 icon={SectionIcons.practice}
                 href={practice ? `/dashboard/practice/${practice.id}` : "/dashboard/practice"}

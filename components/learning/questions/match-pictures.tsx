@@ -196,7 +196,7 @@ export function MatchPicturesAnswer({
                     type="button"
                     data-match-box={target.id}
                     aria-label={`${target.label}: ${inside ? alt(inside) : "empty"}${selected ? ". Place the chosen picture here" : ""}${
-                      isRight ? ". Correct" : isWrong ? ". Not this one" : ""
+                      isRight ? ". Correct" : isWrong ? ". Incorrect" : ""
                     }`}
                     disabled={locked}
                     onPointerDown={(event) => onPointerDown(event, inside?.id ?? null, () => tapBox(target.id))}
@@ -216,9 +216,9 @@ export function MatchPicturesAnswer({
                   {mode === "learn" || showCorrect ? (
                     <span className="grid size-[max(40px,2.6em)] shrink-0 place-items-center">
                       {right && right !== inside?.id && (
-                        <span className="relative block size-full rounded-md border-2 border-ok bg-card p-[0.1em]" title="Right picture">
+                        <span className="relative block size-full rounded-md border-2 border-ok bg-card p-[0.1em]" title="Correct picture">
                           <Picture media={media} item={itemById(right)} />
-                          <span className="sr-only">Right picture: {alt(itemById(right))}</span>
+                          <span className="sr-only">Correct picture: {alt(itemById(right))}</span>
                           <span aria-hidden="true" className="absolute -right-[0.4em] -top-[0.4em] grid size-[1.3em] place-items-center rounded-full bg-ok text-[0.8em] text-white">
                             <FeedbackMark name="tick" />
                           </span>
@@ -234,7 +234,7 @@ export function MatchPicturesAnswer({
                       }`}
                     >
                       <FeedbackMark name={isRight ? "tick" : "cross"} />
-                      {isRight ? "Correct" : "Not this one"}
+                      {isRight ? "Correct" : "Incorrect"}
                     </span>
                   )}
                 </div>

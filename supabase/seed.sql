@@ -104,7 +104,7 @@ select * from (values
 (6, 'What does “Flag for review” do?',
  E'It marks a question you want to come back to.\n\nIn Practice, you can later practise just your flagged questions. In a mock test, flags are shown on the review screen before you submit, so you can check those questions again.'),
 (7, 'What does my readiness score mean?',
- E'Your readiness score appears on My progress after your first mock test. It is worked out from your latest mock test score, your average mock test score, how much of the Handbook you have done and how many of your practised chapters are not weak areas.\n\nIt is a guide to help you prepare, not a prediction of your official result.'),
+ E'Your readiness score appears on My progress after your first mock test. It is worked out from your latest mock test score, your average mock test score, how much of the Handbook you have done and how many of your practised chapters are not weak chapters.\n\nIt is a guide to help you prepare, not a prediction of your official result.'),
 (8, 'Who do I contact for help?',
  E'Your Admin can help with your login, your access dates and your test type. You can also use the support details on this page.')
 ) as starter (position, question, answer)

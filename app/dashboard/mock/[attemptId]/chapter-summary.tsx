@@ -4,7 +4,7 @@ import { Accordion } from "@/components/candidate/accordion";
 import { BADGE, BAR_FILL, BAR_TRACK, CARD, SECONDARY_BUTTON, SECTION_TITLE } from "@/components/candidate/buttons";
 import { Icon } from "@/components/icons";
 
-const MARK_WORDS: Record<MockMark, string> = { R: "Right", W: "Wrong", U: "Not answered" };
+const MARK_WORDS: Record<MockMark, string> = { R: "Correct", W: "Incorrect", U: "Not answered" };
 const percent = (right: number, outOf: number) => (outOf > 0 ? Math.round((right / outOf) * 100) : 0);
 
 // A mock test's results by chapter, grouped by section; each chapter opens to its questions in this test.
@@ -21,7 +21,7 @@ export function ChapterSummary({ attemptId, results }: { attemptId: string; resu
           <h3 className="flex flex-wrap items-baseline justify-between gap-x-4 border-b-2 border-line pb-2 text-lg font-bold text-ink">
             <span className="[overflow-wrap:anywhere]">{section.label}</span>
             <span className="text-base font-semibold">
-              {section.right} of {section.outOf} right ({percent(section.right, section.outOf)}%)
+              {section.right} of {section.outOf} correct ({percent(section.right, section.outOf)}%)
             </span>
           </h3>
           {section.chapters.map((chapter) => (
@@ -47,7 +47,7 @@ export function ChapterSummary({ attemptId, results }: { attemptId: string; resu
 function ChapterRow({ chapter, weakest, reviewHref, practiseHref }: { chapter: MockChapterResult; weakest: boolean; reviewHref: string; practiseHref: string | null }) {
   const summary = (
     <>
-      {chapter.right} of {chapter.outOf} right ({percent(chapter.right, chapter.outOf)}%)
+      {chapter.right} of {chapter.outOf} correct ({percent(chapter.right, chapter.outOf)}%)
       {chapter.unanswered ? ` · ${chapter.unanswered} not answered` : ""}
       {weakest && <span className={`${BADGE} ml-2 border-warn bg-warn-bg align-middle text-warn-strong`}>Weakest</span>}
     </>

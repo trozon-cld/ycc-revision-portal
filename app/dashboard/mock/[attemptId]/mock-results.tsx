@@ -44,8 +44,8 @@ export function MockResultsView({ attemptId, results, practiceUnavailable }: { a
           </p>
           <dl className="mt-4 grid grid-cols-3 gap-2 text-center">
             {[
-              ["Right", results.rightCount],
-              ["Wrong", wrong],
+              ["Correct", results.rightCount],
+              ["Incorrect", wrong],
               ["Not answered", unanswered],
             ].map(([label, value]) => (
               <div key={label} className="rounded-xl bg-fill px-2 py-3">
@@ -101,7 +101,7 @@ export function MockResultsView({ attemptId, results, practiceUnavailable }: { a
               <ul className="mt-2 flex flex-col gap-1 text-base text-ink">
                 {results.weakest.map((topic) => (
                   <li key={topic.id} className="[overflow-wrap:anywhere]">
-                    <span className="font-semibold">{topic.label}</span> ({topic.right} of {topic.outOf} right)
+                    <span className="font-semibold">{topic.label}</span> ({topic.right} of {topic.outOf} correct)
                   </li>
                 ))}
               </ul>

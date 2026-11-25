@@ -225,17 +225,17 @@ export default async function CandidateProgressPage({ params, searchParams }: Pa
             <>
               <p className="text-sm text-ink">
                 {practice.practised} of {countOf(practice.pool, "question")} practised
-                {practice.tries > 0 && ` · ${scorePercent(practice.right, practice.tries)}% of answers right (${practice.right} of ${practice.tries})`}
+                {practice.tries > 0 && ` · ${scorePercent(practice.right, practice.tries)}% of answers correct (${practice.right} of ${practice.tries})`}
                 {` · ${practice.flagged} flagged`}
               </p>
-              <Table columns={["Chapter", "Practised", "Right", "Area"]} isEmpty={false} emptyMessage="">
+              <Table columns={["Chapter", "Practised", "Correct", "Area"]} isEmpty={false} emptyMessage="">
                 {practice.chapters.map((chapter) => (
                   <Row key={chapter.id}>
                     <Cell kind="primary">{chapter.label}</Cell>
                     <Cell label="Practised" nowrap>
                       {chapter.answered} of {chapter.pool}
                     </Cell>
-                    <Cell label="Right" nowrap>
+                    <Cell label="Correct" nowrap>
                       {chapter.tries > 0 ? `${chapter.right} of ${chapter.tries} (${scorePercent(chapter.right, chapter.tries)}%)` : "—"}
                     </Cell>
                     <Cell label="Area" nowrap>
