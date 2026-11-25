@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/guard";
 import { SESSION_ENDED_LOGIN } from "@/lib/auth/constants";
 import { PageBody } from "@/components/candidate/page-body";
+import { BackLink } from "@/components/candidate/back-link";
 import { loadSwitchableTestTypes } from "@/lib/candidates/test-types";
 import { loadMockInProgress } from "@/lib/mock/attempts";
 import { loadPracticeInProgress } from "@/lib/practice/sessions";
@@ -36,6 +37,7 @@ export default async function ChangeTestTypePage({ searchParams }: PageProps<"/d
   return (
     <PageBody>
       <div className="max-w-3xl">
+        <BackLink />
         <h1 className={`${PAGE_TITLE}`}>Change Test Type</h1>
         <p className="mt-3 text-base leading-relaxed text-ink">
           Your Handbook, Practice questions and mock tests follow the test type you choose. You can change it again at

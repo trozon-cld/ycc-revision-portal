@@ -3,6 +3,7 @@ import Link from "next/link";
 import { requireRole } from "@/lib/auth/guard";
 import { loadFaqItems, loadOwnAdminName, loadSupportContact } from "@/lib/faq/load";
 import { PageBody } from "@/components/candidate/page-body";
+import { BackLink } from "@/components/candidate/back-link";
 import { CARD, PAGE_TITLE, PRIMARY_BUTTON, SECONDARY_BUTTON, SECTION_TITLE } from "@/components/candidate/buttons";
 import { loadMockInProgress } from "@/lib/mock/attempts";
 import { loadPracticeInProgress } from "@/lib/practice/sessions";
@@ -40,6 +41,7 @@ export default async function CandidateHelpPage() {
   return (
     <PageBody>
       <div className="max-w-3xl">
+        {resume ? <BackLink href={resume.href} label={resume.label} icon="previous" /> : <BackLink />}
         <h1 className={`${PAGE_TITLE}`}>Help: General Queries</h1>
         <p className="mt-2 text-base text-ink">Answers to common questions about using the portal. Tap a question to see its answer.</p>
 

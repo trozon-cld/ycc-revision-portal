@@ -8,6 +8,7 @@ import { settleOwnMocks } from "@/lib/mock/attempts";
 import { donePercent, MOCK_HISTORY_STEP, scorePercent, scoreText } from "@/lib/mock/types";
 import { loadProgress } from "@/lib/progress/overview";
 import { PageBody } from "@/components/candidate/page-body";
+import { BackLink } from "@/components/candidate/back-link";
 import { PAGE_TITLE, PRIMARY_BUTTON, SECONDARY_BUTTON } from "@/components/candidate/buttons";
 import { Accordion } from "@/components/candidate/accordion";
 import { ChapterResults } from "@/components/candidate/chapter-results";
@@ -27,6 +28,7 @@ export default async function ProgressPage() {
   return (
     <PageBody>
       <div className="max-w-3xl">
+        <BackLink />
         <h1 className={`${PAGE_TITLE}`}>My Progress</h1>
         <p className="mt-2 text-base text-ink [overflow-wrap:anywhere]">Your Handbook, Practice and mock tests for {progress.testTypeName}.</p>
 
