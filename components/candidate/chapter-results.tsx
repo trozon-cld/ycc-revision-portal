@@ -6,13 +6,13 @@ export type ChapterResult = { key: string; label: string; right: number; outOf: 
 
 const BADGE_TONES = { amber: "border-warn bg-warn-bg text-warn-strong", green: "border-ok bg-ok-bg text-ok-strong" };
 
-// `noun` ends each count: "3 of 7 right", "5 of 9 done".
+// `noun` ends each count: "3 of 7 correct", "5 of 9 done".
 export function ChapterResults({
   id,
   title,
   items,
   showPercent = false,
-  noun = "right",
+  noun = "correct",
   empty,
   level = 2,
   collapsible = false,

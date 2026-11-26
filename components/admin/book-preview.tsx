@@ -65,6 +65,8 @@ export function BookPreview({
   readerTools = false,
   allowFullWindow = false,
   covers,
+  backgroundBatch,
+  onProgress,
 }: {
   pages: BookPageData[];
   media: ResolvedMedia;
@@ -83,6 +85,9 @@ export function BookPreview({
   covers?: BookCovers;
   // Adds "Full window": the reader fills the space below the toolbar.
   allowFullWindow?: boolean;
+  // Book Preview's counting progress (see BookReader); other previews leave these out.
+  backgroundBatch?: number;
+  onProgress?: (done: number, total: number) => void;
 }) {
   const [ownDevice, setOwnDevice] = useState<PreviewDevice | "full">(initialDevice);
   const [ownTextSize, setOwnTextSize] = useState<TextSize>(DEFAULT_TEXT_SIZE);
@@ -197,6 +202,8 @@ export function BookPreview({
               onTextSizeChange={readerTools ? setTextSize : undefined}
               resultsNote={readerTools ? "Preview only: these results aren't saved." : undefined}
               covers={covers}
+              backgroundBatch={backgroundBatch}
+              onProgress={onProgress}
             />
           </div>
         </div>

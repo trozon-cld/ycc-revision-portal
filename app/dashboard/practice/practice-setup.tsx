@@ -100,7 +100,7 @@ export function PracticeSetup({
                   <span className="flex flex-col text-base text-ink">
                     {options.weakChapters.map((chapter) => (
                       <span key={chapter.id} className="[overflow-wrap:anywhere]">
-                        {chapter.label} ({chapter.percent}% right)
+                        {chapter.label} ({chapter.percent}% correct)
                       </span>
                     ))}
                   </span>

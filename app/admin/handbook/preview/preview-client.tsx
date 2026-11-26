@@ -1,83 +1,108 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { useFormStatus } from "react-dom";
 import type { BookPageData, ResolvedMedia } from "@/lib/content/book";
 import type { BookCovers } from "@/lib/content/covers";
-import type { PreviewOptions } from "@/lib/content/preview";
 import { BookPreview } from "@/components/admin/book-preview";
-import { Segmented } from "@/components/admin/editor-fields";
-import { inputClass, labelClass } from "@/components/admin/styles";
+import { cardClass } from "@/components/admin/styles";
+import { Spinner } from "@/components/spinner";
+import { formatCount } from "@/lib/format";
 
-// Changing a choice reloads the page with it in the address, so a preview can be bookmarked or shared.
-export function PreviewControls({
-  chapters,
-  testTypes,
-  chapterId,
-  testTypeId,
-  includeDrafts,
-}: PreviewOptions & { chapterId: string | null; testTypeId: string | null; includeDrafts: boolean }) {
-  const router = useRouter();
-  const go = (patch: { chapter?: string | null; testType?: string | null; content?: string | null }) => {
-    const next = { chapter: chapterId, testType: testTypeId, content: includeDrafts ? null : "published", ...patch };
-    const query = new URLSearchParams(Object.entries(next).filter((entry): entry is [string, string] => Boolean(entry[1])));
-    router.push(`/admin/handbook/preview${query.size ? `?${query}` : ""}`);
-  };
-  const sections = [...new Set(chapters.map((chapter) => chapter.sectionLabel))];
+// With the reader covered nobody is reading, so the rest of the book is counted in bigger steps than for candidates.
+const PREVIEW_BATCH = 40;
 
-  return (
-    <div className="mb-4 flex flex-wrap items-end gap-x-4 gap-y-3 rounded-lg border border-slate-200 bg-white p-3">
-      <div className="min-w-0 space-y-1">
-        <label htmlFor="preview-show" className={labelClass}>
-          Show
-        </label>
-        <select id="preview-show" value={chapterId ?? ""} onChange={(event) => go({ chapter: event.target.value || null })} className={`${inputClass} max-w-72`}>
-          <option value="">Whole book</option>
-          {sections.map((section) => (
-            <optgroup key={section} label={section}>
-              {chapters
-                .filter((chapter) => chapter.sectionLabel === section)
-                .map((chapter) => (
-                  <option key={chapter.id} value={chapter.id}>
-                    {chapter.label}
-                  </option>
-                ))}
-            </optgroup>
-          ))}
-        </select>
-      </div>
-      <div className="min-w-0 space-y-1">
-        <label htmlFor="preview-test-type" className={labelClass}>
-          As test type
-        </label>
-        <select
-          id="preview-test-type"
-          value={testTypeId ?? ""}
-          onChange={(event) => go({ testType: event.target.value || null })}
-          className={`${inputClass} max-w-72`}
-        >
-          <option value="">All chapters</option>
-          {testTypes.map((testType) => (
-            <option key={testType.id} value={testType.id}>
-              {testType.label}
-            </option>
-          ))}
-        </select>
-      </div>
-      <Segmented
-        label="Content"
-        value={includeDrafts ? "all" : "published"}
-        options={[
-          ["all", "Include drafts"],
-          ["published", "Published only"],
-        ]}
-        onChange={(value) => go({ content: value === "published" ? "published" : null })}
-      />
-    </div>
-  );
+const ApplyingContext = createContext<(applying: boolean) => void>(() => {});
+
+// Placed inside the filter bar's form: tells the preview while Apply is loading.
+export function ApplyingReporter() {
+  const { pending } = useFormStatus();
+  const report = useContext(ApplyingContext);
+  useEffect(() => report(pending), [pending, report]);
+  return null;
 }
 
-export function PreviewReader({ pages, media, covers }: { pages: BookPageData[]; media: ResolvedMedia; covers?: BookCovers }) {
+// While Apply loads or the reader counts pages, the filters are greyed out and a progress card covers the reader.
+export function PreviewWorkspace({
+  filters,
+  children,
+  pages,
+  media,
+  covers,
+}: {
+  filters: ReactNode;
+  children?: ReactNode;
+  pages: BookPageData[];
+  media: ResolvedMedia;
+  covers?: BookCovers;
+}) {
+  const [applying, setApplying] = useState(false);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const [progressFor, setProgressFor] = useState(pages);
+  if (progressFor !== pages) {
+    setProgressFor(pages);
+    setProgress(null);
+  }
+  const counting = !progress || progress.done < progress.total;
+  const busy = applying || counting;
+  const percent = progress && progress.total > 0 ? Math.floor((progress.done / progress.total) * 100) : 0;
+
   return (
-    <BookPreview pages={pages} media={media} label="Book Preview" initialDevice="full" readerTools allowFullWindow covers={covers} />
+    <>
+      <ApplyingContext.Provider value={setApplying}>
+        <div inert={busy} className={busy ? "opacity-60" : undefined}>
+          {filters}
+        </div>
+      </ApplyingContext.Provider>
+      {children}
+      <div className="relative">
+        <div inert={busy}>
+          <BookPreview
+            pages={pages}
+            media={media}
+            label="Book Preview"
+            initialDevice="full"
+            readerTools
+            allowFullWindow
+            covers={covers}
+            backgroundBatch={PREVIEW_BATCH}
+            onProgress={(done, total) => setProgress({ done, total })}
+          />
+        </div>
+        {busy && (
+          <div className="absolute inset-0 z-10 flex items-start justify-center rounded-lg bg-white/85 px-4 pt-16">
+            <div role="status" className={`${cardClass} w-full max-w-sm space-y-3 p-5 shadow-sm`}>
+              {applying ? (
+                <p className="flex items-center gap-2 font-medium text-ink">
+                  <Spinner />
+                  Loading preview…
+                </p>
+              ) : (
+                <>
+                  <div className="flex items-baseline justify-between gap-3">
+                    <p className="font-medium text-ink">Preparing pages…</p>
+                    <span className="text-sm tabular-nums text-slate-600">{percent}%</span>
+                  </div>
+                  <div
+                    role="progressbar"
+                    aria-label="Preparing pages"
+                    aria-valuemin={0}
+                    aria-valuemax={progress?.total ?? pages.length}
+                    aria-valuenow={progress?.done ?? 0}
+                    aria-valuetext={`${progress?.done ?? 0} of ${progress?.total ?? pages.length} items`}
+                    className="h-3 overflow-hidden rounded-full bg-slate-200"
+                  >
+                    <div className="h-full rounded-full bg-primary transition-[width] duration-300 motion-reduce:transition-none" style={{ width: `${percent}%` }} />
+                  </div>
+                  <p className="text-sm text-slate-600">
+                    {formatCount(progress?.done ?? 0)} of {formatCount(progress?.total ?? pages.length, "item")} laid out.
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </>
   );
 }

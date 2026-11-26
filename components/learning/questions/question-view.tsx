@@ -263,7 +263,7 @@ function Feedback({ result, showsAnswer }: { result: CheckResult; showsAnswer: b
     >
       <MarkIcon name={correct ? "tick" : "cross"} className="mt-[0.15em] size-[1.1em] shrink-0" />
       <span>
-        {correct ? "Correct." : result.answered ? "Not quite." : "Not answered."}
+        {correct ? "Correct." : result.answered ? "Incorrect." : "Not answered."}
         {!correct && showsAnswer && <span className="font-normal"> The correct answer is highlighted.</span>}
       </span>
     </p>

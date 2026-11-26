@@ -25,11 +25,11 @@ select format('alter role ycc_portal login password %L', :'portal_password')
 grant usage on schema public to ycc_portal;
 
 grant select, insert, update, delete on all tables in schema public to ycc_portal;
-grant usage, select on all sequences in schema public to ycc_portal;
+grant usage, select, update on all sequences in schema public to ycc_portal;
 
 -- Tables and counters that later migrations create (as this login) get the same rights.
 alter default privileges in schema public grant select, insert, update, delete on tables to ycc_portal;
-alter default privileges in schema public grant usage, select on sequences to ycc_portal;
+alter default privileges in schema public grant usage, select, update on sequences to ycc_portal;
 
 commit;
 

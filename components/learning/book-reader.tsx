@@ -207,6 +207,8 @@ export function BookReader({
   onPagesDone,
   onQuestionDone,
   listen,
+  backgroundBatch = BACKGROUND_BATCH,
+  onProgress,
 }: {
   pages: BookPageData[];
   media: ResolvedMedia;
@@ -237,6 +239,10 @@ export function BookReader({
   onQuestionDone?: (pageId: string, outcome: HandbookOutcome) => void;
   // Candidate Handbook: Listen reads the page on screen aloud (components/learning/listen.tsx).
   listen?: ListenSetup;
+  // Staff Book preview only (it covers the reader while counting): bigger background steps, and progress
+  // as pages counted and fitted out of all pages. Candidates keep the defaults.
+  backgroundBatch?: number;
+  onProgress?: (done: number, total: number) => void;
 }) {
   const sectionRef = useRef<HTMLElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -481,14 +487,14 @@ export function BookReader({
     if (!same) setCounts({ id: layoutId, values, fresh });
 
     // The rest of the book is measured a batch at a time, letting the reader paint in between.
-    const next = nextBatch(fresh, BACKGROUND_BATCH);
+    const next = nextBatch(fresh, backgroundBatch);
     if (next.length === 0) {
       setBatch([]);
       return;
     }
     const timer = window.setTimeout(() => setBatch(next), 0);
     return () => window.clearTimeout(timer);
-  }, [geometry, batch, pictureCaps, pages, textSize, layoutId, nextBatch, fitList, fitFloor, sizeFor, countsRef]);
+  }, [geometry, batch, pictureCaps, pages, textSize, layoutId, nextBatch, fitList, fitFloor, sizeFor, countsRef, backgroundBatch]);
 
   // Short books are re-measured before anything is painted, so their numbers are never estimates.
   const counted = Boolean(counts) && (pages.length <= MEASURE_BATCH || Boolean(current?.fresh.every(Boolean)));
@@ -654,6 +660,18 @@ export function BookReader({
       tooLong: pages.map((_, index) => Boolean(fitList?.[index]?.gaveUp || fitList?.[index]?.scroll)),
     });
   }, [complete, totalPages, onLayout, pages, sizeFor, fitList]);
+
+  const progress = useLatest(onProgress);
+  const tracked = Boolean(onProgress);
+  const fitted = useMemo(
+    () =>
+      tracked && current ? pages.reduce((count, _, index) => (current.fresh[index] && fitList?.[index]?.final ? count + 1 : count), 0) : 0,
+    [tracked, current, pages, fitList]
+  );
+  useEffect(() => {
+    if (!tracked) return;
+    progress.current?.(complete ? pages.length : Math.max(0, Math.min(fitted, pages.length - 1)), pages.length);
+  }, [tracked, complete, fitted, pages.length, progress]);
   const shortStatus = status.replace(/^Pages? /, "");
   // Sized from the reader's own width (not the screen), so previews match real devices.
   const compact = (stageSize?.width ?? COMPACT_BELOW) < COMPACT_BELOW;

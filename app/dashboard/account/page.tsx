@@ -8,6 +8,7 @@ import { loadCandidateHome } from "@/lib/candidates/home";
 import { findVoiceLanguage, listeningLanguageIn, offeredLanguages } from "@/lib/voice/language-store";
 import { languageNames } from "@/lib/voice/languages";
 import { PageBody } from "@/components/candidate/page-body";
+import { BackLink } from "@/components/candidate/back-link";
 import { CARD, ERROR_BOX, NOTE_BOX, PAGE_TITLE, PRIMARY_BUTTON, SECONDARY_BUTTON, SECTION_TITLE } from "@/components/candidate/buttons";
 import { LogoutButton } from "@/components/logout-button";
 import { LogoutEverywhere, type LogoutEverywhereStyles } from "@/components/logout-everywhere";
@@ -46,7 +47,10 @@ export default async function AccountPage() {
   return (
     <PageBody>
       <div className="flex max-w-3xl flex-col gap-6">
-        <h1 className={`${PAGE_TITLE}`}>Account</h1>
+        <div className="flex flex-col">
+          <BackLink />
+          <h1 className={`${PAGE_TITLE}`}>Account</h1>
+        </div>
 
         <section aria-labelledby="details-heading" className={`${CARD} p-4 lg:p-5`}>
           <h2 id="details-heading" className={`mb-3 ${SECTION_TITLE}`}>

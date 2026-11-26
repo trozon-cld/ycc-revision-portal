@@ -14,7 +14,7 @@ import { ReviewList } from "./review-list";
 export const metadata: Metadata = { title: "Your Answers" };
 
 const FILTERS: { key: string; label: string; match: (item: MockReviewItem) => boolean; none: string }[] = [
-  { key: "wrong", label: "Wrong", match: (item) => item.mark === "W", none: "No wrong answers in this test." },
+  { key: "wrong", label: "Incorrect", match: (item) => item.mark === "W", none: "No incorrect answers in this test." },
   { key: "unanswered", label: "Not answered", match: (item) => item.mark === "U", none: "You answered every question." },
   { key: "flagged", label: "Flagged", match: (item) => item.flaggedInTest, none: "You didn’t flag any questions in this test." },
   { key: "all", label: "All", match: () => true, none: "There are no questions to show." },

@@ -6,7 +6,8 @@ import { isUuid } from "@/lib/ids";
 import { firstParam } from "@/lib/params";
 import { PageHeader } from "@/components/admin/page-header";
 import { countOf } from "@/lib/format";
-import { PreviewControls, PreviewReader } from "./preview-client";
+import { ApplyingReporter, PreviewWorkspace } from "./preview-client";
+import { FilterBar, FilterSelect } from "@/components/admin/filter-bar";
 import { Breadcrumbs } from "@/components/admin/breadcrumbs";
 import { warnNoteClass } from "@/components/admin/styles";
 
@@ -26,6 +27,7 @@ export default async function BookPreviewPage({ searchParams }: PageProps<"/admi
   ]);
 
   const chapter = options.chapters.find((item) => item.id === chapterId);
+  const sections = [...new Set(options.chapters.map((item) => item.sectionLabel))];
   // With a test type the reader numbers chapters in that book; the summary follows it.
   const chapterInBook = testTypeId ? book.pages[0]?.chapterLabel : undefined;
   const summary = [
@@ -33,6 +35,52 @@ export default async function BookPreviewPage({ searchParams }: PageProps<"/admi
     countOf(book.pages.length, "item"),
     ...(includeDrafts && book.drafts > 0 ? [`${book.drafts} marked Draft`] : []),
   ].join(" · ");
+
+  const filters = (
+    <FilterBar action="/admin/handbook/preview" clearHref="/admin/handbook/preview" isFiltered={Boolean(chapterId || testTypeId || !includeDrafts)}>
+      <FilterSelect name="chapter" label="Show" defaultValue={chapterId ?? ""} wide>
+        <option value="">Whole book</option>
+        {sections.map((section) => (
+          <optgroup key={section} label={section}>
+            {options.chapters
+              .filter((item) => item.sectionLabel === section)
+              .map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.label}
+                </option>
+              ))}
+          </optgroup>
+        ))}
+      </FilterSelect>
+      <FilterSelect name="testType" label="As test type" defaultValue={testTypeId ?? ""} wide>
+        <option value="">All test types</option>
+        {options.testTypes.map((testType) => (
+          <option key={testType.id} value={testType.id}>
+            {testType.label}
+          </option>
+        ))}
+      </FilterSelect>
+      <FilterSelect name="content" label="Content" defaultValue={includeDrafts ? "" : "published"}>
+        <option value="">Include drafts</option>
+        <option value="published">Published only</option>
+      </FilterSelect>
+      <ApplyingReporter />
+    </FilterBar>
+  );
+  const leftOut = book.leftOut.length > 0 && (
+    <div role="note" className={`mb-3 ${warnNoteClass}`}>
+      <p className="font-medium">
+        {book.leftOut.length === 1 ? "1 item is" : `${book.leftOut.length} items are`} left out because {book.leftOut.length === 1 ? "it doesn't" : "they don't"} pass the checks yet:
+      </p>
+      <ul className="mt-1 list-disc pl-5">
+        {book.leftOut.slice(0, 10).map((item) => (
+          <li key={item} className="[overflow-wrap:anywhere]">
+            {item}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 
   return (
     <>
@@ -45,38 +93,19 @@ export default async function BookPreviewPage({ searchParams }: PageProps<"/admi
       />
       <PageHeader title="Book Preview" description="The Handbook as candidates will read it. Only you can see this preview." />
 
-      <PreviewControls
-        chapters={options.chapters}
-        testTypes={options.testTypes}
-        chapterId={chapterId}
-        testTypeId={testTypeId}
-        includeDrafts={includeDrafts}
-      />
-
-      {book.leftOut.length > 0 && (
-        <div role="note" className={`mb-3 ${warnNoteClass}`}>
-          <p className="font-medium">
-            {book.leftOut.length === 1 ? "1 item is" : `${book.leftOut.length} items are`} left out because {book.leftOut.length === 1 ? "it doesn't" : "they don't"} pass the checks yet:
-          </p>
-          <ul className="mt-1 list-disc pl-5">
-            {book.leftOut.slice(0, 10).map((item) => (
-              <li key={item} className="[overflow-wrap:anywhere]">
-                {item}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
       {book.pages.length === 0 ? (
-        <p className="rounded-lg border border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-600">
-          {emptyMessage(Boolean(chapterId), Boolean(testTypeId), includeDrafts)}
-        </p>
-      ) : (
         <>
-          <p className="mb-3 text-sm text-slate-700">{summary}</p>
-          <PreviewReader pages={book.pages} media={book.media} covers={covers ?? undefined} />
+          {filters}
+          {leftOut}
+          <p className="rounded-lg border border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-600">
+            {emptyMessage(Boolean(chapterId), Boolean(testTypeId), includeDrafts)}
+          </p>
         </>
+      ) : (
+        <PreviewWorkspace filters={filters} pages={book.pages} media={book.media} covers={covers ?? undefined}>
+          {leftOut}
+          <p className="mb-3 text-sm text-slate-700">{summary}</p>
+        </PreviewWorkspace>
       )}
     </>
   );

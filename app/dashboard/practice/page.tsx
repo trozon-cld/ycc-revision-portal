@@ -36,7 +36,7 @@ export default async function PracticePage({ searchParams }: PageProps<"/dashboa
         <div className="max-w-3xl">
           <h1 className={`${PAGE_TITLE}`}>Practice</h1>
           <p className="mt-3 text-base leading-relaxed text-ink">
-            Answer questions at your own pace. After each one you’ll see the right answer and why.
+            Answer questions at your own pace. After each one you’ll see the correct answer and why.
           </p>
           <p className="mt-1 text-base text-muted [overflow-wrap:anywhere]">Questions for {options.testTypeName}</p>
 
